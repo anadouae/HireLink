@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tableau de bord — HireLink</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/design-system.css" />
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="row between">
+        <a class="brand" href="candidate.html">
+          <span class="brand-mark"></span>
+          <span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span>
+        </a>
+        <button type="button" class="mobile-toggle" id="close-side" aria-label="Fermer">✕</button>
+      </div>
+      <nav class="side-nav">
+        <p class="side-nav-label">Espace</p>
+        <a class="side-link is-active" href="candidate.html">Tableau de bord</a>
+        <a class="side-link" href="candidate-offers.html">Offres pour vous</a>
+        <a class="side-link" href="candidate-applications.html">Mes candidatures</a>
+        <a class="side-link" href="candidate-profile.html">Mon profil &amp; CV</a>
+        <a class="side-link js-in-app-help" href="../help.html">Aide</a>
+      </nav>
+      <div class="side-footer">
+        <div id="side-user">—</div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
+      </div>
+    </aside>
+
+    <div class="app-main">
+      <header class="topbar">
+        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
+        <div class="topbar-search">
+          <span aria-hidden="true">⌕</span>
+          <input type="search" placeholder="Rechercher une offre…" id="quick-search" autocomplete="off" />
+        </div>
+        <div class="topbar-actions">
+          <button type="button" class="btn btn-brass btn-sm" id="btn-premium">Premium</button>
+          <button type="button" class="btn btn-soft btn-sm js-in-app-help" id="btn-help">Aide</button>
+          <div class="avatar" id="avatar">C</div>
+        </div>
+      </header>
+
+      <main class="content">
+        <div class="nudge" id="nudge" hidden>
+          <div>
+            <strong>Pipeline profil incomplet</strong>
+            <span id="nudge-sub">Complétez les étapes pour débloquer le matching fort.</span>
+          </div>
+          <a class="btn btn-primary btn-sm" href="candidate-profile.html">Continuer</a>
+        </div>
+
+        <section class="welcome-strip">
+          <div>
+            <p class="eyebrow">Espace candidat · Performance équitable</p>
+            <h1 id="hello">Bonjour</h1>
+            <p>Profil → Matching → Pipeline de candidature → Décision claire. Pas de zone d’ombre.</p>
+            <p class="muted" style="margin:0.35rem 0 0">Fiabilité personnelle : <strong id="trust-score">—</strong></p>
+          </div>
+          <div class="welcome-actions">
+            <a class="btn btn-secondary" href="candidate-profile.html">CV &amp; profil</a>
+            <a class="btn btn-primary" href="candidate-offers.html">Offres matchées</a>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Pipeline de complétude du profil</h2>
+            <span class="ai-chip">Guidé</span>
+          </div>
+          <div class="panel-body">
+            <div class="profile-score">
+              <div class="ring" id="profile-ring" style="--p:0"><span id="profile-pct">0%</span></div>
+              <div style="flex:1;min-width:200px">
+                <p class="muted" id="profile-hint" style="margin:0 0 0.85rem">Analyse en cours…</p>
+                <div class="pipe-track" id="profile-pipe" aria-label="Étapes profil"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="label">Candidatures actives</div><div class="value" id="st-apps">—</div><div class="delta" id="st-apps-d">En cours</div></div>
+          <div class="stat"><div class="label">En entretien</div><div class="value" id="st-interview">—</div><div class="delta">Étape active</div></div>
+          <div class="stat"><div class="label">Compatibilité moy.</div><div class="value" id="st-match">—</div><div class="delta">Profil × offres</div></div>
+          <div class="stat"><div class="label">Délais tenus</div><div class="value" id="st-sla">—</div><div class="delta">Réponses employeurs</div></div>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Alertes matching</h2>
+            <a class="btn btn-ghost btn-sm" href="candidate-offers.html">Toutes les offres</a>
+          </div>
+          <div class="panel-body">
+            <div class="alert-panel" id="match-alerts"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Pipeline de vos candidatures</h2>
+            <a class="btn btn-ghost btn-sm" href="candidate-applications.html">Voir tout</a>
+          </div>
+          <div class="panel-body">
+            <div class="pipe-track" id="apps-pipe" aria-label="Pipeline candidatures"></div>
+            <div class="chart-bars" id="chart-bars" style="margin-top:1.25rem"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Import CV · extraction compétences</h2>
+            <span class="ai-chip">OCR</span>
+          </div>
+          <div class="panel-body">
+            <div class="cv-drop" id="cv-drop">
+              <strong>Déposez votre CV (PDF / TXT)</strong>
+              <p>HireLink extrait les compétences et enrichit votre profil pour le matching.</p>
+              <label class="btn btn-primary btn-sm" style="cursor:pointer">
+                Choisir un fichier
+                <input type="file" id="cv-file-home" accept=".pdf,.txt,.md" hidden />
+              </label>
+              <p class="muted" id="cv-status" style="margin-top:0.75rem;margin-bottom:0"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head"><h2>Accès rapides</h2></div>
+          <div class="panel-body">
+            <div class="quick-grid">
+              <a class="quick-card" href="candidate-profile.html">
+                <strong>Profil &amp; CV</strong>
+                <span>Compléter le pipeline</span>
+              </a>
+              <a class="quick-card" href="candidate-offers.html">
+                <strong>Offres matchées</strong>
+                <span>Postuler en 1 clic</span>
+              </a>
+              <a class="quick-card" href="candidate-applications.html">
+                <strong>Suivi candidatures</strong>
+                <span>Chaque étape visible</span>
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="../js/ui.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/in-app-help.js"></script>
+  <script src="../js/product.js"></script>
+  <script src="../js/shell.js"></script>
+  <script src="../js/growth.js"></script>
+  <script src="../js/candidate-home.js"></script>
+</body>
+</html>

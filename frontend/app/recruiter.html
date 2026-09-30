@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vue d’ensemble — HireLink</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/design-system.css" />
+  <link rel="stylesheet" href="../css/app.css" />
+  <script src="../js/theme.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="row between">
+        <a class="brand" href="recruiter.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
+        <button type="button" class="mobile-toggle" id="close-side">✕</button>
+      </div>
+      <nav class="side-nav">
+        <a class="side-link is-active" href="recruiter.html">Vue d’ensemble</a>
+        <a class="side-link" href="recruiter-pipeline.html">Pipeline</a>
+        <a class="side-link" href="recruiter-offers.html">Mes offres</a>
+        <a class="side-link" href="recruiter-team.html">Entreprise &amp; équipe</a>
+        <a class="side-link" href="recruiter-settings.html">Paramètres</a>
+        <a class="side-link js-in-app-help" href="../help.html">Aide RH</a>
+      </nav>
+      <div class="side-footer">
+        <div id="side-user">—</div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
+      </div>
+    </aside>
+    <div class="app-main">
+      <header class="topbar">
+        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
+        <div class="topbar-search"><span aria-hidden="true">⌕</span><input type="search" id="search-home" placeholder="Candidat, offre…" autocomplete="off" /></div>
+        <div class="topbar-actions">
+          <button type="button" class="btn btn-soft btn-sm" id="btn-upgrade">Passer Premium</button>
+          <div class="avatar" id="avatar">R</div>
+        </div>
+      </header>
+      <main class="content">
+        <div class="nudge" id="sla-nudge">
+          <div>
+            <strong id="sla-nudge-title">Délais de réponse</strong>
+            <span id="sla-nudge-sub">Chargement…</span>
+          </div>
+          <a class="btn btn-primary btn-sm" href="recruiter-pipeline.html">Voir le pipeline</a>
+        </div>
+
+        <section class="welcome-strip">
+          <div>
+            <p class="eyebrow">Espace recruteur · Petites victoires</p>
+            <h1 id="hello">Tableau de bord</h1>
+            <p id="wins-line">Chargement des progrès…</p>
+            <p class="muted" style="margin:0.35rem 0 0">Fiabilité organisation : <strong id="trust-score">—</strong></p>
+          </div>
+          <div class="welcome-actions">
+            <a class="btn btn-secondary" href="recruiter-pipeline.html">Pipeline</a>
+            <a class="btn btn-primary" href="recruiter-offers.html">Nouvelle offre</a>
+          </div>
+        </section>
+
+        <div class="stat-grid">
+          <div class="stat"><div class="label">Offres actives</div><div class="value" id="st-offers">—</div><div class="delta" id="st-offers-d">Publiées</div></div>
+          <div class="stat"><div class="label">Candidatures</div><div class="value" id="st-apps">—</div><div class="delta" id="st-apps-d">Pipeline</div></div>
+          <div class="stat"><div class="label">Délais tenus</div><div class="value" id="st-sla">—</div><div class="delta">Indice de réactivité</div></div>
+          <div class="stat"><div class="label">Compatibilité moyenne</div><div class="value" id="st-match">—</div><div class="delta">Profils vs postes</div></div>
+        </div>
+
+        <div class="stat-grid" style="grid-template-columns:1.4fr 1fr;align-items:stretch">
+          <section class="panel" style="margin:0">
+            <div class="panel-head">
+              <h2>Inbox prioritaire</h2>
+              <span class="ai-chip">SLA · Scoring</span>
+            </div>
+            <div class="panel-body">
+              <div class="inbox-list" id="inbox-list"></div>
+            </div>
+          </section>
+          <section class="panel" style="margin:0">
+            <div class="panel-head"><h2>Répartition</h2></div>
+            <div class="panel-body">
+              <div class="chart-bars" id="chart-bars"></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head"><h2>Accès rapides</h2></div>
+          <div class="panel-body">
+            <div class="quick-grid">
+              <a class="quick-card" href="recruiter-offers.html">
+                <strong>Offres</strong>
+                <span>Publier &amp; piloter</span>
+              </a>
+              <a class="quick-card" href="recruiter-pipeline.html">
+                <strong>Kanban</strong>
+                <span>Avancer chaque dossier</span>
+              </a>
+              <a class="quick-card" href="recruiter-team.html">
+                <strong>Entreprise</strong>
+                <span>Organisation &amp; sièges RH</span>
+              </a>
+              <a class="quick-card" href="recruiter-settings.html">
+                <strong>Paramètres</strong>
+                <span>Billing · thème · notifs</span>
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="../js/ui.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/in-app-help.js"></script>
+  <script src="../js/product.js"></script>
+  <script src="../js/shell.js"></script>
+  <script src="../js/growth.js"></script>
+  <script src="../js/recruiter-home.js"></script>
+</body>
+</html>

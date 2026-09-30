@@ -1,0 +1,85 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,fit,calc}
+\usepackage{xcolor}
+
+\geometry{margin=2cm}
+\definecolor{hlTeal}{HTML}{0D6E6E}
+\definecolor{hlInk}{HTML}{0F1C2E}
+\definecolor{hlPaper}{HTML}{F7F4EF}
+
+\title{\textbf{HireLink} --- Diagramme d'architecture globale\\
+\large Séance 1 : Conception et initialisation du projet}
+\author{ENSA Tétouan · Module Frameworks Technologie Web}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\noindent\textbf{Flux de communication :}
+Frontend (HTML/CSS/JS) $\rightarrow$ API REST $\rightarrow$ Backend Spring Boot $\rightarrow$ Base MySQL.
+
+\vspace{1em}
+\begin{center}
+\begin{tikzpicture}[
+  node distance=1.1cm and 1.4cm,
+  box/.style={
+    draw=hlInk!70, rounded corners=3pt, align=center,
+    font=\sffamily\small, fill=white, minimum width=3.2cm,
+    minimum height=1.55cm, line width=0.8pt, inner sep=6pt
+  },
+  layer/.style={
+    draw=hlTeal, dashed, rounded corners=6pt,
+    inner xsep=12pt, inner ysep=14pt, line width=0.9pt
+  },
+  arr/.style={-{Latex}, thick, hlInk!80},
+  lab/.style={font=\sffamily\footnotesize\bfseries, text=hlTeal}
+]
+
+\node[box] (fe) {\textbf{Frontend}\\HTML · CSS · JS\\Page d'accueil};
+\node[box, right=of fe] (api) {\textbf{API REST}\\\texttt{/api/v1/*}\\JSON · CORS};
+\node[box, right=of api] (be) {\textbf{Backend}\\Spring Boot 3\\Maven · Java 17};
+\node[box, right=of be] (db) {\textbf{SGBD}\\MySQL 8\\schéma \texttt{hirelink}};
+
+\draw[arr] (fe) -- node[above, lab] {HTTP} (api);
+\draw[arr] (api) -- (be);
+\draw[arr] (be) -- node[above, lab] {JDBC/JPA} (db);
+
+\node[layer, fit=(fe), label={[lab]above:Couche présentation}] {};
+\node[layer, fit=(api)(be), label={[lab]above:Couche applicative}] {};
+\node[layer, fit=(db), label={[lab]above:Couche données}] {};
+
+\end{tikzpicture}
+\end{center}
+
+\vspace{1.5em}
+\section*{Composants principaux}
+
+\begin{itemize}
+  \item \textbf{Frontend} : interface statique (Séance~1), consommation de \texttt{GET /api/v1/health} et \texttt{/meta}.
+  \item \textbf{Backend} : Spring Boot (Web, Data JPA, Validation), exposition OpenAPI (\texttt{/swagger-ui.html}).
+  \item \textbf{Persistance} : MySQL — entités \texttt{User}, \texttt{JobOffer}, \texttt{Application}.
+  \item \textbf{Règle technique} : aucune API tierce payante ; appariement local de compétences (Jaccard).
+\end{itemize}
+
+\section*{Acteurs}
+
+\begin{center}
+\begin{tikzpicture}[
+  actor/.style={
+    draw=hlInk!60, rounded corners=4pt, align=center,
+    font=\sffamily\small, fill=hlPaper, minimum width=3.6cm,
+    minimum height=1.3cm, line width=0.7pt
+  }
+]
+\node[actor] (c) {\textbf{Candidat}\\consultation, candidature, suivi};
+\node[actor, right=1.2cm of c] (r) {\textbf{Recruteur}\\offres, pipeline, SLA};
+\node[actor, right=1.2cm of r] (a) {\textbf{Administrateur}\\supervision, conformité};
+\end{tikzpicture}
+\end{center}
+
+\end{document}

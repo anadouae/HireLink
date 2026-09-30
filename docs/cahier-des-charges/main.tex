@@ -1,0 +1,431 @@
+% !TEX program = pdflatex
+% Cahier des charges — HireLink · EL ASSAL Douae · ENSA Tétouan
+\documentclass[12pt,a4paper,oneside]{report}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\geometry{left=2.8cm,right=2.5cm,top=2.5cm,bottom=2.8cm,headheight=15pt}
+\usepackage{graphicx}
+\graphicspath{{assets/}}
+\usepackage{xcolor}
+\usepackage{csquotes}
+\usepackage{setspace}
+\onehalfspacing
+\usepackage{titlesec}
+\titleformat{\chapter}[display]{\normalfont\huge\bfseries\color{royal}}{\chaptertitlename\ \thechapter}{12pt}{\Huge}
+\titleformat{\section}{\normalfont\Large\bfseries\color{royal}}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0.6em}{}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\textit{HireLink --- Cahier des charges}}
+\fancyhead[R]{\small\thepage}
+\fancyfoot[C]{\small ENSA Tétouan · Université Abdelmalek Essaâdi · 2025--2026}
+\renewcommand{\headrulewidth}{0.4pt}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc,babel}
+\usepackage{float}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=royal!80!black,urlcolor=royal,citecolor=royal}
+
+\definecolor{royal}{RGB}{11,26,77}
+\definecolor{royalsoft}{RGB}{27,63,156}
+\definecolor{gold}{RGB}{196,151,63}
+\definecolor{emerald}{RGB}{31,111,84}
+
+\newcommand{\instlogo}[3]{%
+  \IfFileExists{assets/#1}{\includegraphics[height=#3]{assets/#1}}{%
+    \fbox{\parbox[c][#3][c]{2.8cm}{\centering\scriptsize\bfseries #2}}%
+  }%
+}
+
+\newtcolorbox{objectifbox}{
+  colback=royal!4,colframe=royal,boxrule=0.6pt,arc=2pt,
+  left=6pt,right=6pt,top=4pt,bottom=4pt
+}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  \vspace*{0.4cm}
+  {\large\bfseries UNIVERSITÉ ABDELMALEK ESSAÂDI}\\[3pt]
+  {\normalsize École Nationale des Sciences Appliquées de Tétouan}\\[14pt]
+  \begin{minipage}{0.28\textwidth}\centering
+    \instlogo{logo-uae.png}{UAE}{1.85cm}
+  \end{minipage}\hfill
+  \begin{minipage}{0.28\textwidth}\centering
+    \instlogo{logo-ensa.png}{ENSA}{1.85cm}
+  \end{minipage}
+  \vspace{1.1cm}
+  \rule{\linewidth}{1.15pt}\\[10pt]
+  {\LARGE\bfseries\color{royal} Cahier des charges}\\[6pt]
+  {\large Module --- Frameworks Technologie Web}\\[3pt]
+  {\normalsize Ingénierie logicielle --- Spring Boot / MySQL}\\[3pt]
+  {\normalsize Année universitaire 2025--2026}\\[12pt]
+  {\Huge\bfseries\color{royal} HireLink}\\[8pt]
+  {\Large Plateforme bilatérale de gestion\\du processus de recrutement}\\[6pt]
+  {\normalsize\textit{Orchestration du pipeline de sélection --- engagement de délai --- aide à la décision}}\\[10pt]
+  \rule{\linewidth}{1.15pt}
+  \vspace{1.0cm}
+  \begin{minipage}{0.88\textwidth}
+    \renewcommand{\arraystretch}{1.35}
+    \small
+    \begin{tabular}{@{}>{\bfseries}p{5.0cm}p{9.5cm}@{}}
+      Réalisé par & EL ASSAL Douae \\
+      Établissement & ENSA Tétouan --- Université Abdelmalek Essaâdi \\
+      Filière & Cycle ingénieur --- Génie Informatique \\
+      Module & Frameworks Technologie Web \\
+      Nature du livrable & Spécification produit \& architecture applicative \\
+      SGBD cible & MySQL \\
+    \end{tabular}
+  \end{minipage}
+  \vfill
+  {\small\color{royalsoft} Version 2.0 --- document de cadrage}
+\end{titlepage}
+
+\pagenumbering{roman}
+\chapter*{Résumé exécutif}
+\addcontentsline{toc}{chapter}{Résumé exécutif}
+
+HireLink est une plateforme logicielle de type \textbf{ATS} (\textit{Applicant Tracking System}) à architecture \textbf{bilatérale} : elle interconnecte l'espace \textbf{candidat} et l'espace \textbf{organisation recruteuse} autour d'un même objet métier --- la candidature --- et d'un \textbf{pipeline d'états} formalisé.
+
+Le besoin adressé n'est pas la simple diffusion d'offres (fonction déjà couverte par les jobboards nationaux et les réseaux professionnels). Il réside dans la \textbf{gouvernance du processus de sélection} : traçabilité des transitions, réduction de l'asymétrie d'information entre les parties, engagement de délai de traitement, justification structurée des décisions de rejet, et préparation d'une couche d'\textbf{aide à la décision} entièrement \textbf{locale} (aucun recours à une API commerciale payante).
+
+La solution s'appuie sur une stack contemporaine : \textbf{Spring Boot~3}, \textbf{Spring Security} (JWT), \textbf{Spring Data JPA}, \textbf{MySQL}, migrations versionnées, API OpenAPI, conteneurisation. Le présent document constitue le référentiel fonctionnel et technique du projet. Contrainte pédagogique imposée : \textbf{MySQL} comme SGBD ; \textbf{interdiction des API payantes}.
+
+\tableofcontents
+\clearpage
+\pagenumbering{arabic}
+
+\chapter{Contexte et positionnement}
+\label{ch:contexte}
+
+\section{Contexte organisationnel}
+
+Dans les organisations marocaines (PME, ETI, structures accueillant stagiaires et premiers emplois), le processus de recrutement suit un enchaînement stable : publication du besoin, réception des candidatures, présélection, entretiens, décision. Ce processus est documenté dans la littérature RH et dans les pratiques ATS internationales~\cite{africawork-ats}.
+
+En revanche, la maturité instrumentale demeure hétérogène. Les canaux d'acquisition (jobboards, réseaux professionnels) maximisent le \textbf{volume} de candidatures~\cite{africawork-top7,rekrute-teamtailor}, tandis que le \textbf{pilotage interne} du cycle de sélection (statuts, délais, collaboration décideurs, reporting) relève d'un système d'information dédié --- l'ATS~\cite{africawork-ats,cbo-hrmaps}.
+
+\section{Problématique}
+
+\paragraph{Constats.}
+\begin{enumerate}[leftmargin=1.4em]
+  \item Absence fréquente d'un référentiel unique de candidatures, entraînant une perte de traçabilité.
+  \item Asymétrie d'information : le candidat dispose rarement d'un statut opérationnel fiable.
+  \item Décisions de rejet peu formalisées, limitant l'auditabilité du processus.
+  \item Indicateurs de performance RH (délai de recrutement, taux de conversion par étape) rarement industrialisés hors grands comptes.
+\end{enumerate}
+
+\paragraph{Question de conception.}
+Comment spécifier et réaliser une plateforme ATS bilatérale, fondée sur Spring Boot et MySQL, qui orchestre le pipeline de sélection, contracte un engagement de délai de traitement, et intègre une aide à la décision \textbf{locale} (sans API payante), dans le respect des exigences de protection des données personnelles au Maroc~\cite{loi0908} ?
+
+\section{Objectifs}
+
+\begin{enumerate}[label=\textbf{O\arabic*.}]
+  \item Modéliser et implémenter le pipeline de candidature à états contrôlés.
+  \item Exposer deux espaces applicatifs cohérents (candidat / recruteur) sur une API unique.
+  \item Introduire un \textbf{engagement de délai de réponse} par offre et un indicateur de respect de cet engagement.
+  \item Imposer une \textbf{justification structurée} lors de tout rejet.
+  \item Préparer une couche d'analyse assistée \textbf{locale} (appariement de compétences), sans autonomie décisionnelle et sans API payante.
+  \item Garantir une architecture déployable, sécurisée et documentée (OpenAPI).
+\end{enumerate}
+
+\chapter{Analyse concurrentielle (synthèse)}
+\label{ch:concurrentiel}
+
+Le détail sourcé figure dans le document \textit{Étude de benchmarking HireLink}. Synthèse opérationnelle :
+
+\begin{table}[H]
+\centering
+\caption{Positionnement relatif}
+\small
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Famille} & \textbf{Apport} & \textbf{Limite pour le besoin HireLink} \\
+\midrule
+Jobboards (ReKrute, Emploi.ma, Dreamjob\ldots) & Acquisition de volume~\cite{africawork-top7} & Faible orchestration du pipeline interne \\
+Réseaux professionnels (LinkedIn) & Sourcing de profils qualifiés~\cite{africawork-ats} & Coût et gouvernance ATS limités hors offre entreprise \\
+ATS structurés (Workday, Taleo, Greenhouse, Lever, HRMAPS\ldots) & Pipeline, reporting, parfois IA~\cite{africawork-ats,cbo-hrmaps} & Complexité / coût peu adaptés aux structures légères et au segment stage--PFE \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{objectifbox}
+\textbf{Différenciation HireLink.}\\
+Socle ATS classique (offres, candidatures, pipeline, entretiens, tableaux de bord) + différenciateurs : \textbf{engagement de délai}, \textbf{indice de réactivité organisationnelle}, \textbf{motif de rejet obligatoire}, ciblage \textbf{stage / PFE / premier emploi}, \textbf{aide à la décision locale} (sans API payante).\\[0.4em]
+Au-delà du kanban : HireLink vise un ATS \textbf{exhaustif} (process + preuves) : scorecard structurée (veto / moyenne panel), multi-entretiens RH--métier--dirigeant, checklists bloquantes par étape, timeline immuable, rappels SLA/entretien, feedback NPS, blacklist soft, offre salariale signée, commentaires hiring manager, conformité RGPD (consentement, export, purge).
+\end{objectifbox}
+
+\chapter{Acteurs et cas d'utilisation}
+\label{ch:uc}
+
+\section{Acteurs}
+
+\begin{table}[H]
+\centering
+\caption{Acteurs}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Acteur} & \textbf{Responsabilité} & \textbf{Objectif} \\
+\midrule
+Candidat & Porteur de profil et de candidatures & Postuler et suivre l'avancement \\
+Recruteur & Agent de l'organisation embaucheuse & Conduire le processus de sélection \\
+Administrateur & Gouvernance technique et modération & Assurer l'intégrité de la plateforme \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Cas d'utilisation --- domaine métier}
+
+\begin{enumerate}[leftmargin=1.3em]
+  \item \textbf{UC-01} Authentification et gestion de session (JWT).
+  \item \textbf{UC-02} Inscription différenciée (candidat / recruteur) avec mention d'information et consentement~\cite{loi0908}.
+  \item \textbf{UC-03} Gestion du profil candidat et dépôt de curriculum vitæ (PDF).
+  \item \textbf{UC-04} Gestion de l'entité organisationnelle et du profil recruteur.
+  \item \textbf{UC-05} Cycle de vie d'une offre (brouillon, publication, clôture) avec typologie Stage / PFE / CDI / CDD.
+  \item \textbf{UC-06} Recherche multicritère d'offres (localisation, type de contrat, compétences).
+  \item \textbf{UC-07} Dépôt de candidature (contrainte d'unicité offre--candidat).
+  \item \textbf{UC-08} Transition contrôlée des états du pipeline.
+  \item \textbf{UC-09} Planification d'entretien et enregistrement d'évaluation interne.
+  \item \textbf{UC-10} Décision d'acceptation ou de rejet.
+  \item \textbf{UC-11} Consultation des indicateurs de processus (entonnoir, délais).
+  \item \textbf{UC-12} Notification transactionnelle des événements métier.
+\end{enumerate}
+
+\section{Cas d'utilisation --- différenciateurs produit}
+
+\begin{enumerate}[leftmargin=1.3em,start=13]
+  \item \textbf{UC-13} Paramétrage de l'\textbf{engagement de délai de traitement} à la publication d'offre.
+  \item \textbf{UC-14} Calcul de l'échéance (\texttt{slaDeadline}) à la candidature ; exposition au candidat.
+  \item \textbf{UC-15} Calcul de l'\textbf{indice de réactivité} de l'organisation.
+  \item \textbf{UC-16} Rejet conditionné à un \textbf{motif normalisé} (référentiel de causes).
+  \item \textbf{UC-17} Alertes d'approche et de dépassement d'échéance (ordonnancement).
+  \item \textbf{UC-18} Exécution d'une analyse d'appariement \textbf{locale} (score indicatif, compétences alignées / manquantes).
+  \item \textbf{UC-19} Consultation du rapport d'appariement côté recruteur (aide à la décision humaine).
+  \item \textbf{UC-20} Recalcul de l'appariement après mise à jour du profil ou de l'offre.
+  \item \textbf{UC-21} Export structuré des candidatures (CSV).
+  \item \textbf{UC-22} Tableau de bord candidat (portefeuille de candidatures et entretiens).
+  \item \textbf{UC-23} Clôture d'offre avec bascule maîtrisée des candidatures ouvertes.
+  \item \textbf{UC-24} Exercice des droits d'accès / rectification / effacement (socle conformité).
+\end{enumerate}
+
+\section{Cas d'utilisation --- ATS exhaustif (process + preuves)}
+
+\begin{enumerate}[leftmargin=1.3em,start=25]
+  \item \textbf{UC-25} Scorecard structurée : critères pondérés par offre, notes panel, veto explicite ou seuil éliminatoire, moyenne pondérée.
+  \item \textbf{UC-26} Multi-entretiens (RH / Métier / Dirigeant) avec date, interviewer et compte-rendu.
+  \item \textbf{UC-27} Checklists par étape (templates globaux ou par offre) ; items obligatoires bloquent l'avancée.
+  \item \textbf{UC-28} Timeline immuable (\texttt{ActivityLog} append-only) : chaque transition et preuve est journalisée.
+  \item \textbf{UC-29} Rappels automatiques J-2 SLA étape et J-1 entretien (email ; extension WhatsApp).
+  \item \textbf{UC-30} Feedback 360 : NPS candidat post-entretien (endpoint public).
+  \item \textbf{UC-31} Contrôle duplicate / blacklist soft (historique multi-postes, signal non bloquant).
+  \item \textbf{UC-32} Offre salariale (package, validité, acceptation électronique tracée : token + IP + horodatage).
+  \item \textbf{UC-33} Commentaires hiring manager sans faire avancer le pipeline.
+  \item \textbf{UC-34} Conformité RGPD : consentement horodaté, export dossier, purge/anonymisation après N mois.
+  \item \textbf{UC-35} Parcours candidature multi-étapes (détail offre, CV, lettre/photo optionnels).
+  \item \textbf{UC-36} Freemium produit : assist IA locale, Premium, mode sombre, aide différenciée RH/candidat.
+\end{enumerate}
+
+\chapter{Spécification du pipeline}
+\label{ch:pipeline}
+
+\section{Machine à états}
+
+\[
+\begin{array}{c}
+\texttt{SUBMITTED} \rightarrow \texttt{UNDER\_REVIEW} \rightarrow \texttt{INTERVIEW\_SCHEDULED}\\
+\rightarrow \texttt{INTERVIEW\_COMPLETED} \rightarrow \{\texttt{ACCEPTED},\texttt{REJECTED}\}\\
+\quad\downarrow\\
+\texttt{WITHDRAWN}
+\end{array}
+\]
+
+Les transitions sont validées côté service métier ; toute transition illégale est rejetée. Chaque transition produit un enregistrement d'audit (\texttt{ApplicationStatusHistory}).
+
+\section{Engagement de délai}
+
+\begin{itemize}[leftmargin=1.4em]
+  \item Attribut \texttt{responseTimeDays} sur \texttt{JobOffer}.
+  \item À la candidature : \texttt{responseDeadline = appliedAt + responseTimeDays}.
+  \item Indicateur organisationnel :
+  \[
+  R = 100 \times \frac{N_{\mathrm{on\text{-}time}}}{N_{\mathrm{eligible}}}
+  \]
+\end{itemize}
+
+\section{Règle de rejet}
+
+L'API refuse toute bascule vers \texttt{REJECTED} en l'absence d'un code de motif appartenant au référentiel (\texttt{RefusalReasonCatalog}).
+
+\chapter{Exigences non fonctionnelles}
+\label{ch:nfr}
+
+\begin{table}[H]
+\centering
+\caption{Exigences non fonctionnelles}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+\textbf{Famille} & \textbf{Exigence} \\
+\midrule
+Sécurité & Hachage des secrets (BCrypt/Argon2) ; JWT signé ; autorisation fine par rôle ; validation des entrées ; isolation des CV \\
+Confidentialité & Consentements tracés ; finalités limitées ; pas d'exposition croisée entre organisations \\
+Fiabilité & Transactions sur transitions d'état ; migrations reproductibles \\
+Observabilité & Journalisation structurée ; corrélation des requêtes \\
+Documentation & Spécification OpenAPI 3 synchronisée \\
+Performance & Objectifs de latence raisonnables sur les parcours nominaux en environnement de démonstration \\
+Évolutivité & Séparation API / domaine / infrastructure ; feature flags (aide à la décision) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Architecture et stack technique}
+\label{ch:arch}
+
+\section{Principes}
+Architecture hexagonale / en couches, API-first, SGBD relationnel \textbf{MySQL} comme système de vérité, préparation conteneurisée.
+
+\section{Stack retenue (génération actuelle)}
+
+\begin{table}[H]
+\centering
+\caption{Stack technique}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Composant} & \textbf{Technologie} \\
+\midrule
+Langage / runtime & Java~21 (LTS) \\
+Framework & Spring Boot~3.x \\
+API & Spring Web (REST) \\
+Sécurité & Spring Security~6 + JWT (stateless) \\
+Persistance & Spring Data JPA / Hibernate~6 \\
+SGBD & \textbf{MySQL~8.4} \\
+Migrations & Flyway \\
+Validation & Jakarta Bean Validation \\
+Documentation API & springdoc-openapi (OpenAPI~3) \\
+Ordonnancement & Spring Scheduling \\
+Cache (option MVP+) & Redis (sessions / rate-limiting) \\
+Build & Maven \\
+Qualité & JUnit~5, MockMvc / Testcontainers (MySQL) \\
+Conteneurisation & Docker / Docker Compose \\
+Front de démonstration & SPA (React ou Angular) \textbf{ou} Thymeleaf selon arbitrage pédagogique \\
+Aide à la décision & Module Java local (extraction de compétences + score d'appariement) --- \textbf{aucune API payante} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Contraintes du module.}
+SGBD imposé : \textbf{MySQL}. Interdiction d'intégrer des \textbf{API payantes} (inférence cloud payante, services SaaS à clé facturée, etc.).
+
+\section{Schéma logique}
+
+\begin{center}
+\begin{tikzpicture}[
+  box/.style={draw=royal,rounded corners=2pt,align=center,font=\small,inner sep=5pt,minimum width=3.2cm},
+  arr/.style={-Latex,thick,royalsoft}
+]
+\node[box] (ui) {Clients\\Candidat / Recruteur};
+\node[box,below=0.85cm of ui] (api) {API REST\\Spring Boot 3};
+\node[box,below=0.85cm of api] (dom) {Services métier\\Pipeline · SLA · Quotas};
+\node[box,below=0.85cm of dom] (pg) {MySQL 8.4};
+\node[box,right=1.0cm of dom] (ai) {Analyse locale\\appariement};
+\draw[arr] (ui)--(api);\draw[arr] (api)--(dom);\draw[arr] (dom)--(pg);\draw[arr] (dom)--(ai);
+\end{tikzpicture}
+\end{center}
+
+\section{Aide à la décision locale (sans API payante)}
+\begin{itemize}[leftmargin=1.4em]
+  \item Service métier Java exécuté \textbf{in-process} (aucune dépendance à un fournisseur cloud facturé).
+  \item Entrées : compétences du profil + exigences de l'offre (+ termes extraits du CV si disponible).
+  \item Sortie : score d'appariement $0$--$100$, compétences couvertes / manquantes.
+  \item Algorithme : intersection normalisée de jeux de compétences (Jaccard / couverture pondérée) --- déterministe, auditable, reproductible.
+  \item Décision finale exclusivement humaine.
+\end{itemize}
+
+\chapter{Modèle de données (MySQL)}
+\label{ch:data}
+
+Entités principales : \texttt{users}, \texttt{candidate\_profiles}, \texttt{companies}, \texttt{recruiter\_profiles}, \texttt{job\_offers} (\texttt{response\_time\_days}), \texttt{applications} (\texttt{status}, \texttt{response\_deadline}, \texttt{sla\_breached}), \texttt{application\_status\_history}, \texttt{interviews}, \texttt{refusal\_reason\_catalog}, \texttt{application\_refusals}, \texttt{notifications}, \texttt{matching\_analyses}, \texttt{consent\_records}.
+
+Contraintes : unicité \texttt{(job\_offer\_id, candidate\_id)} ; index sur \texttt{status}, \texttt{response\_deadline} ; intégrité référentielle stricte.
+
+\chapter{API (vue d'ensemble)}
+\label{ch:api}
+
+Groupes principaux : \texttt{/api/v1/auth}, \texttt{/api/v1/candidates}, \texttt{/api/v1/companies}, \texttt{/api/v1/offers}, \texttt{/api/v1/applications}, \texttt{/api/v1/interviews}, \texttt{/api/v1/analytics}, \texttt{/api/v1/matching}, \texttt{/api/v1/notifications}. Versionnement d'API dès l'origine (\texttt{v1}).
+
+\chapter{Plan de réalisation}
+\label{ch:plan}
+
+\begin{table}[H]
+\centering
+\caption{Jalons (8 itérations)}
+\begin{tabularx}{\textwidth}{@{}cX@{}}
+\toprule
+\textbf{Itération} & \textbf{Contenu} \\
+\midrule
+1 & Socle Spring Boot~3, MySQL, Flyway, sécurité JWT \\
+2 & Profils, organisations, offres \\
+3 & Candidatures + machine à états + audit \\
+4 & Engagement de délai + alertes + indice de réactivité \\
+5 & Entretiens + motifs de rejet \\
+6 & Module d'appariement local + persistance des scores \\
+7 & Tableaux de bord + OpenAPI + tests (Testcontainers MySQL) \\
+8 & Conteneurisation, démonstration, dossier de livraison \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Critères d'acceptation}
+\label{ch:accept}
+
+Scénario nominal de validation : création d'organisation et d'offre avec engagement de délai ; candidature ; transitions jusqu'à entretien ; rejet refusant l'absence de motif ; acceptation alternative ; vérification de l'indice de réactivité ; exécution d'un appariement local ; consultation OpenAPI.
+
+\chapter{Risques}
+\label{ch:risques}
+
+\begin{table}[H]
+\centering
+\caption{Risques principaux}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+\textbf{Risque} & \textbf{Impact} & \textbf{Maîtrise} \\
+\midrule
+Extension incontrôlée du périmètre & Retard & Gel des exclusions (paiement natif, scoring autonome, applications mobiles natives) \\
+Données personnelles & Non-conformité & Consentements, minimisation, journalisation \\
+Non-respect contrainte MySQL / API payantes & Non-conformité pédagogique & Stack figée MySQL ; analyse 100\,\% locale \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\chapter{Livrables}
+\begin{enumerate}[leftmargin=1.4em]
+  \item Présent cahier des charges.
+  \item Étude de benchmarking sourcée (document associé).
+  \item Code source, migrations Flyway, composition Docker.
+  \item Spécification OpenAPI.
+  \item Protocole de démonstration et jeux de données.
+\end{enumerate}
+
+\chapter{Conclusion}
+HireLink formalise un ATS bilatéral contemporain : orchestration du pipeline, réduction de l'asymétrie d'information, engagement de délai, auditabilité des rejets, et aide à la décision locale --- sur une stack Spring Boot~3 / \textbf{MySQL}, conforme à l'interdiction des API payantes.
+
+\begin{thebibliography}{99}
+\bibitem{africawork-top7} AfricaWork, ``The Ranking of the Top 7 Recruitment Platforms in Morocco 2025'', \url{https://www.africawork.com/blog/the-ranking-of-the-top-7-recruitment-platforms-in-morocco-2025}.
+\bibitem{africawork-ats} AfricaWork, ``Recruitment Technology in Morocco: LinkedIn, Job Boards, and ATS Compared'', \url{https://www.africawork.com/blog/digital-recruitment-morocco-linkedin-job-boards-ats}.
+\bibitem{rekrute-teamtailor} Teamtailor, ``rekrute Integration'', \url{https://integrations.teamtailor.com/en/integrations/rekrute}.
+\bibitem{cbo-hrmaps} CBO GROUP, ``Logiciel de Recrutement \& ATS au Maroc'', \url{https://cbo.ma/logiciel-recrutement-ats-maroc/}.
+\bibitem{loi0908} CNDP, Loi n$^\circ$09-08, \url{https://www.cndp.ma/wp-content/uploads/2023/11/Loi-09-08-Fr.pdf}.
+\end{thebibliography}
+
+\end{document}
+

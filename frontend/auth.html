@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Accès — HireLink</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/design-system.css" />
+  <link rel="stylesheet" href="css/auth.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-layout">
+    <aside class="auth-hero">
+      <a class="brand" href="index.html">
+        <span class="brand-mark brand-mark--pulse" aria-hidden="true"></span>
+        <span class="brand-name">Hi<span class="r-pulse">r</span>e<span style="color:#e2c98a">Link</span></span>
+      </a>
+
+      <div class="auth-timeline-wrap">
+        <p class="auth-timeline-kicker">Pourquoi HireLink</p>
+        <h2 class="auth-timeline-title">Un parcours clair, des deux côtés.</h2>
+
+        <div class="auth-lux-timeline" id="auth-timeline" aria-label="Points forts">
+          <div class="auth-lux-line" aria-hidden="true">
+            <span class="auth-lux-progress" id="auth-lux-progress"></span>
+          </div>
+
+          <article class="auth-lux-step" data-side="left">
+            <div class="auth-lux-dot" aria-hidden="true"><span></span></div>
+            <div class="auth-lux-card">
+              <span class="auth-lux-num">01</span>
+              <h3>Chaque étape visible</h3>
+              <p>Candidat et recruteur avancent sur le même fil.</p>
+            </div>
+          </article>
+
+          <article class="auth-lux-step" data-side="right">
+            <div class="auth-lux-dot" aria-hidden="true"><span></span></div>
+            <div class="auth-lux-card">
+              <span class="auth-lux-num">02</span>
+              <h3>Délais tenus</h3>
+              <p>Chaque offre s’engage — plus d’attente sans réponse.</p>
+            </div>
+          </article>
+
+          <article class="auth-lux-step" data-side="left">
+            <div class="auth-lux-dot" aria-hidden="true"><span></span></div>
+            <div class="auth-lux-card">
+              <span class="auth-lux-num">03</span>
+              <h3>Le bon profil, vite</h3>
+              <p>Matching local et import CV sans friction.</p>
+            </div>
+          </article>
+
+          <article class="auth-lux-step" data-side="right">
+            <div class="auth-lux-dot" aria-hidden="true"><span></span></div>
+            <div class="auth-lux-card">
+              <span class="auth-lux-num">04</span>
+              <h3>Entreprises vérifiées</h3>
+              <p>Identité contrôlée avant toute publication.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </aside>
+
+    <section class="auth-panel">
+      <div class="auth-card">
+        <div class="auth-tabs" role="tablist">
+          <span class="auth-tabs-pill" id="tabs-pill" aria-hidden="true"></span>
+          <button type="button" class="auth-tab" data-mode="register" id="tab-register" role="tab">Inscription</button>
+          <button type="button" class="auth-tab" data-mode="login" id="tab-login" role="tab">Connexion</button>
+        </div>
+
+        <ol class="pipe-steps" id="pipe-steps" aria-label="Étapes d'inscription">
+          <li class="pipe-step is-active" data-step="1"><span>Rôle</span></li>
+          <li class="pipe-step" data-step="2"><span>Identité</span></li>
+          <li class="pipe-step" data-step="3"><span>Code</span></li>
+        </ol>
+
+        <div class="auth-stage">
+          <h2 id="auth-title">Créer un compte</h2>
+          <p class="muted" id="auth-sub">Choisissez votre profil pour commencer.</p>
+
+          <!-- Étape 1 : rôle (inscription) -->
+          <div id="step-role" class="auth-step is-active" data-panel="role">
+            <div class="role-pick">
+              <button type="button" class="role-option is-selected" data-role="CANDIDAT" id="opt-candidat">
+                <strong>Je suis candidat</strong>
+                <span>Découvrir des opportunités adaptées à mon profil</span>
+              </button>
+              <button type="button" class="role-option" data-role="RECRUTEUR" id="opt-recruteur">
+                <strong>Je recrute</strong>
+                <span>Publier des offres et piloter le pipeline</span>
+              </button>
+            </div>
+            <div class="auth-actions">
+              <button type="button" class="btn btn-primary btn-block" id="btn-role-next">Continuer</button>
+            </div>
+          </div>
+
+          <!-- Étape 2 : email (+ entreprise si recruteur) -->
+          <form id="form-email" class="auth-step auth-form" data-panel="email" novalidate>
+            <div class="field recruiter-only is-hidden" id="field-company">
+              <label for="companyName">Raison sociale officielle</label>
+              <input id="companyName" placeholder="Nom exact au registre" autocomplete="organization" />
+            </div>
+            <div class="field recruiter-only is-hidden" id="field-ice">
+              <label for="companyIce">Identifiant entreprise (ICE)</label>
+              <input id="companyIce" inputmode="numeric" pattern="[0-9]{9,15}" maxlength="15" placeholder="9 à 15 chiffres" autocomplete="off" />
+              <span class="field-hint">Contrôlé auprès du registre — un seul compte par entreprise.</span>
+            </div>
+            <div class="field">
+              <label for="email" id="email-label">Email</label>
+              <input id="email" type="email" required placeholder="vous@exemple.ma" autocomplete="email" />
+            </div>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary btn-block">Recevoir le code</button>
+              <button type="button" class="btn btn-ghost btn-block" id="btn-back-role">Retour</button>
+            </div>
+          </form>
+
+          <!-- Étape 3 : OTP -->
+          <form id="form-otp" class="auth-step auth-form" data-panel="otp" novalidate>
+            <div class="field">
+              <label for="otp">Code à 6 chiffres</label>
+              <input id="otp" inputmode="numeric" maxlength="6" required placeholder="••••••" autocomplete="one-time-code" />
+            </div>
+            <p class="field-hint" id="otp-hint"></p>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary btn-block">Entrer dans HireLink</button>
+              <button type="button" class="btn btn-ghost btn-block" id="btn-back-email">Retour</button>
+            </div>
+          </form>
+
+          <!-- Connexion mot de passe -->
+          <form id="form-password" class="auth-step auth-form" data-panel="password" novalidate>
+            <div class="field">
+              <label for="email-pw">Email</label>
+              <input id="email-pw" type="email" required autocomplete="username" placeholder="vous@exemple.ma" />
+            </div>
+            <div class="field">
+              <label for="password">Mot de passe</label>
+              <input id="password" type="password" required minlength="6" autocomplete="current-password" />
+            </div>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+              <button type="button" class="btn btn-ghost btn-block btn-wrap" id="btn-otp-login">
+                Mot de passe oublié ?<br /><span class="btn-sub">Recevoir un code par e-mail</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div class="auth-divider"><span>ou</span></div>
+        <div id="google-btn-host" class="google-btn-host" hidden></div>
+        <button type="button" class="btn btn-google btn-block" id="btn-google" hidden>
+          <span class="g-icon" aria-hidden="true"></span>
+          Continuer avec Google (démo)
+        </button>
+        <p class="field-hint" id="google-hint" style="text-align:center;margin-top:0.55rem"></p>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/password-toggle.js"></script>
+  <script src="js/auth-timeline.js"></script>
+  <script src="js/auth.js"></script>
+</body>
+</html>
