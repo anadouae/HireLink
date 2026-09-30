@@ -1,9 +1,69 @@
 # HireLink
 
-ATS bilatéral — candidats & organisations recruteuses.  
-**ENSA Tétouan** · Frameworks Technologie Web · Douae El Assal
+**Plateforme bilatérale de gestion du recrutement (ATS)** — ENSA Tétouan · Frameworks Technologie Web · Douae El Assal
 
-Pipeline à états contrôlés · SLA visible · motifs de refus catalogue · matching local · assistance IA bornée.
+---
+
+## Description de l’application
+
+HireLink n’est pas un simple jobboard : c’est un **ATS (Applicant Tracking System)** qui pilote le cycle de sélection **après** le dépôt de candidature.
+
+L’application relie deux publics :
+
+- le **candidat** (étudiant, jeune diplômé, salarié en mobilité) qui trouve une offre, postule et suit son dossier ;
+- l’**organisation recruteuse** (PME / ETI, multi-sièges) qui publie des offres, fait avancer un pipeline d’étapes et décide avec des règles claires.
+
+### Problème traité
+
+Sans outil structuré, le suivi dépend de la rigueur manuelle du recruteur : pas de délai garanti, refus souvent non motivés, candidatures « fantômes ». HireLink impose un **pipeline à états contrôlés côté serveur**, un **SLA de réponse visible**, un **motif de refus obligatoire** (catalogue), et un **matching local** pour aider au tri — **sans jamais automatiser la décision finale**.
+
+### Utilisateurs
+
+| Qui | Rôle dans HireLink |
+|-----|--------------------|
+| Candidat | Profil, CV, candidatures, suivi SLA |
+| Personne RH (Owner / Recruteur) | Offres, pipeline, équipe, entretiens |
+| Hiring Manager | Scorecard / entretien sur dossiers assignés |
+| Administrateur | Vérification entreprise (ICE), supervision |
+
+---
+
+## Fonctionnalités
+
+### Candidat
+- Inscription / connexion sécurisée (mot de passe, OTP, Google)
+- Gestion du profil, compétences / langues, dépôt de CV (OCR)
+- Recherche et consultation des offres publiques
+- Candidature guidée (compétences → CV → lettre de motivation)
+- Suivi des candidatures : statut, SLA restant, historique des transitions
+- Assistance IA bornée (préparation entretien, suggestions de profil) avec crédits
+- Export des données personnelles (droit d’accès)
+
+### Organisation (recruteur)
+- Fiche entreprise et vérification ICE
+- Création, publication et clôture d’offres (SLA par offre)
+- Pipeline Kanban : soumise → présélection → shortlist → entretien → offre → décision
+- Transitions sécurisées côté serveur (checklist + règles d’état)
+- Motif de rejet obligatoire choisi dans un **catalogue fermé**
+- Planification d’entretiens (téléphone, visio, présentiel, asynchrone)
+- Scorecard : critères par poste, notes multi-évaluateurs
+- Historique immuable des changements d’étape
+- Organisation multi-membres : Owner / Recruteur / Hiring Manager (invite / rôles)
+- Assistant IA recruteur (grille d’entretien, brouillon de refus) + crédits partagés
+
+### Transversal
+- **Matching local (F14)** : score Jaccard compétences / offre, gratuit, déterministe, sans API externe
+- **Assistant IA (F15)** : rédaction via LLM optionnel (Gemini / Mistral) — jamais de décision automatique ; pas d’identité envoyée au fournisseur
+- **Crédits IA (F16)** : plafonds selon palier (Essentiel / Performance / Accès / Premium)
+- Notifications in-app
+- Espace administration
+
+### Règles métier clés
+- Une candidature ne peut avancer que vers des états autorisés
+- Isolation des données par organisation
+- Refus impossible sans motif catalogue
+- Le matching **ne rejette jamais** automatiquement
+- Un crédit IA n’est débité qu’en cas de succès de la réponse LLM
 
 ---
 
@@ -84,15 +144,6 @@ HireLink/
 ├── database/                # schema SQL
 └── docs/                    # CDC, guides, diagrammes UML
 ```
-
----
-
-## Fonctionnalités (aperçu CDC)
-
-- Auth (mot de passe / OTP / Google) · profils · offres · candidatures · pipeline  
-- SLA · catalogue de refus · scorecard · historique immuable  
-- Matching local (F14) · assistant LLM optionnel (F15) · crédits (F16)  
-- Organisations / rôles Owner–Recruteur–HM · export données (F21)
 
 ---
 
