@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Organisation — HireLink</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/design-system.css" />
+  <link rel="stylesheet" href="../css/app.css" />
+  <script src="../js/theme.js"></script>
+  <style>
+    .org-hero {
+      display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start;
+      justify-content: space-between; margin-bottom: 1.25rem;
+    }
+    .org-kpis {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; margin-bottom: 1.25rem;
+    }
+    @media (max-width: 800px) { .org-kpis { grid-template-columns: 1fr; } }
+    .org-kpi {
+      background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.1rem;
+    }
+    .org-kpi .label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 .35rem; }
+    .org-kpi .value { font-family: var(--font-display); font-size: 1.35rem; margin: 0; }
+    .org-kpi .hint { margin: .35rem 0 0; font-size: .82rem; color: var(--ink-soft); }
+    .member-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+      padding: .85rem 0; border-bottom: 1px solid var(--line);
+    }
+    .member-row:last-child { border-bottom: 0; }
+    .member-meta { display: flex; flex-direction: column; gap: .15rem; }
+    .badge-snippet { display: none; }
+    .badge-snippet.is-open { display: block; }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="row between">
+        <a class="brand" href="recruiter.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
+        <button type="button" class="mobile-toggle" id="close-side">✕</button>
+      </div>
+      <nav class="side-nav">
+        <a class="side-link" href="recruiter.html">Vue d’ensemble</a>
+        <a class="side-link" href="recruiter-pipeline.html">Pipeline</a>
+        <a class="side-link" href="recruiter-offers.html">Mes offres</a>
+        <a class="side-link is-active" href="recruiter-team.html">Organisation</a>
+        <a class="side-link" href="recruiter-settings.html">Paramètres</a>
+        <a class="side-link js-in-app-help" href="../help.html">Aide RH</a>
+      </nav>
+      <div class="side-footer">
+        <div id="side-user">—</div>
+        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
+      </div>
+    </aside>
+    <div class="app-main">
+      <header class="topbar">
+        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
+        <div class="topbar-actions" style="margin-left:auto">
+          <button type="button" class="btn btn-brass btn-sm" id="btn-upgrade">Passer Premium</button>
+          <div class="avatar" id="avatar">R</div>
+        </div>
+      </header>
+      <main class="content">
+        <div class="org-hero">
+          <div>
+            <p class="eyebrow">Espace recruteur</p>
+            <h1 id="org-name" style="margin:0 0 .35rem">Organisation</h1>
+            <p class="muted" id="org-sub" style="margin:0">—</p>
+          </div>
+          <div class="row" style="gap:.5rem;flex-wrap:wrap">
+            <button type="button" class="btn btn-primary" id="btn-invite">Inviter un membre</button>
+            <button type="button" class="btn btn-soft" id="btn-interview-kit">Grille entretien IA</button>
+          </div>
+        </div>
+
+        <div class="org-kpis">
+          <div class="org-kpi">
+            <p class="label">Statut</p>
+            <p class="value" id="kpi-status">—</p>
+            <p class="hint" id="kpi-ice">ICE —</p>
+          </div>
+          <div class="org-kpi">
+            <p class="label">Crédits IA</p>
+            <p class="value" id="kpi-credits">—</p>
+            <p class="hint" id="kpi-plan">Palier —</p>
+          </div>
+          <div class="org-kpi">
+            <p class="label">Fiabilité</p>
+            <p class="value" id="kpi-trust">—</p>
+            <p class="hint"><button type="button" class="btn btn-ghost btn-sm" id="btn-toggle-badge" style="padding:0;height:auto">Badge carrière</button></p>
+          </div>
+        </div>
+
+        <div class="badge-snippet" id="badge-box">
+          <section class="panel" style="margin-bottom:1.25rem">
+            <div class="panel-head"><h2>Badge carrière</h2></div>
+            <div class="panel-body stack">
+              <p class="muted">À coller sur votre page carrière (preuve de fiabilité HireLink).</p>
+              <pre id="badge-html" class="ai-result" style="font-size:0.75rem;max-height:100px"></pre>
+              <button type="button" class="btn btn-soft btn-sm" id="btn-copy-badge">Copier le snippet</button>
+            </div>
+          </section>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Équipe</h2>
+            <span class="badge badge-chrome" id="members-count">0</span>
+          </div>
+          <div class="panel-body">
+            <p class="muted" style="margin-top:0">Rôles : <strong>Owner</strong> (invite), <strong>Recruteur</strong> (pipeline), <strong>Hiring Manager</strong> (scorecard assignée).</p>
+            <div id="members-list"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script src="../js/ui.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/in-app-help.js"></script>
+  <script src="../js/product.js"></script>
+  <script src="../js/shell.js"></script>
+  <script src="../js/growth.js"></script>
+  <script src="../js/recruiter-team.js"></script>
+</body>
+</html>

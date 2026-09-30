@@ -1,0 +1,89 @@
+package ma.ensat.hirelink.controller;
+
+import ma.ensat.hirelink.model.*;
+import ma.ensat.hirelink.repository.ApplicationRepository;
+import ma.ensat.hirelink.repository.RefusalReasonRepository;
+import ma.ensat.hirelink.service.PrivacyService;
+import ma.ensat.hirelink.service.TimelineService;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/v1")
+public class CatalogPrivacyController {
+
+    private final RefusalReasonRepository refusalReasonRepository;
+    private final TimelineService timelineService;
+    private final PrivacyService privacyService;
+    private final ApplicationRepository applicationRepository;
+
+    public CatalogPrivacyController(
+            RefusalReasonRepository refusalReasonRepository,
+            TimelineService timelineService,
+            PrivacyService privacyService,
+            ApplicationRepository applicationRepository
+    ) {
+        this.refusalReasonRepository = refusalReasonRepository;
+        this.timelineService = timelineService;
+        this.privacyService = privacyService;
+        this.applicationRepository = applicationRepository;
+    }
+
+    @GetMapping("/refusal-reasons")
+    public List<Map<String, Object>> refusalReasons() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (RefusalReason r : refusalReasonRepository.findByActiveTrue()) {
+            out.add(Map.of("code", r.getCode(), "label", r.getLabel()));
+        }
+        return out;
+    }
+
+    @GetMapping("/applications/{id}/timeline")
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> timeline(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id
+    ) {
+        Application app = applicationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
+        boolean ok = user.getRole() == Role.ADMINISTRATEUR
+                || app.getCandidate().getId().equals(user.getId())
+                || (user.getRole() == Role.RECRUTEUR
+                    && app.getJobOffer().getRecruiter().getId().equals(user.getId()));
+        if (!ok) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès historique refusé (R03)");
+        }
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (ApplicationStatusHistory h : timelineService.forApplication(id)) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("from", h.getFromStatus());
+            row.put("to", h.getToStatus());
+            row.put("actorUserId", h.getActorUserId());
+            row.put("payload", h.getPayloadJson());
+            row.put("at", h.getCreatedAt().toString());
+            out.add(row);
+        }
+        return out;
+    }
+
+    @GetMapping("/me/export")
+    public Map<String, Object> export(@AuthenticationPrincipal User user) {
+        return privacyService.exportFor(user);
+    }
+
+    @PostMapping("/me/consents")
+    public Map<String, Object> consent(
+            @AuthenticationPrincipal User user,
+            @RequestBody Map<String, Object> body
+    ) {
+        String purpose = String.valueOf(body.getOrDefault("purpose", "recruitment"));
+        boolean granted = !Boolean.FALSE.equals(body.get("granted"));
+        var c = privacyService.recordConsent(user, purpose, granted);
+        return Map.of("purpose", c.getPurpose(), "granted", c.isGranted(), "at", c.getCreatedAt().toString());
+    }
+}

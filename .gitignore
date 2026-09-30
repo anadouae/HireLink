@@ -1,0 +1,38 @@
+# Build
+target/
+backend/target/
+backend/bin/
+*.class
+*.jar
+*.war
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+.classpath
+.project
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+**/application-local.properties
+
+# Python / temp generators
+__pycache__/
+*.pyc
+docs/_gen_*.py
+backend/scripts/gen_cdc_*.py
+
+# Uploads / local
+*.tmp
+~$*

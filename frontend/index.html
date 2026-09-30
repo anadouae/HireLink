@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HireLink — Recrutement à performance équitable</title>
+  <meta name="description" content="HireLink : réciprocité engagée, délais tenus, employeurs vérifiés automatiquement. Payez la valeur — pas le volume." />
+  <meta property="og:title" content="HireLink — Recrutement à performance équitable" />
+  <meta property="og:description" content="Chaque talent mérite une réponse. Chaque offre exige un engagement. Transparence bilatérale, ROI mesurable." />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="fr_FR" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/design-system.css" />
+  <link rel="stylesheet" href="css/landing.css" />
+</head>
+<body class="landing-body">
+  <canvas id="synapse-bg" aria-hidden="true"></canvas>
+  <div class="scroll-progress" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="HireLink">
+      <span class="brand-mark brand-mark--pulse" aria-hidden="true"></span>
+      <span class="brand-name">Hi<span class="r-pulse">r</span>e<span>Link</span></span>
+    </a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="#produit">Produit</a>
+      <a href="#parcours">Parcours</a>
+      <a href="#confiance">Confiance</a>
+      <a href="#tarifs">Tarifs</a>
+      <a href="security.html">Sécurité</a>
+      <a href="help.html">Aide</a>
+      <a href="about.html">À propos</a>
+    </nav>
+    <div class="row">
+      <a class="btn btn-ghost btn-sm" href="auth.html?mode=login">Connexion</a>
+      <a class="btn btn-primary btn-sm" href="auth.html?mode=register">Commencer</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero hero--split reveal">
+      <div class="hero-copy">
+        <p class="eyebrow">HR-Tech · Performance équitable</p>
+        <h1 class="hero-title">
+          <span class="hero-line" style="--d:0">Le recrutement</span>
+          <span class="hero-line" style="--d:1">
+            <span class="hero-accent hero-accent--go">qui répond.</span>
+          </span>
+          <span class="hero-line" style="--d:2">
+            <span class="hero-accent hero-accent--stop">Ou qui s’arrête.</span>
+          </span>
+        </h1>
+        <p class="lead">
+          Parce que chaque talent mérite une réponse et chaque offre exige un engagement.
+          HireLink connecte les meilleurs profils aux entreprises de confiance —
+          délais garantis, vérification automatisée, suivi transparent. Des deux côtés.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="auth.html?mode=register&role=RECRUTEUR">Recruter avec engagement</a>
+          <a class="btn btn-secondary" href="auth.html?mode=register&role=CANDIDAT">Trouver mon poste</a>
+        </div>
+      </div>
+      <div class="hero-media">
+        <div class="video-stage">
+          <video
+            id="hero-video"
+            class="hero-video"
+            muted
+            playsinline
+            autoplay
+            preload="metadata"
+            poster="assets/videos/hero-poster.svg"
+          ></video>
+          <div class="video-fade" aria-hidden="true"></div>
+          <div class="video-dots" id="video-dots" role="tablist" aria-label="Séquences vidéo"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="produit" class="section section-timeline">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Produit</p>
+          <h2>Ce qui brise le statu quo.</h2>
+          <p class="lead">Moins d’attente. Plus de clarté. Une relation mesurable — et respectueuse — des deux côtés.</p>
+        </div>
+
+        <div class="lux-timeline" aria-label="Points forts produit">
+          <div class="lux-timeline-line" aria-hidden="true">
+            <span class="lux-timeline-progress"></span>
+          </div>
+
+          <article class="lux-step reveal-step" data-side="left">
+            <div class="lux-step-dot" aria-hidden="true"><span></span></div>
+            <div class="lux-step-card">
+              <div class="feature-icon">01</div>
+              <h3>Réciprocité engagée</h3>
+              <p>Candidat et recruteur avancent sur le même fil. Chaque étape est visible. Plus de zone d’ombre.</p>
+            </div>
+          </article>
+
+          <article class="lux-step reveal-step" data-side="right">
+            <div class="lux-step-dot" aria-hidden="true"><span></span></div>
+            <div class="lux-step-card">
+              <div class="feature-icon">02</div>
+              <h3>Délais tenus, confiance gagnée</h3>
+              <p>Chaque offre s’engage sur un temps de réponse. Pipeline sécurisé : checks, scorecard, entretiens typés — pas un kanban vide.</p>
+            </div>
+          </article>
+
+          <article class="lux-step reveal-step" data-side="left">
+            <div class="lux-step-dot" aria-hidden="true"><span></span></div>
+            <div class="lux-step-card">
+              <div class="feature-icon">03</div>
+              <h3>Signal fort, pas du volume</h3>
+              <p>Offres classées selon le profil. Les talents voient d’abord ce qui correspond — ROI côté recrutement.</p>
+            </div>
+          </article>
+
+          <article class="lux-step reveal-step" data-side="right">
+            <div class="lux-step-dot" aria-hidden="true"><span></span></div>
+            <div class="lux-step-card">
+              <div class="feature-icon">04</div>
+              <h3>Process + preuves</h3>
+              <p>Checklists bloquantes, timeline immuable, motif de refus obligatoire, offre salariale tracée — gouvernance ATS réelle.</p>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="parcours" class="section section-alt">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">Parcours</p>
+          <h2>De l’envie à la décision.</h2>
+          <p class="lead">Un flux fluide — quatre temps, zéro brouillard.</p>
+        </div>
+        <div class="river" aria-label="Étapes du parcours">
+          <div class="river-flow" aria-hidden="true"></div>
+          <ol class="river-steps">
+            <li class="river-step reveal-step">
+              <span class="river-ico" aria-hidden="true">↗</span>
+              <span class="river-num">1</span>
+              <strong>Postulez</strong>
+              <small>En quelques secondes</small>
+            </li>
+            <li class="river-step reveal-step">
+              <span class="river-ico" aria-hidden="true">◎</span>
+              <span class="river-num">2</span>
+              <strong>Suivez</strong>
+              <small>Chaque étape visible</small>
+            </li>
+            <li class="river-step reveal-step">
+              <span class="river-ico river-ico--svg" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/>
+                </svg>
+              </span>
+              <span class="river-num">3</span>
+              <strong>Échangez</strong>
+              <small>Entretiens cadrés</small>
+            </li>
+            <li class="river-step reveal-step">
+              <span class="river-ico" aria-hidden="true">✓</span>
+              <span class="river-num">4</span>
+              <strong>Décidez</strong>
+              <small>Offre ou retour clair</small>
+            </li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section id="confiance" class="section reveal">
+      <div class="container trust-showcase">
+        <div>
+          <p class="eyebrow">Confiance &amp; sécurité</p>
+          <h2>Vérification automatisée. Zéro flou.</h2>
+          <p class="lead">
+            Identité entreprise contrôlée avant publication. Emails professionnels sécurisés.
+            Les refus s’expliquent — toujours. Pas de boîte noire.
+          </p>
+          <p class="trust-counter"><strong id="trust-count">12+</strong> entreprises déjà passées par le contrôle d’identité.</p>
+        </div>
+        <div class="trust-cards">
+          <div class="trust-card trust-card--a">
+            <div class="trust-anim" aria-hidden="true"></div>
+            <h3>Identité légale en temps réel</h3>
+            <p>Raison sociale + registre + email de domaine. Une entreprise, un compte unique.</p>
+          </div>
+          <div class="trust-card trust-card--b">
+            <div class="trust-anim" aria-hidden="true"></div>
+            <h3>Publication verrouillée</h3>
+            <p>Sans validation, aucune offre n’est visible. Les faux employeurs restent hors radar.</p>
+          </div>
+          <div class="trust-card trust-card--c">
+            <div class="trust-anim" aria-hidden="true"></div>
+            <h3>Sécurité automatisée</h3>
+            <p>Contrôles machine-first : preuves d’identité, domaines pro, alertes de concordance — continuum 2026.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tarifs" class="section section-alt reveal">
+      <div class="container">
+        <div class="section-head">
+          <p class="eyebrow">Tarifs · Pay-per-Value</p>
+          <h2 id="pricing-title">Accélérez votre carrière</h2>
+          <p class="lead" id="pricing-lead">
+            ROI personnel clair : activez votre recherche gratuitement, passez en Performance pour diviser votre temps de recherche.
+          </p>
+        </div>
+
+        <div class="pricing-switch" role="tablist" aria-label="Voir les tarifs">
+          <button type="button" class="is-active" role="tab" aria-selected="true" data-pricing="candidat" id="price-tab-candidat">Candidats</button>
+          <button type="button" role="tab" aria-selected="false" data-pricing="recruteur" id="price-tab-recruteur">Recruteurs</button>
+        </div>
+
+        <div class="pricing pricing--2" id="pricing-candidat" role="tabpanel">
+          <article class="price-card">
+            <p class="eyebrow">Essentiel</p>
+            <div class="price">0 <small>MAD</small></div>
+            <p class="price-note">Activez votre recherche sans friction.</p>
+            <ul>
+              <li><strong>Transparence totale :</strong> Postuler et suivre son parcours en temps réel.</li>
+              <li><strong>Matching intelligent :</strong> Offres classées selon votre profil réel.</li>
+              <li><strong>Zéro saisie :</strong> Import de CV automatisé en un geste.</li>
+            </ul>
+            <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=CANDIDAT">Activer ma recherche</a>
+          </article>
+          <article class="price-card is-featured">
+            <span class="tag badge badge-rose">ROI perso</span>
+            <p class="eyebrow">Performance</p>
+            <div class="price">39 <small>MAD / mois</small></div>
+            <p class="price-note">Divisez votre temps de recherche par deux.</p>
+            <ul>
+              <li><strong>Visibilité maximale :</strong> Profil certifié mis en avant auprès des recruteurs.</li>
+              <li><strong>Zéro opportunité manquée :</strong> Alertes ultra-ciblées en temps réel.</li>
+              <li><strong>Avantage premier arrivé :</strong> Accès prioritaire exclusif aux nouvelles offres.</li>
+            </ul>
+            <a class="btn btn-primary btn-block" href="auth.html?mode=register&role=CANDIDAT">Passer en Performance</a>
+          </article>
+        </div>
+
+        <div class="pricing pricing--2" id="pricing-recruteur" role="tabpanel" hidden>
+          <article class="price-card">
+            <p class="eyebrow">Accès</p>
+            <div class="price">0 <small>MAD</small></div>
+            <p class="price-note">Automatisez votre sourcing de confiance.</p>
+            <ul>
+              <li><strong>Pipeline fluide :</strong> Outils de suivi des candidatures (ATS) inclus.</li>
+              <li><strong>Badge de confiance :</strong> Vérification légale instantanée par API.</li>
+              <li><strong>Engagement visible :</strong> Affichage de vos délais de réponse garantis.</li>
+            </ul>
+            <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=RECRUTEUR">Activer mon sourcing</a>
+          </article>
+          <article class="price-card is-featured">
+            <span class="tag badge badge-rose">ROI entreprise</span>
+            <p class="eyebrow">Premium</p>
+            <div class="price">299 <small>MAD / mois</small></div>
+            <p class="price-note">Sécurisez les meilleurs talents avant vos concurrents.</p>
+            <ul>
+              <li><strong>Collaboration totale :</strong> Multi-sièges pour aligner vos équipes.</li>
+              <li><strong>Attraction augmentée :</strong> Offres prioritaires à forte visibilité.</li>
+              <li><strong>Pilotage par la donnée :</strong> Alertes intelligentes et reporting ROI automatisé.</li>
+            </ul>
+            <a class="btn btn-primary btn-block" href="auth.html?mode=register&role=RECRUTEUR">Sécuriser les talents</a>
+          </article>
+        </div>
+        <p class="pricing-footnote faint">Vous ne payez pas le bruit — vous investissez la valeur. Gratuit pour activer. Premium pour accélérer.</p>
+      </div>
+    </section>
+
+    <div class="cta-band reveal">
+      <div>
+        <h2>Prêt à recruter (ou postuler) avec engagement ?</h2>
+        <p>Compte en quelques secondes. Le profil se construit après — quand vous êtes prêt.</p>
+      </div>
+      <a class="btn btn-primary" href="auth.html?mode=register">Créer mon compte</a>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-glow" aria-hidden="true"></div>
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="brand" href="index.html">
+          <span class="brand-mark brand-mark--pulse" aria-hidden="true"></span>
+          <span class="brand-name">Hi<span class="r-pulse">r</span>e<span style="color:#e2c98a">Link</span></span>
+        </a>
+        <p>Le recrutement qui répond — ou qui s’arrête.</p>
+      </div>
+      <nav class="footer-nav" aria-label="Pied de page">
+        <div class="footer-col">
+          <span class="footer-label">Produit</span>
+          <a href="index.html#produit">Fonctionnalités</a>
+          <a href="index.html#tarifs">Tarifs</a>
+          <a href="index.html#parcours">Parcours</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-label">Confiance</span>
+          <a href="security.html">Sécurité</a>
+          <a href="help.html">Aide &amp; FAQ</a>
+          <a href="about.html">À propos</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-label">Accès</span>
+          <a href="auth.html?mode=login">Connexion</a>
+          <a href="auth.html?mode=register">Créer un compte</a>
+          <a href="about.html#contact">Contact</a>
+        </div>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span id="footer-year">2026</span> HireLink</span>
+      <div class="footer-live" aria-hidden="true">
+        <span class="footer-live-mark brand-mark brand-mark--pulse"></span>
+        <span class="footer-live-word">Hi<span class="r-pulse">r</span>e<span class="footer-live-gold">Link</span></span>
+        <span class="footer-pulse"></span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/synapse.js"></script>
+  <script src="js/landing-hero.js"></script>
+  <script src="js/pricing-switch.js"></script>
+  <script src="js/reveal.js"></script>
+  <script src="js/nav.js"></script>
+  <script>
+    var y = document.getElementById("footer-year");
+    if (y) y.textContent = String(new Date().getFullYear());
+  </script>
+</body>
+</html>

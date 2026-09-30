@@ -1,0 +1,5 @@
+# Configuration locale (exemple)
+# Copier vers application-local.properties et adapter le mot de passe MySQL.
+
+spring.datasource.username=root
+spring.datasource.password=VOTRE_MOT_DE_PASSE

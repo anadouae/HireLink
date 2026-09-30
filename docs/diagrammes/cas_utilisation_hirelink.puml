@@ -1,0 +1,40 @@
+@startuml HireLink_UseCases
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+actor "Candidat" as Cand
+actor "Personne RH\n(Owner/Recruteur)" as RH
+actor "Hiring Manager" as HM
+actor "Administrateur" as Admin
+actor "Matching local" as Match
+actor "Fournisseur LLM" as LLM
+actor "Scheduler" as Sched
+rectangle "HireLink" {
+  usecase "S'authentifier" as UC01
+  usecase "Gérer profil / CV" as UC02
+  usecase "Consulter offres" as UC03
+  usecase "Postuler" as UC04
+  usecase "Suivre candidatures + SLA" as UC05
+  usecase "Créer / publier offre" as UC07
+  usecase "Piloter pipeline" as UC08
+  usecase "Noter scorecard" as UC10
+  usecase "Assistance IA" as UC12
+  usecase "Calculer matching" as UC15
+  usecase "Administrer" as UC99
+}
+Cand --> UC01
+Cand --> UC02
+Cand --> UC03
+Cand --> UC04
+Cand --> UC05
+RH --> UC01
+RH --> UC07
+RH --> UC08
+RH --> UC12
+HM --> UC10
+Admin --> UC99
+UC04 ..> UC15 : <<include>>
+Match --> UC15
+LLM --> UC12
+Sched --> UC05
+@enduml

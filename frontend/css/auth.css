@@ -1,0 +1,618 @@
+/* Auth — layout propre, étapes exclusives, pas de superposition */
+
+[hidden] {
+  display: none !important;
+}
+
+.r-pulse {
+  display: inline-block;
+  background: linear-gradient(120deg, #7a2032, #e87030, #e2c98a, #8a9199, #7a2032);
+  background-size: 220% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: r-beat 1.35s ease-in-out infinite, r-shine 4s linear infinite;
+}
+@keyframes r-beat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.18); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.12); }
+  56% { transform: scale(1); }
+}
+@keyframes r-shine {
+  to { background-position: 220% center; }
+}
+
+.brand-mark--pulse {
+  animation: heartbeat 1.35s ease-in-out infinite;
+}
+@keyframes heartbeat {
+  0%, 100% { transform: scale(1); }
+  14% { transform: scale(1.14); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.1); }
+  56% { transform: scale(1); }
+}
+
+.auth-body {
+  min-height: 100vh;
+}
+
+.auth-layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.auth-hero {
+  background:
+    radial-gradient(600px 400px at 20% 20%, rgba(122, 32, 50, 0.32), transparent 60%),
+    radial-gradient(500px 360px at 80% 80%, rgba(232, 112, 48, 0.22), transparent 55%),
+    linear-gradient(160deg, var(--navy) 0%, #0a0810 100%);
+  color: #f7f2e7;
+  padding: clamp(1.5rem, 3.5vw, 2.5rem);
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  min-height: 100vh;
+}
+
+.auth-timeline-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
+
+.auth-timeline-kicker {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e2c98a;
+}
+
+.auth-timeline-title {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.45rem, 2.6vw, 1.9rem);
+  color: #fff;
+  max-width: 16ch;
+  line-height: 1.2;
+}
+
+.auth-lux-timeline {
+  position: relative;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.auth-lux-line {
+  position: absolute;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.auth-lux-progress {
+  display: block;
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(180deg, #7a2032, #e87030);
+  border-radius: inherit;
+  transition: height 0.55s var(--ease);
+}
+
+.auth-lux-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.35rem;
+  align-items: center;
+  margin-bottom: 1.15rem;
+  opacity: 0;
+  transition: opacity 0.55s var(--ease), transform 0.55s var(--ease);
+}
+
+.auth-lux-step:last-child {
+  margin-bottom: 0;
+}
+
+.auth-lux-step[data-side="left"] {
+  transform: translateX(-18px);
+}
+
+.auth-lux-step[data-side="right"] {
+  transform: translateX(18px);
+}
+
+.auth-lux-step.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.auth-lux-step[data-side="left"] .auth-lux-card {
+  grid-column: 1;
+  justify-self: end;
+  text-align: right;
+}
+
+.auth-lux-step[data-side="right"] .auth-lux-card {
+  grid-column: 2;
+  justify-self: start;
+  text-align: left;
+}
+
+.auth-lux-dot {
+  position: absolute;
+  left: 50%;
+  top: 1.1rem;
+  transform: translateX(-50%);
+  z-index: 2;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: #120e16;
+  border: 2px solid rgba(217, 186, 106, 0.35);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 5px rgba(14, 26, 46, 0.85);
+}
+
+.auth-lux-dot span {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: #7a2032;
+  transform: scale(0.35);
+  opacity: 0.35;
+  transition: transform 0.4s var(--ease), opacity 0.4s var(--ease);
+}
+
+.auth-lux-step.is-visible .auth-lux-dot {
+  border-color: #e2c98a;
+}
+
+.auth-lux-step.is-visible .auth-lux-dot span {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.auth-lux-step.is-current .auth-lux-dot span {
+  animation: auth-lux-pulse 1.8s ease-out infinite;
+}
+
+@keyframes auth-lux-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(122, 32, 50, 0.55); }
+  70% { box-shadow: 0 0 0 10px rgba(122, 32, 50, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(122, 32, 50, 0); }
+}
+
+.auth-lux-card {
+  width: min(100%, 210px);
+  padding: 0.85rem 0.95rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.3s var(--ease), background 0.3s var(--ease),
+    transform 0.3s var(--ease);
+}
+
+.auth-lux-step.is-current .auth-lux-card {
+  background: rgba(122, 32, 50, 0.14);
+  border-color: rgba(217, 186, 106, 0.4);
+  transform: translateY(-2px);
+}
+
+.auth-lux-num {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  color: #e2c98a;
+  margin-bottom: 0.3rem;
+}
+
+.auth-lux-card h3 {
+  margin: 0 0 0.3rem;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.auth-lux-card p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: rgba(247, 242, 231, 0.7);
+}
+
+.auth-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.25rem, 3vw, 2.5rem);
+  background:
+    radial-gradient(500px 300px at 100% 0%, rgba(122, 32, 50, 0.08), transparent 50%),
+    var(--paper);
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 1.5rem 1.35rem 1.4rem;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  overflow: visible;
+}
+
+.auth-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.3rem;
+  padding: 0.28rem;
+  background: var(--paper-2);
+  border-radius: var(--radius-pill);
+  margin-bottom: 1.15rem;
+}
+
+.auth-tabs-pill {
+  position: absolute;
+  top: 0.28rem;
+  left: 0.28rem;
+  width: calc(50% - 0.28rem);
+  height: calc(100% - 0.56rem);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.35s var(--ease);
+  z-index: 0;
+}
+
+.auth-tabs-pill.is-login {
+  transform: translateX(100%);
+}
+
+.auth-tab {
+  position: relative;
+  z-index: 1;
+  border: 0;
+  background: transparent;
+  padding: 0.55rem 0.4rem;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 0.92rem;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+
+.auth-tab.is-active {
+  color: var(--ink);
+}
+
+/* Stepper — une seule numérotation via CSS */
+.pipe-steps {
+  list-style: none;
+  display: flex;
+  align-items: stretch;
+  gap: 0.4rem;
+  margin: 0 0 1.35rem;
+  padding: 0;
+  counter-reset: pipe;
+}
+
+.pipe-steps.is-hidden {
+  display: none !important;
+}
+
+.pipe-step {
+  counter-increment: pipe;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  min-width: 0;
+}
+
+.pipe-step::before {
+  content: counter(pipe);
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  border-radius: 99px;
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  transition: background 0.25s var(--ease), color 0.25s var(--ease), border-color 0.25s var(--ease);
+}
+
+.pipe-step > span {
+  display: block;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.pipe-step.is-active {
+  color: var(--rose-deep);
+}
+
+.pipe-step.is-active::before {
+  background: linear-gradient(135deg, var(--rose), var(--brass));
+  border-color: transparent;
+  color: #fff;
+}
+
+.pipe-step.is-done {
+  color: var(--ok);
+}
+
+.pipe-step.is-done::before {
+  content: "✓";
+  background: var(--ok-bg);
+  border-color: transparent;
+  color: var(--ok);
+}
+
+.auth-stage {
+  min-height: 280px;
+  min-width: 0;
+  width: 100%;
+}
+
+.auth-stage h2 {
+  margin: 0 0 0.3rem;
+  font-size: 1.4rem;
+}
+
+.auth-stage > .muted {
+  margin: 0 0 1.1rem;
+  font-size: 0.92rem;
+}
+
+/* Une seule étape visible à la fois */
+.auth-step {
+  display: none;
+  animation: step-in 0.35s var(--ease);
+}
+
+.auth-step.is-active {
+  display: block;
+}
+
+.auth-step.is-active.auth-form {
+  display: grid;
+  gap: 0.85rem;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.auth-form .field,
+.auth-form .auth-actions {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.auth-actions .btn {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.google-btn-host {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+}
+
+.google-btn-host iframe {
+  margin: 0 auto !important;
+}
+
+.auth-card .btn-google {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.role-pick {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+}
+
+.role-option {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.95rem 1rem;
+  cursor: pointer;
+  background: #fff;
+  text-align: left;
+  width: 100%;
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.role-option:hover {
+  border-color: rgba(122, 32, 50, 0.45);
+}
+
+.role-option.is-selected {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px var(--rose-soft);
+}
+
+.role-option strong {
+  display: block;
+  font-size: 0.95rem;
+  margin-bottom: 0.15rem;
+}
+
+.role-option span {
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.auth-actions {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.15rem 0;
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.btn-google {
+  background: #fff;
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.btn-google:hover {
+  border-color: var(--rose);
+  box-shadow: 0 0 0 3px var(--rose-soft);
+}
+
+.g-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: conic-gradient(#ea4335 0 25%, #fbbc05 0 50%, #34a853 0 75%, #4285f4 0);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.recruiter-only.is-hidden {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .auth-layout {
+    grid-template-columns: 1fr;
+  }
+  .auth-hero {
+    min-height: auto;
+    padding-bottom: 1.5rem;
+  }
+  .auth-timeline-title {
+    max-width: none;
+    margin-bottom: 1.1rem;
+  }
+  .auth-lux-line {
+    left: 0.85rem;
+    transform: none;
+  }
+  .auth-lux-step {
+    grid-template-columns: 1fr;
+    padding-left: 2.2rem;
+    gap: 0;
+  }
+  .auth-lux-step[data-side="left"],
+  .auth-lux-step[data-side="right"] {
+    transform: translateY(14px);
+  }
+  .auth-lux-step.is-visible {
+    transform: none;
+  }
+  .auth-lux-step[data-side="left"] .auth-lux-card,
+  .auth-lux-step[data-side="right"] .auth-lux-card {
+    grid-column: 1;
+    justify-self: stretch;
+    text-align: left;
+    width: 100%;
+  }
+  .auth-lux-dot {
+    left: 0.85rem;
+  }
+  .auth-stage {
+    min-height: 0;
+  }
+}
+
+/* Password reveal */
+.pw-field {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+.pw-field input {
+  width: 100%;
+  padding-right: 2.75rem;
+  box-sizing: border-box;
+}
+.pw-toggle {
+  position: absolute;
+  right: 0.45rem;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  padding: 0;
+}
+.pw-toggle:hover {
+  color: var(--burgundy);
+  background: var(--burgundy-soft);
+}
+.pw-toggle:focus-visible {
+  outline: 2px solid var(--burgundy);
+  outline-offset: 1px;
+}
