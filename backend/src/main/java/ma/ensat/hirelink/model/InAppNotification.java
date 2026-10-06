@@ -5,7 +5,11 @@ import java.time.Instant;
 
 /** F19 — notification in-app. */
 @Entity
-@Table(name = "notifications")
+@Table(name = "notifications", indexes = {
+        @Index(name = "idx_notif_user", columnList = "user_id"),
+        @Index(name = "idx_notif_user_read", columnList = "user_id,read_flag"),
+        @Index(name = "idx_notif_created", columnList = "created_at")
+})
 public class InAppNotification {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -34,4 +38,5 @@ public class InAppNotification {
     public boolean isReadFlag() { return readFlag; }
     public void setReadFlag(boolean readFlag) { this.readFlag = readFlag; }
     public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

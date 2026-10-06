@@ -5,7 +5,12 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "applications",
-       uniqueConstraints = @UniqueConstraint(columnNames = {"candidate_id", "job_offer_id"}))
+       uniqueConstraints = @UniqueConstraint(columnNames = {"candidate_id", "job_offer_id"}),
+       indexes = {
+           @Index(name = "idx_app_status", columnList = "status"),
+           @Index(name = "idx_app_submitted", columnList = "submitted_at"),
+           @Index(name = "idx_app_candidate", columnList = "candidate_id")
+       })
 public class Application {
 
     @Id

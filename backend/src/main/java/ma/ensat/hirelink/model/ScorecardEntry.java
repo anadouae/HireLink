@@ -4,7 +4,11 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "scorecard_entries")
+@Table(name = "scorecard_entries", indexes = {
+        @Index(name = "idx_se_application", columnList = "application_id"),
+        @Index(name = "idx_se_criterion", columnList = "criterion_id"),
+        @Index(name = "idx_se_evaluator", columnList = "evaluator_user_id")
+})
 public class ScorecardEntry {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

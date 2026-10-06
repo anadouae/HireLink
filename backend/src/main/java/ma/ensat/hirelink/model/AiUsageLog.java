@@ -4,7 +4,11 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "ai_usage_logs")
+@Table(name = "ai_usage_logs", indexes = {
+        @Index(name = "idx_ai_user", columnList = "user_id"),
+        @Index(name = "idx_ai_org", columnList = "organization_id"),
+        @Index(name = "idx_ai_created", columnList = "created_at")
+})
 public class AiUsageLog {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

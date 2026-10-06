@@ -3,7 +3,9 @@ package ma.ensat.hirelink.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "scorecard_criteria")
+@Table(name = "scorecard_criteria", indexes = {
+        @Index(name = "idx_sc_offer", columnList = "job_offer_id")
+})
 public class ScorecardCriterion {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

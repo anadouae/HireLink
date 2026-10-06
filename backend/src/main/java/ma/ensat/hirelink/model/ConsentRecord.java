@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "consent_records")
+@Table(name = "consent_records", indexes = {
+        @Index(name = "idx_consent_user", columnList = "user_id"),
+        @Index(name = "idx_consent_purpose", columnList = "purpose")
+})
 public class ConsentRecord {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

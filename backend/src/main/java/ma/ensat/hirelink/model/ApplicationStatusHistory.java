@@ -5,7 +5,10 @@ import java.time.Instant;
 
 /** Timeline immuable F13 / R12 — append-only. */
 @Entity
-@Table(name = "application_status_history")
+@Table(name = "application_status_history", indexes = {
+        @Index(name = "idx_ash_application", columnList = "application_id"),
+        @Index(name = "idx_ash_created", columnList = "created_at")
+})
 public class ApplicationStatusHistory {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -34,4 +37,5 @@ public class ApplicationStatusHistory {
     public String getPayloadJson() { return payloadJson; }
     public void setPayloadJson(String payloadJson) { this.payloadJson = payloadJson; }
     public Instant getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }
