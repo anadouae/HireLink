@@ -1,40 +1,47 @@
-@startuml HireLink_UseCases
+@startuml
 left to right direction
 skinparam packageStyle rectangle
-skinparam actorStyle awesome
-actor "Candidat" as Cand
-actor "Personne RH\n(Owner/Recruteur)" as RH
+actor "Candidat" as C
+actor "Personne RH\n(Owner / Recruteur)" as RH
 actor "Hiring Manager" as HM
-actor "Administrateur" as Admin
-actor "Matching local" as Match
-actor "Fournisseur LLM" as LLM
-actor "Scheduler" as Sched
+actor "Administrateur de l'application HireLink" as A
+rectangle "« système »\nMatching local" as M
+rectangle "« système »\nFournisseur LLM" as L
+rectangle "« système »\nMessagerie / e-mail" as E
+rectangle "« système »\nPaiement / facturation" as P
+rectangle "« système »\nScheduler SLA" as S
+rectangle "« système »\nIdentité Google" as G
 rectangle "HireLink" {
-  usecase "S'authentifier" as UC01
-  usecase "Gérer profil / CV" as UC02
-  usecase "Consulter offres" as UC03
-  usecase "Postuler" as UC04
-  usecase "Suivre candidatures + SLA" as UC05
-  usecase "Créer / publier offre" as UC07
-  usecase "Piloter pipeline" as UC08
-  usecase "Noter scorecard" as UC10
-  usecase "Assistance IA" as UC12
-  usecase "Calculer matching" as UC15
-  usecase "Administrer" as UC99
+  usecase "S'authentifier" as Auth
+  usecase "Postuler à une offre" as Post
+  usecase "Calculer le matching local" as Match
+  usecase "Créer / publier une offre" as Creer
+  usecase "Définir le SLA de l'offre" as SLA
+  usecase "Utiliser l'assistance IA" as IA
+  usecase "Débiter un crédit IA" as Credit
+  usecase "Notifier (in-app / e-mail)" as Notif
+  usecase "Motiver un refus" as Refus
+  usecase "Avancer une candidature" as Avancer
+  usecase "Auth. via Google" as AG
+  usecase "Gérer paiement / abonnement" as Pay
 }
-Cand --> UC01
-Cand --> UC02
-Cand --> UC03
-Cand --> UC04
-Cand --> UC05
-RH --> UC01
-RH --> UC07
-RH --> UC08
-RH --> UC12
-HM --> UC10
-Admin --> UC99
-UC04 ..> UC15 : <<include>>
-Match --> UC15
-LLM --> UC12
-Sched --> UC05
+C --> Auth
+C --> Post
+RH --> Creer
+RH --> Avancer
+HM --> Auth
+A --> Auth
+Post ..> Match : <<include>>
+Creer ..> SLA : <<include>>
+IA ..> Credit : <<include>>
+Post ..> Notif : <<include>>
+Refus ..> Avancer : <<extend>>
+AG ..> Auth : <<extend>>
+Pay ..> IA : <<extend>>
+M --> Match
+L --> IA
+E --> Notif
+P --> Pay
+S --> Auth
+G --> AG
 @enduml

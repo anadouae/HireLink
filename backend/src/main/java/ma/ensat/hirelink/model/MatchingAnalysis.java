@@ -4,7 +4,10 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "matching_analyses")
+@Table(name = "matching_analyses", indexes = {
+        @Index(name = "idx_match_application", columnList = "application_id"),
+        @Index(name = "idx_match_created", columnList = "created_at")
+})
 public class MatchingAnalysis {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

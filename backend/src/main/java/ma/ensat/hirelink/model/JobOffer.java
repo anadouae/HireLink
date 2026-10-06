@@ -4,7 +4,11 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 @Entity
-@Table(name = "job_offers")
+@Table(name = "job_offers", indexes = {
+        @Index(name = "idx_offer_published", columnList = "published"),
+        @Index(name = "idx_offer_recruiter", columnList = "recruiter_id"),
+        @Index(name = "idx_offer_created", columnList = "created_at")
+})
 public class JobOffer {
 
     @Id

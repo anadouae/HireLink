@@ -2,6 +2,9 @@
 target/
 backend/target/
 backend/bin/
+backend/BOOT-INF/
+backend/tmp_jar_check/
+backend/tmp_jar_check2/
 *.class
 *.jar
 *.war
