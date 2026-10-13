@@ -1,0 +1,243 @@
+{
+  "info": {
+    "name": "HireLink — CRUD Séance 4",
+    "description": "Tests Postman CRUD : Offres, Motifs de refus, Notifications",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8081/api/v1" },
+    { "key": "token", "value": "" },
+    { "key": "offerId", "value": "1" },
+    { "key": "refusalId", "value": "1" },
+    { "key": "notifId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login recruteur",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.accessToken) pm.collectionVariables.set('token', j.accessToken);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"recruteur@hirelink.ma\",\n  \"password\": \"Recruteur123!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Login admin",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.accessToken) pm.collectionVariables.set('token', j.accessToken);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@hirelink.ma\",\n  \"password\": \"Admin123!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CRUD Offres",
+      "item": [
+        {
+          "name": "CREATE offre",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) pm.collectionVariables.set('offerId', String(j.id));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dev Spring — test CRUD\",\n  \"description\": \"Offre créée via Postman\",\n  \"requiredSkills\": \"Java,Spring\",\n  \"location\": \"Tétouan\",\n  \"contractType\": \"CDI\",\n  \"responseSlaDays\": 7,\n  \"published\": false\n}"
+            },
+            "url": "{{baseUrl}}/offers"
+          }
+        },
+        {
+          "name": "READ liste mes offres",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/offers/mine"
+          }
+        },
+        {
+          "name": "READ offre by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/offers/{{offerId}}"
+          }
+        },
+        {
+          "name": "UPDATE offre",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Dev Spring — test CRUD (modifié)\",\n  \"description\": \"Mise à jour Postman\",\n  \"requiredSkills\": \"Java,Spring,MySQL\",\n  \"location\": \"Tétouan\",\n  \"contractType\": \"CDI\",\n  \"responseSlaDays\": 5,\n  \"published\": false\n}"
+            },
+            "url": "{{baseUrl}}/offers/{{offerId}}"
+          }
+        },
+        {
+          "name": "DELETE offre",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/offers/{{offerId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CRUD Motifs de refus",
+      "item": [
+        {
+          "name": "READ motifs actifs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/refusal-reasons"
+          }
+        },
+        {
+          "name": "CREATE motif (admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) pm.collectionVariables.set('refusalId', String(j.id));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"TEST_CRUD\",\n  \"label\": \"Motif test Postman\",\n  \"active\": true\n}"
+            },
+            "url": "{{baseUrl}}/refusal-reasons"
+          }
+        },
+        {
+          "name": "UPDATE motif (admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Motif test Postman (modifié)\",\n  \"active\": true\n}"
+            },
+            "url": "{{baseUrl}}/refusal-reasons/{{refusalId}}"
+          }
+        },
+        {
+          "name": "DELETE motif (admin)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/refusal-reasons/{{refusalId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "CRUD Notifications",
+      "item": [
+        {
+          "name": "CREATE notification",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "const j = pm.response.json();",
+                "if (j.id) pm.collectionVariables.set('notifId', String(j.id));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test CRUD\",\n  \"body\": \"Notification créée via Postman\",\n  \"kind\": \"INFO\"\n}"
+            },
+            "url": "{{baseUrl}}/notifications"
+          }
+        },
+        {
+          "name": "READ mes notifications",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/notifications"
+          }
+        },
+        {
+          "name": "UPDATE mark read",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/notifications/{{notifId}}/read"
+          }
+        },
+        {
+          "name": "DELETE notification",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/notifications/{{notifId}}"
+          }
+        }
+      ]
+    }
+  ]
+}

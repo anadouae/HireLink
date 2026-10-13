@@ -62,6 +62,20 @@ public class OrganizationController {
         );
     }
 
+    public record OrgUpdate(String name, String ice) {}
+
+    @PutMapping("/mine")
+    public Map<String, Object> updateMine(@AuthenticationPrincipal User user, @RequestBody OrgUpdate body) {
+        Organization org = organizationService.updateMine(user, body.name(), body.ice());
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", org.getId());
+        m.put("name", org.getName());
+        m.put("ice", org.getIce());
+        m.put("verified", org.isVerified());
+        m.put("planTier", org.getPlanTier().name());
+        return m;
+    }
+
     @DeleteMapping("/mine/members/{userId}")
     public Map<String, Object> remove(@AuthenticationPrincipal User user, @PathVariable Long userId) {
         organizationService.removeMember(user, userId);

@@ -162,9 +162,12 @@ public class AuthService {
         if (role != Role.RECRUTEUR) {
             return;
         }
+        // Inscription libre : ICE + raison sociale + email — aucun document.
+        // Badge / publication a posteriori (companyVerified).
         var result = companyVerificationService.verify(ice, company, user.getId(), user.getEmail());
         user.setCompanyIce(result.ice());
         user.setCompany(result.companyName());
         user.setCompanyVerified(result.verified());
+        user.setVerificationStatus(result.status());
     }
 }

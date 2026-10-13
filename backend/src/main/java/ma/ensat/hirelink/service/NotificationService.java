@@ -44,4 +44,27 @@ public class NotificationService {
         n.setReadFlag(true);
         repository.save(n);
     }
+
+    @Transactional
+    public InAppNotification create(User user, String title, String body, String kind) {
+        if (title == null || title.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "title requis");
+        }
+        InAppNotification n = new InAppNotification();
+        n.setUserId(user.getId());
+        n.setTitle(title.trim());
+        n.setBody(body == null ? "" : body.trim());
+        n.setKind(kind == null || kind.isBlank() ? "INFO" : kind.trim());
+        return repository.save(n);
+    }
+
+    @Transactional
+    public void delete(User user, Long id) {
+        InAppNotification n = repository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification introuvable"));
+        if (!n.getUserId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès refusé");
+        }
+        repository.delete(n);
+    }
 }

@@ -7,8 +7,7 @@
     { key: "SUBMITTED", label: "Soumises" },
     { key: "SCREENING", label: "Présélection" },
     { key: "SHORTLISTED", label: "Shortlist" },
-    { key: "INTERVIEW", label: "Entretien" },
-    { key: "OFFER", label: "Offre" },
+    { key: "INTERVIEW", label: "Entretien (fin)" },
     { key: "CLOSED", label: "Clôturées" },
   ];
 

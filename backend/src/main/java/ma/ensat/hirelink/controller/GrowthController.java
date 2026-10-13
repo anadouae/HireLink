@@ -2,6 +2,7 @@ package ma.ensat.hirelink.controller;
 
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
+import ma.ensat.hirelink.service.ApplicationService;
 import ma.ensat.hirelink.service.ReliabilityService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,11 +19,13 @@ import java.util.concurrent.ConcurrentHashMap;
 public class GrowthController {
 
     private final ReliabilityService reliabilityService;
+    private final ApplicationService applicationService;
     private final ConcurrentHashMap<String, String> referrals = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Long, Integer> badgeViews = new ConcurrentHashMap<>();
 
-    public GrowthController(ReliabilityService reliabilityService) {
+    public GrowthController(ReliabilityService reliabilityService, ApplicationService applicationService) {
         this.reliabilityService = reliabilityService;
+        this.applicationService = applicationService;
     }
 
     @GetMapping("/reliability/me")
@@ -91,5 +94,14 @@ public class GrowthController {
         m.put("total", 4);
         m.put("percent", Math.round(100.0 * done / 4));
         return m;
+    }
+
+    /** Funnel pipeline — métriques conversion SaaS (activation / rétention). */
+    @GetMapping("/growth/pipeline-funnel")
+    public Map<String, Object> pipelineFunnel(@AuthenticationPrincipal User user) {
+        if (user.getRole() != Role.RECRUTEUR && user.getRole() != Role.ADMINISTRATEUR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Espace organisation");
+        }
+        return applicationService.pipelineFunnel(user);
     }
 }

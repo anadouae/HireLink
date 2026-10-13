@@ -2,6 +2,8 @@ package ma.ensat.hirelink.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -52,6 +54,13 @@ public class User {
     @Column(name = "company_verified", nullable = false)
     private boolean companyVerified = false;
 
+    /**
+     * Statut anti-fraude LinkedIn-like :
+     * PENDING | NEED_CORPORATE_EMAIL | WAITING_REGISTRY | NAME_MISMATCH | REGISTRY_MATCH
+     */
+    @Column(name = "verification_status", length = 48)
+    private String verificationStatus = "PENDING";
+
     @Column(name = "profile_complete", nullable = false)
     private boolean profileComplete = false;
 
@@ -82,6 +91,18 @@ public class User {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    /** Offres publiées par ce recruteur (@OneToMany). */
+    @OneToMany(mappedBy = "recruiter")
+    private List<JobOffer> jobOffers = new ArrayList<>();
+
+    /** Candidatures déposées par ce candidat (@OneToMany). */
+    @OneToMany(mappedBy = "candidate")
+    private List<Application> applications = new ArrayList<>();
+
+    /** Appartenances org via Membership — N–N User↔Organization (@OneToMany côté association). */
+    @OneToMany(mappedBy = "user")
+    private List<Membership> memberships = new ArrayList<>();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -122,6 +143,9 @@ public class User {
     public boolean isCompanyVerified() { return companyVerified; }
     public void setCompanyVerified(boolean companyVerified) { this.companyVerified = companyVerified; }
 
+    public String getVerificationStatus() { return verificationStatus; }
+    public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
+
     public boolean isProfileComplete() { return profileComplete; }
     public void setProfileComplete(boolean profileComplete) { this.profileComplete = profileComplete; }
 
@@ -145,4 +169,13 @@ public class User {
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    public List<JobOffer> getJobOffers() { return jobOffers; }
+    public void setJobOffers(List<JobOffer> jobOffers) { this.jobOffers = jobOffers; }
+
+    public List<Application> getApplications() { return applications; }
+    public void setApplications(List<Application> applications) { this.applications = applications; }
+
+    public List<Membership> getMemberships() { return memberships; }
+    public void setMemberships(List<Membership> memberships) { this.memberships = memberships; }
 }

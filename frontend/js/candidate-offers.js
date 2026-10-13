@@ -41,7 +41,8 @@
           : "") +
         "</div><div class='stack'><span class='badge badge-rose'></span>" +
         "<button type='button' class='btn btn-soft btn-sm js-detail'>Voir l’offre</button>" +
-        "<button type='button' class='btn btn-primary btn-sm js-apply'>Postuler</button></div>";
+        "<button type='button' class='btn btn-primary btn-sm js-apply'>Postuler</button>" +
+        "<button type='button' class='btn btn-ghost btn-sm js-report'>Signaler</button></div>";
       el.querySelector("h3").textContent = o.title;
       el.querySelector("p").textContent =
         (o.recruiterName || "") + " · " + (o.location || "") + " · " + (o.contractType || "");
@@ -58,6 +59,39 @@
         });
       el.querySelector(".js-detail").addEventListener("click", () => openApply(o));
       el.querySelector(".js-apply").addEventListener("click", () => openApply(o));
+      el.querySelector(".js-report").addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const ok = await HireLink.openModal({
+          title: "Signaler cette annonce",
+          description: o.title,
+          bodyHtml:
+            '<p class="muted">3 signalements → suspension automatique (anti fake jobs).</p>' +
+            '<div class="field"><label>Motif</label><select id="rep-reason">' +
+            '<option value="FAKE_JOB">Fausse annonce / arnaque</option>' +
+            '<option value="MONEY_ASK">Demande d’argent</option>' +
+            '<option value="OTHER">Autre</option></select></div>',
+          confirmLabel: "Envoyer le signalement",
+          danger: true,
+        });
+        if (!ok) return;
+        const reason = (document.getElementById("rep-reason") || {}).value || "FAKE_JOB";
+        try {
+          const r = await HireLinkAPI.api("/offers/" + o.id + "/report", {
+            method: "POST",
+            body: { reason },
+          });
+          HireLink.toast(
+            r.suspendedNow ? "Offre suspendue" : "Signalement enregistré",
+            r.suspendedNow
+              ? "Seuil atteint (" + r.reportCount + "/" + r.threshold + ")"
+              : r.reportCount + "/" + r.threshold + " signalements",
+            r.suspendedNow ? "warn" : "ok"
+          );
+          if (r.suspendedNow) load();
+        } catch (err) {
+          HireLink.toast("Signalement", err.message, "danger");
+        }
+      });
       el.querySelector("h3").style.cursor = "pointer";
       el.querySelector("h3").addEventListener("click", () => openApply(o));
       offerList.appendChild(el);

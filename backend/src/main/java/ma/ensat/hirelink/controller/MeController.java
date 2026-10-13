@@ -61,6 +61,7 @@ public class MeController {
             user.setCompanyIce(v.ice());
             user.setCompany(v.companyName());
             user.setCompanyVerified(v.verified());
+            user.setVerificationStatus(v.status());
         }
         boolean complete = user.getFullName() != null && !user.getFullName().isBlank();
         if (user.getRole() == Role.CANDIDAT) {
@@ -69,7 +70,9 @@ public class MeController {
                     && user.getSoughtRoles() != null && !user.getSoughtRoles().isBlank();
         }
         if (user.getRole() == Role.RECRUTEUR) {
-            complete = complete && user.getCompanyIce() != null && user.isCompanyVerified();
+            // Profil « complet » = infos renseignées ; badge vérifié = droit de publier (séparé).
+            complete = complete && user.getCompanyIce() != null
+                    && user.getCompany() != null && !user.getCompany().isBlank();
         }
         user.setProfileComplete(complete);
         userRepository.save(user);
@@ -77,6 +80,10 @@ public class MeController {
     }
 
     private ApiDtos.UserProfile toProfile(User u) {
+        String vs = u.getVerificationStatus();
+        if (vs == null || vs.isBlank()) {
+            vs = u.isCompanyVerified() ? "REGISTRY_MATCH" : "PENDING";
+        }
         return new ApiDtos.UserProfile(
                 u.getId(),
                 u.getEmail(),
@@ -89,6 +96,7 @@ public class MeController {
                 u.getCompany(),
                 u.getCompanyIce(),
                 u.isCompanyVerified(),
+                vs,
                 u.getSoughtRoles(),
                 u.getPreferredLocations(),
                 u.getPreferredContracts(),

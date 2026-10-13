@@ -9,7 +9,9 @@ import java.time.Instant;
        indexes = {
            @Index(name = "idx_app_status", columnList = "status"),
            @Index(name = "idx_app_submitted", columnList = "submitted_at"),
-           @Index(name = "idx_app_candidate", columnList = "candidate_id")
+           @Index(name = "idx_app_candidate", columnList = "candidate_id"),
+           @Index(name = "idx_app_hm", columnList = "assigned_hm_user_id"),
+           @Index(name = "idx_app_deadline", columnList = "response_deadline")
        })
 public class Application {
 
@@ -75,6 +77,18 @@ public class Application {
     @Column(name = "assigned_hm_user_id")
     private Long assignedHmUserId;
 
+    /** Deadline SLA calculée à la soumission (submitted_at + response_sla_days). */
+    @Column(name = "response_deadline")
+    private Instant responseDeadline;
+
+    /** Première décision explicite (ACCEPT / REJECT) — mesure fiabilité. */
+    @Column(name = "first_decision_at")
+    private Instant firstDecisionAt;
+
+    /** Évite le spam de notifications SLA (une alerte max). */
+    @Column(name = "sla_breach_notified", nullable = false)
+    private boolean slaBreachNotified = false;
+
     @Column(name = "submitted_at", nullable = false, updatable = false)
     private Instant submittedAt = Instant.now();
 
@@ -136,6 +150,15 @@ public class Application {
 
     public Long getAssignedHmUserId() { return assignedHmUserId; }
     public void setAssignedHmUserId(Long assignedHmUserId) { this.assignedHmUserId = assignedHmUserId; }
+
+    public Instant getResponseDeadline() { return responseDeadline; }
+    public void setResponseDeadline(Instant responseDeadline) { this.responseDeadline = responseDeadline; }
+
+    public Instant getFirstDecisionAt() { return firstDecisionAt; }
+    public void setFirstDecisionAt(Instant firstDecisionAt) { this.firstDecisionAt = firstDecisionAt; }
+
+    public boolean isSlaBreachNotified() { return slaBreachNotified; }
+    public void setSlaBreachNotified(boolean slaBreachNotified) { this.slaBreachNotified = slaBreachNotified; }
 
     public Instant getSubmittedAt() { return submittedAt; }
     public void setSubmittedAt(Instant submittedAt) { this.submittedAt = submittedAt; }

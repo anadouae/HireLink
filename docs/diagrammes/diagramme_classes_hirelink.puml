@@ -1,0 +1,104 @@
+@startuml HireLink_Diagramme_Classes
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam packageFontSize 14
+title HireLink — Diagramme de classes (JPA)
+
+package "model" {
+  enum Role {
+    CANDIDAT
+    RECRUTEUR
+    ADMINISTRATEUR
+  }
+  enum OrgRole {
+    OWNER
+    RECRUTEUR
+    HIRING_MANAGER
+  }
+  enum ApplicationStatus {
+    SUBMITTED
+    SCREENING
+    SHORTLISTED
+    INTERVIEW
+    OFFER
+    ACCEPTED
+    REJECTED
+    WITHDRAWN
+  }
+
+  class User {
+    +Long id
+    +String email
+    +String fullName
+    +Role role
+    +String skills
+  }
+
+  class Organization {
+    +Long id
+    +String name
+    +String ice
+    +boolean verified
+  }
+
+  class Membership {
+    +Long id
+    +OrgRole orgRole
+    +boolean active
+  }
+
+  class JobOffer {
+    +Long id
+    +String title
+    +String description
+    +String requiredSkills
+    +boolean published
+  }
+
+  class Application {
+    +Long id
+    +ApplicationStatus status
+    +Double matchScore
+  }
+
+  class Tag {
+    +Long id
+    +String name
+  }
+
+  class RefusalReason {
+    +Long id
+    +String code
+    +String label
+    +boolean active
+  }
+
+  class InAppNotification {
+    +Long id
+    +Long userId
+    +String title
+    +boolean readFlag
+  }
+}
+
+User "1" -- "*" JobOffer : recruiter\n@OneToMany / @ManyToOne
+User "1" -- "*" Application : candidate\n@OneToMany / @ManyToOne
+JobOffer "1" -- "*" Application : jobOffer\n@OneToMany / @ManyToOne
+User "*" -- "*" Organization : via Membership\nN-N
+User "1" -- "*" Membership
+Organization "1" -- "*" Membership
+JobOffer "*" -- "*" Tag : @ManyToMany\njob_offer_tags
+Organization "1" -- "0..1" User : owner\n@ManyToOne
+
+note right of Membership
+  Table d'association User ↔ Organization
+  avec attributs (orgRole, active)
+end note
+
+note bottom of Tag
+  Relation @ManyToMany explicite
+  (exigence Séance 3)
+end note
+
+@enduml

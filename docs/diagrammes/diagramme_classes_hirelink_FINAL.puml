@@ -1,0 +1,196 @@
+@startuml HireLink_Classes_CDC_STYLE_UPDATED
+!theme plain
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam classFontSize 12
+skinparam classHeaderBackgroundColor #1e3a5f
+skinparam classBackgroundColor #ffffff
+skinparam ArrowColor #334155
+skinparam packageStyle rectangle
+title HireLink — Diagramme de classes (style CDC · contenu à jour)
+
+class User <<class>> {
+  - id : Long
+  - email : String
+  - passwordHash : String
+  - role : Role
+  - company : String
+  - companyIce : String
+  - companyVerified : boolean
+  - verificationStatus : String
+  - planTier : PlanTier
+  - createdAt : Instant
+  --
+  + login()
+  + updateProfile()
+}
+
+class CandidateProfile <<class>> {
+  - skills : String
+  - soughtRoles : String
+  - preferredLocations : String
+  - preferredContracts : String
+  - experienceLevel : String
+  - profileComplete : boolean
+  --
+  + updateProfile()
+  + exportData()
+  note : concept CDC / attributs User en code
+}
+
+class Organization <<class>> {
+  - name : String
+  - ice : String
+  - verified : boolean
+  - verificationStatus : String
+  - planTier : PlanTier
+  --
+  + verify()
+}
+
+class Membership <<class>> {
+  - orgRole : OrgRole
+  - active : boolean
+  --
+  + hasPermission(action)
+}
+
+class JobOffer <<class>> {
+  - title : String
+  - requiredSkills : String
+  - responseSlaDays : int
+  - published : boolean
+  - suspended : boolean
+  - reportCount : int
+  - quarantineReason : String
+  --
+  + publish()
+  + close()
+  + suspend()
+}
+
+class OfferReport <<class>> {
+  - jobOfferId : Long
+  - reporterUserId : Long
+  - reason : String
+  - createdAt : Instant
+  --
+  note : ≥ 3 → suspension auto
+}
+
+class Application <<class>> #F5E6D3 {
+  - status : ApplicationStatus
+  - matchScore : Double
+  - refusalReasonCode : String
+  - appliedAt : Instant
+  - responseDeadline : Instant
+  - slaBreachNotified : boolean
+  - assignedHmUserId : Long
+  --
+  + transitionTo(status)
+  + withdraw()
+}
+
+class Interview <<class>> {
+  - type : String
+  - scheduledAt : Instant
+  - location : String
+  - notes : String
+  --
+  + schedule()
+  note : concept CDC / champs Application en code
+}
+
+class ApplicationStatusHistory <<class>> {
+  - fromStatus : ApplicationStatus
+  - toStatus : ApplicationStatus
+  - actorUserId : Long
+  - occurredAt : Instant
+  --
+  note : ajout seul, jamais modifié
+}
+
+class RefusalReason <<class>> {
+  - code : String
+  - label : String
+  - active : boolean
+}
+
+class ScorecardCriterion <<class>> {
+  - label : String
+  - weight : int
+  - canVeto : boolean
+}
+
+class ScorecardEntry <<class>> {
+  - score : int
+  - veto : boolean
+  - comment : String
+}
+
+class MatchingAnalysis <<class>> #E8F5E9 {
+  - score : Double
+  - coveredSkills : String
+  - missingSkills : String
+  --
+  + compute()
+}
+
+class ConsentRecord <<class>> #E8F5E9 {
+  - purpose : String
+  - granted : boolean
+}
+
+class AiCreditLedger <<class>> #E8F5E9 {
+  - plan : PlanTier
+  - monthlyQuota : int
+  - balance : int
+  --
+  + hasCredit()
+  + debit()
+  + resetMonthly()
+  note : concept CDC / planTier + AiUsageLog en code
+}
+
+class AiUsageLog <<class>> #E8F5E9 {
+  - feature : String
+  - provider : String
+  - charsIn : int
+  - charsOut : int
+  - creditsSpent : int
+  - success : boolean
+}
+
+User "1" -- "0..1" CandidateProfile : possède
+User "1" -- "0..*" Membership : détient
+Membership "1..*" -- "1" Organization : compte
+Organization "1" -- "0..*" JobOffer : publie
+CandidateProfile "1" -- "0..*" Application : dépose
+JobOffer "1" -- "0..*" Application : reçoit
+Membership "0..*" -- "0..*" Application : assigné HM
+Application "1" *-- "1..*" ApplicationStatusHistory : historique
+Application "1" -- "0..*" Interview : génère
+Application "0..*" -- "0..1" RefusalReason : refusée pour
+Application "1" -- "0..*" MatchingAnalysis : analysée par
+JobOffer "1" -- "1..*" ScorecardCriterion : définit
+Interview "1" -- "0..*" ScorecardEntry : produit
+ScorecardCriterion "1" -- "0..*" ScorecardEntry
+JobOffer "1" -- "0..*" OfferReport : signalée
+User "1" ..> "0..*" OfferReport : signale
+User "1" -- "0..*" ConsentRecord : donne
+Organization "1" -- "0..1" AiCreditLedger : dispose de
+User "1" -- "0..1" AiCreditLedger : dispose de
+AiCreditLedger "1" -- "0..*" AiUsageLog : trace
+
+note bottom of Organization
+  Anti-fraude LinkedIn-like :
+  inscription libre (ICE + RS + email)
+  publication seulement si verified
+end note
+
+note bottom of JobOffer
+  Scan fake-job + quarantineReason
+  OfferReport ≥ 3 → suspended
+end note
+
+@enduml
