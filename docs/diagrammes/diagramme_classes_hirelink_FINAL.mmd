@@ -1,0 +1,113 @@
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#7A2032', 'primaryTextColor': '#fff', 'lineColor': '#475569'}}}%%
+classDiagram
+direction TB
+
+class User {
+  +Long id
+  +String email
+  +String passwordHash
+  +String fullName
+  +Role role
+  +String company
+  +String companyIce
+  +boolean companyVerified
+  +String verificationStatus
+  +PlanTier planTier
+  +login()
+  +updateProfile()
+}
+class Organization {
+  +Long id
+  +String name
+  +String ice
+  +boolean verified
+  +String verificationStatus
+  +PlanTier planTier
+}
+class Membership {
+  +Long id
+  +OrgRole orgRole
+  +boolean active
+}
+class JobOffer {
+  +Long id
+  +String title
+  +boolean published
+  +boolean suspended
+  +int reportCount
+  +String quarantineReason
+  +int responseSlaDays
+  +publish()
+}
+class OfferReport {
+  +Long jobOfferId
+  +Long reporterUserId
+  +String reason
+}
+class Application {
+  +ApplicationStatus status
+  +Double matchScore
+  +String refusalReasonCode
+  +Instant responseDeadline
+  +Long assignedHmUserId
+  +transitionTo()
+}
+class ApplicationStatusHistory {
+  +String fromStatus
+  +String toStatus
+  +appendOnly()
+}
+class Tag {
+  +String name
+}
+class RefusalReason {
+  +String code
+  +String label
+}
+class MatchingAnalysis {
+  +Double score
+  +String coveredSkills
+  +String missingSkills
+}
+class ScorecardCriterion {
+  +String label
+  +int weight
+}
+class ScorecardEntry {
+  +int score
+}
+class InAppNotification {
+  +String title
+  +boolean readFlag
+}
+class AiUsageLog {
+  +String feature
+  +int creditsSpent
+  +boolean success
+}
+class EmailOtp {
+  +String code
+  +String purpose
+}
+class ConsentRecord {
+  +String purpose
+  +boolean granted
+}
+
+User "1" --> "*" Membership : détient
+Membership "*" --> "1" Organization : compte
+Organization "1" --> "0..1" User : owner
+User "1" --> "*" JobOffer : publie
+User "1" --> "*" Application : dépose
+JobOffer "1" --> "*" Application : reçoit
+JobOffer "*" --> "*" Tag : tags
+JobOffer "1" --> "*" OfferReport : signalée
+User "1" --> "*" OfferReport : signale
+Application "1" --> "*" ApplicationStatusHistory
+Application "*" --> "0..1" RefusalReason
+Application "1" --> "0..1" MatchingAnalysis
+JobOffer "1" --> "*" ScorecardCriterion
+Application "1" --> "*" ScorecardEntry
+User "1" --> "*" InAppNotification
+User "1" --> "*" AiUsageLog
+User "1" --> "*" ConsentRecord

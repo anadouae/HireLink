@@ -39,16 +39,20 @@
       <main class="content">
         <div class="page-title">
           <div>
-            <p class="eyebrow">ATS · Scoring · SLA</p>
+            <p class="eyebrow">ATS · Funnel · SLA · IA bornée</p>
             <h1>Pipeline</h1>
-            <p class="muted">Kanban riche : score, délais, avancée ou refus motivé.</p>
+            <p class="muted">Kanban sécurisé (R01–R05) · matching non décisionnel · alertes SLA.</p>
           </div>
           <select id="pipe-filter" class="btn btn-soft" style="appearance:auto;padding:0.55rem 0.85rem">
             <option value="all">Tous</option>
             <option value="urgent">SLA ≤ 2 j</option>
+            <option value="breached">SLA dépassé</option>
             <option value="hot">Score ≥ 75%</option>
             <option value="interview">Entretiens planifiés</option>
           </select>
+        </div>
+        <div id="funnel-strip" class="panel" style="margin-bottom:1rem;padding:0.85rem 1.1rem">
+          <div class="muted" style="font-size:0.8rem">Chargement funnel…</div>
         </div>
         <section class="panel">
           <div class="panel-body"><div class="kanban" id="kanban"></div></div>

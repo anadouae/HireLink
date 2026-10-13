@@ -49,6 +49,9 @@ public class OrganizationService {
         org.setOwner(owner);
         org.setPlanTier(PlanTier.ACCES);
         org.setVerified(owner.isCompanyVerified());
+        org.setVerificationStatus(owner.getVerificationStatus() != null
+                ? owner.getVerificationStatus()
+                : (owner.isCompanyVerified() ? "REGISTRY_MATCH" : "PENDING"));
         organizationRepository.save(org);
         Membership m = new Membership();
         m.setOrganization(org);
@@ -137,5 +140,17 @@ public class OrganizationService {
             x.getUser().getFullName();
         });
         return list;
+    }
+
+    @Transactional
+    public Organization updateMine(User user, String name, String ice) {
+        Membership m = requireMembership(user);
+        if (m.getOrgRole() != OrgRole.OWNER && m.getOrgRole() != OrgRole.RECRUTEUR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Modification réservée Owner/Recruteur");
+        }
+        Organization org = m.getOrganization();
+        if (name != null && !name.isBlank()) org.setName(name.trim());
+        if (ice != null) org.setIce(ice.isBlank() ? null : ice.trim());
+        return organizationRepository.save(org);
     }
 }

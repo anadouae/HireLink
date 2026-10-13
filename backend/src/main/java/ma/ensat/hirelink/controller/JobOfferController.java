@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/offers")
@@ -49,5 +50,11 @@ public class JobOfferController {
             @Valid @RequestBody ApiDtos.JobOfferRequest body
     ) {
         return jobOfferService.update(user, id, body);
+    }
+
+    @DeleteMapping("/{id}")
+    public Map<String, Object> delete(@AuthenticationPrincipal User user, @PathVariable Long id) {
+        jobOfferService.delete(user, id);
+        return Map.of("status", "DELETED", "id", id);
     }
 }

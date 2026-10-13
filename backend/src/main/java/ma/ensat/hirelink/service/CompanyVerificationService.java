@@ -11,23 +11,34 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Anti-fraude employeur :
- * 1) Format ICE
- * 2) Unicité (un ICE = une organisation)
- * 3) Raison sociale obligatoire + rapprochement registre (mock / API OMPIC à brancher)
- * 4) Statut PENDING tant que non confirmé → pas de publication d'offres
+ * Anti-fraude employeur — modèle hybride LinkedIn-like :
+ * inscription libre (raison sociale + ICE + email) sans documents ;
+ * validation / badge a posteriori ; publication bloquée si non vérifié.
  */
 @Service
 public class CompanyVerificationService {
 
-    /** Extrait registre (remplacer par API officielle). */
+    /** Extrait registre (remplacer par API officielle OMPIC). */
     private static final Map<String, String> REGISTRY = Map.of(
             "001544289000035", "Atlas Digital",
             "001234567000012", "Nova RH",
             "002468135000098", "HireDesk Services"
     );
 
-    public record Result(String ice, String companyName, boolean verified, String status) {}
+    private static final Set<String> FREE_EMAIL_DOMAINS = Set.of(
+            "gmail.com", "googlemail.com", "yahoo.com", "yahoo.fr", "hotmail.com",
+            "hotmail.fr", "outlook.com", "outlook.fr", "live.com", "icloud.com",
+            "proton.me", "protonmail.com", "mail.com", "aol.com", "yandex.com"
+    );
+
+    public record Result(
+            String ice,
+            String companyName,
+            boolean verified,
+            String status,
+            boolean corporateEmail,
+            String message
+    ) {}
 
     private final UserRepository userRepository;
 
@@ -46,59 +57,70 @@ public class CompanyVerificationService {
     public Result verify(String rawIce, String companyName, Long currentUserId, String email) {
         if (rawIce == null || rawIce.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Identifiant entreprise obligatoire");
+                    "ICE obligatoire (inscription libre, mais ICE requis)");
         }
         if (companyName == null || companyName.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Raison sociale officielle obligatoire");
+                    "Raison sociale obligatoire");
         }
         String ice = rawIce.replaceAll("\\s+", "");
         if (!ice.matches("\\d{9,15}")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Identifiant invalide (9 à 15 chiffres)");
+                    "ICE invalide (9 à 15 chiffres)");
         }
 
         var existing = userRepository.findByCompanyIce(ice);
         if (existing.isPresent() && (currentUserId == null || !existing.get().getId().equals(currentUserId))) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Cet identifiant est déjà lié à un autre compte HireLink");
+                    "Cet ICE est déjà lié à un autre compte HireLink");
         }
 
         String name = companyName.trim();
-        String registryName = REGISTRY.get(ice);
-        boolean verified = false;
-        String status = "PENDING_REVIEW";
-
         boolean corporateEmail = isCorporateEmail(email);
 
-        if (registryName != null) {
-            if (similar(name, registryName) >= 0.72) {
-                if (corporateEmail) {
-                    verified = true;
-                    status = "REGISTRY_MATCH";
-                    name = registryName;
-                } else {
-                    status = "NEED_CORPORATE_EMAIL";
-                    name = registryName;
-                }
-            } else {
-                status = "NAME_MISMATCH";
-            }
+        // Filtre n°1 LinkedIn-like : email gratuit → jamais de badge auto
+        if (!corporateEmail) {
+            return new Result(ice, name, false, "NEED_CORPORATE_EMAIL", false,
+                    "Compte créé. Badge / publication bloqués : utilisez un e-mail professionnel (@entreprise.ma), pas Gmail/Yahoo/Outlook.");
         }
 
-        return new Result(ice, name, verified, status);
+        String registryName = REGISTRY.get(ice);
+        if (registryName == null) {
+            return new Result(ice, name, false, "WAITING_REGISTRY", true,
+                    "Compte créé. E-mail pro OK — vérification registre (mock OMPIC) en attente. Publication encore bloquée.");
+        }
+        if (similar(name, registryName) < 0.72) {
+            return new Result(ice, name, false, "NAME_MISMATCH", true,
+                    "Raison sociale différente du registre pour cet ICE. Publication bloquée jusqu’à correction / revue.");
+        }
+        return new Result(ice, registryName, true, "REGISTRY_MATCH", true,
+                "Entreprise vérifiée (matching registre + e-mail pro). Publication autorisée.");
     }
 
-    private boolean isCorporateEmail(String email) {
+    public boolean isCorporateEmail(String email) {
         if (email == null || !email.contains("@")) {
-            return true; // seed / admin paths without email still OK
+            return false;
         }
-        String domain = email.substring(email.indexOf('@') + 1).toLowerCase(Locale.ROOT);
-        return !Set.of(
-                "gmail.com", "googlemail.com", "yahoo.com", "yahoo.fr", "hotmail.com",
-                "outlook.com", "live.com", "icloud.com", "proton.me", "protonmail.com",
-                "mail.com", "aol.com", "yandex.com"
-        ).contains(domain);
+        String domain = email.substring(email.indexOf('@') + 1).toLowerCase(Locale.ROOT).trim();
+        return !domain.isEmpty() && !FREE_EMAIL_DOMAINS.contains(domain);
+    }
+
+    public String publishBlockReason(String verificationStatus) {
+        if (verificationStatus == null || verificationStatus.isBlank()) {
+            return "Entreprise non vérifiée — publication impossible.";
+        }
+        return switch (verificationStatus) {
+            case "NEED_CORPORATE_EMAIL" ->
+                    "Publication refusée (NEED_CORPORATE_EMAIL) : fournissez un e-mail professionnel lié au domaine de l’entreprise.";
+            case "WAITING_REGISTRY" ->
+                    "Publication refusée (WAITING_REGISTRY) : vérification registre en cours.";
+            case "NAME_MISMATCH" ->
+                    "Publication refusée (NAME_MISMATCH) : alignez la raison sociale sur le registre ICE.";
+            case "PENDING" ->
+                    "Publication refusée (PENDING) : complétez ICE + raison sociale + e-mail pro.";
+            default ->
+                    "Entreprise non vérifiée (" + verificationStatus + ") — inscription libre ≠ publication libre.";
+        };
     }
 
     private double similar(String a, String b) {
@@ -106,7 +128,6 @@ public class CompanyVerificationService {
         String nb = norm(b);
         if (na.equals(nb)) return 1.0;
         if (na.contains(nb) || nb.contains(na)) return 0.85;
-        // Jaccard tokens
         var ta = java.util.Set.of(na.split("\\s+"));
         var tb = java.util.Set.of(nb.split("\\s+"));
         long inter = ta.stream().filter(tb::contains).count();

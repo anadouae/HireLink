@@ -58,6 +58,18 @@ public class AiAssistController {
         return creditMap(aiCreditService.status(user, premium));
     }
 
+    /** Quels providers cloud sont configurés (clés masquées). */
+    @GetMapping("/status")
+    public Map<String, Object> status(@AuthenticationPrincipal User user) {
+        Map<String, Object> m = new LinkedHashMap<>(llmProvider.statusMap());
+        m.put("user", user.getEmail());
+        m.put("features", List.of(
+                "profile-rewrite", "interview-prep", "interview-kit",
+                "refusal-draft", "match-explain", "language-check"
+        ));
+        return m;
+    }
+
     @PostMapping("/profile-rewrite")
     public Map<String, Object> profileRewrite(
             @AuthenticationPrincipal User user,
@@ -210,7 +222,7 @@ public class AiAssistController {
         }
     }
 
-    /** R16 : débit seulement si succès. */
+    /** R16 : débit seulement si succès — ledger durable = ai_usage_logs. */
     private Map<String, Object> debitIfSuccess(User user, boolean premium, String feature, LlmProvider.LlmResult llm) {
         AiUsageLog log = new AiUsageLog();
         log.setUserId(user.getId());
@@ -221,10 +233,9 @@ public class AiAssistController {
         log.setCharsOut(llm.charsOut());
         log.setSuccess(llm.success());
         if (llm.success()) {
-            var st = aiCreditService.consumeAfterSuccess(user, premium);
             log.setCreditsSpent(1);
             aiUsageLogRepository.save(log);
-            return creditMap(st);
+            return creditMap(aiCreditService.status(user, premium));
         }
         log.setCreditsSpent(0);
         aiUsageLogRepository.save(log);

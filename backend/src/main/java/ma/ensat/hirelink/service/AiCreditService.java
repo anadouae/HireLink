@@ -2,19 +2,29 @@ package ma.ensat.hirelink.service;
 
 import ma.ensat.hirelink.model.PlanTier;
 import ma.ensat.hirelink.model.User;
+import ma.ensat.hirelink.repository.AiUsageLogRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Ledger crédits IA F16 — paliers CDC §9.
+ * Compteur durable via ai_usage_logs (pas de ConcurrentHashMap).
  * Matching local (F14) ne consomme rien. F15 consomme 1 crédit après succès (R16).
  */
 @Service
 public class AiCreditService {
 
-    private final ConcurrentHashMap<String, AtomicInteger> used = new ConcurrentHashMap<>();
+    private final AiUsageLogRepository aiUsageLogRepository;
+
+    public AiCreditService(AiUsageLogRepository aiUsageLogRepository) {
+        this.aiUsageLogRepository = aiUsageLogRepository;
+    }
 
     public record CreditStatus(
             String plan,
@@ -43,51 +53,54 @@ public class AiCreditService {
         return user.getRole().name().contains("CANDIDAT") ? PlanTier.ESSENTIEL : PlanTier.ACCES;
     }
 
+    @Transactional(readOnly = true)
     public CreditStatus status(User user, boolean premiumHeader) {
         PlanTier tier = resolveTier(user, premiumHeader);
         int limit = limitFor(tier);
-        // Premium org / Performance candidate still have finite credits per CDC; "illimité" n'est pas dans le CDC v2
-        int u = used.computeIfAbsent(key(user.getId()), k -> new AtomicInteger(0)).get();
+        int u = usedThisMonth(user.getId());
         return new CreditStatus(tier.name(), limit, u, Math.max(0, limit - u), false, u < limit);
     }
 
     /** Ne pas appeler avant succès LLM (R16). */
+    @Transactional(readOnly = true)
     public CreditStatus consumeAfterSuccess(User user, boolean premiumHeader) {
-        CreditStatus before = status(user, premiumHeader);
-        if (!before.allowed()) return before;
-        used.computeIfAbsent(key(user.getId()), k -> new AtomicInteger(0)).incrementAndGet();
+        // Le débit réel est l'insertion AiUsageLog (creditsSpent=1) faite par le controller.
+        // Ici on recalcule le statut après écriture.
         return status(user, premiumHeader);
     }
 
     /** @deprecated use status(User, boolean) */
+    @Transactional(readOnly = true)
     public CreditStatus status(Long userId, String role, boolean premium) {
         int limit = premium ? 300 : ("RECRUTEUR".equalsIgnoreCase(role) || "ADMINISTRATEUR".equalsIgnoreCase(role) ? 20 : 5);
-        int u = used.computeIfAbsent(key(userId), k -> new AtomicInteger(0)).get();
+        int u = usedThisMonth(userId);
         return new CreditStatus(premium ? "PREMIUM" : "ESSENTIEL", limit, u, Math.max(0, limit - u), false, u < limit);
     }
 
     /** @deprecated */
+    @Transactional(readOnly = true)
     public CreditStatus consume(Long userId, String role, boolean premium) {
-        CreditStatus before = status(userId, role, premium);
-        if (!before.allowed()) return before;
-        used.computeIfAbsent(key(userId), k -> new AtomicInteger(0)).incrementAndGet();
         return status(userId, role, premium);
     }
 
-    private String key(Long userId) {
-        return userId + "-" + java.time.YearMonth.now();
+    private int usedThisMonth(Long userId) {
+        YearMonth ym = YearMonth.now(ZoneOffset.UTC);
+        Instant from = ym.atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant to = ym.plusMonths(1).atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Integer sum = aiUsageLogRepository.sumCreditsSpent(userId, from, to);
+        return sum == null ? 0 : sum;
     }
 
-    public java.util.List<String> interviewKit(String jobTitle, String skills) {
+    public List<String> interviewKit(String jobTitle, String skills) {
         String title = jobTitle == null || jobTitle.isBlank() ? "le poste" : jobTitle.trim();
-        java.util.List<String> skillList = new java.util.ArrayList<>();
+        List<String> skillList = new ArrayList<>();
         if (skills != null) {
             for (String s : skills.split("[,;/|]+")) {
                 if (!s.isBlank()) skillList.add(s.trim());
             }
         }
         String sk = skillList.isEmpty() ? "vos compétences clés" : skillList.get(0);
-        java.util.List<String> q = new java.util.ArrayList<>();
+        List<String> q = new ArrayList<>();
         q.add("Ouverture (2 min) — Présentez un résultat concret lié à " + title + ".");
         q.add("Technique — Donnez un exemple où vous avez utilisé " + sk + " sous contrainte de délai.");
         q.add("STAR — Situation / Tâche / Action / Résultat sur un projet similaire.");

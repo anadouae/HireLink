@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>HireLink — Motifs de refus (CRUD)</title>
+  <link rel="stylesheet" href="../css/design-system.css" />
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body class="app-body">
+  <div id="shell-root"></div>
+  <main class="app-main">
+    <header class="page-head">
+      <h1>Motifs de refus</h1>
+      <p class="muted">CRUD admin — catalogue fermé (Séance 4)</p>
+    </header>
+    <section class="card" style="margin-bottom:1rem">
+      <h2 style="margin-top:0">Ajouter</h2>
+      <div class="row" style="gap:.75rem;flex-wrap:wrap">
+        <input id="rr-code" placeholder="CODE" style="min-width:140px" />
+        <input id="rr-label" placeholder="Libellé" style="flex:1;min-width:200px" />
+        <button class="btn btn-primary" id="rr-add">Créer</button>
+      </div>
+    </section>
+    <section class="card">
+      <table class="table">
+        <thead><tr><th>Code</th><th>Libellé</th><th>Actif</th><th>Actions</th></tr></thead>
+        <tbody id="rr-body"><tr><td colspan="4" class="muted">Chargement…</td></tr></tbody>
+      </table>
+    </section>
+  </main>
+  <script src="../js/config.js"></script>
+  <script src="../js/api.js"></script>
+  <script src="../js/ui.js"></script>
+  <script src="../js/shell.js"></script>
+  <script>
+    (function () {
+      const session = HireLinkShell.mountShell({ roles: ["ADMINISTRATEUR"], hello: false });
+      if (!session) return;
+      const body = document.getElementById("rr-body");
+
+      async function load() {
+        try {
+          const rows = await HireLinkAPI.api("/refusal-reasons?all=true");
+          body.innerHTML = "";
+          if (!rows.length) {
+            body.innerHTML = "<tr><td colspan='4' class='muted'>Aucun motif</td></tr>";
+            return;
+          }
+          rows.forEach((r) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = "<td></td><td></td><td></td><td></td>";
+            tr.children[0].textContent = r.code;
+            tr.children[1].textContent = r.label;
+            tr.children[2].textContent = r.active ? "Oui" : "Non";
+            const actions = document.createElement("div");
+            actions.style.display = "flex";
+            actions.style.gap = ".35rem";
+            const edit = document.createElement("button");
+            edit.className = "btn btn-ghost btn-sm";
+            edit.textContent = "Renommer";
+            edit.onclick = async () => {
+              const label = prompt("Nouveau libellé", r.label);
+              if (!label) return;
+              try {
+                await HireLinkAPI.api("/refusal-reasons/" + r.id, {
+                  method: "PUT",
+                  body: { label: label, active: r.active },
+                });
+                HireLink.toast("OK", "Motif mis à jour", "ok");
+                load();
+              } catch (e) {
+                HireLink.toast("Erreur", e.message, "danger");
+              }
+            };
+            const del = document.createElement("button");
+            del.className = "btn btn-ghost btn-sm";
+            del.textContent = "Supprimer";
+            del.onclick = async () => {
+              if (!confirm("Supprimer " + r.code + " ?")) return;
+              try {
+                await HireLinkAPI.api("/refusal-reasons/" + r.id, { method: "DELETE" });
+                HireLink.toast("OK", "Supprimé", "ok");
+                load();
+              } catch (e) {
+                HireLink.toast("Erreur", e.message, "danger");
+              }
+            };
+            actions.appendChild(edit);
+            actions.appendChild(del);
+            tr.children[3].appendChild(actions);
+            body.appendChild(tr);
+          });
+        } catch (e) {
+          body.innerHTML = "<tr><td colspan='4' class='muted'>" + e.message + "</td></tr>";
+        }
+      }
+
+      document.getElementById("rr-add").onclick = async () => {
+        const code = document.getElementById("rr-code").value.trim();
+        const label = document.getElementById("rr-label").value.trim();
+        try {
+          await HireLinkAPI.api("/refusal-reasons", {
+            method: "POST",
+            body: { code: code, label: label, active: true },
+          });
+          document.getElementById("rr-code").value = "";
+          document.getElementById("rr-label").value = "";
+          HireLink.toast("OK", "Motif créé", "ok");
+          load();
+        } catch (e) {
+          HireLink.toast("Erreur", e.message, "danger");
+        }
+      };
+      load();
+    })();
+  </script>
+</body>
+</html>

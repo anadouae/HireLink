@@ -3,35 +3,30 @@
   if (!session) return;
   if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("recruiter");
 
+  // Périmètre : fin positive à INTERVIEW (pas d'étape Offre / Accepté).
   const COLUMNS = [
     { key: "SUBMITTED", label: "Soumises" },
     { key: "SCREENING", label: "Présélection" },
     { key: "SHORTLISTED", label: "Shortlist" },
-    { key: "INTERVIEW", label: "Entretien" },
-    { key: "OFFER", label: "Offre" },
+    { key: "INTERVIEW", label: "Entretien (fin)" },
   ];
   const NEXT = {
     SUBMITTED: "SCREENING",
     SCREENING: "SHORTLISTED",
     SHORTLISTED: "INTERVIEW",
-    INTERVIEW: "OFFER",
-    OFFER: "ACCEPTED",
   };
   const STEP_HINT = {
     SCREENING: "Présélection : CV et compétences vs fiche de poste.",
     SHORTLISTED: "Shortlist : candidat retenu pour échange humain.",
-    INTERVIEW: "Entretien : type, créneau et canal obligatoires.",
-    OFFER: "Proposition : vous formalisez une offre au candidat.",
-    ACCEPTED: "Acceptation : clôture positive du dossier.",
+    INTERVIEW: "Entretien : dernière étape gérée. Ensuite : refus possible, pas d'offre in-app.",
   };
 
   let allApps = [];
   let refusalCatalog = [];
 
-  function slaClass(days) {
-    if (days == null) return "";
-    if (days < 0) return "danger";
-    if (days <= 2) return "warn";
+  function slaClass(days, breached) {
+    if (breached || (days != null && days < 0)) return "danger";
+    if (days != null && days <= 2) return "warn";
     return "";
   }
 
@@ -55,7 +50,51 @@
       refusalCatalog
         .map((r) => '<option value="' + esc(r.code) + '">' + esc(r.label) + " (" + esc(r.code) + ")</option>")
         .join("") +
-      "</select></div>"
+      "</select></div>" +
+      '<div class="row" style="gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap">' +
+      '<button type="button" class="btn btn-soft btn-sm" id="btn-ai-refuse">Brouillon IA (R15)</button>' +
+      '<span class="muted" style="font-size:0.75rem">Motif + intitulé poste uniquement — pas de PII</span></div>' +
+      '<div id="ai-refuse-box" class="ai-result" style="display:none;margin-top:0.5rem;max-height:140px"></div>'
+    );
+  }
+
+  async function loadFunnel() {
+    const el = document.getElementById("funnel-strip");
+    if (!el) return;
+    try {
+      const f = await HireLinkAPI.api("/growth/pipeline-funnel");
+      const by = f.byStatus || {};
+      const nudge = (f.growth && f.growth.nudge) || "";
+      el.innerHTML =
+        '<div class="row between" style="flex-wrap:wrap;gap:0.75rem;align-items:flex-start">' +
+        '<div style="display:flex;flex-wrap:wrap;gap:0.65rem">' +
+        metric("Actifs", f.active) +
+        metric("SLA ⚠", f.slaBreached) +
+        metric("Hot ≥75%", f.hotMatches) +
+        metric("→ Entretien", (f.conversionToInterviewPct || 0) + "%") +
+        metric("Hire rate", (f.hireRatePct || 0) + "%") +
+        "</div>" +
+        '<div class="muted" style="font-size:0.78rem;max-width:28rem;line-height:1.4">' +
+        esc((f.growth && f.growth.hint) || "") +
+        (nudge ? "<br/><strong style='color:var(--rose,#7a2032)'>" + esc(nudge) + "</strong>" : "") +
+        "</div></div>" +
+        '<div class="row" style="gap:0.35rem;margin-top:0.65rem;flex-wrap:wrap;font-size:0.72rem">' +
+        ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "REJECTED", "WITHDRAWN"]
+          .map((k) => '<span class="badge badge-chrome">' + k + " " + (by[k] || 0) + "</span>")
+          .join("") +
+        "</div>";
+    } catch (err) {
+      el.innerHTML = '<p class="muted" style="margin:0;font-size:0.8rem">' + esc(err.message) + "</p>";
+    }
+  }
+
+  function metric(label, val) {
+    return (
+      '<div style="min-width:4.5rem"><div class="muted" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:.04em">' +
+      esc(label) +
+      '</div><div style="font-weight:700;font-size:1.15rem">' +
+      esc(String(val == null ? "—" : val)) +
+      "</div></div>"
     );
   }
 
@@ -171,7 +210,11 @@
       esc(c.photoFileName || "Non") +
       "</span></div>" +
       "<div><strong>SLA restant</strong><span>" +
-      (c.slaRemainingDays == null ? "—" : c.slaRemainingDays + " j") +
+      (c.slaBreached
+        ? "Dépassé"
+        : c.slaRemainingDays == null
+          ? "—"
+          : c.slaRemainingDays + " j") +
       "</span></div>" +
       (c.candidateSkills
         ? "<div><strong>Skills</strong><span>" + esc(c.candidateSkills) + "</span></div>"
@@ -206,14 +249,21 @@
       return;
     }
     const needInterview = next === "INTERVIEW";
+    const needOfferNote = next === "OFFER";
     const body =
       dossierHtml(c) +
       '<p class="muted" style="margin:0 0 0.65rem">' +
       esc(STEP_HINT[next] || "") +
       "</p>" +
       checksHtml() +
-      '<div class="field" style="margin-top:0.75rem"><label>Note RH interne</label>' +
-      '<textarea id="adv-note" rows="2" placeholder="Décision, points à vérifier en entretien…"></textarea></div>' +
+      '<div class="field" style="margin-top:0.75rem"><label>Note RH interne' +
+      (needOfferNote ? " *" : "") +
+      "</label>" +
+      '<textarea id="adv-note" rows="2" placeholder="' +
+      (needOfferNote
+        ? "Décision d’offre obligatoire (pourquoi ce profil)…"
+        : "Décision, points à vérifier…") +
+      '"></textarea></div>' +
       '<div class="row" style="gap:0.75rem;flex-wrap:wrap;margin-top:0.65rem">' +
       '<div class="field" style="flex:1;min-width:120px"><label>Score tech (1–5)</label>' +
       '<input type="number" id="score-tech" min="1" max="5" placeholder="—" /></div>' +
@@ -224,7 +274,9 @@
       "</div>" +
       (needInterview
         ? '<div class="stack" style="margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid var(--line)">' +
-          '<p class="muted" style="margin:0;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Organisation entretien</p>' +
+          '<div class="row between" style="align-items:center"><p class="muted" style="margin:0;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em">Organisation entretien</p>' +
+          '<button type="button" class="btn btn-soft btn-sm" id="btn-ai-kit">Kit IA entretien</button></div>' +
+          '<div id="ai-kit-box" class="ai-result" style="display:none;margin:0.5rem 0;max-height:120px"></div>' +
           '<div class="field"><label>Type *</label><select id="int-type">' +
           '<option value="">— Choisir —</option>' +
           '<option value="PHONE">Téléphone</option>' +
@@ -238,13 +290,38 @@
           "</div>"
         : "");
 
-    const ok = await HireLink.openModal({
+    const okPromise = HireLink.openModal({
       title: "Avancer · " + c.candidateName,
       description: c.status + " → " + next + " · vérifications obligatoires",
       bodyHtml: body,
       confirmLabel: "Confirmer l’étape",
       large: true,
     });
+
+    setTimeout(() => {
+      const kitBtn = document.getElementById("btn-ai-kit");
+      if (!kitBtn) return;
+      kitBtn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+          const r = await HireLinkAPI.api("/ai/interview-kit", {
+            method: "POST",
+            body: { jobTitle: c.jobTitle, skills: c.candidateSkills, premium: true },
+          });
+          const box = document.getElementById("ai-kit-box");
+          if (box) {
+            box.style.display = "block";
+            box.textContent = r.content || (r.questions || []).join("\n");
+          }
+          HireLink.toast("Kit IA", "Proposition — le manager décide (R07)", "ok");
+        } catch (err) {
+          HireLink.toast("IA", err.message, "warn");
+        }
+      };
+    }, 80);
+
+    const ok = await okPromise;
     if (!ok) return;
 
     const confirmIdentity = !!(document.getElementById("chk-id") || {}).checked;
@@ -279,6 +356,10 @@
           "/5"
       );
     }
+    if (needOfferNote && !rawNote) {
+      HireLink.toast("Offre", "Note de décision obligatoire", "warn");
+      return;
+    }
     if (noteParts.length) payload.advanceNote = noteParts.join("\n");
 
     if (needInterview) {
@@ -312,7 +393,7 @@
         esc(c.coverLetter) +
         "</div>"
       : "";
-    const ok = await HireLink.openModal({
+    const okPromise = HireLink.openModal({
       title: "Refuser " + c.candidateName,
       description: "Motif catalogue obligatoire (R04) — visible par le candidat.",
       bodyHtml: dossierHtml(c) + letterBlock + checksHtml() + refusalSelectHtml(),
@@ -320,6 +401,43 @@
       danger: true,
       large: true,
     });
+
+    setTimeout(() => {
+      const aiBtn = document.getElementById("btn-ai-refuse");
+      if (!aiBtn) return;
+      aiBtn.onclick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const code = (document.getElementById("reject-reason") || {}).value || "";
+        if (!code) {
+          HireLink.toast("Motif", "Choisissez d’abord un motif catalogue", "warn");
+          return;
+        }
+        const label =
+          (refusalCatalog.find((r) => r.code === code) || {}).label || code;
+        try {
+          const r = await HireLinkAPI.api("/ai/refusal-draft", {
+            method: "POST",
+            body: {
+              reasonCode: code,
+              reasonLabel: label,
+              jobTitle: c.jobTitle,
+              premium: true,
+            },
+          });
+          const box = document.getElementById("ai-refuse-box");
+          if (box) {
+            box.style.display = "block";
+            box.textContent = r.content || "";
+          }
+          HireLink.toast("IA", "Brouillon prêt — validation humaine (R07)", "ok");
+        } catch (err) {
+          HireLink.toast("IA", err.message, "warn");
+        }
+      };
+    }, 80);
+
+    const ok = await okPromise;
     if (!ok) return;
     const reason = (document.getElementById("reject-reason") || {}).value || "";
     if (!reason.trim()) {
@@ -387,7 +505,9 @@
     const q = ((document.getElementById("search-pipeline") || {}).value || "").trim().toLowerCase();
     let filtered = allApps;
     if (filter === "urgent") {
-      filtered = filtered.filter((a) => a.slaRemainingDays != null && a.slaRemainingDays <= 2);
+      filtered = filtered.filter((a) => a.slaRemainingDays != null && a.slaRemainingDays <= 2 && !a.slaBreached);
+    } else if (filter === "breached") {
+      filtered = filtered.filter((a) => a.slaBreached);
     } else if (filter === "hot") {
       filtered = filtered.filter((a) => (a.matchScore || 0) >= 75);
     } else if (filter === "interview") {
@@ -405,6 +525,7 @@
       const cards = filtered
         .filter((a) => a.status === col.key)
         .sort((a, b) => {
+          if (a.slaBreached !== b.slaBreached) return a.slaBreached ? -1 : 1;
           const sa = a.slaRemainingDays == null ? 99 : a.slaRemainingDays;
           const sb = b.slaRemainingDays == null ? 99 : b.slaRemainingDays;
           if (sa !== sb) return sa - sb;
@@ -423,10 +544,12 @@
       }
       cards.forEach((c) => {
         const card = document.createElement("article");
-        const urgent = c.slaRemainingDays != null && c.slaRemainingDays <= 2;
-        card.className = "kanban-card" + (urgent ? " is-urgent" : "") + ((c.matchScore || 0) >= 75 ? " is-hot" : "");
+        const urgent =
+          c.slaBreached || (c.slaRemainingDays != null && c.slaRemainingDays <= 2);
+        card.className =
+          "kanban-card" + (urgent ? " is-urgent" : "") + ((c.matchScore || 0) >= 75 ? " is-hot" : "");
         const sla = c.slaRemainingDays;
-        const slaTxt = sla == null ? "—" : sla < 0 ? "Retard" : sla + " j";
+        const slaTxt = c.slaBreached ? "Retard" : sla == null ? "—" : sla < 0 ? "Retard" : sla + " j";
         card.innerHTML =
           "<h3></h3><p></p><div class='match-bar'><span></span></div>" +
           "<div class='kanban-meta'><span class='badge badge-rose'></span>" +
@@ -449,7 +572,7 @@
           c.matchScore != null ? Math.round(c.matchScore) + "%" : "—";
         const pill = card.querySelector(".sla-pill");
         pill.textContent = "SLA " + slaTxt;
-        const sc = slaClass(sla);
+        const sc = slaClass(sla, c.slaBreached);
         if (sc) pill.classList.add(sc);
         card.querySelector(".js-view").onclick = (e) => {
           e.stopPropagation();
@@ -482,6 +605,7 @@
       }
       allApps = await HireLinkAPI.api("/applications/pipeline");
       paint();
+      loadFunnel();
     } catch (err) {
       root.innerHTML = "<p class='muted'>" + err.message + "</p>";
     }

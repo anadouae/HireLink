@@ -1,0 +1,50 @@
+FICHE ORALE — ANTI-SURPRISE (Séances 3 & 4)
+===========================================
+
+1) COMMENT LES TABLES SONT CRÉÉES (ne plus jamais dire « .sql »)
+----------------------------------------------------------------
+Phrase exacte à dire :
+« Les tables sont générées par Hibernate à partir des classes Java annotées @Entity.
+Au démarrage de Spring Boot, avec spring.jpa.hibernate.ddl-auto=update,
+Hibernate crée ou met à jour le schéma MySQL. phpMyAdmin sert uniquement
+à vérifier le résultat. La source de vérité est le modèle Java, pas un
+fichier schema.sql. »
+
+2) SÉANCE 3 — CE QUI ÉTAIT DEMANDÉ / CE QU’ON A FAIT
+----------------------------------------------------
+Demandé : entités JPA, relations, Hibernate, MySQL, diagramme de classes, formulaires.
+Fait :
+- Entities dans backend/.../model/
+- Relations ManyToOne / OneToMany / ManyToMany (JobOffer↔Tag) / Membership
+- ddl-auto=update
+- Diagramme : docs/diagrammes/diagramme_classes_hirelink_FINAL.png
+- UI alignée (offres, pipeline, profil)
+
+3) SÉANCE 4 — CE QUI ÉTAIT DEMANDÉ / CE QU’ON A FAIT
+----------------------------------------------------
+Demandé : CRUD ≥ 3 entités, API REST, frontend, Postman.
+Fait :
+1. JobOffer     → /api/v1/offers          (+ UI recruiter-offers)
+2. RefusalReason→ /api/v1/refusal-reasons (+ UI admin-refusal-reasons)
+3. Notification → /api/v1/notifications
+Architecture : Controller → Service → Repository → Entity
+Postman : collection exécutée = 15/15 OK (0 échec)
+
+4) ARCHITECTURE EN UNE PHRASE
+-----------------------------
+« Le navigateur appelle l’API avec un JWT ; le Controller reçoit,
+le Service applique les règles, le Repository parle à MySQL via JPA. »
+
+5) COMPTES (si le prof demande)
+-------------------------------
+admin@hirelink.ma      / Admin123!
+recruteur@hirelink.ma  / Recruteur123!
+candidat@hirelink.ma   / Candidat123!
+
+6) DÉMARRAGE RAPIDE
+-------------------
+MySQL XAMPP Start
+java (JDK 21+) -jar backend\target\hirelink-1.0.0-SNAPSHOT.jar
+python -m http.server 5500  (dans frontend)
+http://localhost:5500/auth.html
+http://localhost:8081/api/v1/health  → UP

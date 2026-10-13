@@ -1,0 +1,22 @@
+PACK LIVRABLES — HireLink Séances 3 & 4
+Date : 11/10/2026
+
+Ordre de lecture pour le professeur :
+1) 02_GUIDE_UTILISATION_ET_COMPTES_HireLink.docx   ← commencer ICI (comptes + étapes exactes)
+2) 03_DOCUMENT_TESTS_SEANCE3_SEANCE4_HireLink.docx ← matrice de tests + résultats
+3) 01_RAPPORT_SEANCE3_SEANCE4_HireLink.docx        ← ce qui est demandé / ce qui a été fait
+
+Collection Postman :
+../postman/HireLink_CRUD_Seance4.postman_collection.json
+
+Phrase orale critique (tables) :
+Les tables sont générées par Hibernate à partir des classes @Entity
+(spring.jpa.hibernate.ddl-auto=update). phpMyAdmin sert à vérifier.
+
+IMPORTANT démarrage API :
+Utiliser Java 21 ou plus (ex. "C:\Program Files\Java\jdk-23\bin\java.exe").
+Java 17 provoque UnsupportedClassVersionError.
+
+Postman / Newman (exécuté) :
+15 requêtes · 0 échec · voir postman_results.txt
+Fiche orale : 04_FICHE_ORALE_ANTI_SURPRISE.txt

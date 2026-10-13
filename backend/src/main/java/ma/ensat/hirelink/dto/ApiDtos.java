@@ -21,6 +21,7 @@ public class ApiDtos {
             String company,
             String companyIce,
             boolean companyVerified,
+            String verificationStatus,
             String soughtRoles,
             String preferredLocations,
             String preferredContracts,
@@ -58,6 +59,9 @@ public class ApiDtos {
             String contractType,
             int responseSlaDays,
             boolean published,
+            boolean suspended,
+            int reportCount,
+            String quarantineReason,
             Long recruiterId,
             String recruiterName,
             Instant createdAt,
@@ -83,6 +87,7 @@ public class ApiDtos {
             ApplicationStatus status,
             Double matchScore,
             String rejectionReason,
+            String refusalReasonCode,
             String cvSource,
             String cvFileName,
             String coverLetter,
@@ -92,10 +97,13 @@ public class ApiDtos {
             String interviewLocation,
             String interviewNotes,
             String advanceNote,
+            Long assignedHmUserId,
             Instant submittedAt,
             Instant updatedAt,
+            Instant responseDeadline,
             Integer slaDays,
-            Long slaRemainingDays
+            Long slaRemainingDays,
+            boolean slaBreached
     ) {}
 
     public record AdvanceRequest(

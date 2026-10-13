@@ -34,13 +34,23 @@ public class AiUsageLog {
     private Instant createdAt = Instant.now();
 
     public Long getId() { return id; }
+    public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
+    public Long getOrganizationId() { return organizationId; }
     public void setOrganizationId(Long organizationId) { this.organizationId = organizationId; }
+    public String getFeature() { return feature; }
     public void setFeature(String feature) { this.feature = feature; }
+    public String getProvider() { return provider; }
     public void setProvider(String provider) { this.provider = provider; }
+    public String getModel() { return model; }
     public void setModel(String model) { this.model = model; }
+    public int getCharsIn() { return charsIn; }
     public void setCharsIn(int charsIn) { this.charsIn = charsIn; }
+    public int getCharsOut() { return charsOut; }
     public void setCharsOut(int charsOut) { this.charsOut = charsOut; }
+    public int getCreditsSpent() { return creditsSpent; }
     public void setCreditsSpent(int creditsSpent) { this.creditsSpent = creditsSpent; }
+    public boolean isSuccess() { return success; }
     public void setSuccess(boolean success) { this.success = success; }
+    public Instant getCreatedAt() { return createdAt; }
 }

@@ -72,8 +72,35 @@
 
   let cachedApps = [];
 
+  async function showVerifyBanner() {
+    try {
+      const me = await HireLinkAPI.api("/me");
+      const host = document.querySelector(".content") || document.querySelector("main");
+      if (!host || me.companyVerified) {
+        const old = document.getElementById("hl-verify-banner");
+        if (old) old.remove();
+        return;
+      }
+      let ban = document.getElementById("hl-verify-banner");
+      if (!ban) {
+        ban = document.createElement("div");
+        ban.id = "hl-verify-banner";
+        ban.className = "panel";
+        ban.style.cssText = "margin:0 0 1rem;padding:0.9rem 1.1rem;border:1px solid #e8b4a0;background:#fff7f2";
+        host.insertBefore(ban, host.firstChild);
+      }
+      const st = me.verificationStatus || "PENDING";
+      ban.innerHTML =
+        "<strong>Inscription libre ≠ publication libre</strong>" +
+        '<p class="muted" style="margin:0.35rem 0 0;font-size:0.9rem">Statut : <code>' +
+        st +
+        "</code>. Vous pouvez créer des brouillons d’offres, mais la publication reste bloquée tant que l’entreprise n’est pas vérifiée (e-mail pro + matching registre / validation admin).</p>";
+    } catch (_) {}
+  }
+
   async function load() {
     try {
+      showVerifyBanner();
       const [apps, offers] = await Promise.all([
         HireLinkAPI.api("/applications/pipeline"),
         HireLinkAPI.api("/offers/mine"),
@@ -141,13 +168,13 @@
         if (relEl) relEl.textContent = rel.score + "/100 · " + rel.label;
       } catch (_) {}
 
-      const counts = { SUBMITTED: 0, SCREENING: 0, SHORTLISTED: 0, INTERVIEW: 0, OFFER: 0 };
+      const counts = { SUBMITTED: 0, SCREENING: 0, SHORTLISTED: 0, INTERVIEW: 0 };
       apps.forEach((a) => {
         if (counts[a.status] != null) counts[a.status]++;
       });
       const max = Math.max(1, ...Object.values(counts));
-      const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER"];
-      const labels = ["Soumises", "Screen", "Shortlist", "Entretien", "Offre"];
+      const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
+      const labels = ["Soumises", "Screen", "Shortlist", "Entretien"];
       document.getElementById("chart-bars").innerHTML = keys
         .map((k, i) => {
           const h = Math.round((counts[k] / max) * 100);

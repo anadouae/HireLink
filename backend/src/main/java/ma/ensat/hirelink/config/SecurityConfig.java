@@ -57,6 +57,7 @@ public class SecurityConfig {
                                 "/v3/api-docs/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/offers/public").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/refusal-reasons").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMINISTRATEUR")
                         .anyRequest().authenticated()
                 )

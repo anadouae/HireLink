@@ -1,5 +1,19 @@
-# Configuration locale (exemple)
-# Copier vers application-local.properties et adapter le mot de passe MySQL.
+# =============================================================================
+# HireLink — secrets locaux (NE PAS COMMITTER)
+# Copie ce fichier vers : application-local.properties
+# Spring Boot charge automatiquement le profil "local" si tu lances avec :
+#   --spring.profiles.active=local
+# ou mets simplement application-local.properties à côté (voir README agent).
+# =============================================================================
 
-spring.datasource.username=root
-spring.datasource.password=VOTRE_MOT_DE_PASSE
+hirelink.llm.provider=gemini
+hirelink.llm.fallback-chain=gemini,groq,mistral
+
+hirelink.llm.gemini.api-key=COLLER_CLE_GEMINI_ICI
+hirelink.llm.gemini.model=gemini-2.0-flash
+
+hirelink.llm.groq.api-key=COLLER_CLE_GROQ_ICI
+hirelink.llm.groq.model=llama-3.3-70b-versatile
+
+hirelink.llm.mistral.api-key=COLLER_CLE_MISTRAL_ICI
+hirelink.llm.mistral.model=mistral-small-latest

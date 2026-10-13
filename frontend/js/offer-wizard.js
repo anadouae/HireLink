@@ -35,20 +35,21 @@
     document.head.appendChild(s);
   }
 
-  async function start(onDone) {
+  async function start(onDone, existing) {
     ensureShellCss();
     if (global.HireLinkSkills) HireLinkSkills.ensureCss();
 
     const state = {
       step: 0,
       dir: "fwd",
-      title: "",
-      description: "",
-      location: "Maroc · Hybride",
-      contractType: "CDI",
-      responseSlaDays: 7,
-      published: true,
-      skillsCsv: "Java, Spring Boot, MySQL",
+      editId: existing && existing.id ? existing.id : null,
+      title: (existing && existing.title) || "",
+      description: (existing && existing.description) || "",
+      location: (existing && existing.location) || "Maroc · Hybride",
+      contractType: (existing && existing.contractType) || "CDI",
+      responseSlaDays: (existing && existing.responseSlaDays) || 7,
+      published: existing ? !!existing.published : true,
+      skillsCsv: (existing && existing.requiredSkills) || "Java, Spring Boot, MySQL",
       languagesCsv: "Français (Natif), Anglais (B2)",
       skillsApi: null,
       submitting: false,
@@ -220,8 +221,8 @@
             return;
           }
         }
-        await HireLinkAPI.api("/offers", {
-          method: "POST",
+        await HireLinkAPI.api(state.editId ? "/offers/" + state.editId : "/offers", {
+          method: state.editId ? "PUT" : "POST",
           body: {
             title: state.title,
             description: state.description,
@@ -233,7 +234,11 @@
           },
         });
         close();
-        HireLink.toast("Offre créée", state.published ? "Publiée" : "Brouillon", "ok");
+        HireLink.toast(
+          state.editId ? "Offre mise à jour" : "Offre créée",
+          state.published ? "Publiée" : "Brouillon",
+          "ok"
+        );
         if (typeof onDone === "function") onDone();
       } catch (err) {
         HireLink.toast("Erreur", err.message, "danger");
@@ -246,7 +251,9 @@
       const isLast = state.step === STEPS.length - 1;
       overlay.innerHTML =
         '<div class="hl-ow-card" role="dialog" aria-modal="true">' +
-        '<div class="hl-ow-top"><h2>Nouvelle offre</h2>' +
+        '<div class="hl-ow-top"><h2>' +
+        (state.editId ? "Modifier l’offre" : "Nouvelle offre") +
+        "</h2>" +
         '<p class="muted" style="margin:0;font-size:.9rem">Étape ' +
         (state.step + 1) +
         " / " +
@@ -264,7 +271,15 @@
         '<button type="button" class="btn btn-primary" id="ow-next"' +
         (state.submitting ? " disabled" : "") +
         ">" +
-        (state.submitting ? "Création…" : isLast ? "Créer l’offre" : "Continuer") +
+        (state.submitting
+          ? state.editId
+            ? "Enregistrement…"
+            : "Création…"
+          : isLast
+            ? state.editId
+              ? "Enregistrer"
+              : "Créer l’offre"
+            : "Continuer") +
         "</button></div></div></div>";
 
       overlay.querySelector("#ow-cancel").onclick = close;
@@ -320,5 +335,10 @@
     overlay.classList.add("is-open");
   }
 
-  global.HireLinkOfferWizard = { start };
+  global.HireLinkOfferWizard = {
+    start,
+    edit: function (offer, onDone) {
+      return start(onDone, offer);
+    },
+  };
 })(window);

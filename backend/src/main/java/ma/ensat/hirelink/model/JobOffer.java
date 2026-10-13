@@ -2,6 +2,10 @@ package ma.ensat.hirelink.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "job_offers", indexes = {
@@ -18,6 +22,19 @@ public class JobOffer {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "recruiter_id", nullable = false)
     private User recruiter;
+
+    /** Candidatures liées à cette offre (@OneToMany). */
+    @OneToMany(mappedBy = "jobOffer", cascade = CascadeType.ALL, orphanRemoval = false)
+    private List<Application> applications = new ArrayList<>();
+
+    /** Tags N–N (@ManyToMany via table job_offer_tags). */
+    @ManyToMany
+    @JoinTable(
+            name = "job_offer_tags",
+            joinColumns = @JoinColumn(name = "job_offer_id"),
+            inverseJoinColumns = @JoinColumn(name = "tag_id")
+    )
+    private Set<Tag> tags = new HashSet<>();
 
     @Column(nullable = false, length = 200)
     private String title;
@@ -41,6 +58,17 @@ public class JobOffer {
 
     @Column(nullable = false)
     private boolean published = false;
+
+    /** Suspendue après signalements communautaires (≥ 3). */
+    @Column(nullable = false)
+    private boolean suspended = false;
+
+    @Column(name = "report_count", nullable = false)
+    private int reportCount = 0;
+
+    /** Motif quarantaine douce (scan soft) ou suspension. */
+    @Column(name = "quarantine_reason", length = 500)
+    private String quarantineReason;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
@@ -72,6 +100,21 @@ public class JobOffer {
     public boolean isPublished() { return published; }
     public void setPublished(boolean published) { this.published = published; }
 
+    public boolean isSuspended() { return suspended; }
+    public void setSuspended(boolean suspended) { this.suspended = suspended; }
+
+    public int getReportCount() { return reportCount; }
+    public void setReportCount(int reportCount) { this.reportCount = reportCount; }
+
+    public String getQuarantineReason() { return quarantineReason; }
+    public void setQuarantineReason(String quarantineReason) { this.quarantineReason = quarantineReason; }
+
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
+
+    public List<Application> getApplications() { return applications; }
+    public void setApplications(List<Application> applications) { this.applications = applications; }
+
+    public Set<Tag> getTags() { return tags; }
+    public void setTags(Set<Tag> tags) { this.tags = tags; }
 }

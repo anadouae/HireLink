@@ -75,6 +75,33 @@ public class AiAssistService {
         return new AssistResult("Prep entretien Premium", sb.toString().trim(), false, tips);
     }
 
+    /** Brouillon refus local (R15) — motif catalogue + intitulé poste uniquement. */
+    public AssistResult refusalDraft(String reasonCode, String reasonLabel, String jobTitle, boolean premium) {
+        String poste = first(jobTitle, "le poste");
+        String motif = first(reasonLabel, first(reasonCode, "profil non retenu"));
+        StringBuilder sb = new StringBuilder();
+        sb.append("Objet : Suite à votre candidature — ").append(poste).append("\n\n");
+        sb.append("Bonjour,\n\n");
+        sb.append("Nous vous remercions pour l’intérêt porté à ").append(poste).append(".\n");
+        sb.append("Après examen attentif du dossier, nous ne poursuivons pas le processus");
+        sb.append(" (motif : ").append(motif).append(").\n\n");
+        sb.append("Cette décision ne remet pas en cause la qualité de votre parcours ;\n");
+        sb.append("nous vous souhaitons pleine réussite dans vos recherches.\n\n");
+        sb.append("Cordialement,\nL’équipe recrutement");
+        List<String> tips = new ArrayList<>();
+        tips.add("Relisez avant envoi — l’IA ne décide jamais (R07).");
+        tips.add("N’ajoutez pas de données personnelles dans le prompt (R15).");
+        if (!premium) {
+            tips.add("Premium : variantes ton court / formel / encouragent une autre offre.");
+            return new AssistResult("Brouillon refus (aperçu)", sb.toString(), true, tips);
+        }
+        sb.append("\n\n— Variante courte —\n");
+        sb.append("Merci pour votre candidature à ").append(poste)
+                .append(". Nous ne retenons pas votre profil à ce stade (").append(motif)
+                .append("). Bonne continuation.");
+        return new AssistResult("Brouillon refus Premium", sb.toString(), false, tips);
+    }
+
     private List<String> split(String raw) {
         if (raw == null || raw.isBlank()) return List.of();
         return Arrays.stream(raw.split("[,;|/]+"))

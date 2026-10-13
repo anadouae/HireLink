@@ -1,0 +1,84 @@
+﻿RÉSULTATS NEWMAN — HireLink CRUD Séance 4
+Date: 2026-10-11 16:40
+API: http://127.0.0.1:8081/api/v1
+Collection: docs/postman/HireLink_CRUD_Seance4.postman_collection.json
+
+BILAN: 15 requêtes exécutées · 0 échec · durée ~2.5s
+
+Couverture:
+- Auth: Login recruteur, Login admin
+- CRUD Offres: CREATE, READ list, READ by id, UPDATE, DELETE (tous 200 OK)
+- CRUD Motifs: READ, CREATE, UPDATE, DELETE (tous 200 OK)
+- CRUD Notifications: CREATE, READ, mark read, DELETE (tous 200 OK)
+
+HireLink — CRUD Séance 4
+
+□ Auth
+└ Login recruteur
+  POST http://127.0.0.1:8081/api/v1/auth/login [200 OK, 942B, 348ms]
+
+└ Login admin
+  POST http://127.0.0.1:8081/api/v1/auth/login [200 OK, 933B, 239ms]
+
+□ CRUD Offres
+└ CREATE offre
+  POST http://127.0.0.1:8081/api/v1/offers [200 OK, 793B, 48ms]
+
+└ READ liste mes offres
+  GET http://127.0.0.1:8081/api/v1/offers/mine [200 OK, 785B, 57ms]
+
+└ READ offre by id
+  GET http://127.0.0.1:8081/api/v1/offers/8 [200 OK, 783B, 51ms]
+
+└ UPDATE offre
+  PUT http://127.0.0.1:8081/api/v1/offers/8 [200 OK, 795B, 58ms]
+
+└ DELETE offre
+  DELETE http://127.0.0.1:8081/api/v1/offers/8 [200 OK, 508B, 83ms]
+
+□ CRUD Motifs de refus
+└ READ motifs actifs
+  GET http://127.0.0.1:8081/api/v1/refusal-reasons [200 OK, 1.16kB, 28ms]
+
+└ CREATE motif (admin)
+  POST http://127.0.0.1:8081/api/v1/refusal-reasons [200 OK, 551B, 61ms]
+
+└ UPDATE motif (admin)
+  PUT http://127.0.0.1:8081/api/v1/refusal-reasons/9 [200 OK, 562B, 53ms]
+
+└ DELETE motif (admin)
+  DELETE http://127.0.0.1:8081/api/v1/refusal-reasons/9 [200 OK, 508B, 47ms]
+
+□ CRUD Notifications
+└ CREATE notification
+  POST http://127.0.0.1:8081/api/v1/notifications [200 OK, 616B, 35ms]
+
+└ READ mes notifications
+  GET http://127.0.0.1:8081/api/v1/notifications [200 OK, 608B, 53ms]
+
+└ UPDATE mark read
+  POST http://127.0.0.1:8081/api/v1/notifications/7/read [200 OK, 505B, 50ms]
+
+└ DELETE notification
+  DELETE http://127.0.0.1:8081/api/v1/notifications/7 [200 OK, 508B, 40ms]
+
+┌─────────────────────────┬───────────────────┬───────────────────┐
+│                         │          executed │            failed │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              iterations │                 1 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│                requests │                15 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│            test-scripts │                 5 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│      prerequest-scripts │                 0 │                 0 │
+├─────────────────────────┼───────────────────┼───────────────────┤
+│              assertions │                 0 │                 0 │
+├─────────────────────────┴───────────────────┴───────────────────┤
+│ total run duration: 2.5s                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ total data received: 3.35kB (approx)                            │
+├─────────────────────────────────────────────────────────────────┤
+│ average response time: 83ms [min: 28ms, max: 348ms, s.d.: 85ms] │
+└─────────────────────────────────────────────────────────────────┘
+

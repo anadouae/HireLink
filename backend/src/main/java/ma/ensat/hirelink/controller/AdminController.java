@@ -82,8 +82,14 @@ public class AdminController {
         User u = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User introuvable"));
         u.setCompanyVerified(true);
+        u.setVerificationStatus("REGISTRY_MATCH");
         userRepository.save(u);
-        return Map.of("id", u.getId(), "companyVerified", true, "company", u.getCompany() == null ? "" : u.getCompany());
+        return Map.of(
+                "id", u.getId(),
+                "companyVerified", true,
+                "verificationStatus", u.getVerificationStatus(),
+                "company", u.getCompany() == null ? "" : u.getCompany()
+        );
     }
 
     private void requireAdmin(User user) {

@@ -2,7 +2,6 @@ package ma.ensat.hirelink.controller;
 
 import ma.ensat.hirelink.model.*;
 import ma.ensat.hirelink.repository.ApplicationRepository;
-import ma.ensat.hirelink.repository.RefusalReasonRepository;
 import ma.ensat.hirelink.service.PrivacyService;
 import ma.ensat.hirelink.service.TimelineService;
 import org.springframework.http.HttpStatus;
@@ -17,31 +16,21 @@ import java.util.*;
 @RequestMapping("/api/v1")
 public class CatalogPrivacyController {
 
-    private final RefusalReasonRepository refusalReasonRepository;
     private final TimelineService timelineService;
     private final PrivacyService privacyService;
     private final ApplicationRepository applicationRepository;
 
     public CatalogPrivacyController(
-            RefusalReasonRepository refusalReasonRepository,
             TimelineService timelineService,
             PrivacyService privacyService,
             ApplicationRepository applicationRepository
     ) {
-        this.refusalReasonRepository = refusalReasonRepository;
         this.timelineService = timelineService;
         this.privacyService = privacyService;
         this.applicationRepository = applicationRepository;
     }
 
-    @GetMapping("/refusal-reasons")
-    public List<Map<String, Object>> refusalReasons() {
-        List<Map<String, Object>> out = new ArrayList<>();
-        for (RefusalReason r : refusalReasonRepository.findByActiveTrue()) {
-            out.add(Map.of("code", r.getCode(), "label", r.getLabel()));
-        }
-        return out;
-    }
+    // GET /refusal-reasons → RefusalReasonController (évite mapping ambigu)
 
     @GetMapping("/applications/{id}/timeline")
     @Transactional(readOnly = true)
@@ -54,7 +43,8 @@ public class CatalogPrivacyController {
         boolean ok = user.getRole() == Role.ADMINISTRATEUR
                 || app.getCandidate().getId().equals(user.getId())
                 || (user.getRole() == Role.RECRUTEUR
-                    && app.getJobOffer().getRecruiter().getId().equals(user.getId()));
+                    && (app.getJobOffer().getRecruiter().getId().equals(user.getId())
+                        || user.getId().equals(app.getAssignedHmUserId())));
         if (!ok) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Accès historique refusé (R03)");
         }
