@@ -8,6 +8,14 @@
   const qParam = new URLSearchParams(location.search).get("q");
   if (qParam) document.getElementById("search-offers").value = qParam;
 
+  function inferWorkMode(location, contract) {
+    const blob = ((location || "") + " " + (contract || "")).toLowerCase();
+    if (/remote|télétravail|teletravail|full\s*remote|100%\s*remote/.test(blob)) return "Remote";
+    if (/hybride|hybrid/.test(blob)) return "Hybride";
+    if (/sur\s*site|onsite|présentiel|presentiel|bureau/.test(blob)) return "Présentiel";
+    return location ? "Sur site" : "Mode à préciser";
+  }
+
   function openApply(o) {
     if (!window.HireLinkApply) {
       HireLink.toast("Erreur", "Assistant de candidature indisponible", "danger");
@@ -33,23 +41,44 @@
     list.forEach((o) => {
       const el = document.createElement("article");
       el.className = "offer";
-      const match = o.matchScore != null ? Math.round(o.matchScore) : "—";
+      const matchPct = o.matchScore != null ? Math.round(o.matchScore) : null;
+      const matchCls =
+        matchPct == null
+          ? "badge-chrome"
+          : matchPct >= 80
+            ? "badge-ok match-hot"
+            : matchPct >= 55
+              ? "badge-info"
+              : "badge-rose";
+      const workMode = inferWorkMode(o.location || "", o.contractType || "");
       el.innerHTML =
-        "<div><h3></h3><p class='muted'></p><div class='offer-meta'></div>" +
-        (o.matchScore != null
-          ? '<div class="match-bar"><span style="width:' + Math.min(100, o.matchScore) + '%"></span></div>'
+        "<div><h3></h3>" +
+        '<p class="offer-essentials muted"></p>' +
+        '<div class="offer-meta"></div>' +
+        (matchPct != null
+          ? '<div class="match-bar"><span style="width:' + Math.min(100, matchPct) + '%"></span></div>'
           : "") +
-        "</div><div class='stack'><span class='badge badge-rose'></span>" +
+        "</div><div class='stack'><span class='badge " +
+        matchCls +
+        "'></span>" +
         "<button type='button' class='btn btn-soft btn-sm js-detail'>Voir l’offre</button>" +
         "<button type='button' class='btn btn-primary btn-sm js-apply'>Postuler</button>" +
         "<button type='button' class='btn btn-ghost btn-sm js-report'>Signaler</button></div>";
       el.querySelector("h3").textContent = o.title;
-      el.querySelector("p").textContent =
-        (o.recruiterName || "") + " · " + (o.location || "") + " · " + (o.contractType || "");
-      el.querySelector(".badge").textContent = "Compatibilité " + match + "%";
+      el.querySelector(".offer-essentials").textContent = [
+        o.location || "Lieu à préciser",
+        workMode,
+        o.contractType || null,
+        o.responseSlaDays != null ? "SLA " + o.responseSlaDays + " j" : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      el.querySelector(".badge").textContent =
+        matchPct != null ? matchPct + "% compatibilité" : "Matching à calculer";
       const meta = el.querySelector(".offer-meta");
-      ["Réponse sous " + o.responseSlaDays + " j"]
-        .concat((o.requiredSkills || "").split(",").slice(0, 4))
+      (o.requiredSkills || "")
+        .split(",")
+        .slice(0, 5)
         .forEach((t) => {
           if (!t || !String(t).trim()) return;
           const b = document.createElement("span");

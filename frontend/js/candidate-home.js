@@ -13,10 +13,9 @@
 
   const APP_STEPS = [
     { key: "SUBMITTED", label: "Soumises" },
-    { key: "SCREENING", label: "Screen" },
+    { key: "SCREENING", label: "Présél." },
     { key: "SHORTLISTED", label: "Shortlist" },
     { key: "INTERVIEW", label: "Entretien" },
-    { key: "OFFER", label: "Offre" },
   ];
 
   function renderProfilePipe(profile) {
@@ -33,13 +32,15 @@
     const pctEl = document.getElementById("profile-pct");
     const hint = document.getElementById("profile-hint");
     const nudge = document.getElementById("nudge");
+    const badgeCount = document.getElementById("profile-badge-count");
     if (ring) ring.style.setProperty("--p", String(pct));
     if (pctEl) pctEl.textContent = pct + "%";
+    if (badgeCount) badgeCount.textContent = done + "/" + PROFILE_STEPS.length + " validés";
     if (hint) {
       hint.textContent =
         pct >= 100
-          ? "Profil prêt — le matching peut prioriser les meilleures offres."
-          : done + "/" + PROFILE_STEPS.length + " étapes. Continuez pour maximiser votre ROI personnel.";
+          ? "Profil complet — matching priorisé sur vos compétences et préférences."
+          : done + "/" + PROFILE_STEPS.length + " sections validées. Complétez pour maximiser la pertinence des offres.";
     }
     if (nudge) nudge.hidden = pct >= 80;
 
@@ -57,11 +58,15 @@
         cls +
         '"><div class="dot">' +
         (ok ? "✓" : i + 1) +
-        "</div><strong>" +
+        '</div><strong>' +
         s.label +
-        "</strong><small>" +
-        s.hint +
-        "</small></div>"
+        '</strong><small>' +
+        (ok ? "Validé" : s.hint) +
+        '</small><span class="pipe-check-badge ' +
+        (ok ? "is-ok" : "is-todo") +
+        '">' +
+        (ok ? "OK" : "À faire") +
+        "</span></div>"
       );
     }).join("");
   }
@@ -141,7 +146,7 @@
         if (relEl) relEl.textContent = rel.score + "/100 · " + rel.label;
       } catch (_) {}
 
-      const counts = { SUBMITTED: 0, SCREENING: 0, SHORTLISTED: 0, INTERVIEW: 0, OFFER: 0 };
+      const counts = { SUBMITTED: 0, SCREENING: 0, SHORTLISTED: 0, INTERVIEW: 0 };
       active.forEach((a) => {
         if (counts[a.status] != null) counts[a.status]++;
       });

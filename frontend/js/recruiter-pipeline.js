@@ -5,10 +5,10 @@
 
   // Périmètre : fin positive à INTERVIEW (pas d'étape Offre / Accepté).
   const COLUMNS = [
-    { key: "SUBMITTED", label: "Soumises" },
-    { key: "SCREENING", label: "Présélection" },
-    { key: "SHORTLISTED", label: "Shortlist" },
-    { key: "INTERVIEW", label: "Entretien (fin)" },
+    { key: "SUBMITTED", label: "Soumises", tone: "neutral" },
+    { key: "SCREENING", label: "Présélection", tone: "warn" },
+    { key: "SHORTLISTED", label: "Shortlist", tone: "info" },
+    { key: "INTERVIEW", label: "Entretien", tone: "ok", end: true },
   ];
   const NEXT = {
     SUBMITTED: "SCREENING",
@@ -17,8 +17,17 @@
   };
   const STEP_HINT = {
     SCREENING: "Présélection : CV et compétences vs fiche de poste.",
-    SHORTLISTED: "Shortlist : candidat retenu pour échange humain.",
-    INTERVIEW: "Entretien : dernière étape gérée. Ensuite : refus possible, pas d'offre in-app.",
+    SHORTLISTED: "Shortlist : candidat retenu pour un échange humain.",
+    INTERVIEW: "Planifiez l’entretien : type, date et lieu ou lien.",
+  };
+
+  const STATUS_FR = {
+    SUBMITTED: "Soumises",
+    SCREENING: "Présélection",
+    SHORTLISTED: "Shortlist",
+    INTERVIEW: "Entretien",
+    REJECTED: "Refusées",
+    WITHDRAWN: "Retirées",
   };
 
   let allApps = [];
@@ -28,6 +37,13 @@
     if (breached || (days != null && days < 0)) return "danger";
     if (days != null && days <= 2) return "warn";
     return "";
+  }
+
+  function matchBadgeClass(score) {
+    if (score == null) return "badge-chrome";
+    if (score >= 80) return "badge-ok match-hot";
+    if (score >= 55) return "badge-info";
+    return "badge-rose";
   }
 
   function esc(s) {
@@ -41,19 +57,19 @@
     if (!refusalCatalog.length) {
       return (
         '<div class="field"><label>Motif de refus (catalogue) *</label>' +
-        '<textarea id="reject-reason" rows="2" placeholder="Code catalogue indisponible"></textarea></div>'
+        '<textarea id="reject-reason" rows="2" placeholder="Catalogue indisponible — réessayez"></textarea></div>'
       );
     }
     return (
-      '<div class="field"><label>Motif de refus (catalogue R04) *</label>' +
+      '<div class="field"><label>Motif de refus (catalogue) *</label>' +
       '<select id="reject-reason"><option value="">— Choisir —</option>' +
       refusalCatalog
-        .map((r) => '<option value="' + esc(r.code) + '">' + esc(r.label) + " (" + esc(r.code) + ")</option>")
+        .map((r) => '<option value="' + esc(r.code) + '">' + esc(r.label) + "</option>")
         .join("") +
       "</select></div>" +
       '<div class="row" style="gap:0.5rem;margin-top:0.5rem;flex-wrap:wrap">' +
-      '<button type="button" class="btn btn-soft btn-sm" id="btn-ai-refuse">Brouillon IA (R15)</button>' +
-      '<span class="muted" style="font-size:0.75rem">Motif + intitulé poste uniquement — pas de PII</span></div>' +
+      '<button type="button" class="btn btn-soft btn-sm" id="btn-ai-refuse">Brouillon IA</button>' +
+      '<span class="muted" style="font-size:0.75rem">Visible par le candidat — sans données personnelles dans le prompt</span></div>' +
       '<div id="ai-refuse-box" class="ai-result" style="display:none;margin-top:0.5rem;max-height:140px"></div>'
     );
   }
@@ -65,22 +81,35 @@
       const f = await HireLinkAPI.api("/growth/pipeline-funnel");
       const by = f.byStatus || {};
       const nudge = (f.growth && f.growth.nudge) || "";
+      const interviews = by.INTERVIEW || 0;
+      const refused = by.REJECTED || 0;
       el.innerHTML =
-        '<div class="row between" style="flex-wrap:wrap;gap:0.75rem;align-items:flex-start">' +
-        '<div style="display:flex;flex-wrap:wrap;gap:0.65rem">' +
-        metric("Actifs", f.active) +
-        metric("SLA ⚠", f.slaBreached) +
-        metric("Hot ≥75%", f.hotMatches) +
-        metric("→ Entretien", (f.conversionToInterviewPct || 0) + "%") +
-        metric("Hire rate", (f.hireRatePct || 0) + "%") +
+        '<div class="kpi-row">' +
+        metric("Actifs", f.active, "neutral") +
+        metric("Retards réponse", f.slaBreached, f.slaBreached ? "danger" : "neutral") +
+        metric("Match ≥75%", f.hotMatches, "ok") +
+        metric("En entretien", interviews, "info") +
+        metric("→ Entretien", (f.conversionToInterviewPct || 0) + "%", "info") +
+        metric("Refus", refused, refused ? "warn" : "neutral") +
         "</div>" +
-        '<div class="muted" style="font-size:0.78rem;max-width:28rem;line-height:1.4">' +
-        esc((f.growth && f.growth.hint) || "") +
-        (nudge ? "<br/><strong style='color:var(--rose,#7a2032)'>" + esc(nudge) + "</strong>" : "") +
-        "</div></div>" +
-        '<div class="row" style="gap:0.35rem;margin-top:0.65rem;flex-wrap:wrap;font-size:0.72rem">' +
+        (nudge || (f.growth && f.growth.hint)
+          ? '<p class="funnel-hint muted">' +
+            esc((f.growth && f.growth.hint) || "") +
+            (nudge ? " · <strong>" + esc(nudge) + "</strong>" : "") +
+            "</p>"
+          : "") +
+        '<div class="funnel-status-row">' +
         ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "REJECTED", "WITHDRAWN"]
-          .map((k) => '<span class="badge badge-chrome">' + k + " " + (by[k] || 0) + "</span>")
+          .map(
+            (k) =>
+              '<span class="status-pill status-pill--' +
+              k.toLowerCase() +
+              '">' +
+              esc(STATUS_FR[k] || k) +
+              " <b>" +
+              (by[k] || 0) +
+              "</b></span>"
+          )
           .join("") +
         "</div>";
     } catch (err) {
@@ -88,11 +117,13 @@
     }
   }
 
-  function metric(label, val) {
+  function metric(label, val, tone) {
     return (
-      '<div style="min-width:4.5rem"><div class="muted" style="font-size:0.65rem;text-transform:uppercase;letter-spacing:.04em">' +
+      '<div class="kpi-card' +
+      (tone ? " kpi-card--" + tone : "") +
+      '"><div class="kpi-card-label">' +
       esc(label) +
-      '</div><div style="font-weight:700;font-size:1.15rem">' +
+      '</div><div class="kpi-card-value">' +
       esc(String(val == null ? "—" : val)) +
       "</div></div>"
     );
@@ -120,8 +151,8 @@
               .join("") +
             "</ol>";
       await HireLink.openModal({
-        title: "Historique (F13)",
-        description: "Append-only — non modifiable (R12)",
+        title: "Historique du dossier",
+        description: "Journal chronologique — non modifiable",
         bodyHtml: html,
         confirmLabel: "Fermer",
         hideCancel: true,
@@ -148,7 +179,7 @@
         });
       }
       const body =
-        '<p class="muted">Scorecard F12 — notes 1 à 5</p>' +
+        '<p class="muted">Scorecard — notes de 1 à 5 par critère</p>' +
         criteria
           .map(
             (cr) =>
@@ -209,12 +240,12 @@
       "<div><strong>Photo</strong><span>" +
       esc(c.photoFileName || "Non") +
       "</span></div>" +
-      "<div><strong>SLA restant</strong><span>" +
+      "<div><strong>1ʳᵉ réponse</strong><span>" +
       (c.slaBreached
-        ? "Dépassé"
+        ? "Délai dépassé"
         : c.slaRemainingDays == null
           ? "—"
-          : c.slaRemainingDays + " j") +
+          : c.slaRemainingDays + " j restants") +
       "</span></div>" +
       (c.candidateSkills
         ? "<div><strong>Skills</strong><span>" + esc(c.candidateSkills) + "</span></div>"
@@ -231,13 +262,16 @@
 
   function checksHtml() {
     return (
-      '<div class="field" style="gap:0.45rem">' +
-      '<label class="row" style="align-items:flex-start;gap:0.5rem"><input type="checkbox" id="chk-id" /> ' +
-      "<span>Je confirme l’identité et les coordonnées du candidat</span></label>" +
-      '<label class="row" style="align-items:flex-start;gap:0.5rem"><input type="checkbox" id="chk-cv" /> ' +
-      "<span>J’ai relu le CV / dossier (lettre &amp; pièces)</span></label>" +
-      '<label class="row" style="align-items:flex-start;gap:0.5rem"><input type="checkbox" id="chk-sla" /> ' +
-      "<span>Je tiens compte du SLA de réponse de l’offre</span></label>" +
+      '<div class="hl-checklist" role="group" aria-label="Checklist obligatoire">' +
+      '<div class="hl-checklist-head"><strong>Checklist obligatoire</strong>' +
+      '<span class="badge badge-chrome">3 / 3</span></div>' +
+      '<p class="muted hl-checklist-sub">Sans ces confirmations, l’étape ne peut pas être validée.</p>' +
+      '<label class="hl-check"><input type="checkbox" id="chk-id" />' +
+      "<span><strong>Identité</strong><small>Coordonnées et identité du candidat vérifiées</small></span></label>" +
+      '<label class="hl-check"><input type="checkbox" id="chk-cv" />' +
+      "<span><strong>Dossier relu</strong><small>CV, lettre et pièces consultés</small></span></label>" +
+      '<label class="hl-check"><input type="checkbox" id="chk-sla" />' +
+      "<span><strong>Délai de réponse</strong><small>Je respecte l’engagement affiché sur l’offre</small></span></label>" +
       "</div>"
     );
   }
@@ -249,21 +283,14 @@
       return;
     }
     const needInterview = next === "INTERVIEW";
-    const needOfferNote = next === "OFFER";
     const body =
       dossierHtml(c) +
       '<p class="muted" style="margin:0 0 0.65rem">' +
       esc(STEP_HINT[next] || "") +
       "</p>" +
       checksHtml() +
-      '<div class="field" style="margin-top:0.75rem"><label>Note RH interne' +
-      (needOfferNote ? " *" : "") +
-      "</label>" +
-      '<textarea id="adv-note" rows="2" placeholder="' +
-      (needOfferNote
-        ? "Décision d’offre obligatoire (pourquoi ce profil)…"
-        : "Décision, points à vérifier…") +
-      '"></textarea></div>' +
+      '<div class="field" style="margin-top:0.75rem"><label>Note RH interne</label>' +
+      '<textarea id="adv-note" rows="2" placeholder="Décision, points à vérifier…"></textarea></div>' +
       '<div class="row" style="gap:0.75rem;flex-wrap:wrap;margin-top:0.65rem">' +
       '<div class="field" style="flex:1;min-width:120px"><label>Score tech (1–5)</label>' +
       '<input type="number" id="score-tech" min="1" max="5" placeholder="—" /></div>' +
@@ -292,7 +319,11 @@
 
     const okPromise = HireLink.openModal({
       title: "Avancer · " + c.candidateName,
-      description: c.status + " → " + next + " · vérifications obligatoires",
+      description:
+        (STATUS_FR[c.status] || c.status) +
+        " → " +
+        (STATUS_FR[next] || next) +
+        " · checklist obligatoire",
       bodyHtml: body,
       confirmLabel: "Confirmer l’étape",
       large: true,
@@ -314,7 +345,7 @@
             box.style.display = "block";
             box.textContent = r.content || (r.questions || []).join("\n");
           }
-          HireLink.toast("Kit IA", "Proposition — le manager décide (R07)", "ok");
+          HireLink.toast("Kit IA", "Proposition générée — à valider avant envoi", "ok");
         } catch (err) {
           HireLink.toast("IA", err.message, "warn");
         }
@@ -356,10 +387,6 @@
           "/5"
       );
     }
-    if (needOfferNote && !rawNote) {
-      HireLink.toast("Offre", "Note de décision obligatoire", "warn");
-      return;
-    }
     if (noteParts.length) payload.advanceNote = noteParts.join("\n");
 
     if (needInterview) {
@@ -395,7 +422,7 @@
       : "";
     const okPromise = HireLink.openModal({
       title: "Refuser " + c.candidateName,
-      description: "Motif catalogue obligatoire (R04) — visible par le candidat.",
+      description: "Motif catalogue obligatoire — visible par le candidat.",
       bodyHtml: dossierHtml(c) + letterBlock + checksHtml() + refusalSelectHtml(),
       confirmLabel: "Confirmer le refus",
       danger: true,
@@ -430,7 +457,7 @@
             box.style.display = "block";
             box.textContent = r.content || "";
           }
-          HireLink.toast("IA", "Brouillon prêt — validation humaine (R07)", "ok");
+          HireLink.toast("IA", "Brouillon prêt — à relire avant envoi", "ok");
         } catch (err) {
           HireLink.toast("IA", err.message, "warn");
         }
@@ -486,8 +513,8 @@
             "</p>"
           : "") +
         '<div class="row" style="gap:0.5rem;margin-top:0.75rem;flex-wrap:wrap">' +
-        '<button type="button" class="btn btn-soft btn-sm" id="btn-tl">Historique F13</button>' +
-        '<button type="button" class="btn btn-primary btn-sm" id="btn-sc">Scorecard F12</button>' +
+        '<button type="button" class="btn btn-soft btn-sm" id="btn-tl">Historique</button>' +
+        '<button type="button" class="btn btn-primary btn-sm" id="btn-sc">Scorecard</button>' +
         "</div>",
       confirmLabel: "Fermer",
       hideCancel: true,
@@ -532,32 +559,45 @@
           return (b.matchScore || 0) - (a.matchScore || 0);
         });
       const el = document.createElement("div");
-      el.className = "kanban-col";
+      el.className = "kanban-col kanban-col--" + (col.tone || "neutral") + (col.end ? " is-end" : "");
       el.innerHTML =
-        '<div class="kanban-col-head"><span></span><span class="badge badge-chrome"></span></div>' +
+        '<div class="kanban-col-head"><div class="kanban-col-title"><span></span></div><span class="col-count"></span></div>' +
         '<div class="kanban-col-body"></div>';
-      el.querySelector(".kanban-col-head span").textContent = col.label;
-      el.querySelector(".badge").textContent = String(cards.length);
+      el.querySelector(".kanban-col-title > span").textContent = col.label;
+      el.querySelector(".col-count").textContent = String(cards.length);
       const body = el.querySelector(".kanban-col-body");
       if (!cards.length) {
-        body.innerHTML = '<p class="muted" style="font-size:0.8rem;padding:0.35rem">Vide</p>';
+        body.innerHTML = '<p class="kanban-empty muted">Aucun dossier</p>';
       }
       cards.forEach((c) => {
         const card = document.createElement("article");
-        const urgent =
-          c.slaBreached || (c.slaRemainingDays != null && c.slaRemainingDays <= 2);
+        const breached = !!(c.slaBreached || (c.slaRemainingDays != null && c.slaRemainingDays < 0));
+        const urgent = breached || (c.slaRemainingDays != null && c.slaRemainingDays <= 2);
         card.className =
-          "kanban-card" + (urgent ? " is-urgent" : "") + ((c.matchScore || 0) >= 75 ? " is-hot" : "");
+          "kanban-card" +
+          (breached ? " is-breached" : urgent ? " is-urgent" : "") +
+          ((c.matchScore || 0) >= 75 ? " is-hot" : "");
         const sla = c.slaRemainingDays;
-        const slaTxt = c.slaBreached ? "Retard" : sla == null ? "—" : sla < 0 ? "Retard" : sla + " j";
+        const slaTxt = breached
+          ? "Retard"
+          : sla == null
+            ? "—"
+            : sla === 0
+              ? "Dernier jour"
+              : "sous " + sla + " j";
+        const canAdvance = !!NEXT[c.status];
+        const matchPct = c.matchScore != null ? Math.round(c.matchScore) : null;
         card.innerHTML =
+          (breached ? '<div class="card-urgency">Délai de réponse dépassé</div>' : "") +
           "<h3></h3><p></p><div class='match-bar'><span></span></div>" +
-          "<div class='kanban-meta'><span class='badge badge-rose'></span>" +
+          "<div class='kanban-meta'><span class='badge'></span>" +
           "<span class='sla-pill'></span></div>" +
           "<div class='row-actions'>" +
-          "<button type='button' class='btn btn-sm btn-soft js-view'>Dossier</button>" +
-          "<button type='button' class='btn btn-sm btn-primary js-adv'>Avancer</button>" +
-          "<button type='button' class='btn btn-sm btn-ghost js-rej'>Refuser</button></div>";
+          "<button type='button' class='btn btn-sm btn-soft js-view' title='Dossier'><span class='ico' aria-hidden='true'>☰</span> Dossier</button>" +
+          (canAdvance
+            ? "<button type='button' class='btn btn-sm btn-primary js-adv' title='Avancer'><span class='ico' aria-hidden='true'>→</span> Avancer</button>"
+            : "") +
+          "<button type='button' class='btn btn-sm btn-ghost js-rej' title='Refuser'><span class='ico' aria-hidden='true'>✕</span></button></div>";
         card.querySelector("h3").textContent = c.candidateName;
         let sub = c.jobTitle || "";
         if (c.interviewType) {
@@ -568,20 +608,24 @@
         }
         card.querySelector("p").textContent = sub;
         card.querySelector(".match-bar > span").style.width = Math.min(100, c.matchScore || 0) + "%";
-        card.querySelector(".badge").textContent =
-          c.matchScore != null ? Math.round(c.matchScore) + "%" : "—";
+        const mb = card.querySelector(".badge");
+        mb.className = "badge " + matchBadgeClass(matchPct);
+        mb.textContent = matchPct != null ? matchPct + "%" : "—";
         const pill = card.querySelector(".sla-pill");
-        pill.textContent = "SLA " + slaTxt;
+        pill.textContent = "Réponse " + slaTxt;
         const sc = slaClass(sla, c.slaBreached);
         if (sc) pill.classList.add(sc);
         card.querySelector(".js-view").onclick = (e) => {
           e.stopPropagation();
           openDossier(c);
         };
-        card.querySelector(".js-adv").onclick = (e) => {
-          e.stopPropagation();
-          advance(c);
-        };
+        const advBtn = card.querySelector(".js-adv");
+        if (advBtn) {
+          advBtn.onclick = (e) => {
+            e.stopPropagation();
+            advance(c);
+          };
+        }
         card.querySelector(".js-rej").onclick = (e) => {
           e.stopPropagation();
           rejectFlow(c);
@@ -590,6 +634,10 @@
       });
       root.appendChild(el);
     });
+    const totalEl = document.getElementById("kanban-total");
+    if (totalEl) {
+      totalEl.textContent = filtered.filter((a) => COLUMNS.some((c) => c.key === a.status)).length + " dossiers";
+    }
   }
 
   async function load() {

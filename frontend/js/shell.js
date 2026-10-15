@@ -59,7 +59,41 @@
       HireLinkHelp.bindHelpLinks(roleHint);
     }
 
+    ensureThemeToggle();
+
     return session;
+  }
+
+  /** Bouton mode sombre sur toutes les topbars d’espaces app. */
+  function ensureThemeToggle() {
+    const actions = document.querySelector(".topbar-actions");
+    if (!actions) return;
+
+    let btn = document.getElementById("btn-theme");
+    if (!btn) {
+      btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = "btn-theme";
+      btn.className = "icon-btn theme-toggle";
+      btn.setAttribute("data-theme-toggle", "1");
+      actions.insertBefore(btn, actions.firstChild);
+    }
+
+    if (!global.HireLinkTheme) {
+      // charge theme.js à la volée si oublié dans le HTML
+      const s = document.createElement("script");
+      s.src = (location.pathname.includes("/app/") ? "../" : "") + "js/theme.js";
+      s.onload = () => {
+        if (global.HireLinkTheme) {
+          global.HireLinkTheme.syncButtons();
+          btn.onclick = () => global.HireLinkTheme.toggle();
+        }
+      };
+      document.head.appendChild(s);
+    } else {
+      global.HireLinkTheme.syncButtons();
+      btn.onclick = () => global.HireLinkTheme.toggle();
+    }
   }
 
   /** Bind a search input: input + Enter + clear (search event). */
@@ -76,5 +110,5 @@
     });
   }
 
-  global.HireLinkShell = { mountShell, bindSearch };
+  global.HireLinkShell = { mountShell, bindSearch, ensureThemeToggle };
 })(window);

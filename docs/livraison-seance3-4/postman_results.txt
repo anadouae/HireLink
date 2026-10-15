@@ -1,84 +1,142 @@
-﻿RÉSULTATS NEWMAN — HireLink CRUD Séance 4
-Date: 2026-10-11 16:40
+﻿RÉSULTATS NEWMAN — HireLink CRUD + Pipeline
+Date: 2026-10-15 16:26
 API: http://127.0.0.1:8081/api/v1
 Collection: docs/postman/HireLink_CRUD_Seance4.postman_collection.json
 
-BILAN: 15 requêtes exécutées · 0 échec · durée ~2.5s
+BILAN: 22 requêtes · 32 assertions · 0 échec · ~3.6s
 
 Couverture:
-- Auth: Login recruteur, Login admin
-- CRUD Offres: CREATE, READ list, READ by id, UPDATE, DELETE (tous 200 OK)
-- CRUD Motifs: READ, CREATE, UPDATE, DELETE (tous 200 OK)
-- CRUD Notifications: CREATE, READ, mark read, DELETE (tous 200 OK)
+- Santé / Auth config
+- Auth: recruteur owner, candidat, admin (JWT)
+- CRUD Offres: CREATE, READ list, READ by id, UPDATE, DELETE
+- CRUD Motifs: READ, CREATE, UPDATE, DELETE (admin)
+- CRUD Notifications: CREATE, READ, mark read, DELETE
+- Pipeline recruteur + candidatures candidat + /auth/me
+newman
 
-HireLink — CRUD Séance 4
+HireLink — CRUD Séance 4 + Pipeline
+
+□ 00 Santé
+└ Health
+  GET http://127.0.0.1:8081/api/v1/health [200 OK, 686B, 70ms]
+  √  Health 200
+  √  status UP
+
+└ Auth config
+  GET http://127.0.0.1:8081/api/v1/auth/config [200 OK, 686B, 9ms]
+  √  Config 200
 
 □ Auth
-└ Login recruteur
-  POST http://127.0.0.1:8081/api/v1/auth/login [200 OK, 942B, 348ms]
+└ Login recruteur (owner)
+  POST http://127.0.0.1:8081/api/v1/auth/login [200 OK, 930B, 226ms]
+  √  Login recruteur 200
+  √  JWT présent
+
+└ Login candidat
+  POST http://127.0.0.1:8081/api/v1/auth/login [200 OK, 940B, 220ms]
+  √  Login candidat 200
 
 └ Login admin
-  POST http://127.0.0.1:8081/api/v1/auth/login [200 OK, 933B, 239ms]
+  POST http://127.0.0.1:8081/api/v1/auth/login [200 OK, 933B, 228ms]
+  √  Login admin 200
 
 □ CRUD Offres
 └ CREATE offre
-  POST http://127.0.0.1:8081/api/v1/offers [200 OK, 793B, 48ms]
+  POST http://127.0.0.1:8081/api/v1/offers [200 OK, 848B, 36ms]
+  √  CREATE offre 200
+  √  id offre
 
 └ READ liste mes offres
-  GET http://127.0.0.1:8081/api/v1/offers/mine [200 OK, 785B, 57ms]
+  GET http://127.0.0.1:8081/api/v1/offers/mine [200 OK, 3.22kB, 38ms]
+  √  Liste offres 200
+  √  tableau
 
 └ READ offre by id
-  GET http://127.0.0.1:8081/api/v1/offers/8 [200 OK, 783B, 51ms]
+  GET http://127.0.0.1:8081/api/v1/offers/11 [200 OK, 838B, 41ms]
+  √  Offre by id 200
 
 └ UPDATE offre
-  PUT http://127.0.0.1:8081/api/v1/offers/8 [200 OK, 795B, 58ms]
+  PUT http://127.0.0.1:8081/api/v1/offers/11 [200 OK, 850B, 54ms]
+  √  UPDATE offre 200
+  √  titre modifié
 
 └ DELETE offre
-  DELETE http://127.0.0.1:8081/api/v1/offers/8 [200 OK, 508B, 83ms]
+  DELETE http://127.0.0.1:8081/api/v1/offers/11 [200 OK, 509B, 54ms]
+  √  DELETE offre 2xx
 
 □ CRUD Motifs de refus
 └ READ motifs actifs
-  GET http://127.0.0.1:8081/api/v1/refusal-reasons [200 OK, 1.16kB, 28ms]
+  GET http://127.0.0.1:8081/api/v1/refusal-reasons [200 OK, 1.16kB, 17ms]
+  √  Motifs 200
+  √  catalogue non vide
 
 └ CREATE motif (admin)
-  POST http://127.0.0.1:8081/api/v1/refusal-reasons [200 OK, 551B, 61ms]
+  POST http://127.0.0.1:8081/api/v1/refusal-reasons [200 OK, 552B, 34ms]
+  √  CREATE motif 200
 
 └ UPDATE motif (admin)
-  PUT http://127.0.0.1:8081/api/v1/refusal-reasons/9 [200 OK, 562B, 53ms]
+  PUT http://127.0.0.1:8081/api/v1/refusal-reasons/11 [200 OK, 563B, 41ms]
+  √  UPDATE motif 200
 
 └ DELETE motif (admin)
-  DELETE http://127.0.0.1:8081/api/v1/refusal-reasons/9 [200 OK, 508B, 47ms]
+  DELETE http://127.0.0.1:8081/api/v1/refusal-reasons/11 [200 OK, 509B, 45ms]
+  √  DELETE motif 2xx
 
 □ CRUD Notifications
 └ CREATE notification
-  POST http://127.0.0.1:8081/api/v1/notifications [200 OK, 616B, 35ms]
+  POST http://127.0.0.1:8081/api/v1/notifications [200 OK, 617B, 34ms]
+  √  CREATE notif 200
 
 └ READ mes notifications
-  GET http://127.0.0.1:8081/api/v1/notifications [200 OK, 608B, 53ms]
+  GET http://127.0.0.1:8081/api/v1/notifications [200 OK, 609B, 25ms]
+  √  Liste notif 200
 
 └ UPDATE mark read
-  POST http://127.0.0.1:8081/api/v1/notifications/7/read [200 OK, 505B, 50ms]
+  POST http://127.0.0.1:8081/api/v1/notifications/11/read [200 OK, 506B, 34ms]
+  √  Mark read 2xx
 
 └ DELETE notification
-  DELETE http://127.0.0.1:8081/api/v1/notifications/7 [200 OK, 508B, 40ms]
+  DELETE http://127.0.0.1:8081/api/v1/notifications/11 [200 OK, 509B, 147ms]
+  √  DELETE notif 2xx
 
-┌─────────────────────────┬───────────────────┬───────────────────┐
-│                         │          executed │            failed │
-├─────────────────────────┼───────────────────┼───────────────────┤
-│              iterations │                 1 │                 0 │
-├─────────────────────────┼───────────────────┼───────────────────┤
-│                requests │                15 │                 0 │
-├─────────────────────────┼───────────────────┼───────────────────┤
-│            test-scripts │                 5 │                 0 │
-├─────────────────────────┼───────────────────┼───────────────────┤
-│      prerequest-scripts │                 0 │                 0 │
-├─────────────────────────┼───────────────────┼───────────────────┤
-│              assertions │                 0 │                 0 │
-├─────────────────────────┴───────────────────┴───────────────────┤
-│ total run duration: 2.5s                                        │
-├─────────────────────────────────────────────────────────────────┤
-│ total data received: 3.35kB (approx)                            │
-├─────────────────────────────────────────────────────────────────┤
-│ average response time: 83ms [min: 28ms, max: 348ms, s.d.: 85ms] │
-└─────────────────────────────────────────────────────────────────┘
+□ Pipeline & candidatures
+└ Offres publiques
+  GET http://127.0.0.1:8081/api/v1/offers/public [200 OK, 3.46kB, 37ms]
+  √  Public offers 200
+  √  liste
+
+└ Pipeline recruteur
+  GET http://127.0.0.1:8081/api/v1/applications/pipeline [200 OK, 8.63kB, 61ms]
+  √  Pipeline 200
+  √  dossier(s) seed
+
+└ Mes candidatures (candidat)
+  GET http://127.0.0.1:8081/api/v1/applications/mine [200 OK, 1.23kB, 63ms]
+  √  Mine apps 200
+  √  tableau
+
+└ Me candidat
+  GET http://127.0.0.1:8081/api/v1/auth/me [200 OK, 714B, 31ms]
+  √  Me 200
+  √  rôle CANDIDAT
+
+┌─────────────────────────┬───────────────────┬──────────────────┐
+│                         │          executed │           failed │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              iterations │                 1 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│                requests │                22 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│            test-scripts │                22 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│      prerequest-scripts │                 0 │                0 │
+├─────────────────────────┼───────────────────┼──────────────────┤
+│              assertions │                32 │                0 │
+├─────────────────────────┴───────────────────┴──────────────────┤
+│ total run duration: 3.6s                                       │
+├────────────────────────────────────────────────────────────────┤
+│ total data received: 18.92kB (approx)                          │
+├────────────────────────────────────────────────────────────────┤
+│ average response time: 70ms [min: 9ms, max: 228ms, s.d.: 66ms] │
+└────────────────────────────────────────────────────────────────┘
 

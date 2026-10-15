@@ -13,11 +13,11 @@
     },
     {
       q: "Où suivre mes candidatures ?",
-      a: "Mes candidatures (kanban) : soumise → présélection → shortlist → entretien → offre. Les délais SLA employeur sont visibles.",
+      a: "Mes candidatures : liste puis détail avec timeline — soumise → présélection → shortlist → entretien. Les délais SLA employeur sont visibles.",
     },
     {
       q: "Prep entretien IA ?",
-      a: "Sur une carte en entretien, ou dans Profil → Assist IA. Aperçu gratuit ; script complet en Premium.",
+      a: "Dans le détail d’une candidature ou Profil → Assistant IA. Inclus dans votre quota mensuel ; Premium augmente le plafond.",
     },
     {
       q: "Premium candidat — à quoi ça sert ?",
@@ -36,7 +36,11 @@
     },
     {
       q: "Pipeline : comment avancer en sécurité ?",
-      a: "Chaque avancée exige : vérifier l’identité, confirmer lecture du CV, prendre en compte le SLA, et une note RH. Pour l’entretien : type + date obligatoires.",
+      a: "Chaque avancée exige : identité, lecture du CV, respect du délai de 1ʳᵉ réponse promis sur l’offre, et une note RH. Pour l’entretien : type + date obligatoires.",
+    },
+    {
+      q: "C’est quoi le délai de 1ʳᵉ réponse ?",
+      a: "À la création de l’offre, vous choisissez en combien de jours vous vous engagez à donner une première réponse (ex. 7 jours). Ce n’est pas un délai inventé par dossier : le compteur démarre à la candidature et le candidat le voit. Avancer ou refuser avant l’échéance = engagement tenu.",
     },
     {
       q: "Organiser un entretien ?",
@@ -52,7 +56,7 @@
     },
     {
       q: "Facturation & Premium ?",
-      a: "Paramètres → Facturation : plan actuel, activation Premium démo, récap avantages. Mode sombre dans Apparence.",
+      a: "Paramètres → Facturation : plan actuel, activation Premium, récap avantages. Mode sombre dans Apparence.",
     },
   ];
 

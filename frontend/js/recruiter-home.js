@@ -10,11 +10,20 @@
     return "";
   }
 
+  const STATUS_FR = {
+    SUBMITTED: "Soumise",
+    SCREENING: "Présélection",
+    SHORTLISTED: "Shortlist",
+    INTERVIEW: "Entretien",
+    REJECTED: "Refusée",
+    WITHDRAWN: "Retirée",
+  };
+
   function scoreTier(score) {
-    if (score == null) return { label: "—", cls: "" };
-    if (score >= 75) return { label: "Hot", cls: "is-hot" };
-    if (score >= 50) return { label: "Fit", cls: "" };
-    return { label: "Low", cls: "" };
+    if (score == null) return { label: "—", cls: "badge-chrome" };
+    if (score >= 80) return { label: "Excellent", cls: "badge-ok match-hot" };
+    if (score >= 55) return { label: "Bon", cls: "badge-info" };
+    return { label: "Faible", cls: "badge-rose" };
   }
 
   function renderInbox(apps) {
@@ -53,19 +62,22 @@
       item.innerHTML =
         "<div><strong></strong><p class='muted'></p>" +
         "<div class='kanban-meta' style='margin-top:0.45rem'>" +
-        "<span class='badge badge-rose'></span>" +
+        "<span class='badge js-match'></span>" +
         "<span class='sla-pill'></span>" +
-        "<span class='badge badge-chrome'></span></div></div>" +
+        "<span class='badge badge-chrome js-status'></span></div></div>" +
         "<div class='stack'><a class='btn btn-sm btn-primary' href='recruiter-pipeline.html'>Traiter</a></div>";
       item.querySelector("strong").textContent = c.candidateName || "Candidat";
-      item.querySelector("p").textContent = (c.jobTitle || "") + " · " + (c.status || "");
-      item.querySelector(".badge-rose").textContent =
-        c.matchScore != null ? Math.round(c.matchScore) + "% · " + tier.label : "Score —";
+      item.querySelector("p").textContent =
+        (c.jobTitle || "") + " · " + (STATUS_FR[c.status] || c.status || "");
+      const matchBadge = item.querySelector(".js-match");
+      matchBadge.className = "badge " + tier.cls;
+      matchBadge.textContent =
+        c.matchScore != null ? Math.round(c.matchScore) + "% · " + tier.label : "Match —";
       const pill = item.querySelector(".sla-pill");
-      pill.textContent = "SLA " + slaTxt;
+      pill.textContent = "Réponse " + slaTxt;
       const sc = slaClass(sla);
       if (sc) pill.classList.add(sc);
-      item.querySelector(".badge-chrome").textContent = c.status;
+      item.querySelector(".js-status").textContent = STATUS_FR[c.status] || c.status;
       root.appendChild(item);
     });
   }
@@ -139,27 +151,29 @@
         document.getElementById("sla-nudge-sub").textContent =
           "Si le dossier de " +
           (first.candidateName || "ce candidat") +
-          " n’est pas traité avant l’échéance SLA, il basculera en dépassement visible du candidat (intention si-alors).";
+          " n’est pas traité avant l’échéance SLA, le dépassement sera visible côté candidat.";
       } else {
         document.getElementById("sla-nudge-sub").textContent =
           "Tous vos délais sont sous contrôle — engagement de confiance tenu.";
       }
 
-      const decided = apps.filter((a) => ["ACCEPTED", "REJECTED"].includes(a.status)).length;
+      const decided = apps.filter((a) => ["INTERVIEW", "REJECTED"].includes(a.status)).length;
       const interviews = apps.filter((a) => a.status === "INTERVIEW" || a.interviewType).length;
       const wins = document.getElementById("wins-line");
       if (wins) {
         wins.textContent =
-          decided +
-          " décision" +
-          (decided > 1 ? "s" : "") +
-          " explicites · " +
           interviews +
           " entretien" +
           (interviews > 1 ? "s" : "") +
           " · " +
+          decided +
+          " dossier" +
+          (decided > 1 ? "s" : "") +
+          " en phase finale · " +
           urgent.length +
-          " à traiter avant rupture SLA";
+          " urgent" +
+          (urgent.length > 1 ? "s" : "") +
+          " SLA";
       }
 
       try {

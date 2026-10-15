@@ -1,28 +1,70 @@
 {
   "info": {
-    "name": "HireLink — CRUD Séance 4",
-    "description": "Tests Postman CRUD : Offres, Motifs de refus, Notifications",
+    "name": "HireLink — CRUD Séance 4 + Pipeline",
+    "description": "Tests Postman complets : Auth, Offres, Motifs, Notifications, Pipeline candidatures, Santé",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
     { "key": "baseUrl", "value": "http://127.0.0.1:8081/api/v1" },
-    { "key": "token", "value": "" },
+    { "key": "recruiterToken", "value": "" },
+    { "key": "adminToken", "value": "" },
+    { "key": "candidateToken", "value": "" },
     { "key": "offerId", "value": "1" },
     { "key": "refusalId", "value": "1" },
-    { "key": "notifId", "value": "1" }
+    { "key": "notifId", "value": "1" },
+    { "key": "appId", "value": "1" }
   ],
   "item": [
     {
-      "name": "Auth",
+      "name": "00 Santé",
       "item": [
         {
-          "name": "Login recruteur",
+          "name": "Health",
           "event": [{
             "listen": "test",
             "script": {
               "exec": [
+                "pm.test('Health 200', () => pm.response.to.have.status(200));",
                 "const j = pm.response.json();",
-                "if (j.accessToken) pm.collectionVariables.set('token', j.accessToken);"
+                "pm.test('status UP', () => pm.expect(j.status).to.eql('UP'));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        },
+        {
+          "name": "Auth config",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Config 200', () => pm.response.to.have.status(200));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/config"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login recruteur (owner)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Login recruteur 200', () => pm.response.to.have.status(200));",
+                "const j = pm.response.json();",
+                "pm.test('JWT présent', () => pm.expect(j.accessToken).to.be.a('string').and.not.empty);",
+                "pm.collectionVariables.set('recruiterToken', j.accessToken);"
               ]
             }
           }],
@@ -31,7 +73,29 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"recruteur@hirelink.ma\",\n  \"password\": \"Recruteur123!\"\n}"
+              "raw": "{\n  \"email\": \"n.bennani@atlasdigital.ma\",\n  \"password\": \"Recruteur123!\"\n}"
+            },
+            "url": "{{baseUrl}}/auth/login"
+          }
+        },
+        {
+          "name": "Login candidat",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Login candidat 200', () => pm.response.to.have.status(200));",
+                "const j = pm.response.json();",
+                "pm.collectionVariables.set('candidateToken', j.accessToken);"
+              ]
+            }
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"candidat@hirelink.ma\",\n  \"password\": \"Candidat123!\"\n}"
             },
             "url": "{{baseUrl}}/auth/login"
           }
@@ -42,8 +106,9 @@
             "listen": "test",
             "script": {
               "exec": [
+                "pm.test('Login admin 200', () => pm.response.to.have.status(200));",
                 "const j = pm.response.json();",
-                "if (j.accessToken) pm.collectionVariables.set('token', j.accessToken);"
+                "pm.collectionVariables.set('adminToken', j.accessToken);"
               ]
             }
           }],
@@ -68,8 +133,10 @@
             "listen": "test",
             "script": {
               "exec": [
+                "pm.test('CREATE offre 200', () => pm.response.to.have.status(200));",
                 "const j = pm.response.json();",
-                "if (j.id) pm.collectionVariables.set('offerId', String(j.id));"
+                "pm.test('id offre', () => pm.expect(j.id).to.be.ok);",
+                "pm.collectionVariables.set('offerId', String(j.id));"
               ]
             }
           }],
@@ -77,7 +144,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
             ],
             "body": {
               "mode": "raw",
@@ -88,27 +155,53 @@
         },
         {
           "name": "READ liste mes offres",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Liste offres 200', () => pm.response.to.have.status(200));",
+                "pm.test('tableau', () => pm.expect(pm.response.json()).to.be.an('array'));"
+              ]
+            }
+          }],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [{ "key": "Authorization", "value": "Bearer {{recruiterToken}}" }],
             "url": "{{baseUrl}}/offers/mine"
           }
         },
         {
           "name": "READ offre by id",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Offre by id 200', () => pm.response.to.have.status(200));"
+              ]
+            }
+          }],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [{ "key": "Authorization", "value": "Bearer {{recruiterToken}}" }],
             "url": "{{baseUrl}}/offers/{{offerId}}"
           }
         },
         {
           "name": "UPDATE offre",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('UPDATE offre 200', () => pm.response.to.have.status(200));",
+                "pm.test('titre modifié', () => pm.expect(pm.response.json().title).to.include('modifié'));"
+              ]
+            }
+          }],
           "request": {
             "method": "PUT",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              { "key": "Authorization", "value": "Bearer {{recruiterToken}}" }
             ],
             "body": {
               "mode": "raw",
@@ -119,9 +212,17 @@
         },
         {
           "name": "DELETE offre",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('DELETE offre 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"
+              ]
+            }
+          }],
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [{ "key": "Authorization", "value": "Bearer {{recruiterToken}}" }],
             "url": "{{baseUrl}}/offers/{{offerId}}"
           }
         }
@@ -132,6 +233,15 @@
       "item": [
         {
           "name": "READ motifs actifs",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Motifs 200', () => pm.response.to.have.status(200));",
+                "pm.test('catalogue non vide', () => pm.expect(pm.response.json().length).to.be.above(0));"
+              ]
+            }
+          }],
           "request": {
             "method": "GET",
             "url": "{{baseUrl}}/refusal-reasons"
@@ -139,35 +249,54 @@
         },
         {
           "name": "CREATE motif (admin)",
-          "event": [{
-            "listen": "test",
-            "script": {
-              "exec": [
-                "const j = pm.response.json();",
-                "if (j.id) pm.collectionVariables.set('refusalId', String(j.id));"
-              ]
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set('refusalCode', 'TEST_CRUD_' + Date.now());"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('CREATE motif 200', () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.collectionVariables.set('refusalId', String(j.id));"
+                ]
+              }
             }
-          }],
+          ],
           "request": {
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"TEST_CRUD\",\n  \"label\": \"Motif test Postman\",\n  \"active\": true\n}"
+              "raw": "{\n  \"code\": \"{{refusalCode}}\",\n  \"label\": \"Motif test Postman\",\n  \"active\": true\n}"
             },
             "url": "{{baseUrl}}/refusal-reasons"
           }
         },
         {
           "name": "UPDATE motif (admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('UPDATE motif 200', () => pm.response.to.have.status(200));"
+              ]
+            }
+          }],
           "request": {
             "method": "PUT",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
             ],
             "body": {
               "mode": "raw",
@@ -178,9 +307,17 @@
         },
         {
           "name": "DELETE motif (admin)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('DELETE motif 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"
+              ]
+            }
+          }],
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
             "url": "{{baseUrl}}/refusal-reasons/{{refusalId}}"
           }
         }
@@ -195,8 +332,9 @@
             "listen": "test",
             "script": {
               "exec": [
+                "pm.test('CREATE notif 200', () => pm.response.to.have.status(200));",
                 "const j = pm.response.json();",
-                "if (j.id) pm.collectionVariables.set('notifId', String(j.id));"
+                "pm.collectionVariables.set('notifId', String(j.id));"
               ]
             }
           }],
@@ -204,7 +342,7 @@
             "method": "POST",
             "header": [
               { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{token}}" }
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
             ],
             "body": {
               "mode": "raw",
@@ -215,26 +353,124 @@
         },
         {
           "name": "READ mes notifications",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Liste notif 200', () => pm.response.to.have.status(200));"
+              ]
+            }
+          }],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
             "url": "{{baseUrl}}/notifications"
           }
         },
         {
           "name": "UPDATE mark read",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Mark read 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"
+              ]
+            }
+          }],
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
             "url": "{{baseUrl}}/notifications/{{notifId}}/read"
           }
         },
         {
           "name": "DELETE notification",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('DELETE notif 2xx', () => pm.expect(pm.response.code).to.be.oneOf([200, 204]));"
+              ]
+            }
+          }],
           "request": {
             "method": "DELETE",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
             "url": "{{baseUrl}}/notifications/{{notifId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pipeline & candidatures",
+      "item": [
+        {
+          "name": "Offres publiques",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Public offers 200', () => pm.response.to.have.status(200));",
+                "pm.test('liste', () => pm.expect(pm.response.json()).to.be.an('array'));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/offers/public"
+          }
+        },
+        {
+          "name": "Pipeline recruteur",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Pipeline 200', () => pm.response.to.have.status(200));",
+                "const apps = pm.response.json();",
+                "pm.test('dossier(s) seed', () => pm.expect(apps).to.be.an('array').and.not.empty);",
+                "if (apps.length) pm.collectionVariables.set('appId', String(apps[0].id));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{recruiterToken}}" }],
+            "url": "{{baseUrl}}/applications/pipeline"
+          }
+        },
+        {
+          "name": "Mes candidatures (candidat)",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Mine apps 200', () => pm.response.to.have.status(200));",
+                "pm.test('tableau', () => pm.expect(pm.response.json()).to.be.an('array'));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{candidateToken}}" }],
+            "url": "{{baseUrl}}/applications/mine"
+          }
+        },
+        {
+          "name": "Me candidat",
+          "event": [{
+            "listen": "test",
+            "script": {
+              "exec": [
+                "pm.test('Me 200', () => pm.response.to.have.status(200));",
+                "pm.test('rôle CANDIDAT', () => pm.expect(pm.response.json().role).to.eql('CANDIDAT'));"
+              ]
+            }
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{candidateToken}}" }],
+            "url": "{{baseUrl}}/auth/me"
           }
         }
       ]

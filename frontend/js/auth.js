@@ -173,7 +173,7 @@
         body: { email, purpose: mode === "register" ? "REGISTER" : "LOGIN" },
       });
       document.getElementById("otp-hint").textContent =
-        "Code envoyé à " + email + " (aussi dans la console du backend en démo).";
+        "Code envoyé à " + email + ".";
       if (mode === "register") setPipe(3);
       title.textContent = "Vérification";
       sub.textContent = "Saisissez le code reçu.";
@@ -340,7 +340,7 @@
     try {
       const ok = await HireLink.openModal({
         title: "Continuer avec Google",
-        description: "Mode démo local — branchez votre Client ID (docs/GOOGLE_SETUP.md).",
+        description: "Connexion Google — configurez le Client ID OAuth si besoin.",
         bodyHtml:
           '<div class="stack">' +
           '<div class="field"><label>Email</label><input id="g-email" type="email" /></div>' +
@@ -403,11 +403,11 @@
         try {
           await mountGoogleButton(cfg.googleClientId);
         } catch (err) {
-          if (hint) hint.textContent = "Google indisponible — mode démo";
+          if (hint) hint.textContent = "Google temporairement indisponible — utilisez e-mail / mot de passe.";
           if (fallback) fallback.hidden = false;
         }
       } else {
-        if (hint) hint.textContent = "Google en mode démo — voir docs/GOOGLE_SETUP.md";
+        if (hint) hint.textContent = "Connexion Google optionnelle — e-mail / mot de passe disponibles.";
         if (fallback) fallback.hidden = false;
       }
     })

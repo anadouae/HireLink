@@ -1,12 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pipeline — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css" />
-  <link rel="stylesheet" href="../css/app.css" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20260415g" />
+  <link rel="stylesheet" href="../css/app.css?v=20260415g" />
+  <script src="../js/theme.js?v=20260415g"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -39,33 +40,37 @@
       <main class="content">
         <div class="page-title">
           <div>
-            <p class="eyebrow">ATS · Funnel · SLA · IA bornée</p>
+            <p class="eyebrow">Recrutement · Pipeline</p>
             <h1>Pipeline</h1>
-            <p class="muted">Kanban sécurisé (R01–R05) · matching non décisionnel · alertes SLA.</p>
+            <p class="muted">Suivez chaque dossier jusqu’à l’entretien · délai de 1ʳᵉ réponse · refus motivé.</p>
           </div>
-          <select id="pipe-filter" class="btn btn-soft" style="appearance:auto;padding:0.55rem 0.85rem">
-            <option value="all">Tous</option>
-            <option value="urgent">SLA ≤ 2 j</option>
-            <option value="breached">SLA dépassé</option>
-            <option value="hot">Score ≥ 75%</option>
-            <option value="interview">Entretiens planifiés</option>
+          <select id="pipe-filter" class="btn btn-soft" style="appearance:auto;padding:0.55rem 0.85rem" aria-label="Filtrer le pipeline">
+            <option value="all">Tous les dossiers</option>
+            <option value="urgent">Réponse ≤ 2 j</option>
+            <option value="breached">Délai dépassé</option>
+            <option value="hot">Match ≥ 75%</option>
+            <option value="interview">Entretiens</option>
           </select>
         </div>
-        <div id="funnel-strip" class="panel" style="margin-bottom:1rem;padding:0.85rem 1.1rem">
-          <div class="muted" style="font-size:0.8rem">Chargement funnel…</div>
+        <div id="funnel-strip" class="funnel-kpi panel" style="margin-bottom:1rem;padding:0.95rem 1.15rem">
+          <div class="muted" style="font-size:0.8rem">Chargement des indicateurs…</div>
         </div>
         <section class="panel">
-          <div class="panel-body"><div class="kanban" id="kanban"></div></div>
+          <div class="panel-head">
+            <h2>Kanban</h2>
+            <span class="badge badge-chrome" id="kanban-total">—</span>
+          </div>
+          <div class="panel-body"><div class="kanban kanban--4" id="kanban"></div></div>
         </section>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js"></script>
-  <script src="../js/api.js"></script>
-  <script src="../js/in-app-help.js"></script>
-  <script src="../js/product.js"></script>
-  <script src="../js/shell.js"></script>
-  <script src="../js/growth.js"></script>
-  <script src="../js/recruiter-pipeline.js"></script>
+  <script src="../js/ui.js?v=20260415g"></script>
+  <script src="../js/api.js?v=20260415g"></script>
+  <script src="../js/in-app-help.js?v=20260415g"></script>
+  <script src="../js/product.js?v=20260415g"></script>
+  <script src="../js/shell.js?v=20260415g"></script>
+  <script src="../js/growth.js?v=20260415g"></script>
+  <script src="../js/recruiter-pipeline.js?v=20260415g"></script>
 </body>
 </html>

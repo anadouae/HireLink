@@ -1,13 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vue d’ensemble — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css" />
-  <link rel="stylesheet" href="../css/app.css" />
-  <script src="../js/theme.js"></script>
+  <link rel="stylesheet" href="../css/design-system.css?v=20260415g" />
+  <link rel="stylesheet" href="../css/app.css?v=20260415g" />
+  <script src="../js/theme.js?v=20260415g"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -41,7 +41,7 @@
       <main class="content">
         <div class="nudge" id="sla-nudge">
           <div>
-            <strong id="sla-nudge-title">Délais de réponse</strong>
+            <strong id="sla-nudge-title">Délais de 1ʳᵉ réponse</strong>
             <span id="sla-nudge-sub">Chargement…</span>
           </div>
           <a class="btn btn-primary btn-sm" href="recruiter-pipeline.html">Voir le pipeline</a>
@@ -49,9 +49,9 @@
 
         <section class="welcome-strip">
           <div>
-            <p class="eyebrow">Espace recruteur · Petites victoires</p>
+            <p class="eyebrow">Espace recruteur</p>
             <h1 id="hello">Tableau de bord</h1>
-            <p id="wins-line">Chargement des progrès…</p>
+            <p id="wins-line">Chargement des indicateurs…</p>
             <p class="muted" style="margin:0.35rem 0 0">Fiabilité organisation : <strong id="trust-score">—</strong></p>
           </div>
           <div class="welcome-actions">
@@ -60,7 +60,7 @@
           </div>
         </section>
 
-        <div class="stat-grid">
+        <div class="stat-grid kpi-top" aria-label="Indicateurs clés">
           <div class="stat"><div class="label">Offres actives</div><div class="value" id="st-offers">—</div><div class="delta" id="st-offers-d">Publiées</div></div>
           <div class="stat"><div class="label">Candidatures</div><div class="value" id="st-apps">—</div><div class="delta" id="st-apps-d">Pipeline</div></div>
           <div class="stat"><div class="label">Délais tenus</div><div class="value" id="st-sla">—</div><div class="delta">Indice de réactivité</div></div>
@@ -71,7 +71,7 @@
           <section class="panel" style="margin:0">
             <div class="panel-head">
               <h2>Inbox prioritaire</h2>
-              <span class="ai-chip">SLA · Scoring</span>
+              <span class="badge badge-chrome">SLA · Match</span>
             </div>
             <div class="panel-body">
               <div class="inbox-list" id="inbox-list"></div>
@@ -111,12 +111,12 @@
       </main>
     </div>
   </div>
-  <script src="../js/ui.js"></script>
-  <script src="../js/api.js"></script>
-  <script src="../js/in-app-help.js"></script>
-  <script src="../js/product.js"></script>
-  <script src="../js/shell.js"></script>
-  <script src="../js/growth.js"></script>
-  <script src="../js/recruiter-home.js"></script>
+  <script src="../js/ui.js?v=20260415g"></script>
+  <script src="../js/api.js?v=20260415g"></script>
+  <script src="../js/in-app-help.js?v=20260415g"></script>
+  <script src="../js/product.js?v=20260415g"></script>
+  <script src="../js/shell.js?v=20260415g"></script>
+  <script src="../js/growth.js?v=20260415g"></script>
+  <script src="../js/recruiter-home.js?v=20260415g"></script>
 </body>
 </html>

@@ -8,7 +8,7 @@
     const prem = HireLinkProduct && HireLinkProduct.isPremium("recruiter");
     document.getElementById("plan-badge").textContent = prem ? "Premium" : "Gratuit";
     document.getElementById("plan-desc").textContent = prem
-      ? "Premium actif (démo) — sièges équipe, alertes, offres mises en avant."
+      ? "Premium actif — sièges équipe, alertes, offres mises en avant."
       : "Plan Gratuit : 1 siège, pipeline sécurisé, SLA. Passez Premium pour scaler l’équipe RH.";
     document.getElementById("btn-billing-cancel").hidden = !prem;
     document.getElementById("btn-billing-premium").textContent = prem ? "Gérer Premium" : "Activer Premium";

@@ -3,25 +3,79 @@
   if (!session) return;
   if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("candidate");
 
-  const COLUMNS = [
-    { key: "SUBMITTED", label: "Soumises" },
-    { key: "SCREENING", label: "Présélection" },
-    { key: "SHORTLISTED", label: "Shortlist" },
-    { key: "INTERVIEW", label: "Entretien (fin)" },
-    { key: "CLOSED", label: "Clôturées" },
-  ];
+  const STATUS_LABEL = {
+    SUBMITTED: "Soumise",
+    SCREENING: "Présélection",
+    SHORTLISTED: "Shortlist",
+    INTERVIEW: "Entretien",
+    REJECTED: "Refusée",
+    WITHDRAWN: "Retirée",
+  };
+
+  /** Fin positive produit = INTERVIEW (pas d'étape Offre / Accepté). */
+  const PIPELINE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
 
   let apps = [];
+  let profile = null;
+  let selectedId = null;
 
-  function slaClass(days) {
-    if (days == null) return "";
-    if (days < 0) return "danger";
-    if (days <= 2) return "warn";
-    return "";
+  const viewList = document.getElementById("view-list");
+  const viewDetail = document.getElementById("view-detail");
+  const listRoot = document.getElementById("apps-list");
+
+  function statusBadgeClass(st) {
+    if (st === "REJECTED" || st === "WITHDRAWN") return "badge-danger";
+    if (st === "INTERVIEW") return "badge-ok";
+    if (st === "SHORTLISTED") return "badge-rose";
+    if (st === "SCREENING") return "badge-info";
+    return "badge-chrome";
   }
 
-  function render() {
-    const q = (document.getElementById("filter-apps").value || "").trim().toLowerCase();
+  function fmtWhen(iso) {
+    if (!iso) return "—";
+    try {
+      return new Date(iso).toLocaleString("fr-FR", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return String(iso);
+    }
+  }
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+  function setHtml(node, html) {
+    if (node) node.innerHTML = html;
+  }
+
+  function setText(node, text) {
+    if (node) node.textContent = text;
+  }
+
+  function showList() {
+    selectedId = null;
+    if (viewDetail) viewDetail.hidden = true;
+    if (viewList) viewList.hidden = false;
+    history.replaceState(null, "", location.pathname);
+  }
+
+  function showDetail(app) {
+    selectedId = app.id;
+    if (viewList) viewList.hidden = true;
+    if (viewDetail) viewDetail.hidden = false;
+    paintDetail(app);
+    history.replaceState(null, "", "?id=" + app.id);
+  }
+
+  function renderList() {
+    if (!listRoot) return;
+    const filter = el("filter-apps");
+    const q = ((filter && filter.value) || "").trim().toLowerCase();
     const filtered = q
       ? apps.filter((a) =>
           ((a.jobTitle || "") + " " + (a.status || "") + " " + (a.rejectionReason || ""))
@@ -29,157 +83,198 @@
             .includes(q)
         )
       : apps;
-    const root = document.getElementById("kanban");
-    root.innerHTML = "";
-    COLUMNS.forEach((col) => {
-      const cards =
-        col.key === "CLOSED"
-          ? filtered.filter((a) => ["REJECTED", "WITHDRAWN", "ACCEPTED"].includes(a.status))
-          : filtered.filter((a) => a.status === col.key);
-      const el = document.createElement("div");
-      el.className = "kanban-col";
-      el.innerHTML =
-        '<div class="kanban-col-head"><span></span><span class="badge badge-chrome"></span></div>' +
-        '<div class="kanban-col-body"></div>';
-      el.querySelector(".kanban-col-head span").textContent = col.label;
-      el.querySelector(".badge").textContent = String(cards.length);
-      const body = el.querySelector(".kanban-col-body");
-      if (!cards.length) {
-        body.innerHTML = '<p class="muted" style="font-size:0.8rem;padding:0.35rem">Vide</p>';
+
+    if (!filtered.length) {
+      setHtml(
+        listRoot,
+        q
+          ? '<p class="muted">Aucun résultat pour « ' + q + " ».</p>"
+          : '<p class="muted">Aucune candidature — <a href="candidate-offers.html">voir les offres</a>.</p>'
+      );
+      return;
+    }
+
+    listRoot.innerHTML = "";
+    filtered.forEach((a) => {
+      const row = document.createElement("button");
+      row.type = "button";
+      row.className = "cand-app-row";
+      const sla = a.slaRemainingDays;
+      const slaTxt = sla == null ? "—" : sla < 0 ? "SLA dépassé" : "SLA " + sla + " j";
+      row.innerHTML =
+        '<div class="cand-app-row-main">' +
+        "<strong></strong>" +
+        '<span class="muted row-sub"></span>' +
+        '<span class="row-timeline-hint muted">Historique →</span>' +
+        "</div>" +
+        '<span class="badge status-badge"></span>' +
+        '<span class="sla-pill"></span>' +
+        '<span class="muted row-open" style="font-size:0.85rem">Détail</span>';
+      setText(row.querySelector("strong"), a.jobTitle || "Offre");
+      setText(
+        row.querySelector(".row-sub"),
+        (a.matchScore != null ? Math.round(a.matchScore) + "% match · " : "") +
+          "déposée " +
+          fmtWhen(a.submittedAt || a.appliedAt)
+      );
+      const badge = row.querySelector(".badge");
+      if (badge) {
+        badge.className = "badge status-badge " + statusBadgeClass(a.status);
+        badge.innerHTML =
+          '<span class="pulse" aria-hidden="true"></span> ' +
+          (STATUS_LABEL[a.status] || a.status || "—");
       }
-      cards.forEach((c) => {
-        const card = document.createElement("article");
-        card.className = "kanban-card";
-        const sla = c.slaRemainingDays;
-        const slaTxt = sla == null ? "—" : sla < 0 ? "En retard" : sla + " j";
-        card.innerHTML =
-          "<h3></h3><p></p>" +
-          '<div class="match-bar"><span></span></div>' +
-          "<div class='kanban-meta'><span class='badge badge-rose'></span>" +
-          "<span class='sla-pill'></span></div>" +
-          "<div class='row-actions'></div>";
-        card.querySelector("h3").textContent = c.jobTitle || "Offre";
-        let statusLine = c.status + (c.rejectionReason ? " · " + c.rejectionReason : "");
-        if (c.interviewType) {
-          const when = c.interviewAt ? new Date(c.interviewAt).toLocaleString("fr-FR") : "";
-          statusLine =
-            "Entretien " +
-            c.interviewType +
-            (when ? " · " + when : "") +
-            (c.interviewLocation ? " · " + c.interviewLocation : "");
-        }
-        card.querySelector("p").textContent = statusLine;
-        card.querySelector(".match-bar > span").style.width = Math.min(100, c.matchScore || 0) + "%";
-        card.querySelector(".badge").textContent =
-          c.matchScore != null ? Math.round(c.matchScore) + "% match" : "—";
-        const pill = card.querySelector(".sla-pill");
-        pill.textContent = "SLA " + slaTxt;
-        const sc = slaClass(sla);
-        if (sc) pill.classList.add(sc);
-        const actions = card.querySelector(".row-actions");
-        const view = document.createElement("button");
-        view.type = "button";
-        view.className = "btn btn-sm btn-soft";
-        view.textContent = "Détails";
-        view.onclick = () => openMyDossier(c);
-        actions.appendChild(view);
-        if (c.status === "INTERVIEW") {
-          const prep = document.createElement("button");
-          prep.type = "button";
-          prep.className = "btn btn-sm btn-primary";
-          prep.textContent = "Prep IA";
-          prep.onclick = () => interviewPrep(c);
-          actions.appendChild(prep);
-        }
-        if (!["REJECTED", "WITHDRAWN", "ACCEPTED"].includes(c.status)) {
-          const wd = document.createElement("button");
-          wd.type = "button";
-          wd.className = "btn btn-sm btn-ghost";
-          wd.textContent = "Retirer";
-          wd.onclick = () => withdraw(c);
-          actions.appendChild(wd);
-        }
-        body.appendChild(card);
-      });
-      root.appendChild(el);
+      const pill = row.querySelector(".sla-pill");
+      if (pill) {
+        pill.textContent = slaTxt;
+        if (sla != null && sla < 0) pill.classList.add("danger");
+        else if (sla != null && sla <= 2) pill.classList.add("warn");
+      }
+      row.addEventListener("click", () => showDetail(a));
+      listRoot.appendChild(row);
     });
   }
 
-  async function openMyDossier(c) {
-    const when = c.interviewAt ? new Date(c.interviewAt).toLocaleString("fr-FR") : "—";
-    const html =
-      '<div class="hl-review-list">' +
-      "<div><strong>Statut</strong><span>" +
-      (c.status || "—") +
-      "</span></div>" +
-      "<div><strong>Match</strong><span>" +
-      (c.matchScore != null ? Math.round(c.matchScore) + "%" : "—") +
-      "</span></div>" +
-      "<div><strong>CV</strong><span>" +
-      (c.cvFileName || c.cvSource || "—") +
-      "</span></div>" +
-      "<div><strong>Lettre</strong><span>" +
-      (c.coverLetter ? "Envoyée" : "Non") +
-      "</span></div>" +
-      "<div><strong>SLA</strong><span>" +
-      (c.slaRemainingDays == null ? "—" : c.slaRemainingDays + " j restants") +
-      "</span></div>" +
-      (c.interviewType
-        ? "<div><strong>Entretien</strong><span>" +
-          c.interviewType +
-          " · " +
-          when +
-          "</span></div>" +
-          "<div><strong>Lieu / lien</strong><span>" +
-          (c.interviewLocation || "—") +
-          "</span></div>"
-        : "") +
-      (c.rejectionReason
-        ? "<div><strong>Motif</strong><span>" + c.rejectionReason + "</span></div>"
-        : "") +
-      "</div>";
-    await HireLink.openModal({
-      title: c.jobTitle || "Ma candidature",
-      description: "Suivi bilatéral — même vérité que le recruteur.",
-      bodyHtml:
-        html +
-        '<button type="button" class="btn btn-soft btn-sm" id="btn-my-tl" style="margin-top:0.75rem">Voir l’historique (F13)</button>',
-      confirmLabel: "Fermer",
-      hideCancel: true,
-      large: true,
-    });
-    const btn = document.getElementById("btn-my-tl");
-    if (btn) {
-      btn.onclick = async () => {
-        try {
-          const rows = await HireLinkAPI.api("/applications/" + c.id + "/timeline");
-          const tl =
-            !rows.length
-              ? "<p class='muted'>Aucun événement.</p>"
-              : "<ol>" +
-                rows
-                  .map(
-                    (h) =>
-                      "<li><strong>" +
-                      (h.from || "—") +
-                      " → " +
-                      h.to +
-                      "</strong> · " +
-                      h.at +
-                      "</li>"
-                  )
-                  .join("") +
-                "</ol>";
-          await HireLink.openModal({
-            title: "Historique",
-            bodyHtml: tl,
-            confirmLabel: "Fermer",
-            hideCancel: true,
-          });
-        } catch (err) {
-          HireLink.toast("Timeline", err.message, "danger");
-        }
-      };
+  function stepState(status, step) {
+    const closed = ["REJECTED", "WITHDRAWN"].includes(status);
+    if (closed) {
+      if (step === "SUBMITTED") return "done";
+      return "todo";
+    }
+    const idx = PIPELINE.indexOf(status);
+    const sIdx = PIPELINE.indexOf(step);
+    if (sIdx < 0 || idx < 0) return "todo";
+    if (status === "INTERVIEW" && step === "INTERVIEW") return "done";
+    if (sIdx < idx) return "done";
+    if (sIdx === idx) return "now";
+    return "todo";
+  }
+
+  async function paintDetail(app) {
+    setText(el("d-title"), app.jobTitle || "Candidature");
+    setText(
+      el("d-sub"),
+      (app.cvSource === "UPLOAD" ? "CV joint" : "Profil HireLink") +
+        (app.submittedAt ? " · déposée " + fmtWhen(app.submittedAt) : "")
+    );
+
+    const st = el("d-status");
+    if (st) {
+      st.className = "badge " + statusBadgeClass(app.status);
+      st.innerHTML = '<span class="pulse"></span> ' + (STATUS_LABEL[app.status] || app.status);
+    }
+
+    const pct = app.matchScore != null ? Math.round(app.matchScore) : null;
+    setText(el("d-match-pct"), pct != null ? pct + "%" : "—");
+    const bar = el("d-match-bar");
+    if (bar) bar.style.width = (pct != null ? pct : 0) + "%";
+
+    const skillsEl = el("d-skills");
+    const skillsRaw = (profile && profile.skills) || "";
+    const tags = skillsRaw
+      .split(/[,;|]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 12);
+    setHtml(
+      skillsEl,
+      tags.length
+        ? tags.map((t) => '<span class="tag">' + t + "</span>").join("")
+        : '<span class="muted" style="font-size:0.85rem">Complète ton profil pour afficher tes compétences.</span>'
+    );
+
+    let rows = [];
+    try {
+      rows = await HireLinkAPI.api("/applications/" + app.id + "/timeline");
+    } catch (_) {
+      rows = [];
+    }
+
+    const tl = el("d-timeline");
+    if (tl) tl.innerHTML = "";
+
+    if (tl && rows && rows.length) {
+      rows.forEach((h, i) => {
+        const last = i === rows.length - 1;
+        const div = document.createElement("div");
+        div.className = "hl-tstep " + (last ? "now" : "done");
+        div.innerHTML =
+          '<div class="hl-ttime"></div><strong></strong><div class="muted" style="font-size:0.82rem"></div>';
+        setText(div.querySelector(".hl-ttime"), fmtWhen(h.at || h.occurredAt || h.createdAt));
+        setText(
+          div.querySelector("strong"),
+          (h.to && (STATUS_LABEL[h.to] || h.to)) ||
+            (h.from
+              ? (STATUS_LABEL[h.from] || h.from) + " → " + (STATUS_LABEL[h.to] || h.to)
+              : "Mise à jour")
+        );
+        setText(
+          div.querySelector(".muted"),
+          (h.from ? (STATUS_LABEL[h.from] || h.from) + " → " : "") +
+            (STATUS_LABEL[h.to] || h.to || "")
+        );
+        tl.appendChild(div);
+      });
+    } else if (tl) {
+      const steps = [
+        { key: "SUBMITTED", label: "Soumise", note: app.cvFileName || app.cvSource || "Dossier reçu" },
+        { key: "SCREENING", label: "Présélection", note: pct != null ? "Match " + pct + "%" : "En revue" },
+        { key: "SHORTLISTED", label: "Shortlist", note: "Sélection RH" },
+        {
+          key: "INTERVIEW",
+          label: "Entretien",
+          note: app.interviewType
+            ? app.interviewType + (app.interviewAt ? " · " + fmtWhen(app.interviewAt) : "")
+            : "Planification",
+        },
+      ];
+      steps.forEach((s) => {
+        const stt = stepState(app.status, s.key);
+        const div = document.createElement("div");
+        div.className = "hl-tstep " + stt;
+        div.innerHTML =
+          '<div class="hl-ttime"></div><strong></strong><div class="muted" style="font-size:0.82rem"></div>';
+        setText(
+          div.querySelector(".hl-ttime"),
+          stt === "now" ? "En cours" : stt === "done" ? "Validé" : ""
+        );
+        setText(div.querySelector("strong"), s.label);
+        setText(div.querySelector(".muted"), s.note || "");
+        tl.appendChild(div);
+      });
+      if (app.status === "REJECTED") {
+        const div = document.createElement("div");
+        div.className = "hl-tstep now";
+        div.innerHTML =
+          '<div class="hl-ttime">Refus</div><strong>Refusée</strong><div class="muted" style="font-size:0.82rem"></div>';
+        setText(div.querySelector(".muted"), app.rejectionReason || "Motif communiqué");
+        tl.appendChild(div);
+      } else if (app.status === "WITHDRAWN") {
+        const div = document.createElement("div");
+        div.className = "hl-tstep now";
+        div.innerHTML =
+          '<div class="hl-ttime">Clôture</div><strong>Retirée</strong><div class="muted" style="font-size:0.82rem">Vous avez retiré cette candidature</div>';
+        tl.appendChild(div);
+      }
+    }
+
+    const actions = el("d-actions");
+    if (actions) {
+      actions.innerHTML = "";
+      if (!["REJECTED", "WITHDRAWN"].includes(app.status)) {
+        const wd = document.createElement("button");
+        wd.type = "button";
+        wd.className = "btn btn-ghost btn-sm";
+        wd.textContent = "Retirer ma candidature";
+        wd.onclick = () => withdraw(app);
+        actions.appendChild(wd);
+      }
+    }
+
+    const aiBtn = el("d-ai-prep");
+    if (aiBtn) {
+      aiBtn.disabled = false;
+      aiBtn.onclick = () => interviewPrep(app);
     }
   }
 
@@ -231,7 +326,8 @@
         body: { status: "WITHDRAWN" },
       });
       HireLink.toast("Retirée", "", "ok");
-      load();
+      await load();
+      showList();
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
     }
@@ -239,15 +335,41 @@
 
   async function load() {
     try {
-      apps = await HireLinkAPI.api("/applications/mine");
-      render();
+      const [mine, me] = await Promise.all([
+        HireLinkAPI.api("/applications/mine"),
+        HireLinkAPI.api("/me").catch(() => null),
+      ]);
+      apps = Array.isArray(mine) ? mine : [];
+      profile = me;
+      renderList();
+      const params = new URLSearchParams(location.search);
+      const id = params.get("id");
+      if (id) {
+        const found = apps.find((a) => String(a.id) === String(id));
+        if (found) showDetail(found);
+        else showList();
+      }
     } catch (err) {
       HireLink.toast("Candidatures", err.message, "danger");
+      setHtml(listRoot, '<p class="muted">Impossible de charger les candidatures.</p>');
     }
   }
 
-  HireLinkShell.bindSearch(document.getElementById("filter-apps"), () => render());
-  const prem = document.getElementById("btn-premium");
+  const back = el("btn-back-list");
+  if (back) back.addEventListener("click", showList);
+  HireLinkShell.bindSearch(el("filter-apps"), () => {
+    if (!viewList || !viewList.hidden) renderList();
+  });
+  const prem = el("btn-premium");
   if (prem) prem.onclick = () => HireLinkGrowth && HireLinkGrowth.showPremium("candidate");
+
+  if (!listRoot) {
+    HireLink.toast(
+      "Candidatures",
+      "Page obsolète en cache — forcez un rechargement (Ctrl+F5).",
+      "danger"
+    );
+    return;
+  }
   load();
 })();
