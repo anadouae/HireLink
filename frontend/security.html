@@ -37,29 +37,31 @@
     <div class="sec-grid">
       <article class="sec-card">
         <h3>Authentification</h3>
-        <p>Session sécurisée, mot de passe chiffré, option code e-mail, Google Sign-In.</p>
+        <p>JWT signé, BCrypt, OTP e-mail, Google Sign-In. Sessions sans cookie serveur (stateless).</p>
       </article>
       <article class="sec-card">
         <h3>Employeurs vérifiés</h3>
-        <p>Identifiant légal + raison sociale + email de domaine. Publication bloquée tant que non validé.</p>
+        <p>ICE + raison sociale + e-mail de domaine. Publication bloquée tant que non validé. Signalements d’offres (≥3 → suspension).</p>
       </article>
       <article class="sec-card">
         <h3>Données protégées</h3>
-        <p>Accès par rôle. En-têtes de sécurité navigateur. Pas de partage de CV hors pipeline.</p>
+        <p>Isolation multi-tenant par organisation. Rôles RH / HM. En-têtes HSTS-ready, X-Frame-Options, no-store.</p>
       </article>
       <article class="sec-card">
         <h3>Décisions responsables</h3>
-        <p>Tout refus exige un motif. Les délais de réponse sont engagés.</p>
+        <p>Machine d’états pipeline. Refus catalogue obligatoire. Timeline horodatée. SLA monitoré.</p>
       </article>
     </div>
 
     <section class="legal-block">
-      <h2>Engagements concrets</h2>
+      <h2>Engagements concrets (niveau SaaS)</h2>
       <ul>
-        <li>Chiffrement des mots de passe (jamais en clair)</li>
-        <li>Jetons d’accès à durée limitée</li>
-        <li>Contrôle CORS et isolation des espaces</li>
-        <li>Import CV traité côté serveur — vous validez avant enregistrement</li>
+        <li>Mots de passe hachés BCrypt — jamais stockés en clair</li>
+        <li>Jetons JWT à durée limitée + CORS strict par origine</li>
+        <li>Checklist RH avant chaque avance (identité, CV lu, SLA)</li>
+        <li>Catalogue de motifs de refus — pas de rejet silencieux</li>
+        <li>Score de fiabilité employeur (respect SLA × décisions explicites)</li>
+        <li>Import CV côté serveur — validation avant enregistrement</li>
       </ul>
     </section>
 

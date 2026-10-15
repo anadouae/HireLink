@@ -4,6 +4,21 @@
   if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("candidate");
 
   let skillsApi = null;
+  let dirty = false;
+  const saveBar = document.getElementById("profile-save-bar");
+
+  function setDirty(v) {
+    dirty = !!v;
+    if (saveBar) saveBar.classList.toggle("is-clean", !dirty);
+  }
+
+  function bindDirty() {
+    ["pf-roles", "pf-loc", "pf-contracts", "pf-level"].forEach((id) => {
+      const node = document.getElementById(id);
+      if (node) node.addEventListener("input", () => setDirty(true));
+      if (node) node.addEventListener("change", () => setDirty(true));
+    });
+  }
 
   async function showAi(endpoint, body) {
     const box = document.getElementById("ai-result");
@@ -57,6 +72,7 @@
           document.getElementById("pf-skills").value = [v.skillsCsv, v.languagesCsv]
             .filter(Boolean)
             .join(", ");
+          setDirty(true);
         },
       });
     }
@@ -71,6 +87,7 @@
       document.getElementById("pf-loc").value = p.preferredLocations || "";
       document.getElementById("pf-contracts").value = p.preferredContracts || "";
       document.getElementById("pf-level").value = p.experienceLevel || "";
+      setDirty(false);
     } catch (err) {
       HireLink.toast("Profil", err.message, "danger");
     }
@@ -81,6 +98,8 @@
     const skills =
       (skillsApi && skillsApi.getCombinedCsv()) ||
       document.getElementById("pf-skills").value;
+    const btn = document.getElementById("btn-save-profile");
+    if (btn) btn.disabled = true;
     try {
       await HireLinkAPI.api("/me", {
         method: "PATCH",
@@ -92,9 +111,12 @@
           experienceLevel: document.getElementById("pf-level").value,
         },
       });
+      setDirty(false);
       HireLink.toast("Profil enregistré", "Vos offres seront mises à jour", "ok");
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
+    } finally {
+      if (btn) btn.disabled = false;
     }
   });
 
@@ -148,5 +170,7 @@
       skills: document.getElementById("pf-skills").value,
     });
 
+  bindDirty();
+  setDirty(false);
   load();
 })();

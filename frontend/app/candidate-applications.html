@@ -1,12 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mes candidatures — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css" />
-  <link rel="stylesheet" href="../css/app.css" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20260415b" />
+  <link rel="stylesheet" href="../css/app.css?v=20260415e" />
+  <script src="../js/theme.js?v=20260415e"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -30,33 +31,91 @@
     <div class="app-main">
       <header class="topbar">
         <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-search"><span>⌕</span><input type="search" id="filter-apps" placeholder="Filtrer une offre…" /></div>
+        <div class="topbar-search"><span>⌕</span><input type="search" id="filter-apps" placeholder="Rechercher une candidature…" /></div>
         <div class="topbar-actions">
           <button type="button" class="btn btn-brass btn-sm" id="btn-premium">Premium</button>
+          <a class="btn btn-primary btn-sm" href="candidate-offers.html">Postuler</a>
           <div class="avatar" id="avatar">C</div>
         </div>
       </header>
       <main class="content">
         <div class="page-title">
           <div>
-            <p class="eyebrow">Pipeline candidat</p>
+            <p class="eyebrow">Espace candidat</p>
             <h1>Mes candidatures</h1>
-            <p class="muted">Kanban bilatéral : chaque étape visible, délais employeurs affichés.</p>
+            <p class="muted">Chaque transition est horodatée — le refus est toujours motivé.</p>
           </div>
-          <a class="btn btn-primary" href="candidate-offers.html">Postuler</a>
         </div>
-        <section class="panel">
-          <div class="panel-body"><div class="kanban" id="kanban"></div></div>
+
+        <!-- LISTE -->
+        <section class="panel" id="view-list">
+          <div class="panel-body" id="apps-list">
+            <p class="muted">Chargement…</p>
+          </div>
+        </section>
+
+        <!-- DÉTAIL (caché jusqu’à sélection) -->
+        <section id="view-detail" class="cand-detail" hidden>
+          <button type="button" class="btn btn-secondary btn-sm" id="btn-back-list" style="margin-bottom:1rem">← Toutes mes candidatures</button>
+          <div class="cand-detail-grid">
+            <article class="panel cand-detail-main">
+              <div class="panel-body">
+                <div class="cand-detail-head">
+                  <div>
+                    <h2 id="d-title">—</h2>
+                    <p class="muted" id="d-sub" style="margin:0.25rem 0 0">—</p>
+                  </div>
+                  <span class="badge badge-info" id="d-status"><span class="pulse"></span> —</span>
+                </div>
+                <h3 class="timeline-title">Historique du dossier</h3>
+                <div class="hl-timeline hl-timeline--airy" id="d-timeline"></div>
+                <div class="cand-detail-actions" id="d-actions"></div>
+              </div>
+            </article>
+            <aside class="cand-detail-side">
+              <div class="panel">
+                <div class="panel-body">
+                  <h3 style="margin:0 0 0.75rem;font-size:1.05rem">Profil &amp; matching</h3>
+                  <div class="tag-row" id="d-skills"></div>
+                  <div style="margin-top:1rem">
+                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.3rem">
+                      <span class="muted">Compatibilité profil × offre</span>
+                      <strong id="d-match-pct">—</strong>
+                    </div>
+                    <div class="match-bar"><span id="d-match-bar" style="width:0%"></span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="panel ai-spotlight" id="ai-spotlight">
+                <div class="panel-body">
+                  <div class="ai-spotlight-head">
+                    <span class="ai-chip">Assistant IA</span>
+                    <span class="badge badge-brass">1 crédit</span>
+                  </div>
+                  <h3 style="margin:0.55rem 0 0.35rem;font-size:1.12rem">Préparation d’entretien</h3>
+                  <p class="muted" style="font-size:0.86rem;margin:0 0 0.9rem">
+                    Questions probables, points à valoriser, script de réponses — généré pour ce poste.
+                  </p>
+                  <ul class="ai-spotlight-list">
+                    <li>Questions ciblées sur le rôle</li>
+                    <li>Arguments basés sur votre profil</li>
+                    <li>Checklist anti-stress avant l’entretien</li>
+                  </ul>
+                  <button type="button" class="btn btn-primary btn-block" id="d-ai-prep">Générer ma préparation</button>
+                </div>
+              </div>
+            </aside>
+          </div>
         </section>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js"></script>
-  <script src="../js/api.js"></script>
-  <script src="../js/in-app-help.js"></script>
-  <script src="../js/product.js"></script>
-  <script src="../js/shell.js"></script>
-  <script src="../js/growth.js"></script>
-  <script src="../js/candidate-applications.js"></script>
+  <script src="../js/ui.js?v=20260415e"></script>
+  <script src="../js/api.js?v=20260415e"></script>
+  <script src="../js/in-app-help.js?v=20260415e"></script>
+  <script src="../js/product.js?v=20260415e"></script>
+  <script src="../js/shell.js?v=20260415e"></script>
+  <script src="../js/growth.js?v=20260415e"></script>
+  <script src="../js/candidate-applications.js?v=20260415e"></script>
 </body>
 </html>

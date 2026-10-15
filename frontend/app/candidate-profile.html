@@ -1,12 +1,13 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mon profil — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css" />
-  <link rel="stylesheet" href="../css/app.css" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20260415b" />
+  <link rel="stylesheet" href="../css/app.css?v=20260415e" />
+  <script src="../js/theme.js?v=20260415e"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -43,15 +44,16 @@
           <div>
             <p class="eyebrow">Profil</p>
             <h1>Ce que vous recherchez</h1>
-            <p class="muted">Ces informations servent à vous proposer les offres les plus pertinentes.</p>
+            <p class="muted">Ces informations alimentent le matching et vos candidatures. Importez un CV pour préremplir les compétences.</p>
           </div>
         </div>
         <section class="panel">
-          <div class="panel-head"><h2>Formulaire commun</h2><span class="badge badge-brass">Recommandations</span></div>
+          <div class="panel-head"><h2>Profil professionnel</h2><span class="badge badge-chrome">Matching</span></div>
           <div class="panel-body">
             <form class="profile-form" id="profile-form">
               <div class="field field-full">
                 <label>Compétences &amp; langues</label>
+                <p class="field-hint" style="margin:0 0 0.45rem">Suggestions au clic · ou import CV dans la barre du haut</p>
                 <input type="hidden" id="pf-skills" />
                 <div id="pf-skills-picker"></div>
               </div>
@@ -76,20 +78,23 @@
                 <label for="pf-contracts">Contrats souhaités</label>
                 <input id="pf-contracts" placeholder="CDI, Stage, Alternance" />
               </div>
-              <div class="field-full">
-                <button type="submit" class="btn btn-primary">Enregistrer</button>
-                <a class="btn btn-soft" href="candidate-offers.html" style="margin-left:0.5rem">Voir mes offres</a>
+              <div class="profile-save-bar" id="profile-save-bar">
+                <span class="muted" id="profile-dirty-hint">Modifications non enregistrées</span>
+                <div>
+                  <a class="btn btn-soft btn-sm" href="candidate-offers.html">Voir mes offres</a>
+                  <button type="submit" class="btn btn-primary" id="btn-save-profile">Enregistrer</button>
+                </div>
               </div>
             </form>
           </div>
         </section>
         <section class="panel">
           <div class="panel-head">
-            <h2>Assist IA</h2>
-            <span class="ai-chip">Freemium → Premium</span>
+            <h2>Assistant IA</h2>
+            <span class="ai-chip">Crédits mensuels</span>
           </div>
           <div class="panel-body">
-            <p class="muted" style="margin-top:0">Réécriture de pitch et préparation entretien. Aperçu gratuit, script complet en Premium.</p>
+            <p class="muted" style="margin-top:0">Réécriture de pitch et préparation entretien. Inclus dans votre quota mensuel ; Premium augmente le plafond.</p>
             <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
               <button type="button" class="btn btn-primary btn-sm" id="btn-ai-rewrite">Réécrire mon pitch</button>
               <button type="button" class="btn btn-soft btn-sm" id="btn-ai-interview">Prep entretien</button>
@@ -100,13 +105,13 @@
       </main>
     </div>
   </div>
-  <script src="../js/ui.js"></script>
-  <script src="../js/api.js"></script>
-  <script src="../js/in-app-help.js"></script>
-  <script src="../js/product.js"></script>
-  <script src="../js/shell.js"></script>
-  <script src="../js/growth.js"></script>
-  <script src="../js/skills-catalog.js"></script>
-  <script src="../js/candidate-profile.js"></script>
+  <script src="../js/ui.js?v=20260415e"></script>
+  <script src="../js/api.js?v=20260415e"></script>
+  <script src="../js/in-app-help.js?v=20260415e"></script>
+  <script src="../js/product.js?v=20260415e"></script>
+  <script src="../js/shell.js?v=20260415e"></script>
+  <script src="../js/growth.js?v=20260415e"></script>
+  <script src="../js/skills-catalog.js?v=20260415e"></script>
+  <script src="../js/candidate-profile.js?v=20260415e"></script>
 </body>
 </html>

@@ -92,7 +92,7 @@
     overlay.querySelector("#hl-prem-cta").onclick = () => {
       overlay.classList.remove("is-open");
       if (global.HireLink && HireLink.toast) {
-        HireLink.toast("Premium", "Plan activé en démo", "ok");
+        HireLink.toast("Premium", "Plan Premium activé", "ok");
       }
       localStorage.setItem("hirelink.premium.active." + role, "1");
       const bar = document.getElementById("hl-prem-bar");

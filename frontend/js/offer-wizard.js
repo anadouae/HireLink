@@ -107,10 +107,24 @@
             )
             .join("") +
           "</select></div>" +
-          '<div class="field" style="flex:1;min-width:100px"><label>SLA (jours)</label><input id="ow-sla" type="number" min="1" max="60" value="' +
-          state.responseSlaDays +
-          '" /></div></div>' +
-          '<p class="muted" style="margin:0;font-size:.85rem">Le délai de réponse (SLA) est visible du candidat.</p></div></div>'
+          '<div class="field" style="flex:1;min-width:160px"><label>Délai de 1ʳᵉ réponse</label>' +
+          '<select id="ow-sla">' +
+          [3, 5, 7, 10, 14]
+            .map(
+              (d) =>
+                '<option value="' +
+                d +
+                '"' +
+                (Number(state.responseSlaDays) === d ? " selected" : "") +
+                ">" +
+                d +
+                " jours" +
+                (d === 7 ? " (recommandé)" : "") +
+                "</option>"
+            )
+            .join("") +
+          "</select>" +
+          '<p class="muted" style="margin:.35rem 0 0;font-size:.82rem">Engagement affiché au candidat : « nous vous répondons sous X jours ». Chronomètre dès la candidature.</p></div></div></div></div>'
         );
       }
       if (state.step === 1) {
@@ -133,7 +147,7 @@
         " · " +
         esc(state.contractType) +
         "</span></div>" +
-        "<div><strong>SLA</strong><span>" +
+        "<div><strong>1ʳᵉ réponse sous</strong><span>" +
         state.responseSlaDays +
         " jours</span></div>" +
         "<div><strong>Compétences</strong><span>" +
