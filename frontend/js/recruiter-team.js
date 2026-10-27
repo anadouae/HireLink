@@ -11,8 +11,14 @@
   function paintLogo(url, name) {
     const box = document.getElementById("co-logo-box");
     if (!box) return;
-    if (url) {
-      box.innerHTML = '<img alt="" src="' + String(url).replace(/"/g, "") + '" onerror="this.remove()" />';
+    const src = HireLinkAPI.mediaUrl(url);
+    if (src) {
+      box.innerHTML =
+        '<img alt="Logo entreprise" src="' +
+        String(src).replace(/"/g, "") +
+        '" onerror="this.parentNode.textContent=\'' +
+        String(name || "E").charAt(0).toUpperCase() +
+        "'\" />";
     } else {
       box.textContent = String(name || "E").charAt(0).toUpperCase();
     }
@@ -25,12 +31,14 @@
     const web = document.getElementById("co-website");
     const sector = document.getElementById("co-sector");
     const city = document.getElementById("co-city");
+    const logoUrl = document.getElementById("co-logo-url");
     if (name && o.name) name.value = o.name;
     if (ice && o.ice) ice.value = o.ice;
     if (bio && o.presentation) bio.value = o.presentation;
     if (web) web.value = o.website || "";
     if (sector) sector.value = o.sector || "";
     if (city) city.value = o.city || "";
+    if (logoUrl) logoUrl.value = o.logoUrl || "";
   }
 
   function loadOrg() {
@@ -116,6 +124,7 @@
             sector: (document.getElementById("co-sector") || {}).value,
             city: (document.getElementById("co-city") || {}).value,
             presentation: document.getElementById("co-bio").value,
+            logoUrl: (document.getElementById("co-logo-url") || {}).value || "",
           },
         });
         HireLink.toast("Entreprise", "Fiche enregistrée. La vérification a été relancée.", "ok");
@@ -124,6 +133,49 @@
         HireLink.toast("Entreprise", err.message, "danger");
       }
     });
+  }
+
+  const logoFile = document.getElementById("co-logo-file");
+  if (logoFile) {
+    logoFile.addEventListener("change", async () => {
+      const file = logoFile.files && logoFile.files[0];
+      if (!file) return;
+      const fd = new FormData();
+      fd.append("file", file);
+      try {
+        const o = await HireLinkAPI.api("/organizations/mine/logo", {
+          method: "POST",
+          formData: fd,
+          timeoutMs: 45000,
+        });
+        HireLink.toast("Logo", "Image enregistrée. Visible côté candidat.", "ok");
+        paintLogo(o.logoUrl, o.name);
+        const urlInput = document.getElementById("co-logo-url");
+        if (urlInput) urlInput.value = o.logoUrl || "";
+      } catch (err) {
+        HireLink.toast("Logo", err.message, "danger");
+      } finally {
+        logoFile.value = "";
+      }
+    });
+  }
+
+  const logoClear = document.getElementById("co-logo-clear");
+  if (logoClear) {
+    logoClear.onclick = async () => {
+      try {
+        await HireLinkAPI.api("/organizations/mine", {
+          method: "PUT",
+          body: { logoUrl: "" },
+        });
+        const urlInput = document.getElementById("co-logo-url");
+        if (urlInput) urlInput.value = "";
+        HireLink.toast("Logo", "Logo retiré.", "ok");
+        loadOrg();
+      } catch (err) {
+        HireLink.toast("Logo", err.message, "danger");
+      }
+    };
   }
 
   const recheck = document.getElementById("btn-recheck");

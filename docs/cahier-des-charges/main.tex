@@ -90,18 +90,18 @@
     \end{tabular}
   \end{minipage}
   \vfill
-  {\small\color{royalsoft} Version 2.0 --- document de cadrage}
+  {\small\color{royalsoft} Version 3.0 --- alignée sur l'application déployée (octobre 2026)}
 \end{titlepage}
 
 \pagenumbering{roman}
 \chapter*{Résumé exécutif}
 \addcontentsline{toc}{chapter}{Résumé exécutif}
 
-HireLink est une plateforme logicielle de type \textbf{ATS} (\textit{Applicant Tracking System}) à architecture \textbf{bilatérale} : elle interconnecte l'espace \textbf{candidat} et l'espace \textbf{organisation recruteuse} autour d'un même objet métier --- la candidature --- et d'un \textbf{pipeline d'états} formalisé.
+HireLink est une plateforme logicielle de type \textbf{ATS} (\textit{Applicant Tracking System}) à architecture \textbf{trilatérale} : espaces \textbf{candidat}, \textbf{recruteur} et \textbf{administrateur}, autour de la candidature et d'un \textbf{pipeline d'états} formalisé.
 
-Le besoin adressé n'est pas la simple diffusion d'offres (fonction déjà couverte par les jobboards nationaux et les réseaux professionnels). Il réside dans la \textbf{gouvernance du processus de sélection} : traçabilité des transitions, réduction de l'asymétrie d'information entre les parties, engagement de délai de traitement, justification structurée des décisions de rejet, et préparation d'une couche d'\textbf{aide à la décision} entièrement \textbf{locale} (aucun recours à une API commerciale payante).
+Le besoin adressé n'est pas la simple diffusion d'offres. Il réside dans la \textbf{gouvernance du processus de sélection} : traçabilité, engagement de délai (SLA), motifs de refus documentés, \textbf{vérification d'entreprise} avant publication, matching / scorecard, et aide à la décision (synthèse CV assistée, crédits Essentiel).
 
-La solution s'appuie sur une stack contemporaine : \textbf{Spring Boot~3}, \textbf{Spring Security} (JWT), \textbf{Spring Data JPA}, \textbf{MySQL}, migrations versionnées, API OpenAPI, conteneurisation. Le présent document constitue le référentiel fonctionnel et technique du projet. Contrainte pédagogique imposée : \textbf{MySQL} comme SGBD ; \textbf{interdiction des API payantes}.
+La solution livrée : \textbf{Spring Boot~3} / Java, \textbf{Spring Security} (JWT), \textbf{Spring Data JPA} / Hibernate (\texttt{ddl-auto=update}), \textbf{MySQL/MariaDB} (\texttt{hirelink}), frontend HTML/JS (police \textbf{Inter}, palette bordeaux). API : \texttt{/api/v1}. Contrainte pédagogique : \textbf{MySQL} ; pas d'API cloud payante obligatoire pour le socle.
 
 \tableofcontents
 \clearpage
@@ -233,7 +233,10 @@ Administrateur & Gouvernance technique et modération & Assurer l'intégrité de
   \item \textbf{UC-33} Commentaires hiring manager sans faire avancer le pipeline.
   \item \textbf{UC-34} Conformité RGPD : consentement horodaté, export dossier, purge/anonymisation après N mois.
   \item \textbf{UC-35} Parcours candidature multi-étapes (détail offre, CV, lettre/photo optionnels).
-  \item \textbf{UC-36} Freemium produit : assist IA locale, Premium, mode sombre, aide différenciée RH/candidat.
+  \item \textbf{UC-36} Freemium produit : assist IA (synthèse CV, crédits), formules Essentiel / Performance / Premium.
+  \item \textbf{UC-37} Vérification d'entreprise hybride (ICE + e-mail pro $\rightarrow$ auto ; sinon file admin) ; publication bloquée sans badge.
+  \item \textbf{UC-38} Annuaire public d'entreprises (logo, secteur, site) et topbar (Passer Premium, cloche, profil).
+  \item \textbf{UC-39} Score CV par sections (frontend) et synthèse textuelle journalisée (\texttt{ai\_usage\_logs}).
 \end{enumerate}
 
 \chapter{Spécification du pipeline}
@@ -303,22 +306,16 @@ Architecture hexagonale / en couches, API-first, SGBD relationnel \textbf{MySQL}
 \toprule
 \textbf{Composant} & \textbf{Technologie} \\
 \midrule
-Langage / runtime & Java~21 (LTS) \\
-Framework & Spring Boot~3.x \\
-API & Spring Web (REST) \\
-Sécurité & Spring Security~6 + JWT (stateless) \\
-Persistance & Spring Data JPA / Hibernate~6 \\
-SGBD & \textbf{MySQL~8.4} \\
-Migrations & Flyway \\
+Langage / runtime & Java~23 (démo) / compatible LTS \\
+Framework & Spring Boot~3.3.x \\
+API & Spring Web (REST) --- port \textbf{8081}, préfixe \texttt{/api/v1} \\
+Sécurité & Spring Security + JWT (stateless) ; rôles CANDIDAT / RECRUTEUR / ADMINISTRATEUR \\
+Persistance & Spring Data JPA / Hibernate~6 (\texttt{ddl-auto=update}) \\
+SGBD & \textbf{MySQL / MariaDB} --- schéma \texttt{hirelink} (phpMyAdmin) \\
 Validation & Jakarta Bean Validation \\
-Documentation API & springdoc-openapi (OpenAPI~3) \\
-Ordonnancement & Spring Scheduling \\
-Cache (option MVP+) & Redis (sessions / rate-limiting) \\
 Build & Maven \\
-Qualité & JUnit~5, MockMvc / Testcontainers (MySQL) \\
-Conteneurisation & Docker / Docker Compose \\
-Front de démonstration & SPA (React ou Angular) \textbf{ou} Thymeleaf selon arbitrage pédagogique \\
-Aide à la décision & Module Java local (extraction de compétences + score d'appariement) --- \textbf{aucune API payante} \\
+Front & HTML/CSS/JS (\texttt{http.server} :5500), typographie \textbf{Inter} \\
+Aide à la décision & Matching local + synthèse CV (\texttt{/ai/cv-summary}) + score sections \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -354,14 +351,16 @@ SGBD imposé : \textbf{MySQL}. Interdiction d'intégrer des \textbf{API payantes
 \chapter{Modèle de données (MySQL)}
 \label{ch:data}
 
-Entités principales : \texttt{users}, \texttt{candidate\_profiles}, \texttt{companies}, \texttt{recruiter\_profiles}, \texttt{job\_offers} (\texttt{response\_time\_days}), \texttt{applications} (\texttt{status}, \texttt{response\_deadline}, \texttt{sla\_breached}), \texttt{application\_status\_history}, \texttt{interviews}, \texttt{refusal\_reason\_catalog}, \texttt{application\_refusals}, \texttt{notifications}, \texttt{matching\_analyses}, \texttt{consent\_records}.
+Entités JPA réelles (package \texttt{ma.ensat.hirelink.model}) : \texttt{User}, \texttt{Organization} (ICE, logo, \texttt{verificationMethod}, badge), \texttt{Membership}, \texttt{JobOffer} (SLA), \texttt{Application}, \texttt{Tag} (ManyToMany), \texttt{RefusalReason}, \texttt{InAppNotification}, \texttt{MatchingAnalysis}, scorecards, \texttt{AiUsageLog}.
 
-Contraintes : unicité \texttt{(job\_offer\_id, candidate\_id)} ; index sur \texttt{status}, \texttt{response\_deadline} ; intégrité référentielle stricte.
+Tables MySQL générées par Hibernate : \texttt{users}, \texttt{organizations}, \texttt{memberships}, \texttt{job\_offers}, \texttt{applications}, \texttt{tags} / \texttt{job\_offer\_tags}, \texttt{refusal\_reason\_catalog}, \texttt{notifications}, \texttt{matching\_analyses}, \texttt{ai\_usage\_logs}, etc.
+
+Contraintes : unicité candidature offre--candidat ; publication conditionnée au badge entreprise ; intégrité référentielle JPA.
 
 \chapter{API (vue d'ensemble)}
 \label{ch:api}
 
-Groupes principaux : \texttt{/api/v1/auth}, \texttt{/api/v1/candidates}, \texttt{/api/v1/companies}, \texttt{/api/v1/offers}, \texttt{/api/v1/applications}, \texttt{/api/v1/interviews}, \texttt{/api/v1/analytics}, \texttt{/api/v1/matching}, \texttt{/api/v1/notifications}. Versionnement d'API dès l'origine (\texttt{v1}).
+Groupes principaux : \texttt{/api/v1/auth}, \texttt{/api/v1/me}, \texttt{/api/v1/offers}, \texttt{/api/v1/applications}, \texttt{/api/v1/organizations} (+ \texttt{/public}, \texttt{/mine/verify}), \texttt{/api/v1/admin}, \texttt{/api/v1/refusal-reasons}, \texttt{/api/v1/notifications}, \texttt{/api/v1/matching}, \texttt{/api/v1/ai}. Versionnement \texttt{v1}.
 
 \chapter{Plan de réalisation}
 \label{ch:plan}
@@ -416,8 +415,14 @@ Non-respect contrainte MySQL / API payantes & Non-conformité pédagogique & Sta
   \item Protocole de démonstration et jeux de données.
 \end{enumerate}
 
+\chapter{État de réalisation (v3.0)}
+\label{ch:etat}
+\begin{objectifbox}
+\textbf{Livré et démontrable.} Auth (OTP / Google), profils, organisations vérifiées (auto ICE + admin), offres avec SLA, pipeline candidatures, motifs de refus, notifications in-app, matching, scorecard, admin (stats / entreprises / plans), UX candidat (dashboard, entreprises logos, candidatures), formules Essentiel/Performance, synthèse CV. Livrables séances 3--4 : modèle JPA, diagramme de classes, CRUD REST (offres, motifs, notifications) + Postman.
+\end{objectifbox}
+
 \chapter{Conclusion}
-HireLink formalise un ATS bilatéral contemporain : orchestration du pipeline, réduction de l'asymétrie d'information, engagement de délai, auditabilité des rejets, et aide à la décision locale --- sur une stack Spring Boot~3 / \textbf{MySQL}, conforme à l'interdiction des API payantes.
+HireLink formalise un ATS trilatéral contemporain : orchestration du pipeline, engagement de délai, auditabilité des rejets, vérification d'entreprise, et aide à la décision --- sur Spring Boot~3 / \textbf{MySQL}, aligné sur l'application réelle.
 
 \begin{thebibliography}{99}
 \bibitem{africawork-top7} AfricaWork, ``The Ranking of the Top 7 Recruitment Platforms in Morocco 2025'', \url{https://www.africawork.com/blog/the-ranking-of-the-top-7-recruitment-platforms-in-morocco-2025}.

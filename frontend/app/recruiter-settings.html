@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
   <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
   <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+  <link rel="stylesheet" href="../css/components.css?v=20261027a" />
   <script src="../js/theme.js?v=20261026d"></script>
 </head>
 <body>
@@ -48,6 +48,7 @@
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Sections du cabinet">
             <button type="button" class="is-on" data-settings="org">Cabinet</button>
+            <button type="button" data-settings="image">Image</button>
             <button type="button" data-settings="deadlines">Délais</button>
             <button type="button" data-settings="plans">Formules</button>
           </nav>
@@ -68,6 +69,26 @@
                 <header class="card-header"><h2>Apparence</h2><p>Le thème reste local à votre écran.</p></header>
                 <div class="card-body">
                   <div class="setting-row"><span>Mode sombre</span><label class="switch"><input type="checkbox" data-theme-toggle id="theme-toggle" /><span class="slider"></span></label></div>
+                </div>
+              </article>
+            </section>
+            <section class="settings-panel" id="set-image" hidden>
+              <article class="settings-card" id="photo-upload">
+                <header class="card-header">
+                  <h2>Photo de profil</h2>
+                  <p>Elle apparaît en cercle en haut à droite (à côté de la cloche). Format carré recommandé (JPG ou PNG).</p>
+                </header>
+                <div class="card-body photo-upload">
+                  <div class="profile-photo" id="btn-photo" title="Changer la photo" role="button" tabindex="0">
+                    <img id="pf-photo" alt="" hidden />
+                    <span id="pf-photo-fallback">R</span>
+                  </div>
+                  <div>
+                    <p class="muted" style="margin:0 0 0.65rem">Cliquez sur le cercle ou sur le bouton pour choisir une image. Elle remplace l’icône générique.</p>
+                    <button type="button" class="btn btn-primary" id="btn-photo-pick">Ajouter / changer l’image</button>
+                    <button type="button" class="btn btn-ghost" id="btn-photo-clear" style="margin-left:0.4rem">Retirer</button>
+                    <input type="file" id="pf-photo-file" accept="image/jpeg,image/png,image/webp" hidden />
+                  </div>
                 </div>
               </article>
             </section>
@@ -131,8 +152,8 @@
   <script src="../js/api.js?v=20261026d"></script>
   <script src="../js/in-app-help.js?v=20261026d"></script>
   <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/shell.js?v=20261027a"></script>
   <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/recruiter-settings.js?v=20261026d"></script>
+  <script src="../js/recruiter-settings.js?v=20261027a"></script>
 </body>
 </html>

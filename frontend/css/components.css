@@ -276,12 +276,41 @@ html[data-theme="dark"] .sidebar.is-rail.is-pinned .sidebar-panel {
 .scene-avatar,
 .hl-scene,
 .hl-dossier-avatar,
-.photo-upload,
-.profile-photo,
 .avatar-layer,
-.avatar-open,
-.offer-co-logo {
+.avatar-open {
   display: none !important;
+}
+/* Photo profil recruteur / logo entreprise : visibles (cercle ou carré arrondi) */
+.photo-upload {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.profile-photo {
+  display: grid;
+}
+.user-chip-top .user-chip-btn {
+  overflow: hidden;
+}
+.user-chip-top .top-profile-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+}
+.user-chip-top .top-profile-initials {
+  font-weight: 700;
+  font-size: 0.78rem;
+  color: #7a2032;
+  letter-spacing: 0.02em;
+}
+.org-logo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  align-items: flex-start;
 }
 
 .engine-grid {
@@ -647,15 +676,27 @@ a.top-crown {
   align-items: center;
   margin-bottom: 0.75rem;
 }
+.org-logo-row {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.org-logo-actions { flex: 1; min-width: 220px; }
 .org-logo-preview {
-  width: 72px;
-  height: 72px;
+  width: 88px;
+  height: 88px;
+  flex: 0 0 88px;
   border-radius: 18px;
   border: 1px solid rgba(26, 18, 20, 0.08);
   background: #fff;
   display: grid;
   place-items: center;
   overflow: hidden;
+  font-family: var(--font-display, Inter, sans-serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #7a2032;
 }
 .org-logo-preview img { width: 100%; height: 100%; object-fit: contain; }
 .admin-co {

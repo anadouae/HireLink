@@ -169,6 +169,21 @@ public class OrganizationService {
             String presentation,
             String employeeRange
     ) {
+        return updateMine(user, name, ice, website, sector, city, presentation, employeeRange, null);
+    }
+
+    @Transactional
+    public Organization updateMine(
+            User user,
+            String name,
+            String ice,
+            String website,
+            String sector,
+            String city,
+            String presentation,
+            String employeeRange,
+            String logoUrl
+    ) {
         Membership m = requireMembership(user);
         if (m.getOrgRole() != OrgRole.OWNER && m.getOrgRole() != OrgRole.RECRUTEUR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Modification réservée Owner/Recruteur");
@@ -185,6 +200,18 @@ public class OrganizationService {
             user.setCompanyPresentation(org.getPresentation());
         }
         if (employeeRange != null) org.setEmployeeRange(employeeRange.isBlank() ? null : employeeRange.trim());
+        if (logoUrl != null) {
+            String url = logoUrl.trim();
+            if (url.isBlank()) {
+                org.setLogoUrl(null);
+            } else if (url.length() > 400) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "URL du logo trop longue");
+            } else if (!(url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/api/v1/media/"))) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "URL du logo invalide");
+            } else {
+                org.setLogoUrl(url);
+            }
+        }
         if (org.getIce() != null && !org.getIce().isBlank() && org.getName() != null) {
             var result = companyVerificationService.verify(org.getIce(), org.getName(), user.getId(), user.getEmail());
             companyVerificationService.apply(user, result);
@@ -195,6 +222,17 @@ public class OrganizationService {
         user.setCompany(org.getName());
         user.setCompanyIce(org.getIce());
         userRepository.save(user);
+        return organizationRepository.save(org);
+    }
+
+    @Transactional
+    public Organization setLogoUrl(User user, String logoUrl) {
+        Membership m = requireMembership(user);
+        if (m.getOrgRole() != OrgRole.OWNER && m.getOrgRole() != OrgRole.RECRUTEUR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Modification réservée Owner/Recruteur");
+        }
+        Organization org = m.getOrganization();
+        org.setLogoUrl(logoUrl);
         return organizationRepository.save(org);
     }
 

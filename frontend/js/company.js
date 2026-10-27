@@ -33,7 +33,13 @@
 
   function setLogo(url) {
     if (!logo || !url) return;
-    logo.innerHTML = '<img alt="" src="' + esc(url) + '" onerror="this.remove()" />';
+    const src =
+      window.HireLinkAPI && HireLinkAPI.mediaUrl
+        ? HireLinkAPI.mediaUrl(url)
+        : /^https?:\/\//i.test(url)
+          ? url
+          : (base.replace(/\/api\/v1\/?$/, "") + (url.startsWith("/") ? url : "/" + url));
+    logo.innerHTML = '<img alt="" src="' + esc(src) + '" onerror="this.remove()" />';
   }
 
   fetch(base + "/offers/public")

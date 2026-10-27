@@ -381,6 +381,39 @@
     count.textContent = unread > 9 ? "9+" : String(unread);
   }
 
+  function profilePhotoUrl(session) {
+    const id = (session && (session.userId || session.id)) || "";
+    if (!id) return "";
+    try {
+      return localStorage.getItem("hirelink.photo." + id) || "";
+    } catch (_) {
+      return "";
+    }
+  }
+
+  function profileInitials(session) {
+    const parts = String((session && session.fullName) || "?").trim().split(/\s+/).filter(Boolean);
+    return ((parts[0] || "?")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+  }
+
+  function paintProfileButton(btn, session) {
+    if (!btn) return;
+    const photo = profilePhotoUrl(session);
+    btn.classList.toggle("has-photo", !!photo);
+    if (photo) {
+      btn.innerHTML = '<img class="top-profile-img" alt="" src="' + photo.replace(/"/g, "") + '" />';
+    } else {
+      btn.innerHTML = '<span class="top-profile-initials">' + profileInitials(session) + "</span>";
+    }
+  }
+
+  function refreshProfileChip() {
+    const session = HireLinkAPI.getSession();
+    if (!session) return;
+    const btn = document.querySelector(".user-chip-top .top-profile");
+    if (btn) paintProfileButton(btn, session);
+  }
+
   function buildUserChip(session, avatar) {
     const wrap = document.createElement("div");
     wrap.className = "user-chip user-chip-top";
@@ -389,15 +422,18 @@
     btn.className = "user-chip-btn top-profile";
     btn.setAttribute("aria-label", "Mon profil");
     btn.setAttribute("title", "Mon profil");
-    btn.insertAdjacentHTML("afterbegin", icon("user"));
+    paintProfileButton(btn, session);
     const menu = document.createElement("div");
     menu.className = "user-menu";
     menu.hidden = true;
-    const profile = session.role === "RECRUTEUR" ? "recruiter-settings.html" : "candidate-profile.html";
+    const profile =
+      session.role === "RECRUTEUR"
+        ? "recruiter-settings.html#image"
+        : "candidate-profile.html";
     const settings = session.role === "RECRUTEUR" ? "recruiter-settings.html" : "candidate-settings.html";
     menu.innerHTML =
       '<div class="user-menu-head"><strong></strong><span></span></div>' +
-      '<a href="' + profile + '">' + icon("user") + "Mon profil</a>" +
+      '<a href="' + profile + '">' + icon("user") + (session.role === "RECRUTEUR" ? "Photo & profil" : "Mon profil") + "</a>" +
       '<a href="' + settings + '">' + icon("settings") + "Paramètres</a>" +
       '<button type="button" data-help="1">' + icon("help") + "Aide</button>" +
       '<button type="button" data-logout="1">' + icon("logout") + "Déconnexion</button>";
@@ -449,7 +485,7 @@
     avatar.style.cursor = "pointer";
     avatar.title = "Mon profil";
     avatar.addEventListener("click", () => {
-      const href = role === "RECRUTEUR" ? "recruiter-settings.html#photo-upload" : role === "CANDIDAT" ? "candidate-profile.html#photo-upload" : "admin.html";
+      const href = role === "RECRUTEUR" ? "recruiter-team.html#photo-upload" : role === "CANDIDAT" ? "candidate-settings.html#image" : "admin.html";
       const file = href.split("#")[0];
       if (location.pathname.indexOf(file) >= 0) {
         const node = document.getElementById("photo-upload");
@@ -618,5 +654,5 @@
     });
   }
 
-  global.HireLinkShell = { mountShell, bindSearch, ensureThemeToggle, watch };
+  global.HireLinkShell = { mountShell, bindSearch, ensureThemeToggle, watch, refreshProfileChip };
 })(window);

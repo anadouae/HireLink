@@ -41,9 +41,22 @@
     }
   }
 
+  function mediaUrl(path) {
+    if (!path) return "";
+    const s = String(path);
+    if (/^https?:\/\//i.test(s) || s.startsWith("data:")) return s;
+    if (s.startsWith("/api/")) {
+      const base = apiBase().replace(/\/api\/v1\/?$/, "");
+      return base + s;
+    }
+    if (s.startsWith("/")) return apiBase().replace(/\/api\/v1\/?$/, "") + s;
+    return s;
+  }
+
   async function api(path, options) {
     const opts = options || {};
-    const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+    const headers = Object.assign({}, opts.headers || {});
+    if (!opts.formData) headers["Content-Type"] = "application/json";
     const token = getToken();
     if (token) headers.Authorization = "Bearer " + token;
     const controller = new AbortController();
@@ -53,7 +66,11 @@
       res = await fetch(apiBase() + path, {
         method: opts.method || "GET",
         headers,
-        body: opts.body ? JSON.stringify(opts.body) : undefined,
+        body: opts.formData
+          ? opts.formData
+          : opts.body
+            ? JSON.stringify(opts.body)
+            : undefined,
         signal: controller.signal,
       });
     } catch (e) {
@@ -118,6 +135,7 @@
       return apiBase();
     },
     api,
+    mediaUrl,
     setAuth,
     clearAuth,
     getSession,

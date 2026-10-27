@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
   <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
   <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+  <link rel="stylesheet" href="../css/components.css?v=20261027a" />
   <script src="../js/theme.js?v=20261026d"></script>
   <style>
     .org-hero {
@@ -98,9 +98,20 @@
         <section class="panel" style="margin-bottom:1.25rem">
           <div class="panel-head"><h2>Fiche entreprise</h2></div>
           <form id="company-form" class="panel-body profile-form">
-            <div class="field field-full" style="display:flex;gap:1rem;align-items:center">
+            <div class="field field-full org-logo-row" id="photo-upload">
               <div class="org-logo-preview" id="co-logo-box"><span class="muted">Logo</span></div>
-              <p class="muted" id="co-verify-hint" style="margin:0">Le badge se déclenche tout seul si l’ICE et l’e-mail professionnel correspondent au registre. Sinon l’admin valide.</p>
+              <div class="org-logo-actions">
+                <p class="muted" id="co-verify-hint" style="margin:0 0 .55rem">Le logo apparaît chez les candidats (Entreprises + fiches d’offres). Carré, fond clair, bien lisible.</p>
+                <div class="row" style="gap:.5rem;flex-wrap:wrap;align-items:center">
+                  <label class="btn btn-primary btn-sm">Choisir une image
+                    <input type="file" id="co-logo-file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden />
+                  </label>
+                  <button type="button" class="btn btn-ghost btn-sm" id="co-logo-clear">Retirer</button>
+                </div>
+                <label class="input-group" style="margin-top:.65rem;max-width:28rem">Ou URL du logo
+                  <input id="co-logo-url" class="form-control" placeholder="https://… ou laissez vide après upload" />
+                </label>
+              </div>
             </div>
             <div class="field"><label for="co-name">Nom</label><input id="co-name" /></div>
             <div class="field"><label for="co-ice">ICE</label><input id="co-ice" placeholder="15 chiffres" /></div>
@@ -129,11 +140,11 @@
     </div>
   </div>
   <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261026d"></script>
+  <script src="../js/api.js?v=20261027a"></script>
   <script src="../js/in-app-help.js?v=20261026d"></script>
   <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/shell.js?v=20261027a"></script>
   <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/recruiter-team.js?v=20261026d"></script>
+  <script src="../js/recruiter-team.js?v=20261027a"></script>
 </body>
 </html>

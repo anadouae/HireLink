@@ -49,24 +49,19 @@
       const parts = String(p.fullName || "R").trim().split(/\s+/).filter(Boolean);
       const letters = ((parts[0] || "R")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
       function paint(url) {
-        const avatar = document.getElementById("avatar");
         if (url && photo) {
           photo.src = url;
           photo.hidden = false;
           if (fallback) fallback.hidden = true;
-          if (avatar) {
-            avatar.textContent = "";
-            avatar.classList.add("has-art");
-            avatar.style.backgroundImage = "url(" + url + ")";
-            avatar.style.backgroundSize = "cover";
-            avatar.style.backgroundPosition = "center";
-          }
         } else {
           if (photo) photo.hidden = true;
           if (fallback) {
             fallback.hidden = false;
             fallback.textContent = letters;
           }
+        }
+        if (window.HireLinkShell && HireLinkShell.refreshProfileChip) {
+          HireLinkShell.refreshProfileChip();
         }
       }
       let stored = "";
@@ -75,7 +70,25 @@
       const file = document.getElementById("pf-photo-file");
       const open = () => file && file.click();
       const btn = document.getElementById("btn-photo");
-      if (btn) btn.addEventListener("click", open);
+      const pick = document.getElementById("btn-photo-pick");
+      const clear = document.getElementById("btn-photo-clear");
+      if (btn) {
+        btn.addEventListener("click", open);
+        btn.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            open();
+          }
+        });
+      }
+      if (pick) pick.addEventListener("click", open);
+      if (clear) {
+        clear.addEventListener("click", () => {
+          try { localStorage.removeItem(photoKey); } catch (_) {}
+          paint("");
+          HireLink.toast("Photo", "Image retirée", "ok");
+        });
+      }
       if (file) {
         file.addEventListener("change", () => {
           const picked = file.files && file.files[0];
@@ -97,15 +110,17 @@
                 return;
               }
               paint(url);
+              HireLink.toast("Photo", "Image enregistrée — visible en haut à droite", "ok");
             };
             img.src = reader.result;
           };
           reader.readAsDataURL(picked);
         });
       }
-      if (location.hash === "#photo-upload") {
+      if (location.hash === "#photo-upload" || location.hash === "#image") {
+        openTab("image");
         const node = document.getElementById("photo-upload");
-        if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+        if (node) setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
       }
     })
     .catch((err) => HireLink.toast("Profil", err.message, "danger"));
@@ -183,7 +198,9 @@
 
   refreshBilling();
   if (location.hash === "#plans") openTab("plans");
+  if (location.hash === "#photo-upload" || location.hash === "#image") openTab("image");
   window.addEventListener("hashchange", function () {
     if (location.hash === "#plans") openTab("plans");
+    if (location.hash === "#photo-upload" || location.hash === "#image") openTab("image");
   });
 })();

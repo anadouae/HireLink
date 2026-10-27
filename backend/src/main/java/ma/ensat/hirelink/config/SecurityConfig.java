@@ -59,6 +59,7 @@ public class SecurityConfig {
                         .requestMatchers("/error").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/offers/public").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/organizations/public").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/media/org-logos/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/catalog/suggest").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/refusal-reasons").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMINISTRATEUR")

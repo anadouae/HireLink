@@ -2,9 +2,17 @@ package ma.ensat.hirelink.controller;
 
 import ma.ensat.hirelink.model.*;
 import ma.ensat.hirelink.service.CompanyVerificationService;
+import ma.ensat.hirelink.service.OrgLogoStorage;
 import ma.ensat.hirelink.service.OrganizationService;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.*;
 
@@ -14,13 +22,16 @@ public class OrganizationController {
 
     private final OrganizationService organizationService;
     private final CompanyVerificationService companyVerificationService;
+    private final OrgLogoStorage orgLogoStorage;
 
     public OrganizationController(
             OrganizationService organizationService,
-            CompanyVerificationService companyVerificationService
+            CompanyVerificationService companyVerificationService,
+            OrgLogoStorage orgLogoStorage
     ) {
         this.organizationService = organizationService;
         this.companyVerificationService = companyVerificationService;
+        this.orgLogoStorage = orgLogoStorage;
     }
 
     public record InviteRequest(String email, String orgRole) {}
@@ -32,7 +43,8 @@ public class OrganizationController {
             String sector,
             String city,
             String presentation,
-            String employeeRange
+            String employeeRange,
+            String logoUrl
     ) {}
 
     @GetMapping("/public")
@@ -86,10 +98,32 @@ public class OrganizationController {
                 body.sector(),
                 body.city(),
                 body.presentation(),
-                body.employeeRange()
+                body.employeeRange(),
+                body.logoUrl()
         );
         Membership me = organizationService.requireMembership(user);
         return toBody(org, me);
+    }
+
+    @PostMapping(value = "/mine/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Map<String, Object> uploadLogo(
+            @AuthenticationPrincipal User user,
+            @RequestPart("file") MultipartFile file
+    ) {
+        Organization org = organizationService.ensureForRecruiter(user);
+        try {
+            String stored = orgLogoStorage.save(org.getId(), file.getOriginalFilename(), file.getBytes());
+            String publicUrl = "/api/v1/media/org-logos/" + stored;
+            org = organizationService.setLogoUrl(user, publicUrl);
+            Membership me = organizationService.requireMembership(user);
+            return toBody(org, me);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Upload du logo impossible");
+        }
     }
 
     @PostMapping("/mine/verify")
