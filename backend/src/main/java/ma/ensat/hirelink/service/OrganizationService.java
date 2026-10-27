@@ -1,6 +1,7 @@
 package ma.ensat.hirelink.service;
 
 import ma.ensat.hirelink.model.*;
+import ma.ensat.hirelink.repository.JobOfferRepository;
 import ma.ensat.hirelink.repository.MembershipRepository;
 import ma.ensat.hirelink.repository.OrganizationRepository;
 import ma.ensat.hirelink.repository.UserRepository;
@@ -16,13 +17,19 @@ public class OrganizationService {
     private final OrganizationRepository organizationRepository;
     private final MembershipRepository membershipRepository;
     private final UserRepository userRepository;
+    private final CompanyVerificationService companyVerificationService;
+    private final JobOfferRepository jobOfferRepository;
 
     public OrganizationService(OrganizationRepository organizationRepository,
                                MembershipRepository membershipRepository,
-                               UserRepository userRepository) {
+                               UserRepository userRepository,
+                               CompanyVerificationService companyVerificationService,
+                               JobOfferRepository jobOfferRepository) {
         this.organizationRepository = organizationRepository;
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
+        this.companyVerificationService = companyVerificationService;
+        this.jobOfferRepository = jobOfferRepository;
     }
 
     @Transactional
@@ -52,6 +59,10 @@ public class OrganizationService {
         org.setVerificationStatus(owner.getVerificationStatus() != null
                 ? owner.getVerificationStatus()
                 : (owner.isCompanyVerified() ? "REGISTRY_MATCH" : "PENDING"));
+        org.setVerificationMethod(owner.isCompanyVerified() ? "AUTO_REGISTRY" : "PENDING");
+        if (owner.getCompanyPresentation() != null) org.setPresentation(owner.getCompanyPresentation());
+        if (owner.getPreferredLocations() != null) org.setCity(owner.getPreferredLocations());
+        companyVerificationService.enrichProfile(org);
         organizationRepository.save(org);
         Membership m = new Membership();
         m.setOrganization(org);
@@ -144,6 +155,20 @@ public class OrganizationService {
 
     @Transactional
     public Organization updateMine(User user, String name, String ice) {
+        return updateMine(user, name, ice, null, null, null, null, null);
+    }
+
+    @Transactional
+    public Organization updateMine(
+            User user,
+            String name,
+            String ice,
+            String website,
+            String sector,
+            String city,
+            String presentation,
+            String employeeRange
+    ) {
         Membership m = requireMembership(user);
         if (m.getOrgRole() != OrgRole.OWNER && m.getOrgRole() != OrgRole.RECRUTEUR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Modification réservée Owner/Recruteur");
@@ -151,6 +176,108 @@ public class OrganizationService {
         Organization org = m.getOrganization();
         if (name != null && !name.isBlank()) org.setName(name.trim());
         if (ice != null) org.setIce(ice.isBlank() ? null : ice.trim());
+        if (website != null) org.setWebsite(website.isBlank() ? null : website.trim());
+        if (sector != null) org.setSector(sector.isBlank() ? null : sector.trim());
+        if (city != null) org.setCity(city.isBlank() ? null : city.trim());
+        if (presentation != null) {
+            String bio = presentation.trim();
+            org.setPresentation(bio.length() > 1200 ? bio.substring(0, 1200) : bio);
+            user.setCompanyPresentation(org.getPresentation());
+        }
+        if (employeeRange != null) org.setEmployeeRange(employeeRange.isBlank() ? null : employeeRange.trim());
+        if (org.getIce() != null && !org.getIce().isBlank() && org.getName() != null) {
+            var result = companyVerificationService.verify(org.getIce(), org.getName(), user.getId(), user.getEmail());
+            companyVerificationService.apply(user, result);
+            companyVerificationService.applyToOrg(org, result);
+        } else {
+            companyVerificationService.enrichProfile(org);
+        }
+        user.setCompany(org.getName());
+        user.setCompanyIce(org.getIce());
+        userRepository.save(user);
         return organizationRepository.save(org);
+    }
+
+    @Transactional
+    public Organization syncFromRecruiter(User recruiter) {
+        Organization org = ensureForRecruiter(recruiter);
+        if (recruiter.getCompany() != null && !recruiter.getCompany().isBlank()) org.setName(recruiter.getCompany());
+        if (recruiter.getCompanyIce() != null && !recruiter.getCompanyIce().isBlank()) org.setIce(recruiter.getCompanyIce());
+        org.setVerified(recruiter.isCompanyVerified());
+        org.setVerificationStatus(recruiter.getVerificationStatus() != null
+                ? recruiter.getVerificationStatus()
+                : (recruiter.isCompanyVerified() ? "REGISTRY_MATCH" : "PENDING"));
+        org.setVerificationMethod(recruiter.isCompanyVerified() ? "AUTO_REGISTRY" : "PENDING");
+        if (recruiter.getCompanyPresentation() != null) org.setPresentation(recruiter.getCompanyPresentation());
+        companyVerificationService.enrichProfile(org);
+        return organizationRepository.save(org);
+    }
+
+    @Transactional
+    public Organization recheck(User user) {
+        Organization org = ensureForRecruiter(user);
+        if (org.getIce() == null || org.getIce().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Renseignez l’ICE avant de relancer la vérification");
+        }
+        var result = companyVerificationService.verify(
+                org.getIce(),
+                org.getName() != null ? org.getName() : user.getCompany(),
+                user.getId(),
+                user.getEmail()
+        );
+        companyVerificationService.apply(user, result);
+        companyVerificationService.applyToOrg(org, result);
+        userRepository.save(user);
+        return organizationRepository.save(org);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> listPublic() {
+        Map<Long, Map<String, Object>> byOrg = new LinkedHashMap<>();
+        for (JobOffer offer : jobOfferRepository.findByPublishedTrueAndSuspendedFalse()) {
+            Organization org = membershipRepository.findByUserIdAndActiveTrue(offer.getRecruiter().getId()).stream()
+                    .map(Membership::getOrganization)
+                    .findFirst()
+                    .orElse(null);
+            String name = org != null && org.getName() != null ? org.getName()
+                    : (offer.getRecruiter().getCompany() != null ? offer.getRecruiter().getCompany() : "Entreprise");
+            Long key = org != null ? org.getId() : -offer.getRecruiter().getId();
+            Map<String, Object> row = byOrg.get(key);
+            if (row == null) {
+                row = new LinkedHashMap<>();
+                row.put("id", org == null ? null : org.getId());
+                row.put("name", name);
+                row.put("logoUrl", org != null && org.getLogoUrl() != null && !org.getLogoUrl().isBlank()
+                        ? org.getLogoUrl()
+                        : CompanyDirectory.logoFor(org == null ? null : org.getIce(), name));
+                row.put("website", org == null ? "" : nvl(org.getWebsite()));
+                row.put("sector", org == null ? "" : nvl(org.getSector()));
+                row.put("city", org != null && org.getCity() != null && !org.getCity().isBlank()
+                        ? org.getCity()
+                        : firstCity(offer.getLocation()));
+                row.put("employees", org == null ? "" : nvl(org.getEmployeeRange()));
+                row.put("verified", (org != null && org.isVerified()) || offer.getRecruiter().isCompanyVerified());
+                row.put("verificationStatus", org == null ? "" : nvl(org.getVerificationStatus()));
+                row.put("presentation", org != null && org.getPresentation() != null && !org.getPresentation().isBlank()
+                        ? org.getPresentation()
+                        : name + " recrute actuellement sur HireLink.");
+                row.put("offerCount", 0);
+                byOrg.put(key, row);
+            }
+            row.put("offerCount", ((Number) row.get("offerCount")).intValue() + 1);
+            if (row.get("city") == null || String.valueOf(row.get("city")).isBlank()) {
+                row.put("city", firstCity(offer.getLocation()));
+            }
+        }
+        return new ArrayList<>(byOrg.values());
+    }
+
+    private static String nvl(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static String firstCity(String location) {
+        if (location == null || location.isBlank()) return "";
+        return location.split("[·,|/]")[0].trim();
     }
 }

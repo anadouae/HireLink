@@ -292,7 +292,7 @@
           : isLast
             ? state.editId
               ? "Enregistrer"
-              : "Créer l’offre"
+              : "Enregistrer"
             : "Continuer") +
         "</button></div></div></div>";
 

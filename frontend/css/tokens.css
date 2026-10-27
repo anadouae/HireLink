@@ -1,0 +1,22 @@
+/* Alias — la palette réelle est dans design-system.css (bordeaux, champagne, parchemin). */
+:root {
+  --bg: #f5f1ec;
+  --bg-soft: #ebe4db;
+  --text-primary: #1a1214;
+  --text-muted: #5e5558;
+  --border: rgba(26, 18, 20, 0.1);
+
+  --accent: #7a2032;
+  --accent-hover: #521420;
+  --accent-soft: rgba(122, 32, 50, 0.14);
+
+  --brand: #7a2032;
+  --success: #1f6b4a;
+  --danger: #9b2c2c;
+
+  --radius: 14px;
+  --radius-pill: 999px;
+  --font: "Inter", system-ui, sans-serif;
+  --font-display: "Inter", system-ui, sans-serif;
+  --sidebar-w: 240px;
+}

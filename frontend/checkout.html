@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Paiement — HireLink</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="css/checkout.css?v=20261026d" />
+</head>
+<body>
+  <header class="pay-top">
+    <a id="pay-back" href="index.html">← Retour</a>
+    <strong>HireLink</strong>
+    <span>Paiement sécurisé</span>
+  </header>
+
+  <main class="pay-wrap">
+    <section class="pay-summary" aria-label="Récapitulatif">
+      <p class="pay-kicker">Abonnement</p>
+      <h1 id="pay-plan">Premium</h1>
+      <p class="pay-sub" id="pay-sub">—</p>
+      <div class="pay-cycle" role="group" aria-label="Période">
+        <button type="button" class="is-on" data-cycle="month">Mensuel</button>
+        <button type="button" data-cycle="year">Annuel · 2 mois offerts</button>
+      </div>
+      <ul class="pay-lines" id="pay-lines"></ul>
+      <dl class="pay-totals">
+        <div><dt>Sous-total HT</dt><dd id="pay-ht">—</dd></div>
+        <div><dt>TVA 20 %</dt><dd id="pay-tva">—</dd></div>
+        <div class="is-total"><dt>Total TTC</dt><dd id="pay-ttc">—</dd></div>
+      </dl>
+      <p class="pay-sim">Simulation. Aucune carte n’est débitée.</p>
+    </section>
+
+    <section class="pay-form-card" id="pay-panel">
+      <h2>Informations de paiement</h2>
+
+      <div id="pay-saved" hidden>
+        <p class="pay-label">Moyen de paiement</p>
+        <label class="pay-method"><input type="radio" name="method" value="saved" checked /> <span id="pay-saved-label">Carte enregistrée</span></label>
+        <label class="pay-method"><input type="radio" name="method" value="new" /> Utiliser une autre carte</label>
+      </div>
+
+      <form id="pay-form" novalidate>
+        <label>E-mail
+          <input id="pay-email" type="email" autocomplete="email" required />
+        </label>
+        <div id="pay-new-fields">
+          <label>Numéro de carte
+            <span class="pay-cardline">
+              <input id="pay-number" inputmode="numeric" autocomplete="cc-number" placeholder="1234 1234 1234 1234" maxlength="23" required />
+              <span id="pay-brand" class="pay-brand">Carte</span>
+            </span>
+          </label>
+          <div class="pay-row">
+            <label>Expiration
+              <input id="pay-exp" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA" maxlength="5" required />
+            </label>
+            <label>CVC
+              <input id="pay-cvc" inputmode="numeric" autocomplete="cc-csc" placeholder="123" maxlength="4" required />
+            </label>
+          </div>
+          <label>Nom sur la carte
+            <input id="pay-holder" autocomplete="cc-name" required />
+          </label>
+          <p class="pay-label">Adresse de facturation</p>
+          <label>Adresse
+            <input id="pay-address" autocomplete="billing street-address" required />
+          </label>
+          <div class="pay-row">
+            <label>Ville
+              <input id="pay-city" autocomplete="billing address-level2" required />
+            </label>
+            <label>Code postal
+              <input id="pay-zip" autocomplete="billing postal-code" required />
+            </label>
+          </div>
+          <label>Pays
+            <select id="pay-country" autocomplete="billing country">
+              <option value="Maroc" selected>Maroc</option>
+              <option>France</option>
+              <option>Espagne</option>
+              <option>Autre</option>
+            </select>
+          </label>
+        </div>
+        <p class="pay-error" id="pay-error" hidden></p>
+        <button type="submit" class="pay-submit" id="pay-submit">Payer</button>
+        <button type="button" class="pay-secondary" id="pay-demo">Activer Premium sans carte (démonstration)</button>
+        <p class="pay-hint">Carte de démonstration : 4242 4242 4242 4242 · une date future · CVC 123.</p>
+        <p class="pay-brands"><span>Visa</span><span>Mastercard</span><span>CMI</span></p>
+      </form>
+    </section>
+
+    <section class="pay-receipt" id="pay-receipt" hidden>
+      <p class="pay-kicker">Paiement accepté</p>
+      <h2>Reçu</h2>
+      <dl id="pay-receipt-body"></dl>
+      <div class="pay-receipt-actions">
+        <button type="button" class="pay-secondary" id="pay-change">Modifier la carte</button>
+        <a class="pay-submit" id="pay-done" href="index.html">Continuer</a>
+      </div>
+    </section>
+  </main>
+  <script src="js/checkout.js?v=20261026d"></script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 package ma.ensat.hirelink.service;
 
+import ma.ensat.hirelink.model.Organization;
+import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -7,23 +9,17 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.text.Normalizer;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Set;
 
 /**
- * Anti-fraude employeur — modèle hybride LinkedIn-like :
- * inscription libre (raison sociale + ICE + email) sans documents ;
- * validation / badge a posteriori ; publication bloquée si non vérifié.
+ * Vérification employeur — même logique que LinkedIn / Indeed :
+ * 1) e-mail professionnel (pas Gmail)
+ * 2) ICE + raison sociale confrontés au registre
+ * 3) si tout matche → badge automatique
+ * 4) sinon file d’attente admin (espace Administration)
  */
 @Service
 public class CompanyVerificationService {
-
-    /** Extrait registre (remplacer par API officielle OMPIC). */
-    private static final Map<String, String> REGISTRY = Map.of(
-            "001544289000035", "Atlas Digital",
-            "001234567000012", "Nova RH",
-            "002468135000098", "HireDesk Services"
-    );
 
     private static final Set<String> FREE_EMAIL_DOMAINS = Set.of(
             "gmail.com", "googlemail.com", "yahoo.com", "yahoo.fr", "hotmail.com",
@@ -37,6 +33,7 @@ public class CompanyVerificationService {
             boolean verified,
             String status,
             boolean corporateEmail,
+            String method,
             String message
     ) {}
 
@@ -57,44 +54,91 @@ public class CompanyVerificationService {
     public Result verify(String rawIce, String companyName, Long currentUserId, String email) {
         if (rawIce == null || rawIce.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "ICE obligatoire (inscription libre, mais ICE requis)");
+                    "ICE obligatoire pour lancer la vérification");
         }
         if (companyName == null || companyName.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Raison sociale obligatoire");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Raison sociale obligatoire");
         }
         String ice = rawIce.replaceAll("\\s+", "");
         if (!ice.matches("\\d{9,15}")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "ICE invalide (9 à 15 chiffres)");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ICE invalide (9 à 15 chiffres)");
         }
+        String name = companyName.trim();
 
         var existing = userRepository.findByCompanyIce(ice);
         if (existing.isPresent() && (currentUserId == null || !existing.get().getId().equals(currentUserId))) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Cet ICE est déjà lié à un autre compte HireLink");
+            User other = existing.get();
+            boolean sameFirm = similar(other.getCompany() == null ? "" : other.getCompany(), name) >= 0.72;
+            if (!sameFirm) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Cet ICE est déjà lié à un autre compte HireLink");
+            }
         }
-
-        String name = companyName.trim();
         boolean corporateEmail = isCorporateEmail(email);
+        var known = CompanyDirectory.byIce(ice);
 
-        // Filtre n°1 LinkedIn-like : email gratuit → jamais de badge auto
         if (!corporateEmail) {
-            return new Result(ice, name, false, "NEED_CORPORATE_EMAIL", false,
-                    "Compte créé. Badge / publication bloqués : utilisez un e-mail professionnel (@entreprise.ma), pas Gmail/Yahoo/Outlook.");
+            return new Result(ice, name, false, "NEED_CORPORATE_EMAIL", false, "PENDING",
+                    "Compte créé. Pour le badge automatique, utilisez un e-mail professionnel (@entreprise.ma). L’admin peut quand même valider le dossier.");
         }
-
-        String registryName = REGISTRY.get(ice);
-        if (registryName == null) {
-            return new Result(ice, name, false, "WAITING_REGISTRY", true,
-                    "Compte créé. E-mail pro OK — vérification registre (mock OMPIC) en attente. Publication encore bloquée.");
+        if (known.isEmpty()) {
+            return new Result(ice, name, false, "WAITING_REGISTRY", true, "PENDING",
+                    "E-mail professionnel accepté. ICE inconnu du registre automatique — un admin confirme l’identité.");
         }
+        String registryName = known.get().name();
         if (similar(name, registryName) < 0.72) {
-            return new Result(ice, name, false, "NAME_MISMATCH", true,
-                    "Raison sociale différente du registre pour cet ICE. Publication bloquée jusqu’à correction / revue.");
+            return new Result(ice, name, false, "NAME_MISMATCH", true, "PENDING",
+                    "La raison sociale ne correspond pas au registre pour cet ICE. Corrigez le nom ou attendez la revue admin.");
         }
-        return new Result(ice, registryName, true, "REGISTRY_MATCH", true,
-                "Entreprise vérifiée (matching registre + e-mail pro). Publication autorisée.");
+        return new Result(ice, registryName, true, "REGISTRY_MATCH", true, "AUTO_REGISTRY",
+                "Entreprise vérifiée automatiquement (ICE + registre + e-mail professionnel). Publication autorisée.");
+    }
+
+    public void apply(User user, Result result) {
+        if (user == null || result == null) return;
+        user.setCompanyIce(result.ice());
+        user.setCompany(result.companyName());
+        user.setCompanyVerified(result.verified());
+        user.setVerificationStatus(result.status());
+    }
+
+    public void applyToOrg(Organization org, Result result) {
+        if (org == null || result == null) return;
+        org.setIce(result.ice());
+        org.setName(result.companyName());
+        org.setVerified(result.verified());
+        org.setVerificationStatus(result.status());
+        org.setVerificationMethod(result.method());
+        enrichProfile(org);
+    }
+
+    public void enrichProfile(Organization org) {
+        if (org == null) return;
+        CompanyDirectory.byIce(org.getIce())
+                .or(() -> CompanyDirectory.byName(org.getName()))
+                .ifPresent(entry -> {
+                    if (blank(org.getWebsite())) org.setWebsite(entry.website());
+                    if (blank(org.getLogoUrl())) org.setLogoUrl(entry.logoUrl());
+                    if (blank(org.getSector())) org.setSector(entry.sector());
+                    if (blank(org.getCity())) org.setCity(entry.city());
+                    if (blank(org.getEmployeeRange())) org.setEmployeeRange(entry.employees());
+                    if (blank(org.getName()) || similar(org.getName(), entry.name()) > 0.85) {
+                        org.setName(entry.name());
+                    }
+                });
+        if (blank(org.getLogoUrl())) {
+            org.setLogoUrl(CompanyDirectory.logoFor(org.getIce(), org.getName()));
+        }
+    }
+
+    public void markAdminDecision(Organization org, boolean verified) {
+        org.setVerified(verified);
+        org.setVerificationStatus(verified ? "ADMIN_APPROVED" : "PENDING");
+        org.setVerificationMethod(verified ? "ADMIN" : "PENDING");
+        if (org.getOwner() != null) {
+            org.getOwner().setCompanyVerified(verified);
+            org.getOwner().setVerificationStatus(org.getVerificationStatus());
+        }
     }
 
     public boolean isCorporateEmail(String email) {
@@ -111,16 +155,33 @@ public class CompanyVerificationService {
         }
         return switch (verificationStatus) {
             case "NEED_CORPORATE_EMAIL" ->
-                    "Publication refusée (NEED_CORPORATE_EMAIL) : fournissez un e-mail professionnel lié au domaine de l’entreprise.";
+                    "Publication refusée : fournissez un e-mail professionnel lié au domaine de l’entreprise, ou attendez la validation admin.";
             case "WAITING_REGISTRY" ->
-                    "Publication refusée (WAITING_REGISTRY) : vérification registre en cours.";
+                    "Publication refusée : vérification registre en cours. Un admin peut valider le dossier.";
             case "NAME_MISMATCH" ->
-                    "Publication refusée (NAME_MISMATCH) : alignez la raison sociale sur le registre ICE.";
+                    "Publication refusée : alignez la raison sociale sur le registre ICE.";
             case "PENDING" ->
-                    "Publication refusée (PENDING) : complétez ICE + raison sociale + e-mail pro.";
+                    "Publication refusée : complétez ICE + raison sociale. Un admin peut aussi valider.";
             default ->
-                    "Entreprise non vérifiée (" + verificationStatus + ") — inscription libre ≠ publication libre.";
+                    "Entreprise non vérifiée (" + verificationStatus + ") — l’inscription ne donne pas le droit de publier.";
         };
+    }
+
+    public String statusLabel(String status, boolean verified) {
+        if (verified) {
+            if ("ADMIN_APPROVED".equals(status)) return "Vérifiée par l’admin";
+            return "Vérifiée automatiquement";
+        }
+        return switch (status == null ? "" : status) {
+            case "NEED_CORPORATE_EMAIL" -> "E-mail professionnel requis";
+            case "WAITING_REGISTRY" -> "En attente du registre";
+            case "NAME_MISMATCH" -> "Nom différent du registre";
+            default -> "En attente";
+        };
+    }
+
+    private boolean blank(String value) {
+        return value == null || value.isBlank();
     }
 
     private double similar(String a, String b) {
@@ -137,7 +198,7 @@ public class CompanyVerificationService {
     }
 
     private String norm(String s) {
-        String n = Normalizer.normalize(s, Normalizer.Form.NFD)
+        String n = Normalizer.normalize(s == null ? "" : s, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(Locale.ROOT)
                 .replaceAll("[^a-z0-9\\s]", " ")

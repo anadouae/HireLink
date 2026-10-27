@@ -65,7 +65,9 @@
         "<span class='badge js-match'></span>" +
         "<span class='sla-pill'></span>" +
         "<span class='badge badge-chrome js-status'></span></div></div>" +
-        "<div class='stack'><a class='btn btn-sm btn-primary' href='recruiter-pipeline.html'>Traiter</a></div>";
+        "<div class='stack'><a class='btn btn-sm btn-primary' href='recruiter-pipeline.html?app=" +
+        encodeURIComponent(c.id) +
+        "'>Ouvrir le dossier</a></div>";
       item.querySelector("strong").textContent = c.candidateName || "Candidat";
       item.querySelector("p").textContent =
         (c.jobTitle || "") + " · " + (STATUS_FR[c.status] || c.status || "");
@@ -103,10 +105,9 @@
       }
       const st = me.verificationStatus || "PENDING";
       ban.innerHTML =
-        "<strong>Inscription libre ≠ publication libre</strong>" +
-        '<p class="muted" style="margin:0.35rem 0 0;font-size:0.9rem">Statut : <code>' +
-        st +
-        "</code>. Vous pouvez créer des brouillons d’offres, mais la publication reste bloquée tant que l’entreprise n’est pas vérifiée (e-mail pro + matching registre / validation admin).</p>";
+        "<strong>Votre entreprise n’est pas encore vérifiée</strong>" +
+        '<p class="muted" style="margin:0.35rem 0 0.7rem;font-size:0.9rem">Vous pouvez préparer des brouillons. La publication s’ouvre dès que l’administration valide votre entreprise.</p>' +
+        '<a class="btn btn-primary btn-sm" href="recruiter-settings.html">Voir mon entreprise</a>';
     } catch (_) {}
   }
 
@@ -176,11 +177,12 @@
           " SLA";
       }
 
-      try {
-        const rel = await HireLinkAPI.api("/reliability/me");
-        const relEl = document.getElementById("trust-score");
-        if (relEl) relEl.textContent = rel.score + "/100 · " + rel.label;
-      } catch (_) {}
+      const side = document.getElementById("side-advice-text");
+      if (side) {
+        side.textContent = urgent.length
+          ? "Ce mois-ci : " + urgent.length + " dossier" + (urgent.length > 1 ? "s sont" : " est") + " proche du délai promis. Ouvrez-les avant le reste."
+          : "Ce mois-ci : les délais promis sont tenus. Le score aide à lire un CV, il ne retient personne.";
+      }
 
       const counts = { SUBMITTED: 0, SCREENING: 0, SHORTLISTED: 0, INTERVIEW: 0 };
       apps.forEach((a) => {
@@ -188,7 +190,7 @@
       });
       const max = Math.max(1, ...Object.values(counts));
       const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
-      const labels = ["Soumises", "Screen", "Shortlist", "Entretien"];
+      const labels = ["Reçues", "En étude", "Retenues", "Entretien"];
       document.getElementById("chart-bars").innerHTML = keys
         .map((k, i) => {
           const h = Math.round((counts[k] / max) * 100);
@@ -203,6 +205,17 @@
           );
         })
         .join("");
+
+      const received = counts.SUBMITTED + counts.SCREENING + counts.SHORTLISTED + counts.INTERVIEW;
+      const moved = counts.SCREENING + counts.SHORTLISTED + counts.INTERVIEW;
+      const conv = document.getElementById("conversion");
+      if (conv) {
+        conv.textContent = !received
+          ? "Aucune candidature ouverte. L’avancement se calcule dès la première réception."
+          : moved === 0
+            ? "Les " + received + " dossiers ouverts sont encore à la réception. Le délai promis court depuis le dépôt."
+            : moved + " dossier" + (moved > 1 ? "s ont quitté" : " a quitté") + " la réception, sur " + received + " ouverts. Le délai promis court depuis le dépôt.";
+      }
 
       renderInbox(cachedApps);
     } catch (err) {
@@ -221,9 +234,6 @@
     });
   }
 
-  document.getElementById("btn-upgrade").addEventListener("click", () => {
-    if (window.HireLinkGrowth) HireLinkGrowth.showPremium("recruiter");
-  });
   if (window.HireLinkGrowth) HireLinkGrowth.scheduleNudge("recruiter", 28000);
   load();
 })();

@@ -27,6 +27,13 @@ public class LocalLlmProvider implements LlmProvider {
             out.append("4. Collaboration : désaccord avec un métier — comment l'avez-vous géré ?\n");
             out.append("5. Questions du candidat pour clarifier le succès à 90 jours.\n");
             out.append("\n(Proposition locale — éditez librement avant l'entretien.)");
+        } else if (lower.contains("coach") || lower.contains("recommand")) {
+            out.append("Recommandations pour votre CV :\n");
+            out.append("1. Le titre doit reprendre le métier que vous visez, pas seulement votre diplôme.\n");
+            out.append("2. Chaque expérience tient en deux lignes : ce que vous avez fait, puis un résultat chiffré.\n");
+            out.append("3. Placez en haut les compétences qui reviennent dans les offres que vous regardez.\n");
+            out.append("4. Retirez les missions trop anciennes si elles n’ont aucun lien avec le poste.\n");
+            out.append("\nPosez une question précise dans le chat, par exemple : « Que manque-t-il pour un stage data ? »");
         } else {
             out.append("Analyse de profil (proposition) :\n");
             out.append("- Mettez en avant 3 compétences alignées sur l'offre.\n");

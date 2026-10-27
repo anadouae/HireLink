@@ -73,7 +73,7 @@ public class HttpLlmProvider implements LlmProvider {
                 last = e;
             }
         }
-        LlmResult fb = local.complete(systemPrompt, userPrompt);
+            LlmResult fb = local.complete(systemPrompt, userPrompt);
         String note = last == null ? "" : " (" + last.getClass().getSimpleName() + ")";
         return new LlmResult(
                 fb.text() + "\n\n[Fallback local — cloud indisponible" + note + "]",

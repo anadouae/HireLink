@@ -103,12 +103,27 @@
    * @param {HTMLElement} root
    * @param {{ selected?: string[], languages?: {name:string,level:string}[], onChange?: Function }} opts
    */
+  function dedupeLanguages(list) {
+    const seen = new Set();
+    const out = [];
+    (list || []).forEach((l) => {
+      const name = l && l.name ? String(l.name).trim() : "";
+      if (!name) return;
+      const key = name.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      out.push({ name, level: l.level || "B2" });
+    });
+    return out;
+  }
+
   function mount(root, opts) {
     ensureCss();
     const state = {
       selected: new Set((opts.selected || []).map((x) => x.trim()).filter(Boolean)),
-      languages: (opts.languages || []).slice(),
+      languages: dedupeLanguages(opts.languages || []),
       filter: "",
+      remote: [],
     };
 
     function emit() {
@@ -175,6 +190,17 @@
         );
       }).join("");
 
+      const remoteHtml = state.remote.length
+        ? '<details class="hl-sk-domain" open><summary>Autres propositions</summary><div class="hl-sk-grid">' +
+          state.remote
+            .map((it) => {
+              const on = state.selected.has(it);
+              return '<button type="button" class="hl-sk-tag' + (on ? " is-on" : "") + '" data-sk="' + esc(it) + '">' + esc(it) + "</button>";
+            })
+            .join("") +
+          "</div></details>"
+        : "";
+
       const langsHtml =
         '<details class="hl-sk-domain" open><summary>Langues</summary><div class="hl-sk-grid">' +
         LANGUAGES.filter((l) => !q || l.toLowerCase().includes(q))
@@ -224,13 +250,29 @@
         selectedHtml +
         "</div>" +
         domainsHtml +
+        remoteHtml +
         langsHtml +
         "</div>";
 
       const search = root.querySelector(".hl-sk-search");
       search.oninput = () => {
         state.filter = search.value;
+        const qv = state.filter.trim();
         paint();
+        clearTimeout(state.timer);
+        if (qv.length >= 2 && window.HireLinkAPI) {
+          state.timer = setTimeout(() => {
+            HireLinkAPI.api("/catalog/suggest?kind=skill&q=" + encodeURIComponent(qv))
+              .then((rows) => {
+                if (state.filter.trim() !== qv) return;
+                state.remote = (rows || []).map(function (item) {
+                  return item && item.label ? item.label : String(item);
+                }).filter(function (item) { return !DOMAINS.some(function (d) { return d.items.indexOf(item) >= 0; }); });
+                paint();
+              })
+              .catch(() => {});
+          }, 250);
+        }
         root.querySelector(".hl-sk-search").focus();
         const el = root.querySelector(".hl-sk-search");
         if (el) {

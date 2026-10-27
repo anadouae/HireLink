@@ -3,22 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css" />
-  <link rel="stylesheet" href="../css/app.css" />
-  <script src="../js/theme.js"></script>
+  <title>Administration — HireLink</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
 </head>
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
-      <a class="brand" href="../index.html">
+      <a class="brand" href="admin.html">
         <span class="brand-mark"></span>
         <span class="brand-name">Hire<span style="color:#d9ba6a">Link</span></span>
       </a>
-      <nav class="side-nav">
-        <a class="side-link is-active" href="admin.html">Supervision</a>
-        <a class="side-link" href="../index.html">Landing</a>
+      <nav class="side-nav" id="admin-nav">
+        <a class="side-link is-active" href="#dash" data-view="dash">Tableau de bord</a>
+        <a class="side-link" href="#orgs" data-view="orgs">Entreprises</a>
+        <a class="side-link" href="#plans" data-view="plans">Plans et factures</a>
+        <a class="side-link" href="#users" data-view="users">Comptes</a>
       </nav>
       <div class="side-footer">
         <div id="side-user">—</div>
@@ -28,32 +32,87 @@
     <div class="app-main">
       <header class="topbar">
         <div><strong>Administration</strong></div>
-        <div class="avatar" id="avatar">A</div>
+        <div class="topbar-actions" style="margin-left:auto">
+          <span class="muted" style="font-size:.85rem">Vérification · plans · comptes</span>
+          <div class="avatar" id="avatar">A</div>
+        </div>
       </header>
       <main class="content">
-        <div class="page-title">
-          <div>
-            <p class="eyebrow">Admin</p>
-            <h1>Indicateurs &amp; comptes</h1>
-          </div>
-        </div>
-        <div class="stat-grid" id="stats"></div>
-        <section class="panel">
-          <div class="panel-head"><h2>Utilisateurs</h2></div>
-          <div class="panel-body" style="padding:0 1.1rem .5rem">
-            <table class="table">
-              <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Actif</th><th></th></tr></thead>
-              <tbody id="users-body"></tbody>
-            </table>
-          </div>
+        <section id="view-dash">
+          <div class="page-title"><div><p class="eyebrow">Admin</p><h1>Tableau de bord</h1></div></div>
+          <div class="stat-grid" id="stats"></div>
+          <section class="panel">
+            <div class="panel-head"><h2>Vérification à traiter</h2></div>
+            <div class="panel-body" id="dash-pending"><p class="muted">Chargement…</p></div>
+            <div class="panel-head"><h2>Entreprises à suivre</h2></div>
+            <div class="panel-body" id="dash-orgs"><p class="muted">Chargement…</p></div>
+          </section>
+        </section>
+
+        <section id="view-orgs" hidden>
+          <div class="page-title"><div><p class="eyebrow">Entreprises</p><h1>Gestion des entreprises</h1></div></div>
+          <section class="panel">
+            <div class="panel-body" style="padding:0 1.1rem .5rem;overflow:auto">
+              <table class="table">
+                <thead><tr><th>Entreprise</th><th>ICE</th><th>Plan</th><th>Statut</th><th>Membres</th><th>Offres</th><th></th></tr></thead>
+                <tbody id="orgs-body"></tbody>
+              </table>
+            </div>
+          </section>
+          <section class="panel" id="org-detail" hidden>
+            <div class="panel-head"><h2 id="org-detail-title">Détail</h2></div>
+            <div class="panel-body" id="org-detail-body"></div>
+          </section>
+        </section>
+
+        <section id="view-plans" hidden>
+          <div class="page-title"><div><p class="eyebrow">Facturation</p><h1>Plans et factures</h1></div></div>
+          <div class="stat-grid" id="plan-cards"></div>
+          <section class="panel">
+            <div class="panel-head"><h2>Générer une facture</h2></div>
+            <div class="panel-body">
+              <form id="invoice-form" class="profile-form">
+                <div class="field">
+                  <label for="inv-org">Entreprise</label>
+                  <select id="inv-org"></select>
+                </div>
+                <div class="field">
+                  <label for="inv-plan">Plan</label>
+                  <select id="inv-plan"></select>
+                </div>
+                <div class="field">
+                  <label for="inv-cycle">Période</label>
+                  <select id="inv-cycle">
+                    <option value="month">Mensuelle</option>
+                    <option value="year">Annuelle</option>
+                  </select>
+                </div>
+                <div class="field field-full">
+                  <button type="submit" class="btn btn-primary">Générer la facture</button>
+                </div>
+              </form>
+            </div>
+          </section>
+        </section>
+
+        <section id="view-users" hidden>
+          <div class="page-title"><div><p class="eyebrow">Comptes</p><h1>Utilisateurs</h1></div></div>
+          <p><input id="user-search" type="search" placeholder="Rechercher un compte…" style="max-width:320px" /></p>
+          <section class="panel">
+            <div class="panel-body" style="padding:0 1.1rem .5rem;overflow:auto">
+              <table class="table">
+                <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Actif</th><th></th></tr></thead>
+                <tbody id="users-body"></tbody>
+              </table>
+            </div>
+          </section>
         </section>
       </main>
     </div>
   </div>
   <script src="../js/config.js"></script>
-  <script src="../js/ui.js"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
   <script src="../js/api.js"></script>
-  <script src="../js/growth.js"></script>
-  <script src="../js/admin.js"></script>
+  <script src="../js/admin.js?v=20261026d"></script>
 </body>
 </html>

@@ -46,6 +46,13 @@ public class Application {
     @Column(name = "cv_file_name", length = 255)
     private String cvFileName;
 
+    @Column(name = "cv_storage_name", length = 255)
+    private String cvStorageName;
+
+    /** JSON des sections confirmées ou lues sur le fichier joint. */
+    @Column(name = "cv_sections", columnDefinition = "TEXT")
+    private String cvSections;
+
     @Column(name = "cover_letter", columnDefinition = "TEXT")
     private String coverLetter;
 
@@ -123,6 +130,12 @@ public class Application {
 
     public String getCvFileName() { return cvFileName; }
     public void setCvFileName(String cvFileName) { this.cvFileName = cvFileName; }
+
+    public String getCvStorageName() { return cvStorageName; }
+    public void setCvStorageName(String cvStorageName) { this.cvStorageName = cvStorageName; }
+
+    public String getCvSections() { return cvSections; }
+    public void setCvSections(String cvSections) { this.cvSections = cvSections; }
 
     public String getCoverLetter() { return coverLetter; }
     public void setCoverLetter(String coverLetter) { this.coverLetter = coverLetter; }

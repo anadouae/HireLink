@@ -43,9 +43,17 @@ class Organization <<class>> {
   - ice : String
   - verified : boolean
   - verificationStatus : String
+  - verificationMethod : String
+  - website : String
+  - logoUrl : String
+  - sector : String
+  - city : String
+  - employeeRange : String
+  - presentation : String
   - planTier : PlanTier
   --
   + verify()
+  + enrichFromDirectory()
 }
 
 class Membership <<class>> {

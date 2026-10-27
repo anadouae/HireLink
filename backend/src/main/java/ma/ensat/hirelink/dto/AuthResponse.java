@@ -10,7 +10,8 @@ public record AuthResponse(
         String fullName,
         Role role,
         boolean mustSetPassword,
-        boolean emailVerified
+        boolean emailVerified,
+        boolean profileComplete
 ) {
     public static AuthResponse of(String token, ma.ensat.hirelink.model.User u) {
         return new AuthResponse(
@@ -21,7 +22,8 @@ public record AuthResponse(
                 u.getFullName(),
                 u.getRole(),
                 u.isMustSetPassword(),
-                u.isEmailVerified()
+                u.isEmailVerified(),
+                u.isProfileComplete()
         );
     }
 }

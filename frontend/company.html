@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Entreprise — HireLink</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="css/landing.css?v=20261026d" />
+  <link rel="stylesheet" href="css/components.css?v=20261026d" />
+</head>
+<body class="landing-body">
+  <header class="site-header">
+    <a class="brand" href="index.html">
+      <span class="brand-mark brand-mark--pulse"></span>
+      <span class="brand-name">Hi<span class="r-pulse">r</span>e<span>Link</span></span>
+    </a>
+    <nav class="nav" aria-label="Sur cette page">
+      <a href="index.html#offres">Offres</a>
+      <a href="index.html#entreprises">Entreprises</a>
+      <a href="index.html#candidats">Candidats</a>
+      <a href="index.html#metiers">Métiers</a>
+      <a href="index.html#parcours">Parcours</a>
+      <a href="index.html#tarifs">Formules</a>
+    </nav>
+    <div class="row">
+      <a class="btn btn-ghost btn-sm" href="auth.html?mode=login">Connexion</a>
+      <a class="btn btn-primary btn-sm" href="auth.html?mode=register">Commencer</a>
+    </div>
+  </header>
+  <main class="section">
+    <div class="container co-page">
+      <a class="co-back" href="index.html#offres">← Offres</a>
+      <article class="co-profile">
+        <div class="co-cover" aria-hidden="true"></div>
+        <div class="co-id">
+          <div class="co-logo" id="co-logo">—</div>
+          <div>
+            <h1 id="co-name">Entreprise</h1>
+            <p class="muted" id="co-meta">Chargement…</p>
+          </div>
+        </div>
+      </article>
+      <div class="co-layout">
+        <aside class="co-about">
+          <h2>À propos</h2>
+          <p id="co-about">—</p>
+          <h2>Repères</h2>
+          <div class="co-facts" id="co-facts"></div>
+        </aside>
+        <section>
+          <h2 class="co-pub-title">Publications</h2>
+          <div class="public-offer-grid" id="co-offers"></div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <script src="js/config.js"></script>
+  <script src="js/public-nav.js?v=20261026d"></script>
+  <script src="js/company.js?v=20261026d"></script>
+</body>
+</html>

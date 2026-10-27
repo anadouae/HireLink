@@ -63,6 +63,17 @@ public class AuthController {
         return authService.loginPassword(body);
     }
 
+    @PostMapping("/complete-profile")
+    public AuthResponse completeProfile(
+            @AuthenticationPrincipal User user,
+            @RequestBody AuthDtos.CompleteProfile body
+    ) {
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié");
+        }
+        return authService.completeProfile(user, body);
+    }
+
     @PostMapping("/set-password")
     public AuthResponse setPassword(
             @AuthenticationPrincipal User user,

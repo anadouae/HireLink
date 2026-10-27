@@ -31,6 +31,8 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
 
     long countByCandidateIdAndSubmittedAtAfter(Long candidateId, Instant after);
 
+    long countByStatus(ApplicationStatus status);
+
     @Query("""
             SELECT a FROM Application a JOIN FETCH a.jobOffer o JOIN FETCH a.candidate
             WHERE a.responseDeadline IS NOT NULL

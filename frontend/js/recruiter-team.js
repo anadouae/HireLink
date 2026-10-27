@@ -8,6 +8,31 @@
     if (el) el.textContent = v;
   }
 
+  function paintLogo(url, name) {
+    const box = document.getElementById("co-logo-box");
+    if (!box) return;
+    if (url) {
+      box.innerHTML = '<img alt="" src="' + String(url).replace(/"/g, "") + '" onerror="this.remove()" />';
+    } else {
+      box.textContent = String(name || "E").charAt(0).toUpperCase();
+    }
+  }
+
+  function fillForm(o) {
+    const name = document.getElementById("co-name");
+    const ice = document.getElementById("co-ice");
+    const bio = document.getElementById("co-bio");
+    const web = document.getElementById("co-website");
+    const sector = document.getElementById("co-sector");
+    const city = document.getElementById("co-city");
+    if (name && o.name) name.value = o.name;
+    if (ice && o.ice) ice.value = o.ice;
+    if (bio && o.presentation) bio.value = o.presentation;
+    if (web) web.value = o.website || "";
+    if (sector) sector.value = o.sector || "";
+    if (city) city.value = o.city || "";
+  }
+
   function loadOrg() {
     HireLinkAPI.api("/organizations/mine")
       .then((o) => {
@@ -16,9 +41,17 @@
           "org-sub",
           "Mon rôle : " + (o.myRole || "—") + " · palier " + (o.planTier || "ACCES")
         );
-        setText("kpi-status", o.verified ? "Vérifiée" : "À vérifier");
+        setText("kpi-status", o.statusLabel || (o.verified ? "Vérifiée" : "À vérifier"));
         setText("kpi-ice", o.ice ? "ICE " + o.ice : "ICE non renseigné");
         setText("kpi-plan", "Plan " + (o.planTier || "ACCES"));
+        const hint = document.getElementById("co-verify-hint");
+        if (hint) {
+          hint.textContent = o.verified
+            ? "Badge actif. Vous pouvez publier des offres."
+            : "Le badge se déclenche tout seul si l’ICE et l’e-mail professionnel correspondent au registre. Sinon l’admin valide dans Administration → Entreprises.";
+        }
+        paintLogo(o.logoUrl, o.name);
+        fillForm(o);
       })
       .catch(() => {
         HireLinkAPI.api("/me").then((p) => {
@@ -69,17 +102,42 @@
     })
     .catch(() => {});
 
-  HireLinkAPI.api("/growth/reliability-badge")
-    .then((b) => {
-      if (b.score) setText("kpi-trust", b.score.score + "/100");
-      const pre = document.getElementById("badge-html");
-      if (pre) pre.textContent = b.htmlSnippet || "";
-    })
-    .catch(() => {});
+  const companyForm = document.getElementById("company-form");
+  if (companyForm) {
+    companyForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      try {
+        await HireLinkAPI.api("/organizations/mine", {
+          method: "PUT",
+          body: {
+            name: document.getElementById("co-name").value,
+            ice: document.getElementById("co-ice").value,
+            website: (document.getElementById("co-website") || {}).value,
+            sector: (document.getElementById("co-sector") || {}).value,
+            city: (document.getElementById("co-city") || {}).value,
+            presentation: document.getElementById("co-bio").value,
+          },
+        });
+        HireLink.toast("Entreprise", "Fiche enregistrée. La vérification a été relancée.", "ok");
+        loadOrg();
+      } catch (err) {
+        HireLink.toast("Entreprise", err.message, "danger");
+      }
+    });
+  }
 
-  document.getElementById("btn-upgrade").onclick = () => {
-    if (window.HireLinkGrowth) HireLinkGrowth.showPremium("recruiter");
-  };
+  const recheck = document.getElementById("btn-recheck");
+  if (recheck) {
+    recheck.onclick = async () => {
+      try {
+        const o = await HireLinkAPI.api("/organizations/mine/verify", { method: "POST" });
+        HireLink.toast("Vérification", o.verified ? "Badge attribué automatiquement." : (o.message || "Dossier envoyé à l’admin."), o.verified ? "ok" : "warn");
+        loadOrg();
+      } catch (err) {
+        HireLink.toast("Vérification", err.message, "danger");
+      }
+    };
+  }
 
   const toggle = document.getElementById("btn-toggle-badge");
   if (toggle) {
@@ -118,35 +176,6 @@
     }
   };
 
-  const kitBtn = document.getElementById("btn-interview-kit");
-  if (kitBtn) {
-    kitBtn.onclick = async () => {
-      try {
-        const premium = HireLinkProduct && HireLinkProduct.isPremium("recruiter");
-        const data = await HireLinkAPI.api("/ai/interview-kit", {
-          method: "POST",
-          headers: HireLinkProduct ? HireLinkProduct.premiumHeaders("recruiter") : {},
-          body: { jobTitle: "Poste ouvert", skills: "Java, communication", premium },
-        });
-        await HireLink.openModal({
-          title: data.title || "Grille entretien",
-          description: data.note || "",
-          bodyHtml:
-            (data.content
-              ? "<pre class='ai-result' style='white-space:pre-wrap'>" + data.content + "</pre>"
-              : "") +
-            "<ol>" +
-            (data.questions || []).map((q) => "<li>" + q + "</li>").join("") +
-            "</ol>",
-          confirmLabel: "Fermer",
-          hideCancel: true,
-          large: true,
-        });
-      } catch (err) {
-        HireLink.toast("IA", err.message, "danger");
-      }
-    };
-  }
 
   const copyBadge = document.getElementById("btn-copy-badge");
   if (copyBadge) {

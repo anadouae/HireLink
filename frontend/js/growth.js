@@ -15,7 +15,7 @@
         "Profil mis en avant auprès des recruteurs",
         "Priorité sur les nouvelles offres",
       ],
-      cta: "Passer Premium — 39 MAD/mois",
+      cta: "Continuer vers le paiement",
       priceNote: "Essentiel reste gratuit · résiliable à tout moment",
     },
     recruiter: {
@@ -27,7 +27,7 @@
         "Offres mises en avant",
         "Export & reporting clair",
       ],
-      cta: "Activer Premium — 299 MAD/mois",
+      cta: "Continuer vers le paiement",
       priceNote: "Le plan Gratuit reste disponible sans engagement",
     },
   };
@@ -55,6 +55,10 @@
   }
 
   function showPremium(role) {
+    if (localStorage.getItem("hirelink.premium.active." + role) === "1") {
+      if (global.HireLink) HireLink.toast("Premium", "Votre offre Premium est déjà active.", "ok");
+      return;
+    }
     ensureCss();
     const conf = COPY[role] || COPY.candidate;
     let overlay = document.getElementById("hl-premium-overlay");
@@ -90,18 +94,15 @@
       overlay.classList.remove("is-open");
     };
     overlay.querySelector("#hl-prem-cta").onclick = () => {
-      overlay.classList.remove("is-open");
-      if (global.HireLink && HireLink.toast) {
-        HireLink.toast("Premium", "Plan Premium activé", "ok");
-      }
-      localStorage.setItem("hirelink.premium.active." + role, "1");
-      const bar = document.getElementById("hl-prem-bar");
-      if (bar) bar.remove();
-      const upgrade = document.getElementById("btn-upgrade") || document.getElementById("btn-premium");
-      if (upgrade) {
-        upgrade.textContent = "Premium ✓";
-        upgrade.classList.add("is-active");
-      }
+      const plan = role === "recruiter" ? "recruiter" : "candidate";
+      const inApp = /\/app\//.test(location.pathname);
+      const file = (location.pathname.split("/").pop() || "index.html").split("?")[0];
+      const back = /^[\w.-]+\.html$/.test(file) ? file : "";
+      location.href =
+        (inApp ? "../" : "") +
+        "checkout.html?plan=" +
+        plan +
+        (back ? "&back=" + encodeURIComponent(back) : "");
     };
     overlay.onclick = (e) => {
       if (e.target === overlay) overlay.classList.remove("is-open");

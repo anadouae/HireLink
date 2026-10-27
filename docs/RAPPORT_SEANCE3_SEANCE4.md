@@ -62,7 +62,7 @@ Fichier clé : `backend/src/main/resources/application.properties`
 | Entité Java | Table MySQL | Rôle |
 |-------------|-------------|------|
 | User | users | Comptes (CANDIDAT / RECRUTEUR / ADMIN) |
-| Organization | organizations | Entreprise / cabinet |
+| Organization | organizations | Entreprise (ICE, badge auto/admin, logo, secteur, plan) |
 | Membership | memberships | Lien User↔Org + rôle (OWNER, RECRUTEUR, HM) |
 | JobOffer | job_offers | Offres d’emploi |
 | Application | applications | Candidatures + statut pipeline |

@@ -1,13 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mon profil — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20260415b" />
-  <link rel="stylesheet" href="../css/app.css?v=20260415e" />
-  <script src="../js/theme.js?v=20260415e"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026b" />
+  <script src="../js/theme.js?v=20261026d"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -17,12 +20,11 @@
         <button type="button" class="mobile-toggle" id="close-side">✕</button>
       </div>
       <nav class="side-nav">
-        <a class="side-link" href="candidate.html">Tableau de bord</a>
-        <a class="side-link" href="candidate-offers.html">Offres pour vous</a>
+        <a class="side-link" href="candidate-dashboard.html">Tableau de bord</a>
+        <a class="side-link" href="candidate.html">Offres</a>
         <a class="side-link" href="candidate-applications.html">Mes candidatures</a>
-        <a class="side-link is-active" href="candidate-profile.html">Mon profil</a>
-        <a class="side-link js-in-app-help" href="../help.html">Aide</a>
       </nav>
+      <div id="nav-user" class="nav-user"></div>
       <div class="side-footer">
         <div id="side-user">—</div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
@@ -33,9 +35,6 @@
         <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
         <div class="topbar-actions" style="margin-left:auto">
           <button type="button" class="btn btn-brass btn-sm" id="btn-premium">Premium</button>
-          <label class="btn btn-soft btn-sm" style="cursor:pointer">Importer un CV
-            <input type="file" id="cv-file" accept=".pdf,.txt,.md,image/*" hidden />
-          </label>
           <div class="avatar" id="avatar">C</div>
         </div>
       </header>
@@ -43,75 +42,148 @@
         <div class="page-title">
           <div>
             <p class="eyebrow">Profil</p>
-            <h1>Ce que vous recherchez</h1>
-            <p class="muted">Ces informations alimentent le matching et vos candidatures. Importez un CV pour préremplir les compétences.</p>
+            <h1>Mon profil</h1>
+            <p class="muted">Recherche et compétences. Le pourcentage des offres se calcule uniquement sur les compétences.</p>
           </div>
         </div>
+
         <section class="panel">
-          <div class="panel-head"><h2>Profil professionnel</h2><span class="badge badge-chrome">Matching</span></div>
-          <div class="panel-body">
-            <form class="profile-form" id="profile-form">
-              <div class="field field-full">
-                <label>Compétences &amp; langues</label>
-                <p class="field-hint" style="margin:0 0 0.45rem">Suggestions au clic · ou import CV dans la barre du haut</p>
-                <input type="hidden" id="pf-skills" />
-                <div id="pf-skills-picker"></div>
-              </div>
+          <div class="panel-body profile-hero" id="profile-identity">
+            <div>
+              <h2 id="pf-name">—</h2>
+              <p class="muted" id="pf-email">—</p>
+              <p class="profile-facts" id="pf-facts"></p>
+            </div>
+          </div>
+        </section>
+
+        <form id="profile-form">
+          <section class="panel">
+            <div class="panel-head"><h2>Recherche</h2></div>
+            <div class="panel-body profile-form">
               <div class="field">
                 <label for="pf-level">Niveau</label>
                 <select id="pf-level">
                   <option value="">—</option>
+                  <option>Stagiaire</option>
                   <option>Junior</option>
                   <option>Confirmé</option>
                   <option>Senior</option>
+                  <option>Lead</option>
+                  <option>Manager</option>
                 </select>
               </div>
               <div class="field field-full">
                 <label for="pf-roles">Métiers recherchés</label>
-                <input id="pf-roles" placeholder="Développeur Full-Stack, Data Analyst…" />
+                <input id="pf-roles" placeholder="Développeuse Full-Stack Java, Data Analyst…" />
+                <div class="choice-chips" id="pf-role-chips"></div>
               </div>
               <div class="field">
-                <label for="pf-loc">Lieux / modes préférés</label>
-                <input id="pf-loc" placeholder="Tétouan, Remote, Hybride" />
+                <label for="pf-loc">Lieux et modes</label>
+                <input id="pf-loc" type="hidden" />
+                <div class="choice-chips" id="pf-loc-chips"></div>
               </div>
               <div class="field">
-                <label for="pf-contracts">Contrats souhaités</label>
-                <input id="pf-contracts" placeholder="CDI, Stage, Alternance" />
+                <label for="pf-contracts">Contrats</label>
+                <input id="pf-contracts" type="hidden" />
+                <div class="choice-chips" id="pf-contract-chips"></div>
               </div>
-              <div class="profile-save-bar" id="profile-save-bar">
-                <span class="muted" id="profile-dirty-hint">Modifications non enregistrées</span>
-                <div>
-                  <a class="btn btn-soft btn-sm" href="candidate-offers.html">Voir mes offres</a>
-                  <button type="submit" class="btn btn-primary" id="btn-save-profile">Enregistrer</button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </section>
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Assistant IA</h2>
-            <span class="ai-chip">Crédits mensuels</span>
-          </div>
-          <div class="panel-body">
-            <p class="muted" style="margin-top:0">Réécriture de pitch et préparation entretien. Inclus dans votre quota mensuel ; Premium augmente le plafond.</p>
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
-              <button type="button" class="btn btn-primary btn-sm" id="btn-ai-rewrite">Réécrire mon pitch</button>
-              <button type="button" class="btn btn-soft btn-sm" id="btn-ai-interview">Prep entretien</button>
             </div>
-            <div class="ai-result" id="ai-result" hidden></div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Compétences et langues</h2></div>
+            <div class="panel-body">
+              <p class="muted" style="margin-top:0">Cliquez pour ajouter. Une langue n’apparaît qu’une fois, avec son niveau.</p>
+              <input type="hidden" id="pf-skills" />
+              <div id="pf-skills-picker"></div>
+            </div>
+          </section>
+
+          <div class="profile-save-bar" id="profile-save-bar">
+            <span class="muted" id="profile-dirty-hint">Modifications non enregistrées</span>
+            <div>
+              <a class="btn btn-soft btn-sm" href="candidate.html">Voir les offres</a>
+              <button type="submit" class="btn btn-primary" id="btn-save-profile">Enregistrer</button>
+            </div>
           </div>
+        </form>
+
+        <section class="cv-board" id="cv-section">
+          <div class="cv-preview-col">
+            <header class="cv-col-head">
+              <div>
+                <h2>Prévisualisation CV</h2>
+                <p class="muted">Visualisez et gérez votre CV</p>
+              </div>
+            </header>
+            <div class="cv-toolbar">
+              <a id="cv-open" class="btn btn-ghost btn-sm" href="#" target="_blank" rel="noopener">Ouvrir dans un nouvel onglet</a>
+              <div class="cv-zoom">
+                <button type="button" id="cv-zoom-out" aria-label="Réduire">−</button>
+                <span id="cv-zoom-label">100%</span>
+                <button type="button" id="cv-zoom-in" aria-label="Agrandir">+</button>
+              </div>
+            </div>
+            <div id="cv-workbench" class="cv-stage">
+              <div id="cv-scale">
+                <iframe id="cv-frame" class="cv-doc-view" title="Document original" hidden></iframe>
+                <img id="cv-image" class="cv-doc-view" alt="Document original" hidden />
+                <pre id="cv-raw" class="cv-doc-view ocr-preview" hidden></pre>
+              </div>
+              <div id="cv-empty" class="cv-empty-note"></div>
+            </div>
+            <div class="cv-upload-bar">
+              <label class="btn btn-primary">Upload CV
+                <input type="file" id="cv-file" accept=".pdf,.txt,.md,image/*" hidden />
+              </label>
+              <span id="cv-file-label" class="muted"></span>
+            </div>
+            <details class="cv-edit">
+              <summary>Sections lues — à confirmer</summary>
+              <form id="cv-sections">
+                <div class="cv-section-field"><label for="cv-identity">Identité</label><textarea id="cv-identity"></textarea></div>
+                <div class="cv-section-field"><label for="cv-experience">Expériences</label><textarea id="cv-experience"></textarea></div>
+                <div class="cv-section-field"><label for="cv-education">Formation</label><textarea id="cv-education"></textarea></div>
+                <div class="cv-section-field"><label for="cv-skills-read">Compétences</label><textarea id="cv-skills-read"></textarea></div>
+                <div class="cv-section-field"><label for="cv-languages">Langues</label><textarea id="cv-languages"></textarea></div>
+                <button type="submit" class="btn btn-primary btn-sm" id="btn-confirm-cv">Confirmer ces sections</button>
+              </form>
+            </details>
+          </div>
+
+          <aside class="cv-analysis" id="cv-coach">
+            <header class="cv-col-head">
+              <h2>Analyse de votre CV</h2>
+            </header>
+            <div class="score-card">
+              <div class="score-card-top">
+                <span>Score global</span>
+                <strong id="cv-score">—</strong>
+              </div>
+              <div class="score-track" aria-hidden="true"><span id="cv-score-bar"></span></div>
+              <p class="cv-score-legend" id="cv-score-legend">Le score lit les sections du CV (identité, expériences, formation, compétences, langues). Il ne remplace pas un recruteur.</p>
+            </div>
+            <h3>Éléments à améliorer</h3>
+            <p class="muted" id="cv-analysis-lead">Erreurs et manques lus dans les sections du CV.</p>
+            <div class="cv-tabs" id="cv-tabs" role="tablist"></div>
+            <p class="cv-level" id="cv-level"></p>
+            <ul class="cv-findings" id="cv-findings"></ul>
+            <button type="button" class="btn btn-ghost btn-sm" id="cv-more">Voir le détail</button>
+            <div class="coach-log" id="coach-log" hidden></div>
+            <button type="button" class="btn btn-primary" id="coach-analyze">Faire la synthèse</button>
+          </aside>
         </section>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20260415e"></script>
-  <script src="../js/api.js?v=20260415e"></script>
-  <script src="../js/in-app-help.js?v=20260415e"></script>
-  <script src="../js/product.js?v=20260415e"></script>
-  <script src="../js/shell.js?v=20260415e"></script>
-  <script src="../js/growth.js?v=20260415e"></script>
-  <script src="../js/skills-catalog.js?v=20260415e"></script>
-  <script src="../js/candidate-profile.js?v=20260415e"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
+  <script src="../js/api.js?v=20261026d"></script>
+  <script src="../js/in-app-help.js?v=20261026d"></script>
+  <script src="../js/product.js?v=20261026d"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/growth.js?v=20261026d"></script>
+  <script src="../js/skills-catalog.js?v=20261026d"></script>
+  <script src="../js/candidate-profile.js?v=20261026e"></script>
 </body>
 </html>

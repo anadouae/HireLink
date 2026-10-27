@@ -1,13 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Vue d’ensemble — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20260415g" />
-  <link rel="stylesheet" href="../css/app.css?v=20260415g" />
-  <script src="../js/theme.js?v=20260415g"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+  <script src="../js/theme.js?v=20261026d"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -17,13 +20,13 @@
         <button type="button" class="mobile-toggle" id="close-side">✕</button>
       </div>
       <nav class="side-nav">
-        <a class="side-link is-active" href="recruiter.html">Vue d’ensemble</a>
+        <a class="side-link is-active" href="recruiter.html">Tableau de bord</a>
         <a class="side-link" href="recruiter-pipeline.html">Pipeline</a>
-        <a class="side-link" href="recruiter-offers.html">Mes offres</a>
-        <a class="side-link" href="recruiter-team.html">Entreprise &amp; équipe</a>
+        <a class="side-link" href="recruiter-offers.html">Offres</a>
+        <a class="side-link" href="recruiter-team.html">Entreprise</a>
         <a class="side-link" href="recruiter-settings.html">Paramètres</a>
-        <a class="side-link js-in-app-help" href="../help.html">Aide RH</a>
       </nav>
+      <div id="nav-user" class="nav-user"></div>
       <div class="side-footer">
         <div id="side-user">—</div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
@@ -52,11 +55,10 @@
             <p class="eyebrow">Espace recruteur</p>
             <h1 id="hello">Tableau de bord</h1>
             <p id="wins-line">Chargement des indicateurs…</p>
-            <p class="muted" style="margin:0.35rem 0 0">Fiabilité organisation : <strong id="trust-score">—</strong></p>
           </div>
           <div class="welcome-actions">
             <a class="btn btn-secondary" href="recruiter-pipeline.html">Pipeline</a>
-            <a class="btn btn-primary" href="recruiter-offers.html">Nouvelle offre</a>
+            <a class="btn btn-primary" href="recruiter-offers.html#new">Nouvelle offre</a>
           </div>
         </section>
 
@@ -81,6 +83,7 @@
             <div class="panel-head"><h2>Répartition</h2></div>
             <div class="panel-body">
               <div class="chart-bars" id="chart-bars"></div>
+              <p class="muted" id="conversion" style="margin-top:0.8rem"></p>
             </div>
           </section>
         </div>
@@ -111,12 +114,12 @@
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20260415g"></script>
-  <script src="../js/api.js?v=20260415g"></script>
-  <script src="../js/in-app-help.js?v=20260415g"></script>
-  <script src="../js/product.js?v=20260415g"></script>
-  <script src="../js/shell.js?v=20260415g"></script>
-  <script src="../js/growth.js?v=20260415g"></script>
-  <script src="../js/recruiter-home.js?v=20260415g"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
+  <script src="../js/api.js?v=20261026d"></script>
+  <script src="../js/in-app-help.js?v=20261026d"></script>
+  <script src="../js/product.js?v=20261026d"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/growth.js?v=20261026d"></script>
+  <script src="../js/recruiter-home.js?v=20261026d"></script>
 </body>
 </html>
