@@ -3,9 +3,11 @@ package ma.ensat.hirelink.service;
 import ma.ensat.hirelink.dto.ApiDtos;
 import ma.ensat.hirelink.model.*;
 import ma.ensat.hirelink.repository.*;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
@@ -50,6 +52,7 @@ public class ApplicationService {
     private final NotificationService notificationService;
     private final OrganizationService organizationService;
     private final MembershipRepository membershipRepository;
+    private final CvStorage cvStorage;
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
@@ -60,7 +63,8 @@ public class ApplicationService {
             MatchingAnalysisRepository matchingAnalysisRepository,
             NotificationService notificationService,
             OrganizationService organizationService,
-            MembershipRepository membershipRepository
+            MembershipRepository membershipRepository,
+            CvStorage cvStorage
     ) {
         this.applicationRepository = applicationRepository;
         this.jobOfferRepository = jobOfferRepository;
@@ -71,6 +75,7 @@ public class ApplicationService {
         this.notificationService = notificationService;
         this.organizationService = organizationService;
         this.membershipRepository = membershipRepository;
+        this.cvStorage = cvStorage;
     }
 
     @Transactional
@@ -89,7 +94,9 @@ public class ApplicationService {
         if (!offer.isPublished()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offre non publiée");
         }
-        if (applicationRepository.findByCandidateIdAndJobOfferId(candidate.getId(), jobOfferId).isPresent()) {
+        var existing = applicationRepository.findByCandidateIdAndJobOfferId(candidate.getId(), jobOfferId);
+        boolean reopen = existing.isPresent() && existing.get().getStatus() == ApplicationStatus.WITHDRAWN;
+        if (existing.isPresent() && !reopen) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Candidature déjà existante (RM01)");
         }
         String cvSource = req.cvSource() == null || req.cvSource().isBlank() ? "PROFILE" : req.cvSource().trim().toUpperCase();
@@ -99,9 +106,12 @@ public class ApplicationService {
         if (cvSource.equals("UPLOAD") && (req.cvFileName() == null || req.cvFileName().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CV requis : choisissez un fichier");
         }
-        Application app = new Application();
-        app.setCandidate(candidate);
-        app.setJobOffer(offer);
+        Application app = reopen ? existing.get() : new Application();
+        if (!reopen) {
+            app.setCandidate(candidate);
+            app.setJobOffer(offer);
+        }
+        app.setRejectionReason(null);
         app.setStatus(ApplicationStatus.SUBMITTED);
         Instant now = Instant.now();
         app.setSubmittedAt(now);
@@ -120,6 +130,25 @@ public class ApplicationService {
         if (req.photoFileName() != null && !req.photoFileName().isBlank()) {
             app.setPhotoFileName(req.photoFileName().trim());
         }
+        String sections = cleanSections(req.cvSections());
+        if (sections == null && "PROFILE".equals(cvSource)) {
+            sections = candidate.getCvSections();
+        }
+        app.setCvSections(sections);
+        if ("PROFILE".equals(cvSource)
+                && candidate.getCvStorageName() != null
+                && !candidate.getCvStorageName().isBlank()) {
+            try {
+                app.setCvStorageName(cvStorage.copy(candidate.getCvStorageName(), "applications"));
+                if (candidate.getCvFileName() != null && !candidate.getCvFileName().isBlank()) {
+                    app.setCvFileName(candidate.getCvFileName());
+                }
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "CV du profil illisible");
+            }
+        }
         applicationRepository.save(app);
 
         MatchingAnalysis ma = new MatchingAnalysis();
@@ -130,8 +159,9 @@ public class ApplicationService {
         ma.setMissingSkills(String.join(", ", detail.missing()));
         matchingAnalysisRepository.save(ma);
 
-        timelineService.append(app.getId(), null, ApplicationStatus.SUBMITTED.name(),
-                candidate.getId(), "{\"event\":\"APPLY\",\"match\":" + Math.round(score) + "}");
+        timelineService.append(app.getId(), reopen ? ApplicationStatus.WITHDRAWN.name() : null,
+                ApplicationStatus.SUBMITTED.name(),
+                candidate.getId(), "{\"event\":\"" + (reopen ? "REAPPLY" : "APPLY") + "\",\"match\":" + Math.round(score) + "}");
         notificationService.push(offer.getRecruiter().getId(),
                 "Nouvelle candidature",
                 candidate.getFullName() + " a postulé à « " + offer.getTitle() + " »",
@@ -297,14 +327,14 @@ public class ApplicationService {
         Set<ApplicationStatus> allowed = ALLOWED.getOrDefault(app.getStatus(), EnumSet.noneOf(ApplicationStatus.class));
         if (!allowed.contains(req.status())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Transition interdite (R01) : " + app.getStatus() + " → " + req.status());
+                    "Cette étape ne peut pas suivre " + app.getStatus() + ".");
         }
 
         if (!Boolean.TRUE.equals(req.confirmIdentity())
                 || !Boolean.TRUE.equals(req.confirmCvReviewed())
                 || !Boolean.TRUE.equals(req.confirmSlaAware())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Checklist obligatoire incomplète (R05) : identité, CV lu, SLA");
+                    "Confirmez l’identité, la lecture du CV et le délai avant de continuer.");
         }
 
         if (req.status() == ApplicationStatus.REJECTED) {
@@ -380,15 +410,25 @@ public class ApplicationService {
 
     private void applyRefusalCatalog(Application app, String reasonRaw) {
         if (reasonRaw == null || reasonRaw.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Motif de refus obligatoire (R04)");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisissez un motif de refus.");
         }
         String reason = reasonRaw.trim();
+        if (reason.regionMatches(true, 0, "OTHER:", 0, 6)) {
+            String note = reason.substring(6).trim();
+            if (note.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Précisez le motif.");
+            }
+            if (note.length() > 500) note = note.substring(0, 500);
+            app.setRefusalReasonCode("OTHER_CATALOG");
+            app.setRejectionReason(note);
+            return;
+        }
         RefusalReason catalog = refusalReasonRepository.findByCode(reason)
                 .or(() -> refusalReasonRepository.findByActiveTrue().stream()
                         .filter(rr -> rr.getLabel().equalsIgnoreCase(reason))
                         .findFirst())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Motif hors catalogue (R04) — choisissez un code catalogue"));
+                        "Choisissez un motif de la liste."));
         app.setRefusalReasonCode(catalog.getCode());
         app.setRejectionReason(catalog.getLabel());
     }
@@ -474,7 +514,61 @@ public class ApplicationService {
                 deadline,
                 o.getResponseSlaDays(),
                 remaining,
-                breached
+                breached,
+                app.getCvSections(),
+                app.getCvStorageName() != null && !app.getCvStorageName().isBlank()
         );
+    }
+
+    public record CvFile(Resource resource, String filename) {}
+
+    @Transactional
+    public ApiDtos.ApplicationResponse attachCv(User candidate, Long appId, MultipartFile file, String sections) {
+        Application app = applicationRepository.findById(appId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
+        if (!candidate.getId().equals(app.getCandidate().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Ce dossier ne vous appartient pas");
+        }
+        if (file == null || file.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisissez un CV");
+        }
+        try {
+            app.setCvStorageName(cvStorage.save("applications", file.getOriginalFilename(), file.getBytes()));
+            app.setCvFileName(file.getOriginalFilename());
+            app.setCvSource("UPLOAD");
+            String clean = cleanSections(sections);
+            if (clean != null) app.setCvSections(clean);
+            applicationRepository.save(app);
+            return toDto(app);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Enregistrement du CV impossible");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public CvFile loadApplicationCv(User actor, Long appId) {
+        Application app = applicationRepository.findById(appId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
+        if (!actor.getId().equals(app.getCandidate().getId())) {
+            organizationService.assertSameOrg(actor, app.getJobOffer());
+        }
+        if (app.getCvStorageName() == null || app.getCvStorageName().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucun CV joint");
+        }
+        Resource resource = cvStorage.load(app.getCvStorageName());
+        if (resource == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Fichier CV introuvable");
+        }
+        String name = app.getCvFileName() == null || app.getCvFileName().isBlank() ? "cv" : app.getCvFileName();
+        return new CvFile(resource, name);
+    }
+
+    private String cleanSections(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String trimmed = raw.trim();
+        if (!trimmed.startsWith("{")) return null;
+        return trimmed.length() > 8000 ? trimmed.substring(0, 8000) : trimmed;
     }
 }

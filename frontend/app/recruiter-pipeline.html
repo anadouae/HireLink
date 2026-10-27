@@ -1,13 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pipeline — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20260415g" />
-  <link rel="stylesheet" href="../css/app.css?v=20260415g" />
-  <script src="../js/theme.js?v=20260415g"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+  <script src="../js/theme.js?v=20261026d"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -17,12 +20,13 @@
         <button type="button" class="mobile-toggle" id="close-side">✕</button>
       </div>
       <nav class="side-nav">
-        <a class="side-link" href="recruiter.html">Vue d’ensemble</a>
+        <a class="side-link" href="recruiter.html">Tableau de bord</a>
         <a class="side-link is-active" href="recruiter-pipeline.html">Pipeline</a>
-        <a class="side-link" href="recruiter-offers.html">Mes offres</a>
-        <a class="side-link" href="recruiter-team.html">Équipe &amp; Cabinet</a>
-        <a class="side-link js-in-app-help" href="../help.html">Aide</a>
+        <a class="side-link" href="recruiter-offers.html">Offres</a>
+        <a class="side-link" href="recruiter-team.html">Entreprise</a>
+        <a class="side-link" href="recruiter-settings.html">Paramètres</a>
       </nav>
+      <div id="nav-user" class="nav-user"></div>
       <div class="side-footer">
         <div id="side-user">—</div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
@@ -33,7 +37,6 @@
         <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
         <div class="topbar-search"><span aria-hidden="true">⌕</span><input type="search" id="search-pipeline" placeholder="Candidat, offre, statut…" autocomplete="off" /></div>
         <div class="topbar-actions">
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-refresh">Actualiser</button>
           <div class="avatar" id="avatar">R</div>
         </div>
       </header>
@@ -44,13 +47,28 @@
             <h1>Pipeline</h1>
             <p class="muted">Suivez chaque dossier jusqu’à l’entretien · délai de 1ʳᵉ réponse · refus motivé.</p>
           </div>
-          <select id="pipe-filter" class="btn btn-soft" style="appearance:auto;padding:0.55rem 0.85rem" aria-label="Filtrer le pipeline">
+        </div>
+        <div class="pipe-toolbar" role="toolbar" aria-label="Filtres pipeline">
+          <label class="pipe-offer-filter">
+            <span class="pipe-offer-label">Filtrer par offre</span>
+            <select id="pipe-offer" aria-label="Filtrer par offre">
+              <option value="all">Toutes les offres</option>
+            </select>
+          </label>
+          <select id="pipe-filter" class="pipe-filter-native" aria-label="Filtrer les dossiers">
             <option value="all">Tous les dossiers</option>
             <option value="urgent">Réponse ≤ 2 j</option>
             <option value="breached">Délai dépassé</option>
             <option value="hot">Match ≥ 75%</option>
             <option value="interview">Entretiens</option>
           </select>
+          <div class="cand-filters" id="pipe-chips" role="tablist" aria-label="Lecture du pipeline">
+            <button type="button" class="is-on" data-pipe="all">Tous</button>
+            <button type="button" data-pipe="urgent">Réponse ≤ 2 j</button>
+            <button type="button" data-pipe="breached">Délai dépassé</button>
+            <button type="button" data-pipe="hot">Match ≥ 75 %</button>
+            <button type="button" data-pipe="interview">Entretiens</button>
+          </div>
         </div>
         <div id="funnel-strip" class="funnel-kpi panel" style="margin-bottom:1rem;padding:0.95rem 1.15rem">
           <div class="muted" style="font-size:0.8rem">Chargement des indicateurs…</div>
@@ -65,12 +83,12 @@
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20260415g"></script>
-  <script src="../js/api.js?v=20260415g"></script>
-  <script src="../js/in-app-help.js?v=20260415g"></script>
-  <script src="../js/product.js?v=20260415g"></script>
-  <script src="../js/shell.js?v=20260415g"></script>
-  <script src="../js/growth.js?v=20260415g"></script>
-  <script src="../js/recruiter-pipeline.js?v=20260415g"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
+  <script src="../js/api.js?v=20261026d"></script>
+  <script src="../js/in-app-help.js?v=20261026d"></script>
+  <script src="../js/product.js?v=20261026d"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/growth.js?v=20261026d"></script>
+  <script src="../js/recruiter-pipeline.js?v=20261026d"></script>
 </body>
 </html>

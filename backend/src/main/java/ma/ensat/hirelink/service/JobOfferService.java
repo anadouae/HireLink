@@ -3,11 +3,14 @@ package ma.ensat.hirelink.service;
 import ma.ensat.hirelink.dto.ApiDtos;
 import ma.ensat.hirelink.model.Application;
 import ma.ensat.hirelink.model.JobOffer;
+import ma.ensat.hirelink.model.Membership;
 import ma.ensat.hirelink.model.OfferReport;
+import ma.ensat.hirelink.model.Organization;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.ApplicationRepository;
 import ma.ensat.hirelink.repository.JobOfferRepository;
+import ma.ensat.hirelink.repository.MembershipRepository;
 import ma.ensat.hirelink.repository.OfferReportRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -39,6 +42,7 @@ public class JobOfferService {
     private final FraudOfferScanService fraudOfferScanService;
     private final OfferReportRepository offerReportRepository;
     private final NotificationService notificationService;
+    private final MembershipRepository membershipRepository;
 
     public JobOfferService(
             JobOfferRepository jobOfferRepository,
@@ -47,7 +51,8 @@ public class JobOfferService {
             CompanyVerificationService companyVerificationService,
             FraudOfferScanService fraudOfferScanService,
             OfferReportRepository offerReportRepository,
-            NotificationService notificationService
+            NotificationService notificationService,
+            MembershipRepository membershipRepository
     ) {
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
@@ -56,6 +61,7 @@ public class JobOfferService {
         this.fraudOfferScanService = fraudOfferScanService;
         this.offerReportRepository = offerReportRepository;
         this.notificationService = notificationService;
+        this.membershipRepository = membershipRepository;
     }
 
     @Transactional(readOnly = true)
@@ -246,8 +252,50 @@ public class JobOfferService {
                 o.getRecruiter().getId(),
                 o.getRecruiter().getFullName(),
                 o.getCreatedAt(),
-                match
+                match,
+                companyName(o),
+                companyVerified(o),
+                companyLogo(o),
+                companyWebsite(o),
+                companySector(o)
         );
+    }
+
+    private Organization orgOf(JobOffer o) {
+        return membershipRepository.findByUserIdAndActiveTrue(o.getRecruiter().getId()).stream()
+                .map(Membership::getOrganization)
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String companyName(JobOffer o) {
+        Organization org = orgOf(o);
+        if (org != null && org.getName() != null && !org.getName().isBlank()) return org.getName();
+        if (o.getRecruiter().getCompany() != null && !o.getRecruiter().getCompany().isBlank()) {
+            return o.getRecruiter().getCompany();
+        }
+        return o.getRecruiter().getFullName();
+    }
+
+    private boolean companyVerified(JobOffer o) {
+        Organization org = orgOf(o);
+        return (org != null && org.isVerified()) || o.getRecruiter().isCompanyVerified();
+    }
+
+    private String companyLogo(JobOffer o) {
+        Organization org = orgOf(o);
+        if (org != null && org.getLogoUrl() != null && !org.getLogoUrl().isBlank()) return org.getLogoUrl();
+        return CompanyDirectory.logoFor(org == null ? o.getRecruiter().getCompanyIce() : org.getIce(), companyName(o));
+    }
+
+    private String companyWebsite(JobOffer o) {
+        Organization org = orgOf(o);
+        return org == null || org.getWebsite() == null ? "" : org.getWebsite();
+    }
+
+    private String companySector(JobOffer o) {
+        Organization org = orgOf(o);
+        return org == null || org.getSector() == null ? "" : org.getSector();
     }
 
     private double preferenceBoost(User viewer, JobOffer o) {

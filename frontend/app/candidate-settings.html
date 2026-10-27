@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Paramètres — HireLink Candidat</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css" />
-  <link rel="stylesheet" href="../css/app.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026a" />
   <script src="../js/theme.js"></script>
 </head>
 <body>
@@ -17,13 +20,11 @@
         <button type="button" class="mobile-toggle" id="close-side">✕</button>
       </div>
       <nav class="side-nav">
-        <a class="side-link" href="candidate.html">Tableau de bord</a>
-        <a class="side-link" href="candidate-offers.html">Offres pour vous</a>
+        <a class="side-link" href="candidate-dashboard.html">Tableau de bord</a>
+        <a class="side-link" href="candidate.html">Offres</a>
         <a class="side-link" href="candidate-applications.html">Mes candidatures</a>
-        <a class="side-link" href="candidate-profile.html">Mon profil</a>
-        <a class="side-link is-active" href="candidate-settings.html">Paramètres</a>
-        <a class="side-link js-in-app-help" href="../help.html">Aide candidat</a>
       </nav>
+      <div id="nav-user" class="nav-user"></div>
       <div class="side-footer">
         <div id="side-user">—</div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
@@ -36,104 +37,199 @@
           <div class="avatar" id="avatar">C</div>
         </div>
       </header>
-      <main class="content">
-        <div class="page-title">
-          <div>
-            <p class="eyebrow">Espace candidat</p>
-            <h1>Paramètres</h1>
-            <p class="muted">Compte, apparence, facturation Premium et notifications de confort.</p>
+      <main class="content settings-page">
+        <div class="settings-header">
+          <h1>Réglages candidat</h1>
+          <p>Votre identité, votre recherche, et ce que chaque formule change dans l’usage. Pas une facture.</p>
+        </div>
+        <div class="settings-layout">
+          <nav class="settings-nav" aria-label="Sections">
+            <button type="button" class="is-on" data-settings="account">Profil</button>
+            <button type="button" data-settings="search">Parcours</button>
+            <button type="button" data-settings="image">Image</button>
+            <button type="button" data-settings="cv">CV</button>
+            <button type="button" data-settings="privacy">Paramètres</button>
+            <button type="button" data-settings="plans" hidden>Formules</button>
+          </nav>
+          <div class="settings-panels">
+            <section class="settings-panel" id="set-account">
+              <article class="settings-card">
+                <header class="card-header"><h2>Informations personnelles</h2><p>Nom affiché sur vos candidatures.</p></header>
+                <form id="settings-account">
+                  <div class="card-body form-grid">
+                    <label class="input-group">Prénom<input id="set-first" class="form-control" /></label>
+                    <label class="input-group">Nom<input id="set-last" class="form-control" /></label>
+                    <label class="input-group">E-mail<input id="set-email" class="form-control" disabled /></label>
+                    <label class="input-group">Téléphone
+                      <span class="phone-inline">
+                        <select id="set-phone-country" class="form-control">
+                          <option value="Maroc|+212">🇲🇦 +212</option>
+                          <option value="France|+33">🇫🇷 +33</option>
+                          <option value="Espagne|+34">🇪🇸 +34</option>
+                          <option value="Tunisie|+216">🇹🇳 +216</option>
+                          <option value="Algérie|+213">🇩🇿 +213</option>
+                          <option value="Belgique|+32">🇧🇪 +32</option>
+                          <option value="Canada|+1">🇨🇦 +1</option>
+                        </select>
+                        <input id="set-phone" class="form-control" inputmode="tel" placeholder="6 12 34 56 78" />
+                      </span>
+                    </label>
+                    <label class="input-group">Nationalité<input id="set-nat" class="form-control" data-suggest="nationality" placeholder="Rechercher une nationalité" /></label>
+                    <label class="input-group">Genre
+                      <select id="set-gender" class="form-control">
+                        <option value="">Non précisé</option>
+                        <option>Femme</option>
+                        <option>Homme</option>
+                      </select>
+                    </label>
+                    <label class="input-group">Date de naissance<input id="set-birth" class="form-control" type="date" /></label>
+                    <label class="input-group">Ville de résidence<input id="set-city" class="form-control" data-suggest="place" placeholder="Votre ville" /></label>
+                  </div>
+                  <footer class="card-footer"><button type="submit" class="btn btn-primary">Enregistrer</button></footer>
+                </form>
+              </article>
+              <article class="settings-card">
+                <header class="card-header"><h2>Apparence</h2><p>Le thème s’applique à tout votre espace.</p></header>
+                <div class="card-body">
+                  <div class="setting-row"><span>Mode sombre</span><label class="switch"><input type="checkbox" data-theme-toggle id="theme-toggle" /><span class="slider"></span></label></div>
+                </div>
+              </article>
+            </section>
+            <section class="settings-panel" id="set-search" hidden>
+              <article class="settings-card">
+                <header class="card-header"><h2>Parcours</h2><p>École, niveau, mode de travail et contrats recherchés.</p></header>
+                <form id="settings-path">
+                  <div class="card-body form-grid">
+                    <label class="input-group">École<input id="set-school" class="form-control" data-suggest="school" placeholder="Rechercher une école" /></label>
+                    <label class="input-group">Niveau de formation<input id="set-level" class="form-control" data-suggest="level" placeholder="Bac+5, Junior…" /></label>
+                    <label class="input-group">Type de travail
+                      <select id="set-mode" class="form-control">
+                        <option value="">—</option>
+                        <option>Télétravail</option>
+                        <option>Sur site</option>
+                        <option>Hybride</option>
+                        <option>Indifférent</option>
+                      </select>
+                    </label>
+                    <label class="input-group">Disponibilité
+                      <select id="set-avail" class="form-control">
+                        <option value="">—</option>
+                        <option>Immédiatement</option>
+                        <option>Sous 1 mois</option>
+                        <option>Sous 3 mois</option>
+                      </select>
+                    </label>
+                    <label class="input-group">Métier recherché<input id="set-role" class="form-control" data-suggest="job" placeholder="Rechercher un métier" /></label>
+                    <fieldset class="check-set" id="set-contracts">
+                      <legend>Types de contrat</legend>
+                      <label><input type="checkbox" value="Stage" /> Stage</label>
+                      <label><input type="checkbox" value="Premier emploi" /> Premier emploi</label>
+                      <label><input type="checkbox" value="CDI" /> CDI</label>
+                      <label><input type="checkbox" value="CDD" /> CDD</label>
+                      <label><input type="checkbox" value="Job étudiant" /> Job étudiant</label>
+                      <label><input type="checkbox" value="Bénévolat" /> Bénévolat</label>
+                    </fieldset>
+                  </div>
+                  <footer class="card-footer"><button type="submit" class="btn btn-primary">Enregistrer</button></footer>
+                </form>
+              </article>
+            </section>
+            <section class="settings-panel" id="set-image" hidden>
+              <article class="settings-card">
+                <header class="card-header"><h2>Image</h2><p>HireLink n'affiche pas de photo de profil. Le recruteur lit votre CV.</p></header>
+                <div class="card-body">
+                  <p class="muted">Déposez votre document dans l'onglet CV. C'est ce fichier qui sert à postuler et à la synthèse.</p>
+                  <a class="btn btn-primary" href="candidate-settings.html#cv" id="go-cv-from-image">Ouvrir le CV</a>
+                </div>
+              </article>
+            </section>
+            <section class="settings-panel" id="set-cv" hidden>
+              <article class="settings-card">
+                <header class="card-header"><h2>Prévisualisation CV</h2><p>Visualisez et gérez votre CV.</p></header>
+                <div class="card-body">
+                  <iframe id="set-cv-frame" class="cv-doc-view" title="CV" hidden></iframe>
+                  <p id="set-cv-empty" class="muted">Aucun CV déposé.</p>
+                  <label class="btn btn-primary">Upload CV
+                    <input type="file" id="set-cv-file" accept=".pdf,.txt,.md" hidden />
+                  </label>
+                  <a class="btn btn-ghost" href="candidate-profile.html#cv-section">Analyse et sections</a>
+                </div>
+              </article>
+            </section>
+            <section class="settings-panel" id="set-plans" hidden>
+              <article class="settings-card">
+                <header class="card-header">
+                  <h2>Deux façons d’utiliser HireLink</h2>
+                  <p>Ouvrez une formule pour voir ce qu’elle change. Le prix n’est pas le sujet ici : c’est ce que vous pouvez faire.</p>
+                </header>
+                <div class="card-body plan-folds">
+                  <details class="plan-fold" id="fold-essentiel" open>
+                    <summary><span>Essentiel</span><em data-plan-mark="essentiel">Formule de départ</em></summary>
+                    <ul>
+                      <li>Postuler et voir chaque étape du dossier</li>
+                      <li>Offres classées selon vos compétences</li>
+                      <li>Quelques synthèses du CV déjà déposé</li>
+                    </ul>
+                    <p>La synthèse relit les sections de votre CV et dit ce qui manque pour le métier visé. Elle ne postule pas à votre place.</p>
+                  </details>
+                  <details class="plan-fold" id="fold-performance">
+                    <summary><span>Performance</span><em data-plan-mark="performance">À activer</em></summary>
+                    <ul>
+                      <li>Synthèses du CV sans plafond mensuel (Essentiel : 5)</li>
+                      <li>Alertes dès qu’une offre dépasse votre seuil de compatibilité</li>
+                      <li>Profil mis en avant dans les recherches recruteur</li>
+                      <li>Historique et tendances de vos candidatures</li>
+                      <li>Préparation d’entretien à partir du poste et de votre CV</li>
+                    </ul>
+                    <p><strong>39 MAD / mois.</strong> Même logique qu’Essentiel : la synthèse lit votre CV et dit ce qui manque. Elle ne postule pas. Vous pouvez revenir à Essentiel à tout moment.</p>
+                  </details>
+                </div>
+                <footer class="card-footer">
+                  <button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Revenir à Essentiel</button>
+                  <button type="button" class="btn btn-primary" id="btn-billing-premium">Activer Performance</button>
+                </footer>
+              </article>
+              <article class="settings-card">
+                <header class="card-header"><h2>Conseil à partir de votre dossier</h2><p id="credits-line">La synthèse s’appuie sur le CV déjà déposé.</p></header>
+                <div class="card-body" id="advice-box"><p class="muted">Lecture…</p></div>
+                <footer class="card-footer"><a class="btn btn-soft" href="candidate-profile.html#cv-coach">Ouvrir la synthèse du CV</a></footer>
+              </article>
+            </section>
+            <section class="settings-panel" id="set-privacy" hidden>
+              <article class="settings-card">
+                <header class="card-header"><h2>Vos alertes</h2><p>Choisissez ce que la cloche doit vous signaler.</p></header>
+                <div class="card-body">
+                  <div class="setting-row"><span>Alertes de matching</span><label class="switch"><input type="checkbox" id="n-match" checked /><span class="slider"></span></label></div>
+                  <div class="setting-row"><span>Changement d’étape</span><label class="switch"><input type="checkbox" id="n-status" checked /><span class="slider"></span></label></div>
+                  <div class="setting-row"><span>Rappel d’entretien</span><label class="switch"><input type="checkbox" id="n-interview" checked /><span class="slider"></span></label></div>
+                </div>
+                <footer class="card-footer"><button type="button" class="btn btn-primary" id="btn-save-notif">Enregistrer</button></footer>
+              </article>
+              <article class="settings-card">
+                <header class="card-header"><h2>Email</h2><p>Contactez le support pour modifier votre email.</p></header>
+                <div class="card-body">
+                  <label class="input-group">Email<input id="set-email-read" class="form-control" disabled /></label>
+                </div>
+              </article>
+              <article class="settings-card">
+                <header class="card-header"><h2>Supprimer mon compte</h2><p>Action irréversible — toutes vos données seront effacées.</p></header>
+                <div class="card-body" style="display:flex;justify-content:flex-end">
+                  <button type="button" class="btn btn-ghost" id="btn-delete-account" style="color:#9b2c2c">Supprimer</button>
+                </div>
+              </article>
+            </section>
           </div>
         </div>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Compte</h2></div>
-          <div class="panel-body">
-            <form class="profile-form" id="settings-account">
-              <div class="field"><label>Nom</label><input id="set-name" /></div>
-              <div class="field"><label>Email</label><input id="set-email" disabled /></div>
-              <div class="field-full"><button type="submit" class="btn btn-primary">Enregistrer</button></div>
-            </form>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Apparence</h2></div>
-          <div class="panel-body">
-            <label class="row" style="gap:0.75rem;align-items:center">
-              <input type="checkbox" data-theme-toggle id="theme-toggle" />
-              <span>Mode sombre</span>
-            </label>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Facturation</h2><span class="badge badge-brass" id="plan-badge">Essentiel</span></div>
-          <div class="panel-body stack">
-            <p id="plan-desc" class="muted">Essentiel gratuit : candidatures, matching de base, OCR CV.</p>
-            <ul class="faq-list">
-              <li>Premium : alertes matching, IA complète, priorité, profil mis en avant</li>
-            </ul>
-            <div class="row" style="gap:0.5rem;flex-wrap:wrap">
-              <button type="button" class="btn btn-primary" id="btn-billing-premium">Passer Premium</button>
-              <button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Revenir à Essentiel</button>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Fiabilité personnelle</h2><span class="badge badge-chrome" id="rel-badge">—</span></div>
-          <div class="panel-body stack">
-            <p id="rel-desc" class="muted">Score calculé à partir de votre activité (non punitif, consultable).</p>
-            <p id="rel-factors" class="muted" style="font-size:0.9rem"></p>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Parrainage</h2><span class="ai-chip">+1 crédit IA</span></div>
-          <div class="panel-body stack">
-            <p class="muted">Invitez un pair : crédit IA bonus une fois son profil complété (pas à l’inscription seule).</p>
-            <div class="row" style="gap:0.5rem;flex-wrap:wrap;align-items:center">
-              <button type="button" class="btn btn-primary btn-sm" id="btn-referral">Générer mon lien</button>
-              <code id="referral-url" style="font-size:0.85rem;word-break:break-all"></code>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Crédits IA</h2><span class="badge badge-brass" id="credits-badge">—</span></div>
-          <div class="panel-body">
-            <p id="credits-line" class="muted">Capital mensuel Free / Premium illimité.</p>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Notifications</h2></div>
-          <div class="panel-body stack">
-            <label class="row"><input type="checkbox" id="n-match" checked /> Alertes matching</label>
-            <label class="row"><input type="checkbox" id="n-status" checked /> Changement d’étape</label>
-            <label class="row"><input type="checkbox" id="n-interview" checked /> Rappel entretien</label>
-            <button type="button" class="btn btn-soft btn-sm" id="btn-save-notif">Sauver</button>
-            <div id="notif-inbox" class="stack" style="margin-top:0.75rem"></div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Export données (F21)</h2></div>
-          <div class="panel-body stack">
-            <p class="muted">Téléchargez une copie JSON de votre profil, candidatures et consentements.</p>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-export-data">Exporter mes données</button>
-            <button type="button" class="btn btn-ghost btn-sm" id="btn-consent">Enregistrer consentement recrutement</button>
-          </div>
-        </section>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
   <script src="../js/api.js"></script>
   <script src="../js/in-app-help.js"></script>
   <script src="../js/product.js"></script>
-  <script src="../js/shell.js"></script>
-  <script src="../js/growth.js"></script>
-  <script src="../js/candidate-settings.js"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/growth.js?v=20261026d"></script>
+  <script src="../js/suggest.js?v=20261026a"></script>
+  <script src="../js/candidate-settings.js?v=20261026d"></script>
 </body>
 </html>

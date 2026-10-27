@@ -4,14 +4,37 @@
 
   const NOTIF_KEY = "hirelink.notif.recruiter";
 
+  document.querySelectorAll("[data-settings]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-settings");
+      document.querySelectorAll(".settings-panel").forEach((panel) => {
+        panel.hidden = panel.id !== "set-" + id;
+      });
+      document.querySelectorAll("[data-settings]").forEach((other) => {
+        other.classList.toggle("is-on", other === btn);
+      });
+    });
+  });
+
+  function openTab(id) {
+    const btn = document.querySelector('[data-settings="' + id + '"]');
+    if (btn) btn.click();
+  }
+
   function refreshBilling() {
     const prem = HireLinkProduct && HireLinkProduct.isPremium("recruiter");
-    document.getElementById("plan-badge").textContent = prem ? "Premium" : "Gratuit";
-    document.getElementById("plan-desc").textContent = prem
-      ? "Premium actif — sièges équipe, alertes, offres mises en avant."
-      : "Plan Gratuit : 1 siège, pipeline sécurisé, SLA. Passez Premium pour scaler l’équipe RH.";
-    document.getElementById("btn-billing-cancel").hidden = !prem;
-    document.getElementById("btn-billing-premium").textContent = prem ? "Gérer Premium" : "Activer Premium";
+    const essentiel = document.querySelector('[data-plan-mark="essentiel"]');
+    const performance = document.querySelector('[data-plan-mark="performance"]');
+    if (essentiel) essentiel.textContent = prem ? "Toujours disponible" : "Formule en cours";
+    if (performance) performance.textContent = prem ? "Formule en cours" : "À activer";
+    const foldE = document.getElementById("fold-essentiel");
+    const foldP = document.getElementById("fold-performance");
+    if (foldE) foldE.open = !prem;
+    if (foldP) foldP.open = !!prem;
+    const cancel = document.getElementById("btn-billing-cancel");
+    const go = document.getElementById("btn-billing-premium");
+    if (cancel) cancel.hidden = !prem;
+    if (go) go.hidden = !!prem;
   }
 
   HireLinkAPI.api("/me")
@@ -19,6 +42,71 @@
       document.getElementById("set-name").value = p.fullName || "";
       document.getElementById("set-company").value = p.company || "";
       document.getElementById("set-ice").value = p.companyIce || "";
+      const userId = p.id || session.userId || session.id || "me";
+      const photoKey = "hirelink.photo." + userId;
+      const photo = document.getElementById("pf-photo");
+      const fallback = document.getElementById("pf-photo-fallback");
+      const parts = String(p.fullName || "R").trim().split(/\s+/).filter(Boolean);
+      const letters = ((parts[0] || "R")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+      function paint(url) {
+        const avatar = document.getElementById("avatar");
+        if (url && photo) {
+          photo.src = url;
+          photo.hidden = false;
+          if (fallback) fallback.hidden = true;
+          if (avatar) {
+            avatar.textContent = "";
+            avatar.classList.add("has-art");
+            avatar.style.backgroundImage = "url(" + url + ")";
+            avatar.style.backgroundSize = "cover";
+            avatar.style.backgroundPosition = "center";
+          }
+        } else {
+          if (photo) photo.hidden = true;
+          if (fallback) {
+            fallback.hidden = false;
+            fallback.textContent = letters;
+          }
+        }
+      }
+      let stored = "";
+      try { stored = localStorage.getItem(photoKey) || ""; } catch (_) {}
+      paint(stored);
+      const file = document.getElementById("pf-photo-file");
+      const open = () => file && file.click();
+      const btn = document.getElementById("btn-photo");
+      if (btn) btn.addEventListener("click", open);
+      if (file) {
+        file.addEventListener("change", () => {
+          const picked = file.files && file.files[0];
+          if (!picked) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            const img = new Image();
+            img.onload = () => {
+              const size = 320;
+              const canvas = document.createElement("canvas");
+              canvas.width = size;
+              canvas.height = size;
+              const ctx = canvas.getContext("2d");
+              const side = Math.min(img.width, img.height);
+              ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+              const url = canvas.toDataURL("image/jpeg", 0.82);
+              try { localStorage.setItem(photoKey, url); } catch (_) {
+                HireLink.toast("Photo", "Image trop lourde pour ce navigateur", "danger");
+                return;
+              }
+              paint(url);
+            };
+            img.src = reader.result;
+          };
+          reader.readAsDataURL(picked);
+        });
+      }
+      if (location.hash === "#photo-upload") {
+        const node = document.getElementById("photo-upload");
+        if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     })
     .catch((err) => HireLink.toast("Profil", err.message, "danger"));
 
@@ -55,8 +143,6 @@
     localStorage.removeItem("hirelink.premium.active.recruiter");
     HireLink.toast("Plan", "Retour au Gratuit", "info");
     refreshBilling();
-    const barGone = document.getElementById("hl-prem-bar");
-    if (!barGone && window.HireLinkProduct) HireLinkProduct.mountPremiumBar("recruiter");
   };
 
   try {
@@ -79,7 +165,25 @@
   };
 
   // refresh after premium modal CTA
-  window.addEventListener("storage", refreshBilling);
+  HireLinkAPI.api("/applications/pipeline")
+    .then((apps) => {
+      const open = (apps || []).filter((a) => !["REJECTED", "WITHDRAWN"].includes(a.status));
+      const late = open.filter((a) => a.slaRemainingDays != null && a.slaRemainingDays < 0);
+      const note = document.getElementById("cabinet-advice");
+      const side = document.getElementById("side-advice-text");
+      const line = late.length
+        ? late.length + " dossier" + (late.length > 1 ? "s ont" : " a") + " dépassé le délai publié. Ouvrez-les avant le reste. Le score de compatibilité aide à lire, il ne retient personne."
+        : "Aucun délai dépassé. Gardez la file triée par échéance : le candidat voit la date que vous avez promise.";
+      if (note) note.textContent = line;
+      if (side) side.textContent = late.length
+        ? "Ce mois-ci : " + late.length + " dossier" + (late.length > 1 ? "s" : "") + " hors délai. Traitez-les en premier."
+        : "Ce mois-ci : les délais promis sont tenus. La lecture d’un CV ne remplace pas votre décision.";
+    })
+    .catch(() => {});
+
   refreshBilling();
-  setInterval(refreshBilling, 2000);
+  if (location.hash === "#plans") openTab("plans");
+  window.addEventListener("hashchange", function () {
+    if (location.hash === "#plans") openTab("plans");
+  });
 })();

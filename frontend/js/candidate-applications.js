@@ -18,6 +18,7 @@
   let apps = [];
   let profile = null;
   let selectedId = null;
+  let statusFilter = "all";
 
   const viewList = document.getElementById("view-list");
   const viewDetail = document.getElementById("view-detail");
@@ -58,31 +59,59 @@
   }
 
   function showList() {
-    selectedId = null;
-    if (viewDetail) viewDetail.hidden = true;
-    if (viewList) viewList.hidden = false;
+    selectedId = apps[0] ? apps[0].id : null;
+    if (viewDetail) viewDetail.hidden = !selectedId;
     history.replaceState(null, "", location.pathname);
+    if (selectedId) paintDetail(apps[0]);
   }
 
   function showDetail(app) {
     selectedId = app.id;
-    if (viewList) viewList.hidden = true;
     if (viewDetail) viewDetail.hidden = false;
     paintDetail(app);
     history.replaceState(null, "", "?id=" + app.id);
+    document.querySelectorAll(".cand-app-row").forEach(function (row) {
+      row.classList.toggle("is-selected", row.dataset.id === String(app.id));
+    });
   }
 
   function renderList() {
     if (!listRoot) return;
     const filter = el("filter-apps");
     const q = ((filter && filter.value) || "").trim().toLowerCase();
-    const filtered = q
-      ? apps.filter((a) =>
-          ((a.jobTitle || "") + " " + (a.status || "") + " " + (a.rejectionReason || ""))
-            .toLowerCase()
-            .includes(q)
-        )
-      : apps;
+    const filtered = apps.filter((a) => {
+      if (statusFilter === "active" && ["REJECTED", "WITHDRAWN"].includes(a.status)) return false;
+      if (statusFilter !== "all" && statusFilter !== "active" && a.status !== statusFilter) return false;
+      if (!q) return true;
+      return ((a.jobTitle || "") + " " + (a.status || "") + " " + (a.rejectionReason || ""))
+        .toLowerCase()
+        .includes(q);
+    });
+
+    const statusBar = el("app-status-filter");
+    if (statusBar) {
+      const counts = {
+        all: apps.length,
+        active: apps.filter((a) => !["REJECTED", "WITHDRAWN"].includes(a.status)).length,
+        INTERVIEW: apps.filter((a) => a.status === "INTERVIEW").length,
+        REJECTED: apps.filter((a) => a.status === "REJECTED").length,
+        WITHDRAWN: apps.filter((a) => a.status === "WITHDRAWN").length,
+      };
+      statusBar.querySelectorAll("button").forEach((b) => {
+        const key = b.getAttribute("data-st") || "all";
+        let badge = b.querySelector(".filter-count");
+        if (!badge) {
+          badge = document.createElement("span");
+          badge.className = "filter-count";
+          b.appendChild(badge);
+        }
+        badge.textContent = String(counts[key] || 0);
+      });
+    }
+    const summary = el("apps-summary");
+    if (summary) {
+      summary.textContent = filtered.length + " dossier" + (filtered.length > 1 ? "s" : "") + " affiché" + (filtered.length > 1 ? "s" : "");
+    }
 
     if (!filtered.length) {
       setHtml(
@@ -98,24 +127,33 @@
     filtered.forEach((a) => {
       const row = document.createElement("button");
       row.type = "button";
-      row.className = "cand-app-row";
+      row.className = "cand-app-row" + (selectedId === a.id ? " is-selected" : "");
+      row.dataset.id = String(a.id);
       const sla = a.slaRemainingDays;
-      const slaTxt = sla == null ? "—" : sla < 0 ? "SLA dépassé" : "SLA " + sla + " j";
+      const slaTxt =
+        ["REJECTED", "WITHDRAWN"].includes(a.status)
+          ? ""
+          : sla == null
+            ? ""
+            : sla < 0
+              ? "Délai dépassé"
+              : "Réponse " + sla + " j";
+      const reasonBit =
+        a.status === "REJECTED" && a.rejectionReason ? " · " + a.rejectionReason : "";
       row.innerHTML =
         '<div class="cand-app-row-main">' +
         "<strong></strong>" +
         '<span class="muted row-sub"></span>' +
-        '<span class="row-timeline-hint muted">Historique →</span>' +
         "</div>" +
         '<span class="badge status-badge"></span>' +
-        '<span class="sla-pill"></span>' +
-        '<span class="muted row-open" style="font-size:0.85rem">Détail</span>';
+        '<span class="sla-pill"></span>';
       setText(row.querySelector("strong"), a.jobTitle || "Offre");
       setText(
         row.querySelector(".row-sub"),
-        (a.matchScore != null ? Math.round(a.matchScore) + "% match · " : "") +
+        (a.matchScore != null ? Math.round(a.matchScore) + "% · " : "") +
           "déposée " +
-          fmtWhen(a.submittedAt || a.appliedAt)
+          fmtWhen(a.submittedAt || a.appliedAt) +
+          reasonBit
       );
       const badge = row.querySelector(".badge");
       if (badge) {
@@ -127,6 +165,7 @@
       const pill = row.querySelector(".sla-pill");
       if (pill) {
         pill.textContent = slaTxt;
+        pill.hidden = !slaTxt;
         if (sla != null && sla < 0) pill.classList.add("danger");
         else if (sla != null && sla <= 2) pill.classList.add("warn");
       }
@@ -264,9 +303,13 @@
       if (!["REJECTED", "WITHDRAWN"].includes(app.status)) {
         const wd = document.createElement("button");
         wd.type = "button";
-        wd.className = "btn btn-ghost btn-sm";
+        wd.className = "btn btn-danger btn-sm";
         wd.textContent = "Retirer ma candidature";
-        wd.onclick = () => withdraw(app);
+        wd.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          withdraw(app);
+        };
         actions.appendChild(wd);
       }
     }
@@ -280,35 +323,36 @@
 
   async function interviewPrep(c) {
     try {
-      const premium = HireLinkProduct && HireLinkProduct.isPremium("candidate");
-      const data = await HireLinkAPI.api("/ai/interview-prep", {
+      const me = await HireLinkAPI.api("/me");
+      const cvText = [me && me.cvSections, me && me.skills, c.jobTitle ? "Poste visé : " + c.jobTitle : ""]
+        .filter(function (part) { return part && String(part).trim(); })
+        .join("\n");
+      if (!cvText.trim()) {
+        HireLink.toast("Synthèse", "Déposez et confirmez le CV dans le profil.", "info");
+        return;
+      }
+      const data = await HireLinkAPI.api("/ai/cv-summary", {
         method: "POST",
         headers: HireLinkProduct ? HireLinkProduct.premiumHeaders("candidate") : {},
-        body: { jobTitle: c.jobTitle, premium },
+        body: {
+          cvText: cvText,
+          premium: !!(HireLinkProduct && HireLinkProduct.isPremium("candidate")),
+        },
       });
-      const escaped = (data.content || "")
+      const escaped = (data.content || "Pas de synthèse.")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-      const ok = await HireLink.openModal({
-        title: data.title || "Prep entretien",
-        description: data.premiumLocked
-          ? "Aperçu freemium — Premium pour le script complet."
-          : "Script prêt.",
-        bodyHtml:
-          '<div class="ai-result">' +
-          escaped +
-          "</div>" +
-          (data.premiumLocked
-            ? '<p class="muted" style="margin-top:0.75rem">Passez Premium pour débloquer le script réponses.</p>'
-            : ""),
-        confirmLabel: data.premiumLocked ? "Voir Premium" : "Fermer",
-        hideCancel: !data.premiumLocked,
-        large: true,
+        .replace(/>/g, "&gt;")
+        .replace(/\n/g, "<br>");
+      await HireLink.openModal({
+        title: "Synthèse du CV",
+        description: c.jobTitle || "Lecture du document déposé. Elle ne décide pas.",
+        bodyHtml: '<div class="ai-result">' + escaped + "</div>",
+        confirmLabel: "Fermer",
+        hideCancel: true,
       });
-      if (ok && data.premiumLocked && window.HireLinkGrowth) HireLinkGrowth.showPremium("candidate");
     } catch (err) {
-      HireLink.toast("IA", err.message, "danger");
+      HireLink.toast("Synthèse", err.message, "danger");
     }
   }
 
@@ -325,11 +369,17 @@
         method: "PATCH",
         body: { status: "WITHDRAWN" },
       });
-      HireLink.toast("Retirée", "", "ok");
+      history.replaceState(null, "", location.pathname);
+      statusFilter = "WITHDRAWN";
+      HireLink.toast(
+        "Statut : Retirée",
+        "Le dossier reste dans Mes candidatures, filtre Retirées. Vous pouvez postuler à nouveau sur cette offre.",
+        "ok"
+      );
       await load();
       showList();
     } catch (err) {
-      HireLink.toast("Erreur", err.message, "danger");
+      HireLink.toast("Retrait impossible", err.message || "Réessayez", "danger");
     }
   }
 
@@ -341,13 +391,21 @@
       ]);
       apps = Array.isArray(mine) ? mine : [];
       profile = me;
+      const statusBar = el("app-status-filter");
+      if (statusBar) {
+        statusBar.querySelectorAll("button").forEach((b) => {
+          b.classList.toggle("is-on", (b.getAttribute("data-st") || "all") === statusFilter);
+        });
+      }
       renderList();
       const params = new URLSearchParams(location.search);
       const id = params.get("id");
       if (id) {
         const found = apps.find((a) => String(a.id) === String(id));
         if (found) showDetail(found);
-        else showList();
+        else if (apps[0]) showDetail(apps[0]);
+      } else if (apps[0]) {
+        showDetail(apps[0]);
       }
     } catch (err) {
       HireLink.toast("Candidatures", err.message, "danger");
@@ -360,6 +418,17 @@
   HireLinkShell.bindSearch(el("filter-apps"), () => {
     if (!viewList || !viewList.hidden) renderList();
   });
+  const statusBar = el("app-status-filter");
+  if (statusBar) {
+    statusBar.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-st]");
+      if (!btn) return;
+      statusFilter = btn.getAttribute("data-st") || "all";
+      statusBar.querySelectorAll("button").forEach((b) => b.classList.toggle("is-on", b === btn));
+      showList();
+      renderList();
+    });
+  }
   const prem = el("btn-premium");
   if (prem) prem.onclick = () => HireLinkGrowth && HireLinkGrowth.showPremium("candidate");
 

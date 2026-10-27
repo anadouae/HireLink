@@ -17,7 +17,36 @@ public class AuthDtos {
             Role role,
             String fullName,
             String company,
-            String companyIce
+            String companyIce,
+            String phone,
+            String city,
+            String school,
+            String educationLevel,
+            String workMode,
+            String contracts,
+            String metier,
+            String jobTitle
+    ) {}
+
+    public record CompleteProfile(
+            Role role,
+            String fullName,
+            String firstName,
+            String lastName,
+            String phone,
+            String phoneCountry,
+            String city,
+            String nationality,
+            String birthDate,
+            String school,
+            String educationLevel,
+            String workMode,
+            String contracts,
+            String metier,
+            String jobTitle,
+            String company,
+            String companyIce,
+            String password
     ) {}
 
     public record VerifyLoginOtp(

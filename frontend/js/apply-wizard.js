@@ -80,6 +80,8 @@
       cvFileName: "",
       cvFile: null,
       coverLetter: "",
+      letterFileName: "",
+      letterFile: null,
       skillsCsv: profile.skills || "",
       languagesCsv: "",
       skillsApi: null,
@@ -182,19 +184,24 @@
           '<input type="file" id="hl-cv-file" accept=".pdf,.txt,.md,.doc,.docx,application/pdf" hidden /></label>' +
           '<p class="muted" id="hl-cv-name" style="margin:.55rem 0 0">' +
           (state.cvFileName ? "Fichier : " + esc(state.cvFileName) : "Aucun fichier") +
-          "</p></div></div>"
+          "</p></div>" +
+          '<button type="button" class="btn btn-soft btn-sm" id="hl-cv-preview" style="margin-top:.75rem">Aperçu du CV</button></div>'
         );
       }
       if (state.step === 3) {
         return (
           '<div class="' +
           anim +
-          '"><p class="muted" style="margin-top:0"><span class="hl-optional">Optionnel</span> — Lettre de motivation</p>' +
-          '<div class="field"><label for="hl-letter">Message au recruteur</label>' +
-          '<textarea id="hl-letter" rows="7" placeholder="Bonjour,\n\nJe suis motivé(e) par ce poste car…">' +
-          esc(state.coverLetter) +
-          "</textarea></div>" +
-          '<p class="muted" style="font-size:.82rem">Citez 1 compétence de l’offre et un résultat concret.</p></div>'
+          '"><p class="muted" style="margin-top:0"><span class="hl-optional">Optionnel</span> — Lettre de motivation (PDF ou DOCX)</p>' +
+          '<label class="btn btn-soft btn-sm" style="cursor:pointer">Choisir un fichier' +
+          '<input type="file" id="hl-letter-file" accept=".pdf,.doc,.docx,application/pdf" hidden /></label>' +
+          '<p class="muted" id="hl-letter-name" style="margin:.55rem 0 0">' +
+          (state.letterFileName ? "Fichier : " + esc(state.letterFileName) : "Aucune lettre") +
+          "</p>" +
+          (state.letterFileName
+            ? '<button type="button" class="btn btn-ghost btn-sm" id="hl-letter-preview" style="margin-top:.65rem">Aperçu de la lettre</button>'
+            : "") +
+          "</div>"
         );
       }
       return (
@@ -217,7 +224,7 @@
         (state.cvSource === "UPLOAD" ? "Nouveau · " + esc(state.cvFileName || "—") : "Profil HireLink") +
         "</span></div>" +
         "<div><strong>Lettre</strong><span>" +
-        (state.coverLetter.trim() ? state.coverLetter.trim().length + " car." : "Non jointe") +
+        (state.letterFileName ? esc(state.letterFileName) : "Non jointe") +
         "</span></div></div></div>"
       );
     }
@@ -228,9 +235,28 @@
         state.languagesCsv = state.skillsApi.getLanguagesCsv();
       }
       if (state.step === 3) {
-        const ta = overlay.querySelector("#hl-letter");
-        if (ta) state.coverLetter = ta.value;
+        state.coverLetter = state.letterFileName || "";
       }
+    }
+
+    function previewFile(file, title, fallbackHtml) {
+      let body = fallbackHtml || "<p class='muted'>Aucun aperçu.</p>";
+      let url = null;
+      if (file && /pdf$/i.test(file.name || "")) {
+        url = URL.createObjectURL(file);
+        body = '<iframe src="' + url + '" title="Aperçu" style="width:100%;height:420px;border:0;border-radius:12px;background:#fff"></iframe>';
+      } else if (file) {
+        body = "<p><strong>" + esc(file.name) + "</strong></p><p class='muted'>Aperçu intégré pour les PDF. Le fichier DOCX est joint tel quel.</p>";
+      }
+      HireLink.openModal({
+        title: title,
+        bodyHtml: body,
+        confirmLabel: "Fermer",
+        hideCancel: true,
+        large: true,
+      }).then(() => {
+        if (url) URL.revokeObjectURL(url);
+      });
     }
 
     function bindBody() {
@@ -292,10 +318,42 @@
             } catch (_) {}
           };
         }
+        const prev = overlay.querySelector("#hl-cv-preview");
+        if (prev) {
+          prev.onclick = () => {
+            if (state.cvSource === "UPLOAD" && state.cvFile) {
+              previewFile(state.cvFile, "Aperçu du CV");
+              return;
+            }
+            previewFile(
+              null,
+              "Profil HireLink",
+              "<p>Le recruteur verra les compétences de votre profil.</p><p><strong>" +
+                esc(state.skillsCsv || "Profil à compléter") +
+                "</strong></p>"
+            );
+          };
+        }
       }
       if (state.step === 3) {
-        const ta = overlay.querySelector("#hl-letter");
-        if (ta) ta.oninput = () => (state.coverLetter = ta.value);
+        const file = overlay.querySelector("#hl-letter-file");
+        if (file) {
+          file.onchange = () => {
+            const f = file.files && file.files[0];
+            if (!f) return;
+            const ok = /\.(pdf|doc|docx)$/i.test(f.name || "");
+            if (!ok) {
+              HireLink.toast("Lettre", "PDF ou DOCX uniquement", "warn");
+              return;
+            }
+            state.letterFile = f;
+            state.letterFileName = f.name;
+            state.coverLetter = f.name;
+            paint();
+          };
+        }
+        const lp = overlay.querySelector("#hl-letter-preview");
+        if (lp) lp.onclick = () => previewFile(state.letterFile, "Aperçu de la lettre");
       }
     }
 
@@ -334,7 +392,7 @@
               state.cvSource === "UPLOAD"
                 ? state.cvFileName
                 : state.cvFileName || "Profil HireLink",
-            coverLetter: state.coverLetter.trim() || null,
+            coverLetter: state.letterFileName || null,
             photoFileName: null,
           },
         });
@@ -342,7 +400,9 @@
         HireLink.toast("Candidature envoyée", "Suivez-la dans Mes candidatures", "ok");
         if (typeof state.onDone === "function") state.onDone();
       } catch (err) {
-        HireLink.toast("Échec", err.message, "danger");
+        const raw = err.message || "Échec";
+        const msg = /déjà existante/i.test(raw) ? "Vous avez déjà postulé à cette offre" : raw;
+        HireLink.toast("Candidature", msg, "warn");
         state.submitting = false;
         paint();
       }
@@ -397,6 +457,8 @@
       if (skip) {
         skip.onclick = () => {
           state.coverLetter = "";
+          state.letterFileName = "";
+          state.letterFile = null;
           state.dir = "fwd";
           state.step++;
           paint();

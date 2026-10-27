@@ -2,6 +2,7 @@ package ma.ensat.hirelink.model;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,12 @@ public class User {
 
     @Column(name = "full_name", nullable = false, length = 160)
     private String fullName;
+
+    @Column(name = "first_name", length = 80)
+    private String firstName;
+
+    @Column(name = "last_name", length = 80)
+    private String lastName;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
@@ -51,6 +58,10 @@ public class User {
     @Column(name = "company_ice", length = 32)
     private String companyIce;
 
+    /** Présentation publique de l'entreprise, rédigée par le recruteur. */
+    @Column(name = "company_presentation", length = 800)
+    private String companyPresentation;
+
     @Column(name = "company_verified", nullable = false)
     private boolean companyVerified = false;
 
@@ -72,6 +83,38 @@ public class User {
     @Column(name = "preferred_locations", length = 300)
     private String preferredLocations;
 
+    @Column(length = 40)
+    private String phone;
+
+    /** Pays du numéro, pour l'indicatif affiché. */
+    @Column(name = "phone_country", length = 80)
+    private String phoneCountry;
+
+    /** Ville de résidence, distincte des villes de recherche. */
+    @Column(length = 80)
+    private String city;
+
+    @Column(length = 80)
+    private String nationality;
+
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
+
+    @Column(length = 24)
+    private String gender;
+
+    @Column(length = 40)
+    private String availability;
+
+    @Column(length = 160)
+    private String school;
+
+    @Column(name = "work_mode", length = 40)
+    private String workMode;
+
+    @Column(name = "job_title", length = 120)
+    private String jobTitle;
+
     /** Types de contrat — ex: CDI,Stage,Alternance */
     @Column(name = "preferred_contracts", length = 120)
     private String preferredContracts;
@@ -79,6 +122,17 @@ public class User {
     /** Niveau — Junior / Confirmé / Senior */
     @Column(name = "experience_level", length = 40)
     private String experienceLevel;
+
+    @Column(name = "cv_file_name", length = 255)
+    private String cvFileName;
+
+    /** Chemin relatif sous le dossier CV, jamais exposé tel quel au client. */
+    @Column(name = "cv_storage_name", length = 255)
+    private String cvStorageName;
+
+    /** JSON : identity, experience, education, skills, languages. */
+    @Column(name = "cv_sections", columnDefinition = "TEXT")
+    private String cvSections;
 
     /** Palier CDC §9 : ESSENTIEL / PERFORMANCE (candidat) ou ACCES / PREMIUM (org). */
     @Enumerated(EnumType.STRING)
@@ -116,6 +170,12 @@ public class User {
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
 
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
+
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
+
     public Role getRole() { return role; }
     public void setRole(Role role) { this.role = role; }
 
@@ -140,6 +200,9 @@ public class User {
     public String getCompanyIce() { return companyIce; }
     public void setCompanyIce(String companyIce) { this.companyIce = companyIce; }
 
+    public String getCompanyPresentation() { return companyPresentation; }
+    public void setCompanyPresentation(String companyPresentation) { this.companyPresentation = companyPresentation; }
+
     public boolean isCompanyVerified() { return companyVerified; }
     public void setCompanyVerified(boolean companyVerified) { this.companyVerified = companyVerified; }
 
@@ -155,11 +218,50 @@ public class User {
     public String getPreferredLocations() { return preferredLocations; }
     public void setPreferredLocations(String preferredLocations) { this.preferredLocations = preferredLocations; }
 
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+
+    public String getPhoneCountry() { return phoneCountry; }
+    public void setPhoneCountry(String phoneCountry) { this.phoneCountry = phoneCountry; }
+
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+
+    public String getNationality() { return nationality; }
+    public void setNationality(String nationality) { this.nationality = nationality; }
+
+    public LocalDate getBirthDate() { return birthDate; }
+    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
+
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
+
+    public String getAvailability() { return availability; }
+    public void setAvailability(String availability) { this.availability = availability; }
+
+    public String getSchool() { return school; }
+    public void setSchool(String school) { this.school = school; }
+
+    public String getWorkMode() { return workMode; }
+    public void setWorkMode(String workMode) { this.workMode = workMode; }
+
+    public String getJobTitle() { return jobTitle; }
+    public void setJobTitle(String jobTitle) { this.jobTitle = jobTitle; }
+
     public String getPreferredContracts() { return preferredContracts; }
     public void setPreferredContracts(String preferredContracts) { this.preferredContracts = preferredContracts; }
 
     public String getExperienceLevel() { return experienceLevel; }
     public void setExperienceLevel(String experienceLevel) { this.experienceLevel = experienceLevel; }
+
+    public String getCvFileName() { return cvFileName; }
+    public void setCvFileName(String cvFileName) { this.cvFileName = cvFileName; }
+
+    public String getCvStorageName() { return cvStorageName; }
+    public void setCvStorageName(String cvStorageName) { this.cvStorageName = cvStorageName; }
+
+    public String getCvSections() { return cvSections; }
+    public void setCvSections(String cvSections) { this.cvSections = cvSections; }
 
     public PlanTier getPlanTier() { return planTier; }
     public void setPlanTier(PlanTier planTier) { this.planTier = planTier; }

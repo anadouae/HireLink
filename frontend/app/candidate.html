@@ -1,15 +1,18 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tableau de bord — HireLink</title>
+  <title>Offres — HireLink</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20260415b" />
-  <link rel="stylesheet" href="../css/app.css?v=20260415e" />
-  <script src="../js/theme.js?v=20260415e"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261025c" />
+  <script src="../js/theme.js?v=20261026d"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -22,13 +25,11 @@
         <button type="button" class="mobile-toggle" id="close-side" aria-label="Fermer">✕</button>
       </div>
       <nav class="side-nav">
-        <p class="side-nav-label">Espace</p>
-        <a class="side-link is-active" href="candidate.html">Tableau de bord</a>
-        <a class="side-link" href="candidate-offers.html">Offres pour vous</a>
+        <a class="side-link" href="candidate-dashboard.html">Tableau de bord</a>
+        <a class="side-link is-active" href="candidate.html">Offres</a>
         <a class="side-link" href="candidate-applications.html">Mes candidatures</a>
-        <a class="side-link" href="candidate-profile.html">Mon profil &amp; CV</a>
-        <a class="side-link js-in-app-help" href="../help.html">Aide</a>
       </nav>
+      <div id="nav-user" class="nav-user"></div>
       <div class="side-footer">
         <div id="side-user">—</div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
@@ -40,7 +41,7 @@
         <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
         <div class="topbar-search">
           <span aria-hidden="true">⌕</span>
-          <input type="search" placeholder="Rechercher une offre…" id="quick-search" autocomplete="off" />
+          <input type="search" placeholder="Entreprise, poste, ville, compétence, contrat…" id="search-offers" data-suggest="job" autocomplete="off" />
         </div>
         <div class="topbar-actions">
           <button type="button" class="btn btn-brass btn-sm" id="btn-premium">Premium</button>
@@ -49,119 +50,103 @@
         </div>
       </header>
 
-      <main class="content">
-        <div class="nudge" id="nudge" hidden>
-          <div>
-            <strong>Pipeline profil incomplet</strong>
-            <span id="nudge-sub">Complétez les étapes pour débloquer le matching fort.</span>
-          </div>
-          <a class="btn btn-primary btn-sm" href="candidate-profile.html">Continuer</a>
-        </div>
-
-        <section class="welcome-strip">
+      <main class="content cand-home">
+        <div class="page-title">
           <div>
             <p class="eyebrow">Espace candidat</p>
-            <h1 id="hello">Bonjour</h1>
-            <p>Profil → Matching → Pipeline → Décision claire. Chaque étape est traçable.</p>
-            <p class="muted" style="margin:0.35rem 0 0">Fiabilité personnelle : <strong id="trust-score">—</strong></p>
+            <h1>Offres</h1>
+            <p class="muted" id="offers-lead">Toutes les offres publiées. Le pourcentage est la compatibilité entre vos compétences et celles du poste.</p>
           </div>
-          <div class="welcome-actions">
-            <a class="btn btn-secondary" href="candidate-profile.html">CV &amp; profil</a>
-            <a class="btn btn-primary" href="candidate-offers.html">Offres matchées</a>
-          </div>
-        </section>
-
-        <div class="stat-grid kpi-top" aria-label="Indicateurs clés">
-          <div class="stat"><div class="label">Candidatures actives</div><div class="value" id="st-apps">—</div><div class="delta" id="st-apps-d">En cours</div></div>
-          <div class="stat"><div class="label">En entretien</div><div class="value" id="st-interview">—</div><div class="delta">Étape active</div></div>
-          <div class="stat"><div class="label">Compatibilité moy.</div><div class="value" id="st-match">—</div><div class="delta">Profil × offres</div></div>
-          <div class="stat"><div class="label">Délais tenus</div><div class="value" id="st-sla">—</div><div class="delta">Réponses employeurs</div></div>
+          <a class="btn btn-soft" href="candidate-profile.html">CV &amp; profil</a>
         </div>
 
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Complétude du profil</h2>
-            <span class="badge badge-chrome" id="profile-badge-count">—</span>
+        <div class="filter-board">
+        <div class="offer-filters" role="toolbar" aria-label="Filtres offres">
+          <div class="cand-filters" id="offer-scope" role="tablist">
+            <button type="button" class="is-on" data-scope="all">Toutes les offres</button>
+            <button type="button" data-scope="mine">Pour vous</button>
           </div>
-          <div class="panel-body">
-            <div class="profile-score">
-              <div class="ring" id="profile-ring" style="--p:0"><span id="profile-pct">0%</span></div>
-              <div style="flex:1;min-width:200px">
-                <p class="muted" id="profile-hint" style="margin:0 0 0.85rem">Analyse en cours…</p>
-                <div class="pipe-track pipe-track--checks" id="profile-pipe" aria-label="Étapes profil"></div>
-              </div>
+        </div>
+        <div class="filter-board-head">
+          <strong>Affiner</strong>
+          <span class="muted" id="filter-summary">Tous les critères</span>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-filters">Effacer</button>
+        </div>
+
+        <div class="offer-advanced" id="offer-advanced">
+          <label>Ville
+            <select id="f-city"><option value="">Toutes</option></select>
+          </label>
+          <label>Entreprise
+            <select id="f-company"><option value="">Toutes</option></select>
+          </label>
+          <label>Compétence
+            <select id="f-skill"><option value="">Toutes</option></select>
+          </label>
+          <label>Contrat
+            <select id="f-contract"><option value="">Tous</option></select>
+          </label>
+          <label>Mode
+            <select id="f-mode">
+              <option value="">Tous</option>
+              <option value="remote">Remote</option>
+              <option value="hybrid">Hybride</option>
+              <option value="onsite">Présentiel</option>
+            </select>
+          </label>
+          <label>Délai de réponse
+            <select id="f-sla">
+              <option value="">Tous</option>
+              <option value="5">5 jours ou moins</option>
+              <option value="7">7 jours ou moins</option>
+              <option value="14">14 jours ou moins</option>
+            </select>
+          </label>
+          <label>Candidature
+            <select id="f-sent">
+              <option value="">Toutes</option>
+              <option value="open">Pas encore envoyée</option>
+              <option value="sent">Déjà envoyée</option>
+              <option value="withdrawn">Retirée — à renvoyer</option>
+            </select>
+          </label>
+          <label>Compatibilité min.
+            <select id="f-match">
+              <option value="0">Toutes</option>
+              <option value="40">≥ 40 %</option>
+              <option value="60">≥ 60 %</option>
+              <option value="80">≥ 80 %</option>
+            </select>
+          </label>
+        </div>
+        </div>
+        <p class="muted match-legend" id="match-legend">Compatibilité = compétences en commun ÷ (les vôtres + celles de l’offre). Un profil très large baisse le score sur un poste spécialisé.</p>
+
+        <section class="panel split-board">
+          <div class="split-list">
+            <div class="panel-head">
+              <h2 id="offers-heading">Catalogue</h2>
+              <span class="badge badge-chrome" id="offers-count">—</span>
             </div>
+            <div class="offer-list" id="offer-list"></div>
           </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Alertes matching</h2>
-            <a class="btn btn-ghost btn-sm" href="candidate-offers.html">Toutes les offres</a>
-          </div>
-          <div class="panel-body">
-            <div class="alert-panel" id="match-alerts"></div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Pipeline de vos candidatures</h2>
-            <a class="btn btn-ghost btn-sm" href="candidate-applications.html">Voir tout</a>
-          </div>
-          <div class="panel-body">
-            <div class="pipe-track" id="apps-pipe" aria-label="Pipeline candidatures"></div>
-            <div class="chart-bars" id="chart-bars" style="margin-top:1.25rem"></div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Import CV · extraction compétences</h2>
-            <span class="ai-chip">OCR</span>
-          </div>
-          <div class="panel-body">
-            <div class="cv-drop" id="cv-drop">
-              <strong>Déposez votre CV (PDF / TXT)</strong>
-              <p>HireLink extrait les compétences et enrichit votre profil pour le matching.</p>
-              <label class="btn btn-primary btn-sm" style="cursor:pointer">
-                Choisir un fichier
-                <input type="file" id="cv-file-home" accept=".pdf,.txt,.md" hidden />
-              </label>
-              <p class="muted" id="cv-status" style="margin-top:0.75rem;margin-bottom:0"></p>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Accès rapides</h2></div>
-          <div class="panel-body">
-            <div class="quick-grid">
-              <a class="quick-card" href="candidate-profile.html">
-                <strong>Profil &amp; CV</strong>
-                <span>Compléter le pipeline</span>
-              </a>
-              <a class="quick-card" href="candidate-offers.html">
-                <strong>Offres matchées</strong>
-                <span>Postuler en 1 clic</span>
-              </a>
-              <a class="quick-card" href="candidate-applications.html">
-                <strong>Suivi candidatures</strong>
-                <span>Chaque étape visible</span>
-              </a>
-            </div>
-          </div>
+          <article class="split-detail" id="offer-detail">
+            <p class="muted">Choisissez une offre pour lire le poste.</p>
+          </article>
         </section>
       </main>
     </div>
   </div>
 
-  <script src="../js/ui.js?v=20260415e"></script>
-  <script src="../js/api.js?v=20260415e"></script>
-  <script src="../js/in-app-help.js?v=20260415e"></script>
-  <script src="../js/product.js?v=20260415e"></script>
-  <script src="../js/shell.js?v=20260415e"></script>
-  <script src="../js/growth.js?v=20260415e"></script>
-  <script src="../js/candidate-home.js?v=20260415e"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
+  <script src="../js/api.js?v=20261026d"></script>
+  <script src="../js/in-app-help.js?v=20261026d"></script>
+  <script src="../js/product.js?v=20261026d"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/growth.js?v=20261026d"></script>
+  <script src="../js/skills-catalog.js?v=20261026d"></script>
+  <script src="../js/apply-wizard.js?v=20261026d"></script>
+  <script src="../js/suggest.js?v=20261025d"></script>
+  <script src="../js/candidate-home.js?v=20261025d"></script>
 </body>
 </html>

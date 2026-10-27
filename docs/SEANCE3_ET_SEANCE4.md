@@ -8,8 +8,8 @@ Construire le modèle de données et le relier au backend.
 ### Entités métier identifiées
 | Entité | Table | Rôle |
 |--------|-------|------|
-| User | users | Candidat / Recruteur / Admin |
-| Organization | organizations | Entreprise |
+| User | users | Candidat / Recruteur / Admin (+ profil, CV, ICE, plan) |
+| Organization | organizations | Entreprise (ICE, badge, logo, secteur, plan) |
 | Membership | memberships | N–N User ↔ Organization (+ rôle) |
 | JobOffer | job_offers | Offre d'emploi |
 | Application | applications | Candidature |
@@ -74,10 +74,12 @@ Frontend : `app/recruiter-offers.html` (liste + créer + modifier + supprimer)
 | DELETE | `/notifications/{id}` | Delete |
 
 ### Autres endpoints utiles
-- Auth : `/api/v1/auth/login`, OTP, Google
+- Auth : `/api/v1/auth/login`, OTP, Google, `complete-profile`
 - Applications / pipeline : `/api/v1/applications/**`
-- Organizations : `/api/v1/organizations/mine` (GET/PUT) + membres
+- Organizations : `/organizations/mine` (GET/PUT), `/mine/verify`, `/public` (logos)
+- Admin : `/admin/organizations` (vérifier, plan), `/admin/users`, stats
 - Offres publiques : `GET /api/v1/offers/public`
+- CV : `POST/GET /me/cv`, synthèse `POST /ai/cv-summary`
 
 ### Postman
 Collection : `docs/postman/HireLink_CRUD_Seance4.postman_collection.json`

@@ -1,6 +1,7 @@
 package ma.ensat.hirelink.controller;
 
 import ma.ensat.hirelink.model.*;
+import ma.ensat.hirelink.service.CompanyVerificationService;
 import ma.ensat.hirelink.service.OrganizationService;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -12,25 +13,38 @@ import java.util.*;
 public class OrganizationController {
 
     private final OrganizationService organizationService;
+    private final CompanyVerificationService companyVerificationService;
 
-    public OrganizationController(OrganizationService organizationService) {
+    public OrganizationController(
+            OrganizationService organizationService,
+            CompanyVerificationService companyVerificationService
+    ) {
         this.organizationService = organizationService;
+        this.companyVerificationService = companyVerificationService;
     }
 
     public record InviteRequest(String email, String orgRole) {}
+
+    public record OrgUpdate(
+            String name,
+            String ice,
+            String website,
+            String sector,
+            String city,
+            String presentation,
+            String employeeRange
+    ) {}
+
+    @GetMapping("/public")
+    public List<Map<String, Object>> listPublic() {
+        return organizationService.listPublic();
+    }
 
     @GetMapping("/mine")
     public Map<String, Object> mine(@AuthenticationPrincipal User user) {
         Organization org = organizationService.ensureForRecruiter(user);
         Membership me = organizationService.requireMembership(user);
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", org.getId());
-        m.put("name", org.getName());
-        m.put("ice", org.getIce());
-        m.put("verified", org.isVerified());
-        m.put("planTier", org.getPlanTier().name());
-        m.put("myRole", me.getOrgRole().name());
-        return m;
+        return toBody(org, me);
     }
 
     @GetMapping("/mine/members")
@@ -62,23 +76,60 @@ public class OrganizationController {
         );
     }
 
-    public record OrgUpdate(String name, String ice) {}
-
     @PutMapping("/mine")
     public Map<String, Object> updateMine(@AuthenticationPrincipal User user, @RequestBody OrgUpdate body) {
-        Organization org = organizationService.updateMine(user, body.name(), body.ice());
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("id", org.getId());
-        m.put("name", org.getName());
-        m.put("ice", org.getIce());
-        m.put("verified", org.isVerified());
-        m.put("planTier", org.getPlanTier().name());
-        return m;
+        Organization org = organizationService.updateMine(
+                user,
+                body.name(),
+                body.ice(),
+                body.website(),
+                body.sector(),
+                body.city(),
+                body.presentation(),
+                body.employeeRange()
+        );
+        Membership me = organizationService.requireMembership(user);
+        return toBody(org, me);
+    }
+
+    @PostMapping("/mine/verify")
+    public Map<String, Object> recheck(@AuthenticationPrincipal User user) {
+        Organization org = organizationService.recheck(user);
+        Membership me = organizationService.requireMembership(user);
+        Map<String, Object> body = toBody(org, me);
+        body.put("message", companyVerificationService.publishBlockReason(
+                org.isVerified() ? "REGISTRY_MATCH" : org.getVerificationStatus()
+        ));
+        if (org.isVerified()) {
+            body.put("message", "Entreprise vérifiée. Vous pouvez publier des offres.");
+        }
+        return body;
     }
 
     @DeleteMapping("/mine/members/{userId}")
     public Map<String, Object> remove(@AuthenticationPrincipal User user, @PathVariable Long userId) {
         organizationService.removeMember(user, userId);
         return Map.of("status", "REMOVED", "userId", userId);
+    }
+
+    private Map<String, Object> toBody(Organization org, Membership me) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", org.getId());
+        m.put("name", org.getName());
+        m.put("ice", org.getIce());
+        m.put("verified", org.isVerified());
+        m.put("verificationStatus", org.getVerificationStatus() == null ? "" : org.getVerificationStatus());
+        m.put("verificationMethod", org.getVerificationMethod() == null ? "" : org.getVerificationMethod());
+        m.put("statusLabel", companyVerificationService.statusLabel(org.getVerificationStatus(), org.isVerified()));
+        m.put("planTier", org.getPlanTier().name());
+        m.put("myRole", me.getOrgRole().name());
+        m.put("website", org.getWebsite() == null ? "" : org.getWebsite());
+        m.put("logoUrl", org.getLogoUrl() == null ? "" : org.getLogoUrl());
+        m.put("sector", org.getSector() == null ? "" : org.getSector());
+        m.put("city", org.getCity() == null ? "" : org.getCity());
+        m.put("employees", org.getEmployeeRange() == null ? "" : org.getEmployeeRange());
+        m.put("presentation", org.getPresentation() == null ? "" : org.getPresentation());
+        m.put("canPublish", org.isVerified());
+        return m;
     }
 }

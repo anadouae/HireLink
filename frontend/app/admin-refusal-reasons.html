@@ -4,16 +4,20 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HireLink — Motifs de refus (CRUD)</title>
-  <link rel="stylesheet" href="../css/design-system.css" />
-  <link rel="stylesheet" href="../css/app.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
   <script src="../js/theme.js"></script>
 </head>
 <body class="app-body">
   <div id="shell-root"></div>
   <main class="app-main">
     <header class="page-head">
+      <p><a href="admin.html">← Administration</a></p>
       <h1>Motifs de refus</h1>
-      <p class="muted">CRUD admin — catalogue fermé (Séance 4)</p>
+      <p class="muted">Les motifs proposés au recruteur quand une candidature est refusée.</p>
     </header>
     <section class="card" style="margin-bottom:1rem">
       <h2 style="margin-top:0">Ajouter</h2>
@@ -32,8 +36,8 @@
   </main>
   <script src="../js/config.js"></script>
   <script src="../js/api.js"></script>
-  <script src="../js/ui.js"></script>
-  <script src="../js/shell.js"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
   <script>
     (function () {
       const session = HireLinkShell.mountShell({ roles: ["ADMINISTRATEUR"], hello: false });

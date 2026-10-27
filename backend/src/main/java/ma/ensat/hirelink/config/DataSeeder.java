@@ -2,6 +2,7 @@ package ma.ensat.hirelink.config;
 
 import ma.ensat.hirelink.model.*;
 import ma.ensat.hirelink.repository.*;
+import ma.ensat.hirelink.service.CompanyVerificationService;
 import ma.ensat.hirelink.service.OrganizationService;
 import ma.ensat.hirelink.service.SkillMatchingService;
 import org.slf4j.Logger;
@@ -45,7 +46,8 @@ public class DataSeeder {
             ScorecardEntryRepository scoreEntries,
             AiUsageLogRepository aiLogs,
             PasswordEncoder encoder,
-            SkillMatchingService matching
+            SkillMatchingService matching,
+            CompanyVerificationService companyVerificationService
     ) {
         return args -> {
             seedRefusalCatalog(refusalReasons);
@@ -77,6 +79,8 @@ public class DataSeeder {
                 log.info("Seed OK — {} users, {} offres, {} candidatures, {} motifs",
                         users.count(), offers.count(), applications.count(), refusalReasons.count());
             }
+            ensureMarketplace(users, offers, organizationService, encoder);
+            enrichCompanies(organizations, companyVerificationService);
             logAccounts();
         };
     }
@@ -115,6 +119,16 @@ public class DataSeeder {
             r.setAssignedOrgId(org.getId());
             users.save(r);
         });
+    }
+
+    private void enrichCompanies(OrganizationRepository organizations, CompanyVerificationService verification) {
+        for (Organization org : organizations.findAll()) {
+            verification.enrichProfile(org);
+            if (org.isVerified() && (org.getVerificationMethod() == null || org.getVerificationMethod().isBlank())) {
+                org.setVerificationMethod("AUTO_REGISTRY");
+            }
+            organizations.save(org);
+        }
     }
 
     private void seedOperational(
@@ -412,6 +426,96 @@ public class DataSeeder {
 
         log.info("Données opérationnelles chargées — org={}, offres={}, apps={}",
                 atlas.getName(), offers.count(), applications.count());
+    }
+
+    private void ensureMarketplace(
+            UserRepository users,
+            JobOfferRepository offers,
+            OrganizationService organizationService,
+            PasswordEncoder encoder
+    ) {
+        if (users.findByEmailIgnoreCase("recrutement.ocpgroup@hirelink.ma").isPresent()) return;
+        Instant now = Instant.now();
+        String[][] rows = {
+                {"OCP Group", "002100000000011", "Casablanca", "Ingénieur procédés junior", "CDI", "Sur site", "Procédés,Chimie,Excel", "7", "Suivi des unités de production et des indicateurs qualité à Jorf Lasfar et au siège."},
+                {"OCP Group", "002100000000011", "Khouribga", "Stage géologie", "Stage", "Sur site", "Géologie,Cartographie", "10", "Cartographie de sondages et mise à jour des modèles de gisement."},
+                {"Maroc Telecom", "002100000000022", "Rabat", "Ingénieur réseaux", "CDI", "Hybride", "Réseaux,Linux,Cisco", "5", "Exploitation du cœur de réseau et des liaisons fibre."},
+                {"Maroc Telecom", "002100000000022", "Casablanca", "Développeur d'applications", "CDI", "Hybride", "Java,Spring Boot,SQL", "7", "Services numériques grand public et outils internes."},
+                {"Attijariwafa bank", "002100000000033", "Casablanca", "Analyste crédit entreprises", "CDI", "Sur site", "Finance,Excel,Analyse", "5", "Instruction des dossiers de financement PME."},
+                {"Attijariwafa bank", "002100000000033", "Rabat", "Chargé de clientèle", "Premier emploi", "Sur site", "Relation client,Banque", "5", "Accueil, conseil et suivi du portefeuille particuliers."},
+                {"Royal Air Maroc", "002100000000044", "Casablanca", "Agent d'escale", "CDI", "Sur site", "Accueil,Anglais,Français", "7", "Enregistrement, embarquement et information passagers à Mohammed V."},
+                {"Royal Air Maroc", "002100000000044", "Casablanca", "Stage marketing digital", "Stage", "Hybride", "SEO,Réseaux sociaux", "10", "Campagnes de la saison été et suivi des audiences."},
+                {"Renault Group Maroc", "002100000000055", "Tanger", "Ingénieur qualité usine", "CDI", "Sur site", "Qualité,Automobile,ISO", "5", "Contrôle des postes de la ligne de montage à Melloussa."},
+                {"Renault Group Maroc", "002100000000055", "Tanger", "Stage logistique", "Stage", "Sur site", "Logistique,Excel", "10", "Flux pièces et ordonnancement des approvisionnements."},
+                {"Stellantis", "002100000000066", "Kénitra", "Ingénieur process", "CDI", "Sur site", "Process,Lean,Automobile", "7", "Amélioration des temps de cycle sur l'usine de Kénitra."},
+                {"Stellantis", "002100000000066", "Kénitra", "Alternance achats", "Alternance", "Sur site", "Achats,Négociation", "10", "Suivi des fournisseurs locaux de pièces."},
+                {"inwi", "002100000000077", "Casablanca", "Développeur mobile", "CDI", "Hybride", "Kotlin,Swift,API", "7", "Parcours client de l'application inwi."},
+                {"inwi", "002100000000077", "Rabat", "Ingénieur radio", "CDI", "Sur site", "Télécoms,4G,5G", "7", "Planification radio et qualité de service."},
+                {"Intelcia", "002100000000088", "Rabat", "Superviseur centre de contact", "CDI", "Sur site", "Management,Relation client", "5", "Pilotage d'une équipe de conseillers francophones."},
+                {"Intelcia", "002100000000088", "Casablanca", "Chargé de recrutement", "CDI", "Hybride", "Recrutement,Entretien", "5", "Volume de recrutement pour les comptes clients."},
+                {"Capgemini Maroc", "002100000000099", "Casablanca", "Consultant Java", "CDI", "Hybride", "Java,Spring Boot,SQL", "7", "Missions chez des banques et opérateurs."},
+                {"Capgemini Maroc", "002100000000099", "Rabat", "Business analyst", "CDI", "Hybride", "Recueil,UML,Agile", "7", "Cadrage des besoins et rédaction des user stories."},
+                {"CGI Maroc", "002100000000101", "Casablanca", "Développeur .NET", "CDI", "Hybride", "C#,.NET,SQL", "7", "Applications métier pour le secteur public et privé."},
+                {"CGI Maroc", "002100000000101", "Casablanca", "Testeur logiciel", "Premier emploi", "Hybride", "Postman,JUnit,SQL", "7", "Campagnes de tests fonctionnels et API."},
+                {"HPS", "002100000000112", "Casablanca", "Ingénieur paiement", "CDI", "Sur site", "Java,Paiement,SQL", "7", "Évolutions de la plateforme PowerCARD."},
+                {"HPS", "002100000000112", "Casablanca", "Product owner", "CDI", "Hybride", "Produit,Agile,Backlog", "7", "Priorisation du backlog d'un module monétique."},
+                {"Bank of Africa", "002100000000123", "Casablanca", "Contrôleur de gestion", "CDI", "Sur site", "Finance,Excel,Reporting", "5", "Suivi budgétaire des réseaux d'agences."},
+                {"Bank of Africa", "002100000000123", "Fès", "Chargé de conformité", "CDI", "Sur site", "Conformité,Droit", "7", "Contrôles LAB et revue des dossiers agence."},
+                {"Marjane", "002100000000134", "Casablanca", "Chef de rayon", "CDI", "Sur site", "Commerce,Management", "5", "Animation du rayon et résultats du magasin."},
+                {"Marjane", "002100000000134", "Marrakech", "Stage commerce", "Stage", "Sur site", "Vente,Merchandising", "10", "Mise en rayon et suivi des promotions."},
+                {"Decathlon Maroc", "002100000000145", "Casablanca", "Responsable univers", "CDI", "Sur site", "Commerce,Sport,Management", "7", "Pilotage d'un univers sport et de l'équipe magasin."},
+                {"Decathlon Maroc", "002100000000145", "Tanger", "Stage vente", "Stage", "Sur site", "Vente,Accueil", "10", "Conseil client sur le magasin de Tanger."},
+                {"Cosumar", "002100000000156", "Casablanca", "Ingénieur qualité agroalimentaire", "CDI", "Sur site", "Qualité,HACCP,Agroalimentaire", "7", "Plans de contrôle des sucreries."},
+                {"Cosumar", "002100000000156", "Kénitra", "Stage agronomie", "Stage", "Sur site", "Agronomie,Excel", "10", "Suivi des parcelles betteravières."},
+                {"Managem", "002100000000167", "Marrakech", "Ingénieur mines", "CDI", "Sur site", "Mines,Géologie,Sécurité", "7", "Exploitation et sécurité d'un site minier."},
+                {"Managem", "002100000000167", "Ouarzazate", "Géologue junior", "Premier emploi", "Sur site", "Géologie,Cartographie", "10", "Levés de terrain et échantillonnage."},
+                {"ONCF", "002100000000178", "Rabat", "Ingénieur ferroviaire", "CDI", "Sur site", "Ferroviaire,Maintenance", "7", "Maintenance du matériel roulant et des voies."},
+                {"ONCF", "002100000000178", "Casablanca", "Stage exploitation", "Stage", "Sur site", "Transport,Excel", "10", "Suivi de la régularité des trains voyageurs."},
+                {"Tanger Med", "002100000000189", "Tanger", "Coordinateur logistique", "CDI", "Sur site", "Logistique,Port,Excel", "5", "Coordination des flux entre terminal et transporteurs."},
+                {"Tanger Med", "002100000000189", "Tanger", "Stage commerce portuaire", "Stage", "Sur site", "Commerce,Anglais", "10", "Appui aux comptes armateurs."},
+                {"Accor", "002100000000190", "Marrakech", "Réceptionniste", "CDI", "Sur site", "Accueil,Français,Anglais", "5", "Accueil des clients d'un hôtel du centre de Marrakech."},
+                {"Accor", "002100000000190", "Agadir", "Revenue manager junior", "Premier emploi", "Sur site", "Excel,Yield,Hôtellerie", "7", "Tarifs et occupation de l'établissement."},
+                {"Centrale Danone", "002100000000201", "Casablanca", "Ingénieur qualité laitier", "CDI", "Sur site", "Qualité,Agroalimentaire,HACCP", "7", "Contrôles laboratoire et libération des lots."},
+                {"Centrale Danone", "002100000000201", "Casablanca", "Chargé de marketing", "CDI", "Hybride", "Marketing,Excel", "7", "Plans d'animation des marques laitières."},
+                {"LabelVie", "002100000000212", "Casablanca", "Acheteur alimentaire", "CDI", "Sur site", "Achats,Négociation", "5", "Négociation des familles épicerie et frais."},
+                {"Wafa Assurance", "002100000000223", "Casablanca", "Gestionnaire sinistres", "CDI", "Sur site", "Assurance,Relation client", "5", "Instruction des dossiers auto et habitation."},
+                {"Wafa Assurance", "002100000000223", "Casablanca", "Actuaire junior", "Premier emploi", "Hybride", "Statistiques,Excel,Python", "7", "Provisionnement et études de portefeuille."},
+                {"Alstom Maroc", "002100000000234", "Casablanca", "Ingénieur systèmes ferroviaires", "CDI", "Hybride", "Systèmes,Ferroviaire", "7", "Intégration des sous-systèmes de signalisation."},
+                {"Alstom Maroc", "002100000000234", "Rabat", "Stage ingénieur", "Stage", "Sur site", "Ingénierie,Excel", "10", "Appui aux essais d'un projet de matériel roulant."}
+        };
+        java.util.Map<String, User> owners = new java.util.HashMap<>();
+        int i = 0;
+        for (String[] row : rows) {
+            User owner = owners.get(row[0]);
+            if (owner == null) {
+                String slug = foldSlug(row[0]);
+                owner = user(users, encoder, "recrutement." + slug + "@hirelink.ma", "Recrutement " + row[0],
+                        Role.RECRUTEUR, "Recruteur123!", null, row[0]);
+                owner.setCompanyIce(row[1]);
+                owner.setCompanyVerified(true);
+                owner.setCompanyPresentation(row[0] + " recrute au Maroc via HireLink. Les délais de réponse sont affichés sur chaque offre.");
+                owner.setPreferredLocations(row[2]);
+                owner.setProfileComplete(true);
+                owner.setPlanTier(PlanTier.ACCES);
+                users.save(owner);
+                Organization org = organizationService.ensureForRecruiter(owner);
+                owner.setAssignedOrgId(org.getId());
+                users.save(owner);
+                owners.put(row[0], owner);
+            }
+            offer(offers, owner, row[3], row[8], row[6], row[2] + " · " + row[5], row[4],
+                    Integer.parseInt(row[7]), true, now.minus(i + 2L, ChronoUnit.HOURS));
+            i++;
+        }
+        log.info("Catalogue entreprises chargé — {} offres au total", offers.count());
+    }
+
+    private static String foldSlug(String value) {
+        String n = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "")
+                .toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^a-z0-9]+", "");
+        return n.length() > 24 ? n.substring(0, 24) : n;
     }
 
     /** Compte miroir pour ne pas casser le guide (mêmes MDP, profil lié). */

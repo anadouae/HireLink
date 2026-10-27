@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Entreprises — HireLink</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <a class="brand" href="candidate-dashboard.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
+      <nav class="side-nav"></nav>
+      <div id="nav-user" class="nav-user"></div>
+    </aside>
+    <div class="app-main">
+      <header class="topbar">
+        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
+      </header>
+      <main class="content">
+        <div class="page-title" style="text-align:center;display:block">
+          <h1>Entreprises qui recrutent</h1>
+          <p class="muted">Les entreprises qui publient actuellement sur HireLink.</p>
+        </div>
+        <div class="filter-board">
+          <input type="search" id="co-search" placeholder="Rechercher une entreprise…" />
+          <input id="co-city" data-suggest="place" placeholder="Ville" />
+          <select id="co-sector"><option value="">Secteur d’activité</option></select>
+          <button type="button" class="btn btn-primary" id="co-filter">Filtrer</button>
+        </div>
+        <div class="split-board">
+          <div class="split-list" id="co-list"></div>
+          <aside class="split-detail" id="co-detail"><p class="muted">Choisissez une entreprise.</p></aside>
+        </div>
+      </main>
+    </div>
+  </div>
+  <script src="../js/ui.js?v=20261026d"></script>
+  <script src="../js/api.js?v=20261026d"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/suggest.js?v=20261026d"></script>
+  <script src="../js/candidate-companies.js?v=20261026d"></script>
+</body>
+</html>

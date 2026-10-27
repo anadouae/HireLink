@@ -49,6 +49,7 @@ public class OcrController {
             body.put("textPreview", result.text().length() > 800
                     ? result.text().substring(0, 800) + "…"
                     : result.text());
+            body.put("sections", ocrService.sections(result.text(), result.suggestedSkills()));
             body.put("skillsApplied", applySkills);
             return body;
         } catch (IllegalArgumentException e) {

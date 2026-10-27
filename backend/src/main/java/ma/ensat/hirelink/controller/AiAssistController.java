@@ -47,6 +47,8 @@ public class AiAssistController {
     public record InterviewKitRequest(String jobTitle, String skills, Boolean premium) {}
     public record LanguageCheckRequest(String title, String description) {}
     public record RefusalDraftRequest(String reasonCode, String reasonLabel, String jobTitle, Boolean premium) {}
+    public record CoachRequest(String message, String cvText, Boolean premium) {}
+    public record CvSummaryRequest(String cvText, Boolean premium) {}
     public record MatchExplainRequest(String skills, String requiredSkills, Boolean premium) {}
 
     @GetMapping("/credits")
@@ -65,7 +67,7 @@ public class AiAssistController {
         m.put("user", user.getEmail());
         m.put("features", List.of(
                 "profile-rewrite", "interview-prep", "interview-kit",
-                "refusal-draft", "match-explain", "language-check"
+                "refusal-draft", "match-explain", "language-check", "coach"
         ));
         return m;
     }
@@ -88,7 +90,7 @@ public class AiAssistController {
                         + " ; métiers=" + nullSafe(roles) + " ; niveau=" + nullSafe(level)
         );
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Suggestions de profil (F15)");
+        m.put("title", "Suggestions de profil");
         m.put("content", llm.text());
         m.put("provider", llm.provider());
         m.put("premiumLocked", false);
@@ -107,12 +109,12 @@ public class AiAssistController {
         requireCredit(user, premium);
         String skills = body.skills() != null ? body.skills() : user.getSkills();
         LlmProvider.LlmResult llm = llmProvider.complete(
-                "Assistant préparation entretien. Français. Pas de données personnelles.",
+                "Assistant préparation entretien. Français. Pas de données personnelles. Pas de markdown : aucun dièse, aucun astérisque, aucun tableau. Un titre court par ligne, puis des phrases.",
                 "Poste=" + nullSafe(body.jobTitle()) + " ; compétences=" + nullSafe(skills)
-                        + ". Produis une préparation d'entretien claire."
+                        + ". Préparation d'entretien claire, en texte simple."
         );
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Préparation entretien (F15)");
+        m.put("title", "Préparation entretien");
         m.put("content", llm.text());
         m.put("provider", llm.provider());
         m.put("premiumLocked", false);
@@ -138,10 +140,10 @@ public class AiAssistController {
                         + ". 5 à 7 questions discriminantes."
         );
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Grille d’entretien structurée (F15)");
+        m.put("title", "Questions d’entretien");
         m.put("content", llm.text());
         m.put("questions", aiCreditService.interviewKit(body.jobTitle(), body.skills()));
-        m.put("note", "Proposition — le manager édite et mène l’entretien (R07).");
+        m.put("note", "À relire avant l’entretien.");
         m.put("provider", llm.provider());
         m.put("credits", debitIfSuccess(user, premium, "interview-kit", llm));
         return m;
@@ -166,11 +168,83 @@ public class AiAssistController {
                         + ". Message respectueux, court, sans promesse."
         );
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Brouillon de refus (F15)");
+        m.put("title", "Brouillon de refus");
         m.put("content", llm.text());
         m.put("provider", llm.provider());
         m.put("note", "Proposition — le recruteur valide avant envoi.");
         m.put("credits", debitIfSuccess(user, premium, "refusal-draft", llm));
+        return m;
+    }
+
+    @PostMapping("/cv-summary")
+    public Map<String, Object> cvSummary(
+            @AuthenticationPrincipal User user,
+            @RequestBody CvSummaryRequest body,
+            @RequestHeader(value = "X-HireLink-Premium", required = false) String premiumHeader
+    ) {
+        boolean premium = body != null && (Boolean.TRUE.equals(body.premium()) || "1".equals(premiumHeader));
+        String cv = body == null ? "" : nullSafe(body.cvText());
+        if (cv.length() > 4000) cv = cv.substring(0, 4000);
+        if (cv.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucun texte de CV à résumer");
+        }
+        String text;
+        String provider = "local";
+        try {
+            requireCredit(user, premium);
+            boolean recruiter = user.getRole() == Role.RECRUTEUR;
+            LlmProvider.LlmResult llm = llmProvider.complete(
+                    recruiter
+                            ? "Tu résumes un CV pour un recruteur. Français, 6 lignes maximum, sans inventer. Structure : métier probable, expériences, compétences, point d'attention."
+                            : "Tu résumes le CV de la personne qui te parle. Français, tutoiement, 6 lignes maximum, sans inventer. Termine par une seule amélioration concrète.",
+                    cv
+            );
+            text = llm.text();
+            provider = llm.provider();
+            debitIfSuccess(user, premium, "cv-summary", llm);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            text = localSummary(cv);
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("title", "Synthèse du CV");
+        m.put("content", text);
+        m.put("provider", provider);
+        return m;
+    }
+
+    private String localSummary(String cv) {
+        String flat = cv.replace('\n', ' ').replaceAll("\\s+", " ").trim();
+        String head = flat.length() > 420 ? flat.substring(0, 420).trim() + "…" : flat;
+        return "Synthèse à partir du texte déposé :\n" + head
+                + "\n\nLe recruteur voit ce texte, pas une décision. Relisez les sections avant de confirmer.";
+    }
+
+    @PostMapping("/coach")
+    public Map<String, Object> coach(
+            @AuthenticationPrincipal User user,
+            @RequestBody CoachRequest body,
+            @RequestHeader(value = "X-HireLink-Premium", required = false) String premiumHeader
+    ) {
+        if (user.getRole() != Role.CANDIDAT && user.getRole() != Role.ADMINISTRATEUR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux candidats");
+        }
+        boolean premium = Boolean.TRUE.equals(body.premium()) || "1".equals(premiumHeader);
+        requireCredit(user, premium);
+        String cv = nullSafe(body.cvText());
+        if (cv.length() > 4000) cv = cv.substring(0, 4000);
+        String question = nullSafe(body.message());
+        if (question.isEmpty()) question = "Quelles améliorations concrètes apporter à ce CV ?";
+        LlmProvider.LlmResult llm = llmProvider.complete(
+                "Tu es un coach carrière. Français simple, tutoiement. Quatre recommandations maximum, numérotées. Pas de markdown. N'invente aucune expérience absente du CV.",
+                "CV du candidat :\n" + cv + "\n\nQuestion :\n" + question
+        );
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("title", "Coach CV");
+        m.put("content", llm.text());
+        m.put("provider", llm.provider());
+        m.put("credits", debitIfSuccess(user, premium, "coach", llm));
         return m;
     }
 
@@ -189,7 +263,7 @@ public class AiAssistController {
                         + ". Explique les forces et manques, suggère améliorations."
         );
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Explication matching (F15)");
+        m.put("title", "Explication du matching");
         m.put("content", llm.text());
         m.put("provider", llm.provider());
         m.put("credits", debitIfSuccess(user, premium, "match-explain", llm));
@@ -217,8 +291,7 @@ public class AiAssistController {
         var st = aiCreditService.status(user, premium);
         if (!st.allowed()) {
             throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
-                    "Crédits IA épuisés (" + st.used() + "/" + st.limit()
-                            + ") — palier=" + st.plan() + " (F16)");
+                    "Crédits IA épuisés (" + st.used() + "/" + st.limit() + ")");
         }
     }
 

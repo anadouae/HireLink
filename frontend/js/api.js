@@ -83,7 +83,7 @@
   function redirectForRole(role) {
     if (role === "ADMINISTRATEUR") return "app/admin.html";
     if (role === "RECRUTEUR") return "app/recruiter.html";
-    return "app/candidate.html";
+    return "app/candidate-dashboard.html";
   }
 
   function requireAuth(roles) {

@@ -50,7 +50,75 @@ public class OcrService {
         }
         text = text == null ? "" : text.replace('\u0000', ' ').trim();
         List<String> skills = suggestSkills(text);
-        return new OcrResult(text.length() > 12000 ? text.substring(0, 12000) : text, skills, name, text.length());
+        String kept = text.length() > 12000 ? text.substring(0, 12000) : text;
+        return new OcrResult(kept, skills, name, text.length());
+    }
+
+    /** Découpe un CV déjà lu en sections familières. Le candidat confirme avant enregistrement. */
+    public Map<String, String> sections(String text, List<String> skills) {
+        String src = text == null ? "" : text.trim();
+        Map<String, Integer> marks = new LinkedHashMap<>();
+        marks.put("experience", indexOf(src, "(?i)(expériences?\\s+professionnelles?|expérience\\s+professionnelle|parcours\\s+professionnel|work\\s+experience)"));
+        marks.put("education", indexOf(src, "(?i)(formations?|études|education|diplômes?|scolarité)"));
+        marks.put("skills", indexOf(src, "(?i)(compétences|competences|skills|technologies|outils)"));
+        marks.put("languages", indexOf(src, "(?i)(langues?|languages)"));
+
+        List<Map.Entry<String, Integer>> found = marks.entrySet().stream()
+                .filter(e -> e.getValue() >= 0)
+                .sorted(Comparator.comparingInt(Map.Entry::getValue))
+                .toList();
+
+        Map<String, String> out = new LinkedHashMap<>();
+        int first = found.isEmpty() ? src.length() : found.get(0).getValue();
+        String identity = clip(src.substring(0, first));
+        String contacts = contacts(src);
+        if (!contacts.isBlank() && !identity.toLowerCase(Locale.ROOT).contains(contacts.toLowerCase(Locale.ROOT).substring(0, Math.min(12, contacts.length())))) {
+            identity = clip((identity + "\n" + contacts).trim());
+        }
+        out.put("identity", identity.isBlank() ? contacts : identity);
+
+        for (int i = 0; i < found.size(); i++) {
+            int start = found.get(i).getValue();
+            int end = i + 1 < found.size() ? found.get(i + 1).getValue() : src.length();
+            String body = src.substring(start, end);
+            body = body.replaceFirst("(?s)^[^\\n]{0,40}\\n?", "").trim();
+            out.put(found.get(i).getKey(), clip(body));
+        }
+        out.putIfAbsent("experience", "");
+        out.putIfAbsent("education", "");
+        String skillLine = skills == null ? "" : String.join(", ", skills);
+        if (out.getOrDefault("skills", "").isBlank()) out.put("skills", clip(skillLine));
+        if (out.getOrDefault("languages", "").isBlank()) out.put("languages", clip(knownLanguages(src)));
+        return out;
+    }
+
+    private int indexOf(String text, String regex) {
+        Matcher m = Pattern.compile(regex).matcher(text);
+        return m.find() ? m.start() : -1;
+    }
+
+    private String contacts(String text) {
+        List<String> bits = new ArrayList<>();
+        Matcher email = Pattern.compile("[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", Pattern.CASE_INSENSITIVE).matcher(text);
+        if (email.find()) bits.add(email.group());
+        Matcher phone = Pattern.compile("(?:\\+212|0)[\\s.-]*[5-7](?:[\\s.-]*\\d){8}").matcher(text);
+        if (phone.find()) bits.add(phone.group().replaceAll("\\s+", " ").trim());
+        return String.join(" · ", bits);
+    }
+
+    private String knownLanguages(String text) {
+        String[] langs = {"Français", "Arabe", "Anglais", "Espagnol", "Amazigh", "Allemand"};
+        List<String> hit = new ArrayList<>();
+        for (String lang : langs) {
+            if (text.toLowerCase(Locale.ROOT).contains(lang.toLowerCase(Locale.ROOT))) hit.add(lang);
+        }
+        return String.join(", ", hit);
+    }
+
+    private String clip(String value) {
+        if (value == null) return "";
+        String clean = value.replace('\u0000', ' ').trim();
+        return clean.length() > 1500 ? clean.substring(0, 1500) : clean;
     }
 
     private String extractPdf(byte[] bytes) throws Exception {

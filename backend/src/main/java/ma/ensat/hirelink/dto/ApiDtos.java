@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import ma.ensat.hirelink.model.ApplicationStatus;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 public class ApiDtos {
 
@@ -26,7 +27,22 @@ public class ApiDtos {
             String preferredLocations,
             String preferredContracts,
             String experienceLevel,
-            Instant createdAt
+            Instant createdAt,
+            String cvFileName,
+            String cvSections,
+            String companyPresentation,
+            String firstName,
+            String lastName,
+            String phone,
+            String city,
+            String nationality,
+            LocalDate birthDate,
+            String jobTitle,
+            String phoneCountry,
+            String gender,
+            String availability,
+            String school,
+            String workMode
     ) {}
 
     public record UpdateProfile(
@@ -37,7 +53,19 @@ public class ApiDtos {
             String soughtRoles,
             String preferredLocations,
             String preferredContracts,
-            String experienceLevel
+            String experienceLevel,
+            String companyPresentation,
+            String firstName,
+            String lastName,
+            String phone,
+            String phoneCountry,
+            String city,
+            String nationality,
+            String birthDate,
+            String school,
+            String workMode,
+            String gender,
+            String availability
     ) {}
 
     public record JobOfferRequest(
@@ -65,7 +93,12 @@ public class ApiDtos {
             Long recruiterId,
             String recruiterName,
             Instant createdAt,
-            Double matchScore
+            Double matchScore,
+            String companyName,
+            boolean companyVerified,
+            String companyLogo,
+            String companyWebsite,
+            String companySector
     ) {}
 
     public record ApplyRequest(
@@ -73,7 +106,8 @@ public class ApiDtos {
             String cvSource,
             String cvFileName,
             String coverLetter,
-            String photoFileName
+            String photoFileName,
+            String cvSections
     ) {}
 
     public record ApplicationResponse(
@@ -103,7 +137,9 @@ public class ApiDtos {
             Instant responseDeadline,
             Integer slaDays,
             Long slaRemainingDays,
-            boolean slaBreached
+            boolean slaBreached,
+            String cvSections,
+            boolean hasCvFile
     ) {}
 
     public record AdvanceRequest(

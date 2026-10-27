@@ -1,13 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mes candidatures — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20260415b" />
-  <link rel="stylesheet" href="../css/app.css?v=20260415e" />
-  <script src="../js/theme.js?v=20260415e"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+  <script src="../js/theme.js?v=20261026d"></script>
 </head>
 <body>
   <div class="app-shell">
@@ -17,12 +20,11 @@
         <button type="button" class="mobile-toggle" id="close-side">✕</button>
       </div>
       <nav class="side-nav">
-        <a class="side-link" href="candidate.html">Tableau de bord</a>
-        <a class="side-link" href="candidate-offers.html">Offres pour vous</a>
+        <a class="side-link" href="candidate-dashboard.html">Tableau de bord</a>
+        <a class="side-link" href="candidate.html">Offres</a>
         <a class="side-link is-active" href="candidate-applications.html">Mes candidatures</a>
-        <a class="side-link" href="candidate-profile.html">Mon profil</a>
-        <a class="side-link js-in-app-help" href="../help.html">Aide</a>
       </nav>
+      <div id="nav-user" class="nav-user"></div>
       <div class="side-footer">
         <div id="side-user">—</div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
@@ -34,28 +36,34 @@
         <div class="topbar-search"><span>⌕</span><input type="search" id="filter-apps" placeholder="Rechercher une candidature…" /></div>
         <div class="topbar-actions">
           <button type="button" class="btn btn-brass btn-sm" id="btn-premium">Premium</button>
-          <a class="btn btn-primary btn-sm" href="candidate-offers.html">Postuler</a>
+          <a class="btn btn-primary btn-sm" href="candidate.html">Postuler</a>
           <div class="avatar" id="avatar">C</div>
         </div>
       </header>
       <main class="content">
-        <div class="page-title">
-          <div>
-            <p class="eyebrow">Espace candidat</p>
-            <h1>Mes candidatures</h1>
-            <p class="muted">Chaque transition est horodatée — le refus est toujours motivé.</p>
+        <div class="page-title" style="text-align:center;display:block">
+          <h1>Mes Candidatures</h1>
+          <p class="muted">Retrouvez toutes vos candidatures envoyées aux entreprises</p>
+        </div>
+        <div class="filter-board">
+          <div class="cand-filters" id="app-status-filter" role="tablist" aria-label="Filtrer par statut">
+            <button type="button" class="is-on" data-st="all">Toutes</button>
+            <button type="button" data-st="active">En cours</button>
+            <button type="button" data-st="INTERVIEW">Entretien</button>
+            <button type="button" data-st="REJECTED">Refusées</button>
+            <button type="button" data-st="WITHDRAWN">Retirées</button>
           </div>
+          <span class="muted" id="apps-summary">Chargement…</span>
         </div>
 
-        <!-- LISTE -->
-        <section class="panel" id="view-list">
-          <div class="panel-body" id="apps-list">
+        <div class="split-board">
+        <section class="split-list" id="view-list">
+          <div id="apps-list">
             <p class="muted">Chargement…</p>
           </div>
         </section>
 
-        <!-- DÉTAIL (caché jusqu’à sélection) -->
-        <section id="view-detail" class="cand-detail" hidden>
+        <section id="view-detail" class="split-detail cand-detail">
           <button type="button" class="btn btn-secondary btn-sm" id="btn-back-list" style="margin-bottom:1rem">← Toutes mes candidatures</button>
           <div class="cand-detail-grid">
             <article class="panel cand-detail-main">
@@ -88,34 +96,25 @@
               </div>
               <div class="panel ai-spotlight" id="ai-spotlight">
                 <div class="panel-body">
-                  <div class="ai-spotlight-head">
-                    <span class="ai-chip">Assistant IA</span>
-                    <span class="badge badge-brass">1 crédit</span>
-                  </div>
-                  <h3 style="margin:0.55rem 0 0.35rem;font-size:1.12rem">Préparation d’entretien</h3>
-                  <p class="muted" style="font-size:0.86rem;margin:0 0 0.9rem">
-                    Questions probables, points à valoriser, script de réponses — généré pour ce poste.
-                  </p>
-                  <ul class="ai-spotlight-list">
-                    <li>Questions ciblées sur le rôle</li>
-                    <li>Arguments basés sur votre profil</li>
-                    <li>Checklist anti-stress avant l’entretien</li>
-                  </ul>
-                  <button type="button" class="btn btn-primary btn-block" id="d-ai-prep">Générer ma préparation</button>
+                  <h3 style="margin:0 0 0.25rem;font-size:1.02rem">Synthèse du CV</h3>
+                  <p class="muted" style="font-size:0.84rem;margin:0 0 0.75rem">Lecture courte de votre CV pour ce dossier. Elle ne décide pas à votre place.</p>
+                  <button type="button" class="btn btn-primary btn-block" id="d-ai-prep">Faire la synthèse</button>
+                  <div id="d-prep" hidden style="margin-top:0.8rem"></div>
                 </div>
               </div>
             </aside>
           </div>
         </section>
+        </div>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20260415e"></script>
-  <script src="../js/api.js?v=20260415e"></script>
-  <script src="../js/in-app-help.js?v=20260415e"></script>
-  <script src="../js/product.js?v=20260415e"></script>
-  <script src="../js/shell.js?v=20260415e"></script>
-  <script src="../js/growth.js?v=20260415e"></script>
-  <script src="../js/candidate-applications.js?v=20260415e"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
+  <script src="../js/api.js?v=20261026d"></script>
+  <script src="../js/in-app-help.js?v=20261026d"></script>
+  <script src="../js/product.js?v=20261026d"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/growth.js?v=20261026d"></script>
+  <script src="../js/candidate-applications.js?v=20261026d"></script>
 </body>
 </html>

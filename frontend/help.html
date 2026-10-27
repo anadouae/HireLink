@@ -9,8 +9,11 @@
   <meta property="og:description" content="Réponses claires sur l’inscription, les tarifs Basic/Premium et la vérification des entreprises." />
   <meta property="og:type" content="website" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/design-system.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261026d" />
   <link rel="stylesheet" href="css/landing.css" />
+  <link rel="stylesheet" href="css/components.css?v=20261026d" />
   <link rel="stylesheet" href="css/legal.css" />
   <script type="application/ld+json">
   {
@@ -51,12 +54,13 @@
       <span class="brand-mark"></span>
       <span class="brand-name">Hi<span class="r-pulse">r</span>e<span>Link</span></span>
     </a>
-    <nav class="nav">
-      <a href="index.html#produit">Produit</a>
-      <a href="index.html#tarifs">Tarifs</a>
-      <a href="security.html">Sécurité</a>
-      <a href="help.html">Aide</a>
-      <a href="about.html">À propos</a>
+    <nav class="nav" aria-label="Sur cette page">
+      <a href="index.html#offres">Offres</a>
+      <a href="index.html#entreprises">Entreprises</a>
+      <a href="index.html#candidats">Candidats</a>
+      <a href="index.html#metiers">Métiers</a>
+      <a href="index.html#parcours">Parcours</a>
+      <a href="index.html#tarifs">Formules</a>
     </nav>
     <a class="btn btn-primary btn-sm" href="auth.html?mode=login">Connexion</a>
   </header>
@@ -91,7 +95,7 @@
       </details>
       <details>
         <summary>Comment une entreprise est vérifiée ?</summary>
-        <p>Raison sociale + identifiant légal (ICE), email professionnel, contrôles anti-doublon. Sans validation, impossible de publier une offre.</p>
+        <p>Comme LinkedIn : le recruteur renseigne la raison sociale et l’ICE. Si l’e-mail est professionnel et que l’ICE correspond au registre, le badge est attribué automatiquement. Sinon le dossier arrive dans l’espace admin (Entreprises → Vérifier). Sans badge, impossible de publier une offre.</p>
       </details>
       <details>
         <summary>Mot de passe oublié ?</summary>
@@ -146,5 +150,6 @@
     </div>
   </footer>
   <script src="js/nav.js"></script>
+  <script src="js/public-nav.js?v=20261026d"></script>
 </body>
 </html>

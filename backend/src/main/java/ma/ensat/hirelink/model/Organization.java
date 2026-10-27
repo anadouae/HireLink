@@ -19,6 +19,21 @@ public class Organization {
     /** Même sémantique que User.verificationStatus (LinkedIn-like a posteriori). */
     @Column(name = "verification_status", length = 48)
     private String verificationStatus = "PENDING";
+    /** AUTO_REGISTRY | ADMIN | PENDING */
+    @Column(name = "verification_method", length = 24)
+    private String verificationMethod = "PENDING";
+    @Column(length = 180)
+    private String website;
+    @Column(name = "logo_url", length = 400)
+    private String logoUrl;
+    @Column(length = 80)
+    private String sector;
+    @Column(length = 80)
+    private String city;
+    @Column(name = "employee_range", length = 40)
+    private String employeeRange;
+    @Column(length = 1200)
+    private String presentation;
     @Enumerated(EnumType.STRING)
     @Column(name = "plan_tier", nullable = false, length = 24)
     private PlanTier planTier = PlanTier.ACCES;
@@ -42,6 +57,20 @@ public class Organization {
     public void setVerified(boolean verified) { this.verified = verified; }
     public String getVerificationStatus() { return verificationStatus; }
     public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
+    public String getVerificationMethod() { return verificationMethod; }
+    public void setVerificationMethod(String verificationMethod) { this.verificationMethod = verificationMethod; }
+    public String getWebsite() { return website; }
+    public void setWebsite(String website) { this.website = website; }
+    public String getLogoUrl() { return logoUrl; }
+    public void setLogoUrl(String logoUrl) { this.logoUrl = logoUrl; }
+    public String getSector() { return sector; }
+    public void setSector(String sector) { this.sector = sector; }
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+    public String getEmployeeRange() { return employeeRange; }
+    public void setEmployeeRange(String employeeRange) { this.employeeRange = employeeRange; }
+    public String getPresentation() { return presentation; }
+    public void setPresentation(String presentation) { this.presentation = presentation; }
     public PlanTier getPlanTier() { return planTier; }
     public void setPlanTier(PlanTier planTier) { this.planTier = planTier; }
     public User getOwner() { return owner; }

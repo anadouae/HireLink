@@ -1,13 +1,16 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Organisation — HireLink</title>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20260415c" />
-  <link rel="stylesheet" href="../css/app.css?v=20260415c" />
-  <script src="../js/theme.js?v=20260415c"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
+  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+  <script src="../js/theme.js?v=20261026d"></script>
   <style>
     .org-hero {
       display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start;
@@ -41,13 +44,13 @@
         <button type="button" class="mobile-toggle" id="close-side">✕</button>
       </div>
       <nav class="side-nav">
-        <a class="side-link" href="recruiter.html">Vue d’ensemble</a>
+        <a class="side-link" href="recruiter.html">Tableau de bord</a>
         <a class="side-link" href="recruiter-pipeline.html">Pipeline</a>
-        <a class="side-link" href="recruiter-offers.html">Mes offres</a>
-        <a class="side-link is-active" href="recruiter-team.html">Organisation</a>
+        <a class="side-link" href="recruiter-offers.html">Offres</a>
+        <a class="side-link is-active" href="recruiter-team.html">Entreprise</a>
         <a class="side-link" href="recruiter-settings.html">Paramètres</a>
-        <a class="side-link js-in-app-help" href="../help.html">Aide RH</a>
       </nav>
+      <div id="nav-user" class="nav-user"></div>
       <div class="side-footer">
         <div id="side-user">—</div>
         <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
@@ -69,8 +72,8 @@
             <p class="muted" id="org-sub" style="margin:0">—</p>
           </div>
           <div class="row" style="gap:.5rem;flex-wrap:wrap">
-            <button type="button" class="btn btn-primary" id="btn-invite">Inviter un membre</button>
-            <button type="button" class="btn btn-soft" id="btn-interview-kit">Grille entretien IA</button>
+            <a class="btn btn-primary" href="recruiter-offers.html#new">Nouvelle offre</a>
+            <button type="button" class="btn btn-soft" id="btn-invite">Inviter un membre</button>
           </div>
         </div>
 
@@ -86,22 +89,31 @@
             <p class="hint" id="kpi-plan">Palier —</p>
           </div>
           <div class="org-kpi">
-            <p class="label">Fiabilité</p>
-            <p class="value" id="kpi-trust">—</p>
-            <p class="hint"><button type="button" class="btn btn-ghost btn-sm" id="btn-toggle-badge" style="padding:0;height:auto">Badge carrière</button></p>
+            <p class="label">Publication</p>
+            <p class="value">Offres</p>
+            <p class="hint">Depuis cette page, une seule action : Nouvelle offre.</p>
           </div>
         </div>
 
-        <div class="badge-snippet" id="badge-box">
-          <section class="panel" style="margin-bottom:1.25rem">
-            <div class="panel-head"><h2>Badge carrière</h2></div>
-            <div class="panel-body stack">
-              <p class="muted">À coller sur votre page carrière (preuve de fiabilité HireLink).</p>
-              <pre id="badge-html" class="ai-result" style="font-size:0.75rem;max-height:100px"></pre>
-              <button type="button" class="btn btn-soft btn-sm" id="btn-copy-badge">Copier le snippet</button>
+        <section class="panel" style="margin-bottom:1.25rem">
+          <div class="panel-head"><h2>Fiche entreprise</h2></div>
+          <form id="company-form" class="panel-body profile-form">
+            <div class="field field-full" style="display:flex;gap:1rem;align-items:center">
+              <div class="org-logo-preview" id="co-logo-box"><span class="muted">Logo</span></div>
+              <p class="muted" id="co-verify-hint" style="margin:0">Le badge se déclenche tout seul si l’ICE et l’e-mail professionnel correspondent au registre. Sinon l’admin valide.</p>
             </div>
-          </section>
-        </div>
+            <div class="field"><label for="co-name">Nom</label><input id="co-name" /></div>
+            <div class="field"><label for="co-ice">ICE</label><input id="co-ice" placeholder="15 chiffres" /></div>
+            <div class="field"><label for="co-website">Site web</label><input id="co-website" placeholder="https://" /></div>
+            <div class="field"><label for="co-sector">Secteur</label><input id="co-sector" placeholder="Technologie, Banque…" /></div>
+            <div class="field"><label for="co-city">Ville</label><input id="co-city" /></div>
+            <div class="field field-full"><label for="co-bio">Présentation</label><textarea id="co-bio" rows="4" placeholder="Ce que fait l’entreprise, pour qui, et comment elle recrute."></textarea></div>
+            <div class="field-full" style="display:flex;gap:.6rem;flex-wrap:wrap">
+              <button type="submit" class="btn btn-primary">Enregistrer la fiche</button>
+              <button type="button" class="btn btn-soft" id="btn-recheck">Relancer la vérification</button>
+            </div>
+          </form>
+        </section>
 
         <section class="panel">
           <div class="panel-head">
@@ -116,12 +128,12 @@
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20260415c"></script>
-  <script src="../js/api.js?v=20260415c"></script>
-  <script src="../js/in-app-help.js?v=20260415c"></script>
-  <script src="../js/product.js?v=20260415c"></script>
-  <script src="../js/shell.js?v=20260415c"></script>
-  <script src="../js/growth.js?v=20260415c"></script>
-  <script src="../js/recruiter-team.js?v=20260415c"></script>
+  <script src="../js/ui.js?v=20261026d"></script>
+  <script src="../js/api.js?v=20261026d"></script>
+  <script src="../js/in-app-help.js?v=20261026d"></script>
+  <script src="../js/product.js?v=20261026d"></script>
+  <script src="../js/shell.js?v=20261026e"></script>
+  <script src="../js/growth.js?v=20261026d"></script>
+  <script src="../js/recruiter-team.js?v=20261026d"></script>
 </body>
 </html>
