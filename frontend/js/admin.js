@@ -178,10 +178,11 @@
       const tr = document.createElement("tr");
       tr.innerHTML =
         "<td></td><td></td><td></td><td></td><td></td><td></td><td class='row wrap'></td>";
-      tr.children[0].innerHTML = o.logoUrl
-        ? '<span class="admin-co"><img alt="" src="' + esc(o.logoUrl) + '" /><span></span></span>'
+      const logoSrc = o.logoUrl && HireLinkAPI.mediaUrl ? HireLinkAPI.mediaUrl(o.logoUrl) : o.logoUrl;
+      tr.children[0].innerHTML = logoSrc
+        ? '<span class="admin-co"><img alt="" src="' + esc(logoSrc) + '" /><span></span></span>'
         : "";
-      if (o.logoUrl) tr.children[0].querySelector("span span").textContent = o.name;
+      if (logoSrc) tr.children[0].querySelector("span span").textContent = o.name;
       else tr.children[0].textContent = o.name;
       tr.children[1].textContent = o.ice || "—";
       tr.children[2].textContent = planLabel(o.planTier);

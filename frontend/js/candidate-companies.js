@@ -11,7 +11,7 @@
   }
 
   function logoHtml(c) {
-    const src = c.logoUrl || "";
+    const src = HireLinkAPI.mediaUrl(c.logoUrl || "");
     const letter = String(c.name || "E").trim().charAt(0).toUpperCase();
     if (!src) return '<span class="co-mark-fallback">' + esc(letter) + "</span>";
     return (

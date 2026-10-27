@@ -129,7 +129,7 @@
       const href = "company.html?name=" + encodeURIComponent(c.name);
       return (
         "<article class='job-card'>" +
-        (c.logo ? "<img class='co-landing-logo' alt='' src='" + esc(c.logo) + "' />" : "") +
+        (c.logo ? "<img class='co-landing-logo' alt='' src='" + esc((window.HireLinkAPI && HireLinkAPI.mediaUrl) ? HireLinkAPI.mediaUrl(c.logo) : c.logo) + "' />" : "") +
         "<h3>" + esc(c.name) + "</h3>" +
         "<p class='job-meta'><span>" + esc(c.city) + "</span>" +
         (c.verified ? "<span>Identité vérifiée</span>" : "<span>Fiche entreprise</span>") +
