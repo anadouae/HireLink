@@ -29,6 +29,25 @@ public class DataSeeder {
     @Value("${hirelink.seed.force-reset:false}")
     private boolean forceReset;
 
+    @Value("${hirelink.seed.enabled:true}")
+    private boolean seedEnabled;
+
+    @Value("${hirelink.bootstrap.admin-email:}")
+    private String bootstrapAdminEmail;
+
+    @Value("${hirelink.bootstrap.admin-password:}")
+    private String bootstrapAdminPassword;
+
+    /** Évite de recalculer ~35 fois le même hachage BCrypt (coût 12) pendant l'amorçage des comptes de démonstration. */
+    private static PasswordEncoder memoizing(PasswordEncoder real) {
+        java.util.Map<String, String> cache = new java.util.HashMap<>();
+        return new PasswordEncoder() {
+            @Override public String encode(CharSequence raw) { return cache.computeIfAbsent(raw.toString(), k -> real.encode(k)); }
+            @Override public boolean matches(CharSequence raw, String enc) { return real.matches(raw, enc); }
+            @Override public boolean upgradeEncoding(String enc) { return real.upgradeEncoding(enc); }
+        };
+    }
+
     @Bean
     CommandLineRunner seedData(
             UserRepository users,
@@ -45,12 +64,18 @@ public class DataSeeder {
             ScorecardCriterionRepository criteria,
             ScorecardEntryRepository scoreEntries,
             AiUsageLogRepository aiLogs,
-            PasswordEncoder encoder,
+            PasswordEncoder realEncoder,
             SkillMatchingService matching,
             CompanyVerificationService companyVerificationService
     ) {
         return args -> {
+            PasswordEncoder encoder = memoizing(realEncoder);
             seedRefusalCatalog(refusalReasons);
+            bootstrapAdmin(users, realEncoder);
+            if (!seedEnabled) {
+                log.info("Données de démonstration désactivées (hirelink.seed.enabled=false).");
+                return;
+            }
 
             if (forceReset) {
                 log.warn("hirelink.seed.force-reset=true — purge puis rechargement des données");
@@ -75,10 +100,10 @@ public class DataSeeder {
                         criteria, scoreEntries, aiLogs, encoder, matching
                 );
             } else {
-                ensureOrgs(users, organizationService);
                 log.info("Seed OK — {} users, {} offres, {} candidatures, {} motifs",
                         users.count(), offers.count(), applications.count(), refusalReasons.count());
             }
+            ensureOrgs(users, organizationService);
             ensureMarketplace(users, offers, organizationService, encoder);
             enrichCompanies(organizations, companyVerificationService);
             logAccounts();
@@ -113,11 +138,14 @@ public class DataSeeder {
             r.setAssignedOrgId(org.getId());
             users.save(r);
         });
-        // rétrocompat anciens emails
-        users.findByEmailIgnoreCase("recruteur@hirelink.ma").ifPresent(r -> {
-            Organization org = organizationService.ensureForRecruiter(r);
-            r.setAssignedOrgId(org.getId());
-            users.save(r);
+        // Compte miroir « recruteur@hirelink.ma » : même organisation qu'Atlas Digital (sinon 403 « Aucune organisation (R02) »).
+        users.findByEmailIgnoreCase("recruteur@hirelink.ma").ifPresent(alias -> {
+            Organization org = users.findByEmailIgnoreCase("n.bennani@atlasdigital.ma")
+                    .map(organizationService::ensureForRecruiter)
+                    .orElseGet(() -> organizationService.ensureForRecruiter(alias));
+            organizationService.joinOrganization(alias, org, OrgRole.OWNER);
+            alias.setAssignedOrgId(org.getId());
+            users.save(alias);
         });
     }
 
@@ -126,6 +154,9 @@ public class DataSeeder {
             verification.enrichProfile(org);
             if (org.isVerified() && (org.getVerificationMethod() == null || org.getVerificationMethod().isBlank())) {
                 org.setVerificationMethod("AUTO_REGISTRY");
+            }
+            if (org.isVerified() && "PENDING".equals(org.getVerificationStatus())) {
+                org.setVerificationStatus("REGISTRY_MATCH"); // cohérence badge « vérifiée » / statut
             }
             organizations.save(org);
         }
@@ -678,20 +709,26 @@ public class DataSeeder {
         repo.save(n);
     }
 
+    /** Production : crée le premier administrateur depuis l'environnement s'il n'en existe pas (mot de passe conforme à la politique). */
+    private void bootstrapAdmin(UserRepository users, PasswordEncoder encoder) {
+        if (bootstrapAdminEmail == null || bootstrapAdminEmail.isBlank() || users.existsByRole(Role.ADMINISTRATEUR)) return;
+        ma.ensat.hirelink.security.PasswordPolicy.validate(bootstrapAdminPassword, bootstrapAdminEmail, "Administrateur");
+        User admin = new User();
+        admin.setEmail(bootstrapAdminEmail.trim().toLowerCase());
+        admin.setFullName("Administrateur");
+        admin.setRole(Role.ADMINISTRATEUR);
+        admin.setPasswordHash(encoder.encode(bootstrapAdminPassword));
+        admin.setEmailVerified(true);
+        admin.setProfileComplete(true);
+        users.save(admin);
+        log.info("Administrateur initial créé : {} (la double authentification sera exigée à la première connexion)", admin.getEmail());
+    }
+
     private void logAccounts() {
         log.info("══════════════════════════════════════════════════");
-        log.info(" HireLink — comptes (base hirelink)");
-        log.info("  admin@hirelink.ma              / Admin123!");
-        log.info("  n.bennani@atlasdigital.ma      / Recruteur123!   (Owner RH)");
-        log.info("  k.benali@atlasdigital.ma       / Recruteur123!");
-        log.info("  m.alaoui@atlasdigital.ma       / Recruteur123!   (Hiring Manager)");
-        log.info("  s.elamrani@gmail.com           / Candidat123!");
-        log.info("  y.idrissi@outlook.com          / Candidat123!");
-        log.info("  a.tazi@gmail.com               / Candidat123!");
-        log.info("  o.fassi@gmail.com              / Candidat123!");
-        log.info("  i.chraibi@gmail.com            / Candidat123!");
-        log.info("  (alias) candidat@hirelink.ma   / Candidat123!");
-        log.info("  (alias) recruteur@hirelink.ma  / Recruteur123!");
+        log.info(" HireLink — comptes de démonstration (mots de passe : voir docs/GUIDE_INSTALLATION_ET_TEST.md)");
+        log.info("  admin@hirelink.ma · n.bennani@atlasdigital.ma (Owner) · k.benali@atlasdigital.ma");
+        log.info("  m.alaoui@atlasdigital.ma (Hiring Manager) · candidat@hirelink.ma · recruteur@hirelink.ma");
         log.info("══════════════════════════════════════════════════");
     }
 }

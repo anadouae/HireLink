@@ -1,5 +1,6 @@
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["CANDIDAT"], hello: false });
+  let query = "";
+  const session = HireLinkApp.mount({ search: { placeholder: "Rechercher une entreprise…", onQuery: (q) => { query = String(q || "").trim().toLowerCase(); paintList(); } } });
   if (!session) return;
 
   function esc(s) {
@@ -7,7 +8,7 @@
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function logoHtml(c) {
@@ -17,18 +18,27 @@
     return (
       '<img src="' +
       esc(src) +
-      '" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.hidden=false" />' +
+      '" alt="" data-fallback="1" />' +
       '<span class="co-mark-fallback" hidden>' +
       esc(letter) +
       "</span>"
     );
   }
 
+  // La politique CSP interdit les attributs onerror : repli de l'image géré ici (écoute en phase de capture).
+  document.addEventListener("error", function (e) {
+    const t = e.target;
+    if (t && t.tagName === "IMG" && t.dataset.fallback) {
+      t.style.display = "none";
+      if (t.nextElementSibling) t.nextElementSibling.hidden = false;
+    }
+  }, true);
+
   let companies = [];
   let selected = null;
 
   function filtered() {
-    const q = ((document.getElementById("co-search") || {}).value || "").trim().toLowerCase();
+    const q = query;
     const city = ((document.getElementById("co-city") || {}).value || "").trim().toLowerCase();
     const sector = ((document.getElementById("co-sector") || {}).value || "").trim().toLowerCase();
     return companies.filter(function (c) {
@@ -47,7 +57,7 @@
     companies.forEach(function (c) {
       if (c.sector && sectors.indexOf(c.sector) < 0) sectors.push(c.sector);
     });
-    sel.innerHTML = '<option value="">Secteur d’activité</option>' +
+    sel.innerHTML = '<option value="">Tous les secteurs</option>' +
       sectors.sort().map(function (s) {
         return "<option" + (s === current ? " selected" : "") + ">" + esc(s) + "</option>";
       }).join("");
@@ -56,6 +66,7 @@
   function paintList() {
     const root = document.getElementById("co-list");
     const rows = filtered();
+    document.getElementById("co-summary").textContent = HireLinkApp.plural(rows.length, "entreprise") + " qui recrutent actuellement sur HireLink.";
     root.innerHTML = rows.length
       ? rows.map(function (c) {
           const on = selected && selected.name === c.name ? " is-selected" : "";
@@ -69,7 +80,7 @@
             "</p></div></article>"
           );
         }).join("")
-      : '<p class="muted">Aucune entreprise.</p>';
+      : '<p class="muted" style="padding:1rem">Aucune entreprise ne correspond.</p>';
     root.querySelectorAll(".offer").forEach(function (el) {
       el.addEventListener("click", function () {
         selected = companies.filter(function (c) { return c.name === el.dataset.name; })[0] || null;
@@ -86,9 +97,9 @@
       return;
     }
     const jobs = (selected.offers || []).map(function (o) {
-      return '<a class="reco-card" href="candidate.html?offer=' + encodeURIComponent(o.id) + '"><div><strong>' +
-        esc(o.title) + "</strong><p>" + esc(o.location || "") +
-        (o.contractType ? " · " + esc(o.contractType) : "") + "</p></div></a>";
+      return '<a class="rc-item" href="candidate.html?offer=' + encodeURIComponent(o.id) + '"><div class="rc-item-main"><strong>' +
+        esc(o.title) + "</strong><span>" + esc(o.location || "") +
+        (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div></a>";
     }).join("");
     box.innerHTML =
       '<div class="co-detail-head"><span class="co-mark co-mark-lg">' + logoHtml(selected) + "</span><div>" +
@@ -100,7 +111,7 @@
       "</p></div></div>" +
       "<p>" + esc(selected.presentation || "") + "</p>" +
       (selected.website ? '<p><a href="' + esc(selected.website) + '" target="_blank" rel="noopener">Site web</a></p>' : "") +
-      (jobs || "<p class='muted'>Aucune offre listée pour le moment.</p>");
+      (jobs ? '<div class="rc-list">' + jobs + "</div>" : "<p class='muted'>Aucune offre listée pour le moment.</p>");
   }
 
   function attachOffers(list) {
@@ -128,42 +139,13 @@
     if (companies[0]) selected = companies[0];
     paintFilters();
     attachOffers(companies);
-  }).catch(function () {
-    HireLinkAPI.api("/offers/public").then(function (offers) {
-      const map = {};
-      (offers || []).forEach(function (o) {
-        const name = o.companyName || o.recruiterName || "Entreprise";
-        if (!map[name]) {
-          map[name] = {
-            name: name,
-            logoUrl: o.companyLogo || "",
-            website: o.companyWebsite || "",
-            sector: o.companySector || "",
-            city: String(o.location || "").split(/[·,]/)[0].trim(),
-            verified: !!o.companyVerified,
-            offers: [],
-            offerCount: 0,
-            presentation: name + " recrute actuellement sur HireLink.",
-          };
-        }
-        map[name].offers.push(o);
-        map[name].offerCount += 1;
-      });
-      companies = Object.keys(map).sort().map(function (k) { return map[k]; });
-      if (companies[0]) selected = companies[0];
-      paintFilters();
-      paintList();
-      paintDetail();
-    }).catch(function (err) {
-      HireLink.toast("Entreprises", err.message, "danger");
-    });
+  }).catch(function (err) {
+    HireLinkApp.errorState(document.getElementById("co-list"), err.message, function () { location.reload(); });
   });
 
-  ["co-search", "co-city", "co-sector"].forEach(function (id) {
+  ["co-city", "co-sector"].forEach(function (id) {
     const el = document.getElementById(id);
     if (el) el.addEventListener("input", paintList);
     if (el) el.addEventListener("change", paintList);
   });
-  const filterBtn = document.getElementById("co-filter");
-  if (filterBtn) filterBtn.addEventListener("click", paintList);
 })();

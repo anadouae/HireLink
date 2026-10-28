@@ -15,11 +15,14 @@ public class ScorecardService {
     private final ScorecardEntryRepository entryRepository;
     private final JobOfferRepository jobOfferRepository;
     private final ApplicationRepository applicationRepository;
+    private final OrganizationService organizationService;
 
     public ScorecardService(ScorecardCriterionRepository criterionRepository,
                             ScorecardEntryRepository entryRepository,
                             JobOfferRepository jobOfferRepository,
-                            ApplicationRepository applicationRepository) {
+                            ApplicationRepository applicationRepository,
+                            OrganizationService organizationService) {
+        this.organizationService = organizationService;
         this.criterionRepository = criterionRepository;
         this.entryRepository = entryRepository;
         this.jobOfferRepository = jobOfferRepository;
@@ -30,7 +33,7 @@ public class ScorecardService {
     public List<ScorecardCriterion> setCriteria(User recruiter, Long offerId, List<Map<String, Object>> items) {
         JobOffer offer = jobOfferRepository.findById(offerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
-        if (!offer.getRecruiter().getId().equals(recruiter.getId()) && recruiter.getRole() != Role.ADMINISTRATEUR) {
+        if (!organizationService.canManageOffer(recruiter, offer)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Pas propriétaire");
         }
         criterionRepository.findByJobOfferId(offerId).forEach(criterionRepository::delete);
@@ -38,7 +41,8 @@ public class ScorecardService {
         for (Map<String, Object> it : items) {
             ScorecardCriterion c = new ScorecardCriterion();
             c.setJobOfferId(offerId);
-            c.setLabel(String.valueOf(it.getOrDefault("label", "Critère")));
+            String label = String.valueOf(it.getOrDefault("label", "Critère")).strip();
+            c.setLabel(label.isEmpty() ? "Critère" : label.substring(0, Math.min(label.length(), 120)));
             c.setWeight(Math.max(1, ((Number) it.getOrDefault("weight", 1)).intValue()));
             c.setVeto(Boolean.TRUE.equals(it.get("veto")));
             saved.add(criterionRepository.save(c));
@@ -47,7 +51,10 @@ public class ScorecardService {
     }
 
     @Transactional(readOnly = true)
-    public List<ScorecardCriterion> criteria(Long offerId) {
+    public List<ScorecardCriterion> criteria(User viewer, Long offerId) {
+        JobOffer offer = jobOfferRepository.findById(offerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
+        organizationService.assertSameOrg(viewer, offer);
         return criterionRepository.findByJobOfferId(offerId);
     }
 
@@ -63,17 +70,25 @@ public class ScorecardService {
         if (!c.getJobOfferId().equals(app.getJobOffer().getId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Critère hors offre");
         }
-        ScorecardEntry e = new ScorecardEntry();
+        // R02 / R14 : membres de l'organisation de l'offre ; un Hiring Manager seulement sur ses dossiers assignés
+        organizationService.assertCanAccessApplication(evaluator, app);
+        // Une note par (dossier, critère, évaluateur) : on met à jour au lieu d'empiler des doublons
+        ScorecardEntry e = entryRepository
+                .findFirstByApplicationIdAndCriterionIdAndEvaluatorUserId(applicationId, criterionId, evaluator.getId())
+                .orElseGet(ScorecardEntry::new);
         e.setApplicationId(applicationId);
         e.setCriterionId(criterionId);
         e.setEvaluatorUserId(evaluator.getId());
         e.setScore(score);
-        e.setComment(comment);
+        e.setComment(comment == null ? null : comment.substring(0, Math.min(comment.length(), 1000)));
         return entryRepository.save(e);
     }
 
     @Transactional(readOnly = true)
-    public List<ScorecardEntry> entries(Long applicationId) {
+    public List<ScorecardEntry> entries(User viewer, Long applicationId) {
+        Application app = applicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
+        organizationService.assertCanAccessApplication(viewer, app);
         return entryRepository.findByApplicationId(applicationId);
     }
 }

@@ -2,8 +2,10 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HireLink — Recrutement à performance équitable</title>
+  <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
   <meta name="description" content="HireLink : réciprocité engagée, délais tenus, employeurs vérifiés automatiquement. Payez la valeur — pas le volume." />
   <meta property="og:title" content="HireLink — Recrutement à performance équitable" />
   <meta property="og:description" content="Chaque talent mérite une réponse. Chaque offre exige un engagement. Transparence bilatérale, ROI mesurable." />
@@ -13,10 +15,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="css/landing.css?v=20261025a" />
-  <link rel="stylesheet" href="css/components.css?v=20261026d" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="css/landing.css?v=20261029a" />
+  <link rel="stylesheet" href="css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="css/motion.css?v=20261029a" />
 </head>
 <body class="landing-body board-landing">
   <canvas id="synapse-bg" aria-hidden="true"></canvas>
@@ -284,19 +287,16 @@
     </div>
   </footer>
 
-  <script src="js/config.js"></script>
-  <script src="js/ui.js"></script>
-  <script src="js/synapse.js"></script>
-  <script src="js/landing-hero.js?v=20261026d"></script>
-  <script src="js/pricing-switch.js"></script>
-  <script src="js/reveal.js"></script>
-  <script src="js/nav.js?v=20261026d"></script>
-  <script src="js/public-nav.js?v=20261026d"></script>
-  <script src="js/suggest.js?v=20261025d"></script>
-  <script src="js/landing-offers.js?v=20261025d"></script>
-  <script>
-    var y = document.getElementById("footer-year");
-    if (y) y.textContent = String(new Date().getFullYear());
-  </script>
+  <script src="js/config.js?v=20261029a"></script>
+  <script src="js/ui.js?v=20261029a"></script>
+  <script src="js/synapse.js?v=20261029a"></script>
+  <script src="js/landing-hero.js?v=20261029a"></script>
+  <script src="js/pricing-switch.js?v=20261029a"></script>
+  <script src="js/reveal.js?v=20261029a"></script>
+  <script src="js/nav.js?v=20261029a"></script>
+  <script src="js/public-nav.js?v=20261029a"></script>
+  <script src="js/suggest.js?v=20261029a"></script>
+  <script src="js/landing-offers.js?v=20261029a"></script>
+  <script src="js/footer-year.js?v=20261029a"></script>
 </body>
 </html>

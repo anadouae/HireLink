@@ -2,48 +2,35 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mes candidatures — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
-  <script src="../js/theme.js?v=20261026d"></script>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="row between">
-        <a class="brand" href="candidate.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-        <button type="button" class="mobile-toggle" id="close-side">✕</button>
-      </div>
-      <nav class="side-nav">
-        <a class="side-link" href="candidate-dashboard.html">Tableau de bord</a>
-        <a class="side-link" href="candidate.html">Offres</a>
-        <a class="side-link is-active" href="candidate-applications.html">Mes candidatures</a>
-      </nav>
-      <div id="nav-user" class="nav-user"></div>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-search"><span>⌕</span><input type="search" id="filter-apps" placeholder="Rechercher une candidature…" /></div>
-        <div class="topbar-actions">
-          <button type="button" class="btn btn-brass btn-sm" id="btn-premium">Premium</button>
-          <a class="btn btn-primary btn-sm" href="candidate.html">Postuler</a>
-          <div class="avatar" id="avatar">C</div>
-        </div>
-      </header>
-      <main class="content">
-        <div class="page-title" style="text-align:center;display:block">
-          <h1>Mes Candidatures</h1>
-          <p class="muted">Retrouvez toutes vos candidatures envoyées aux entreprises</p>
+<body class="rc" data-role="CANDIDAT" data-active="applications">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
+          <div>
+            <p class="rc-eyebrow">Espace candidat</p>
+            <h1>Mes candidatures</h1>
+            <p class="rc-muted" id="apps-summary">Chargement…</p>
+          </div>
+          <div class="rc-head-actions"><a class="btn btn-primary" href="candidate.html">Trouver une offre</a></div>
         </div>
         <div class="filter-board">
           <div class="cand-filters" id="app-status-filter" role="tablist" aria-label="Filtrer par statut">
@@ -53,7 +40,6 @@
             <button type="button" data-st="REJECTED">Refusées</button>
             <button type="button" data-st="WITHDRAWN">Retirées</button>
           </div>
-          <span class="muted" id="apps-summary">Chargement…</span>
         </div>
 
         <div class="split-board">
@@ -63,58 +49,41 @@
           </div>
         </section>
 
-        <section id="view-detail" class="split-detail cand-detail">
-          <button type="button" class="btn btn-secondary btn-sm" id="btn-back-list" style="margin-bottom:1rem">← Toutes mes candidatures</button>
-          <div class="cand-detail-grid">
-            <article class="panel cand-detail-main">
-              <div class="panel-body">
-                <div class="cand-detail-head">
-                  <div>
-                    <h2 id="d-title">—</h2>
-                    <p class="muted" id="d-sub" style="margin:0.25rem 0 0">—</p>
-                  </div>
-                  <span class="badge badge-info" id="d-status"><span class="pulse"></span> —</span>
-                </div>
-                <h3 class="timeline-title">Historique du dossier</h3>
-                <div class="hl-timeline hl-timeline--airy" id="d-timeline"></div>
-                <div class="cand-detail-actions" id="d-actions"></div>
-              </div>
-            </article>
-            <aside class="cand-detail-side">
-              <div class="panel">
-                <div class="panel-body">
-                  <h3 style="margin:0 0 0.75rem;font-size:1.05rem">Profil &amp; matching</h3>
-                  <div class="tag-row" id="d-skills"></div>
-                  <div style="margin-top:1rem">
-                    <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.3rem">
-                      <span class="muted">Compatibilité profil × offre</span>
-                      <strong id="d-match-pct">—</strong>
-                    </div>
-                    <div class="match-bar"><span id="d-match-bar" style="width:0%"></span></div>
-                  </div>
-                </div>
-              </div>
-              <div class="panel ai-spotlight" id="ai-spotlight">
-                <div class="panel-body">
-                  <h3 style="margin:0 0 0.25rem;font-size:1.02rem">Synthèse du CV</h3>
-                  <p class="muted" style="font-size:0.84rem;margin:0 0 0.75rem">Lecture courte de votre CV pour ce dossier. Elle ne décide pas à votre place.</p>
-                  <button type="button" class="btn btn-primary btn-block" id="d-ai-prep">Faire la synthèse</button>
-                  <div id="d-prep" hidden style="margin-top:0.8rem"></div>
-                </div>
-              </div>
-            </aside>
+        <section id="view-detail" class="split-detail cand-detail" hidden>
+          <div class="cand-detail-head">
+            <div>
+              <h2 id="d-title">—</h2>
+              <p class="muted" id="d-sub" style="margin:0.25rem 0 0">—</p>
+            </div>
+            <span class="badge badge-info" id="d-status">—</span>
           </div>
+          <div id="d-interview" hidden></div>
+          <h3 class="timeline-title">Avancement du dossier</h3>
+          <div class="hl-timeline hl-timeline--airy" id="d-timeline"></div>
+          <div style="margin:1rem 0 .3rem">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.3rem">
+              <span class="muted">Compatibilité profil × offre</span>
+              <strong id="d-match-pct">—</strong>
+            </div>
+            <div class="match-bar"><span id="d-match-bar" style="width:0%"></span></div>
+          </div>
+          <div class="cand-detail-actions">
+            <button type="button" class="btn btn-secondary btn-sm" id="d-ai-prep">Synthèse de mon CV</button>
+            <span id="d-actions" style="display:contents"></span>
+          </div>
+          <div id="d-prep" hidden style="margin-top:0.8rem"></div>
         </section>
         </div>
+      
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261026d"></script>
-  <script src="../js/in-app-help.js?v=20261026d"></script>
-  <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261026e"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/candidate-applications.js?v=20261026d"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/growth.js?v=20261029a"></script>
+  <script defer src="../js/candidate-applications.js?v=20261029a"></script>
 </body>
 </html>

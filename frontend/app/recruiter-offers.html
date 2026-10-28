@@ -2,85 +2,56 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Mes offres — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261027a" />
-  <script src="../js/theme.js?v=20261026d"></script>
+  <title>Offres — HireLink</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="row between">
-        <a class="brand" href="recruiter.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-        <button type="button" class="mobile-toggle" id="close-side">✕</button>
-      </div>
-      <nav class="side-nav">
-        <a class="side-link" href="recruiter.html">Tableau de bord</a>
-        <a class="side-link" href="recruiter-pipeline.html">Pipeline</a>
-        <a class="side-link is-active" href="recruiter-offers.html">Offres</a>
-        <a class="side-link" href="recruiter-team.html">Entreprise</a>
-        <a class="side-link" href="recruiter-settings.html">Paramètres</a>
-      </nav>
-      <div id="nav-user" class="nav-user"></div>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-search"><span aria-hidden="true">⌕</span><input type="search" id="search-offers-rec" placeholder="Titre, lieu, compétences…" autocomplete="off" /></div>
-        <div class="topbar-actions">
-          <button type="button" class="btn btn-brass btn-sm" id="btn-upgrade">Passer Premium</button>
-          <div class="avatar" id="avatar">R</div>
-        </div>
-      </header>
-      <main class="content">
-        <div class="page-title">
+<body class="rc" data-role="RECRUTEUR">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
           <div>
-            <p class="eyebrow">Publication</p>
+            <p class="rc-eyebrow">Publication</p>
             <h1>Mes offres</h1>
-            <p class="muted">Publiez uniquement si votre entreprise est vérifiée.</p>
+            <p>Offres de votre organisation. La publication exige une entreprise vérifiée.</p>
           </div>
+          <div class="rc-head-actions"><button type="button" class="btn btn-primary" id="btn-new-offer">Nouvelle offre</button></div>
         </div>
-        <div class="filter-board">
-          <div class="filter-board-head">
-            <strong>Publications</strong>
-            <span class="muted" id="offers-rec-summary">Chargement…</span>
-            <button type="button" class="btn btn-primary btn-sm" id="btn-new-offer">Nouvelle offre</button>
-          </div>
-          <div class="cand-filters" id="offer-status-filter" role="tablist" aria-label="Filtrer les offres">
-            <button type="button" class="is-on" data-ov="all">Toutes</button>
-            <button type="button" data-ov="published">Publiées</button>
-            <button type="button" data-ov="draft">Brouillons</button>
-            <button type="button" data-ov="with">Avec candidatures</button>
-          </div>
+        <div class="rc-toolbar">
+<div class="rc-chips" id="offer-filter" role="tablist"><button type="button" class="rc-chip is-on" data-ov="all">Toutes</button><button type="button" class="rc-chip" data-ov="published">Publiées</button><button type="button" class="rc-chip" data-ov="draft">Brouillons</button><button type="button" class="rc-chip" data-ov="with">Avec candidatures</button></div>
+          <span class="rc-spacer"></span><span class="rc-pill" id="offers-summary">—</span>
         </div>
-        <section class="panel">
-          <div class="panel-body" style="padding:0 1.1rem 0.5rem;overflow-x:auto">
-            <table class="table">
-              <thead><tr><th>Titre</th><th>Délai réponse</th><th>Candidatures</th><th>Statut</th><th>Actions</th></tr></thead>
-              <tbody id="offers-body"><tr><td colspan="5" class="muted">Chargement…</td></tr></tbody>
-            </table>
-          </div>
+        <section class="rc-card is-flush">
+          <div class="rc-tablewrap"><table class="rc-table">
+            <thead><tr><th>Offre</th><th>Délai réponse</th><th>Candidatures</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="offers-body"></tbody>
+          </table></div>
         </section>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261026d"></script>
-  <script src="../js/in-app-help.js?v=20261026d"></script>
-  <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261027a"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/skills-catalog.js?v=20261026d"></script>
-  <script src="../js/offer-wizard.js?v=20261026d"></script>
-  <script src="../js/recruiter-offers.js?v=20261026d"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/skills-catalog.js?v=20261029a"></script>
+  <script defer src="../js/offer-wizard.js?v=20261029a"></script>
+  <script defer src="../js/recruiter-offers.js?v=20261029a"></script>
 </body>
 </html>

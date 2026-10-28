@@ -1,4 +1,5 @@
 (function () {
+  function cleanLogo(u) { return /google\.com\/s2\/favicons|gstatic\.com\/faviconV2/i.test(u || "") ? "" : (u || ""); }
   const root = document.getElementById("public-offers");
   if (!root) return;
   const base = window.HIRELINK_API_BASE || "http://127.0.0.1:8081/api/v1";
@@ -20,7 +21,9 @@
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/\'/g, "&#39;");
   }
 
   function fold(value) {
@@ -102,10 +105,10 @@
     const map = new Map();
     offers.forEach(function (o) {
       const name = companyOf(o);
-      const row = map.get(name) || { name: name, city: cityOf(o), n: 0, verified: false, logo: o.companyLogo || "", sector: o.companySector || "" };
+      const row = map.get(name) || { name: name, city: cityOf(o), n: 0, verified: false, logo: cleanLogo(o.companyLogo) || "", sector: o.companySector || "" };
       row.n += 1;
       row.verified = row.verified || !!o.companyVerified;
-      if (!row.logo && o.companyLogo) row.logo = o.companyLogo;
+      if (!row.logo && cleanLogo(o.companyLogo)) row.logo = cleanLogo(o.companyLogo);
       if (row.city === "Lieu à préciser") row.city = cityOf(o);
       map.set(name, row);
     });

@@ -30,23 +30,26 @@ public class OcrService {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Fichier vide");
         }
-        String name = file.getOriginalFilename() == null ? "file" : file.getOriginalFilename().toLowerCase();
+        if (file.getSize() > 12L * 1024 * 1024) {
+            throw new IllegalArgumentException("Fichier trop volumineux");
+        }
+        byte[] data = file.getBytes();
+        FileSignature.Kind kind = FileSignature.detect(data);
+        if (kind == null || kind == FileSignature.GIF) {
+            throw new IllegalArgumentException("Format non supporté — PDF, TXT ou image (PNG, JPG, WEBP)");
+        }
+        String raw = file.getOriginalFilename() == null ? "cv" : file.getOriginalFilename();
+        String name = raw.replaceAll("[^\\p{L}\\p{N}._ -]", "_");
+        if (name.length() > 80) name = name.substring(name.length() - 80);
         String text;
-        if (name.endsWith(".pdf")) {
-            text = extractPdf(file.getBytes());
-        } else if (name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".csv")) {
-            text = new String(file.getBytes(), StandardCharsets.UTF_8);
-        } else if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".webp")) {
-            // Image OCR sans Tesseract local : on renvoie un guide + hash meta
-            text = "[Image reçue — installez Tesseract pour OCR pixel. "
-                    + "En attendant, collez le texte du CV ou uploadez un PDF/TXT.]\n"
-                    + "Fichier: " + name + " (" + file.getSize() + " octets)";
+        if (kind == FileSignature.PDF) {
+            text = extractPdf(data);
+        } else if (kind == FileSignature.TEXT) {
+            text = new String(data, StandardCharsets.UTF_8);
         } else {
-            // Tentative texte brut
-            text = new String(file.getBytes(), StandardCharsets.UTF_8);
-            if (text.chars().filter(c -> c < 9 || (c > 14 && c < 32)).count() > text.length() / 5) {
-                throw new IllegalArgumentException("Format non supporté — PDF, TXT ou image");
-            }
+            text = "[Image reçue — la lecture automatique des images n'est pas installée. "
+                    + "Collez le texte du CV ou déposez un PDF / fichier texte.]\n"
+                    + "Fichier: " + name + " (" + file.getSize() + " octets)";
         }
         text = text == null ? "" : text.replace('\u0000', ' ').trim();
         List<String> skills = suggestSkills(text);

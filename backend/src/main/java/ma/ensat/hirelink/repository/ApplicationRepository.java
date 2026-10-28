@@ -18,9 +18,6 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     @Query("SELECT a FROM Application a JOIN FETCH a.jobOffer o JOIN FETCH a.candidate")
     List<Application> findAllFetched();
 
-    @Query("SELECT a FROM Application a JOIN FETCH a.jobOffer o JOIN FETCH a.candidate WHERE o.recruiter.id = :recruiterId")
-    List<Application> findByJobOfferRecruiterId(@Param("recruiterId") Long recruiterId);
-
     @Query("SELECT a FROM Application a JOIN FETCH a.jobOffer o JOIN FETCH a.candidate WHERE o.recruiter.id IN :recruiterIds")
     List<Application> findByJobOfferRecruiterIdIn(@Param("recruiterIds") Collection<Long> recruiterIds);
 

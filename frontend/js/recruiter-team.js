@@ -1,243 +1,162 @@
+/** Entreprise & équipe : fiche entreprise, vérification (ICE), logo, membres de l'organisation. */
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["RECRUTEUR"], hello: false });
+  const RC = HireLinkApp;
+  const session = RC.mount({ active: "team", title: "Entreprise & équipe" });
   if (!session) return;
-  if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("recruiter");
+  const $ = (id) => document.getElementById(id);
+  const esc = RC.esc;
+  let org = null;
 
-  function setText(id, v) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = v;
-  }
+  const VERIF = {
+    REGISTRY_MATCH: { label: "Vérifiée (registre)", tone: "ok" },
+    ADMIN_APPROVED: { label: "Vérifiée par l’administration", tone: "ok" },
+    MANUAL_REVIEW: { label: "En revue par l’administration", tone: "warn" },
+    PENDING: { label: "Vérification en attente", tone: "warn" },
+    REJECTED: { label: "Vérification refusée", tone: "danger" },
+  };
 
-  function paintLogo(url, name) {
-    const box = document.getElementById("co-logo-box");
-    if (!box) return;
-    const src = HireLinkAPI.mediaUrl(url);
+  function paintLogo(o) {
+    const box = $("co-logo-box");
+    const src = o.logoUrl && o.logoUrl.indexOf("google.com/s2/favicons") < 0 ? HireLinkAPI.mediaUrl(o.logoUrl) : "";
+    const letter = String(o.name || "E").charAt(0).toUpperCase();
     if (src) {
-      box.innerHTML =
-        '<img alt="Logo entreprise" src="' +
-        String(src).replace(/"/g, "") +
-        '" onerror="this.parentNode.textContent=\'' +
-        String(name || "E").charAt(0).toUpperCase() +
-        "'\" />";
-    } else {
-      box.textContent = String(name || "E").charAt(0).toUpperCase();
-    }
+      box.innerHTML = '<img alt="Logo ' + esc(o.name) + '" src="' + esc(src) + '" />';
+      box.firstChild.onerror = () => { box.textContent = letter; };
+    } else box.textContent = letter;
   }
 
-  function fillForm(o) {
-    const name = document.getElementById("co-name");
-    const ice = document.getElementById("co-ice");
-    const bio = document.getElementById("co-bio");
-    const web = document.getElementById("co-website");
-    const sector = document.getElementById("co-sector");
-    const city = document.getElementById("co-city");
-    const logoUrl = document.getElementById("co-logo-url");
-    if (name && o.name) name.value = o.name;
-    if (ice && o.ice) ice.value = o.ice;
-    if (bio && o.presentation) bio.value = o.presentation;
-    if (web) web.value = o.website || "";
-    if (sector) sector.value = o.sector || "";
-    if (city) city.value = o.city || "";
-    if (logoUrl) logoUrl.value = o.logoUrl || "";
+  function paintOrg(o) {
+    org = o;
+    const canEdit = o.myRole === "OWNER" || o.myRole === "RECRUTEUR";
+    $("org-name").textContent = o.name || "Organisation";
+    $("org-sub").textContent = "Votre rôle : " + (RC.ROLE_FR[o.myRole] || o.myRole || "—") + " · palier " + (o.planTier || "ACCES");
+    const v = o.verified ? { label: o.statusLabel || "Entreprise vérifiée", tone: "ok" } : VERIF[o.verificationStatus] || { label: o.statusLabel || "À vérifier", tone: "warn" };
+    $("kpi-status").textContent = v.label;
+    $("kpi-status").closest(".rc-kpi").className = "rc-kpi rc-kpi--" + v.tone;
+    $("kpi-ice").textContent = o.ice ? "ICE " + o.ice : "ICE non renseigné";
+    $("verify-hint").innerHTML = o.verified
+      ? "Badge actif : vos offres peuvent être publiées et le badge apparaît côté candidats."
+      : "Renseignez un ICE valide : la vérification est automatique si l’ICE et l’e-mail professionnel correspondent au registre, sinon l’administration valide votre dossier (Administration → Entreprises).";
+    $("btn-recheck").hidden = !!o.verified || !canEdit;
+    const f = $("company-form");
+    ["co-name", "co-ice", "co-website", "co-sector", "co-city", "co-bio"].forEach((id) => { $(id).disabled = !canEdit; });
+    $("co-name").value = o.name || "";
+    $("co-ice").value = o.ice || "";
+    $("co-website").value = o.website || "";
+    $("co-sector").value = o.sector || "";
+    $("co-city").value = o.city || "";
+    $("co-bio").value = o.presentation || "";
+    f.querySelectorAll("button[type=submit]").forEach((b) => (b.hidden = !canEdit));
+    document.querySelectorAll("[data-edit]").forEach((n) => (n.hidden = !canEdit));
+    $("btn-invite").hidden = o.myRole !== "OWNER";
+    document.querySelectorAll("[data-manage]").forEach((n) => (n.hidden = !RC.canManage()));
+    paintLogo(o);
+    $("co-skel").hidden = true;
+    $("co-body").hidden = false;
   }
 
   function loadOrg() {
-    HireLinkAPI.api("/organizations/mine")
-      .then((o) => {
-        setText("org-name", o.name || "Organisation");
-        setText(
-          "org-sub",
-          "Mon rôle : " + (o.myRole || "—") + " · palier " + (o.planTier || "ACCES")
-        );
-        setText("kpi-status", o.statusLabel || (o.verified ? "Vérifiée" : "À vérifier"));
-        setText("kpi-ice", o.ice ? "ICE " + o.ice : "ICE non renseigné");
-        setText("kpi-plan", "Plan " + (o.planTier || "ACCES"));
-        const hint = document.getElementById("co-verify-hint");
-        if (hint) {
-          hint.textContent = o.verified
-            ? "Badge actif. Vous pouvez publier des offres."
-            : "Le badge se déclenche tout seul si l’ICE et l’e-mail professionnel correspondent au registre. Sinon l’admin valide dans Administration → Entreprises.";
-        }
-        paintLogo(o.logoUrl, o.name);
-        fillForm(o);
-      })
-      .catch(() => {
-        HireLinkAPI.api("/me").then((p) => {
-          setText("org-name", p.company || "Organisation");
-          setText("org-sub", p.companyVerified ? "Entreprise vérifiée" : "Vérification en cours");
-          setText("kpi-status", p.companyVerified ? "Vérifiée" : "À vérifier");
-          setText("kpi-ice", p.companyIce ? "ICE " + p.companyIce : "ICE —");
-        }).catch(() => {});
-      });
+    RC.data.org(paintOrg, (err) => {
+      $("co-skel").hidden = true;
+      RC.errorState($("co-error"), err.message, loadOrg);
+    });
   }
 
   function loadMembers() {
-    const box = document.getElementById("members-list");
-    HireLinkAPI.api("/organizations/mine/members")
-      .then((list) => {
-        setText("members-count", String(list.length));
-        if (!list.length) {
-          box.innerHTML = "<p class='muted'>Aucun membre pour l’instant.</p>";
-          return;
-        }
-        box.innerHTML = list
-          .map(
-            (m) =>
-              '<div class="member-row"><div class="member-meta"><strong>' +
-              (m.fullName || m.email) +
-              "</strong><span class='muted'>" +
-              m.email +
-              "</span></div><span class='badge badge-chrome'>" +
-              m.orgRole +
-              "</span></div>"
-          )
-          .join("");
-      })
-      .catch((err) => {
-        box.innerHTML = "<p class='muted'>" + err.message + "</p>";
-      });
+    const box = $("members-list");
+    RC.skeleton(box, 3, 52);
+    HireLinkAPI.api("/organizations/mine/members").then((list) => {
+      $("members-count").textContent = list.length;
+      $("kpi-members").textContent = list.length;
+      const meOwner = org && org.myRole === "OWNER";
+      box.innerHTML = list.map((m) =>
+        '<div class="rc-member rc-fade"><div class="rc-avatar">' + esc(RC.initials(m.fullName || m.email)) + '</div><div class="rc-item-main"><strong>' + esc((m.fullName || m.email).replace(/\s*\(alias\)/, "")) +
+        "</strong><span>" + esc(m.email) + '</span></div><span class="badge ' + (m.orgRole === "OWNER" ? "badge-rose" : m.orgRole === "HIRING_MANAGER" ? "badge-info" : "badge-chrome") + '">' +
+        esc(RC.ROLE_FR[m.orgRole] || m.orgRole) + "</span>" +
+        (meOwner && m.userId !== session.userId ? '<button type="button" class="btn btn-ghost btn-sm" data-remove="' + m.userId + '" data-name="' + esc(m.fullName || m.email) + '">Retirer</button>' : "") + "</div>").join("");
+    }).catch((err) => RC.errorState(box, err.message, loadMembers));
   }
 
-  loadOrg();
-  loadMembers();
+  $("members-list").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-remove]");
+    if (!b) return;
+    const ok = await HireLink.openModal({ title: "Retirer ce membre ?", description: b.dataset.name + " perdra l’accès aux offres et dossiers de l’organisation.", confirmLabel: "Retirer", danger: true });
+    if (!ok) return;
+    try {
+      await HireLinkAPI.api("/organizations/mine/members/" + b.dataset.remove, { method: "DELETE" });
+      RC.toast("Équipe", "Membre retiré", "ok");
+      RC.cacheClear("members");
+      loadMembers();
+    } catch (err) { RC.toast("Équipe", err.message, "danger"); }
+  });
 
-  HireLinkAPI.api("/ai/credits", {
-    headers: HireLinkProduct ? HireLinkProduct.premiumHeaders("recruiter") : {},
-  })
-    .then((c) => {
-      setText("kpi-credits", c.remaining + " / " + c.limit);
-      setText("kpi-plan", (c.plan || "ACCES") + " · ce mois");
-    })
-    .catch(() => {});
-
-  const companyForm = document.getElementById("company-form");
-  if (companyForm) {
-    companyForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      try {
-        await HireLinkAPI.api("/organizations/mine", {
-          method: "PUT",
-          body: {
-            name: document.getElementById("co-name").value,
-            ice: document.getElementById("co-ice").value,
-            website: (document.getElementById("co-website") || {}).value,
-            sector: (document.getElementById("co-sector") || {}).value,
-            city: (document.getElementById("co-city") || {}).value,
-            presentation: document.getElementById("co-bio").value,
-            logoUrl: (document.getElementById("co-logo-url") || {}).value || "",
-          },
-        });
-        HireLink.toast("Entreprise", "Fiche enregistrée. La vérification a été relancée.", "ok");
-        loadOrg();
-      } catch (err) {
-        HireLink.toast("Entreprise", err.message, "danger");
-      }
-    });
-  }
-
-  const logoFile = document.getElementById("co-logo-file");
-  if (logoFile) {
-    logoFile.addEventListener("change", async () => {
-      const file = logoFile.files && logoFile.files[0];
-      if (!file) return;
-      const fd = new FormData();
-      fd.append("file", file);
-      try {
-        const o = await HireLinkAPI.api("/organizations/mine/logo", {
-          method: "POST",
-          formData: fd,
-          timeoutMs: 45000,
-        });
-        HireLink.toast("Logo", "Image enregistrée. Visible côté candidat.", "ok");
-        paintLogo(o.logoUrl, o.name);
-        const urlInput = document.getElementById("co-logo-url");
-        if (urlInput) urlInput.value = o.logoUrl || "";
-      } catch (err) {
-        HireLink.toast("Logo", err.message, "danger");
-      } finally {
-        logoFile.value = "";
-      }
-    });
-  }
-
-  const logoClear = document.getElementById("co-logo-clear");
-  if (logoClear) {
-    logoClear.onclick = async () => {
-      try {
-        await HireLinkAPI.api("/organizations/mine", {
-          method: "PUT",
-          body: { logoUrl: "" },
-        });
-        const urlInput = document.getElementById("co-logo-url");
-        if (urlInput) urlInput.value = "";
-        HireLink.toast("Logo", "Logo retiré.", "ok");
-        loadOrg();
-      } catch (err) {
-        HireLink.toast("Logo", err.message, "danger");
-      }
-    };
-  }
-
-  const recheck = document.getElementById("btn-recheck");
-  if (recheck) {
-    recheck.onclick = async () => {
-      try {
-        const o = await HireLinkAPI.api("/organizations/mine/verify", { method: "POST" });
-        HireLink.toast("Vérification", o.verified ? "Badge attribué automatiquement." : (o.message || "Dossier envoyé à l’admin."), o.verified ? "ok" : "warn");
-        loadOrg();
-      } catch (err) {
-        HireLink.toast("Vérification", err.message, "danger");
-      }
-    };
-  }
-
-  const toggle = document.getElementById("btn-toggle-badge");
-  if (toggle) {
-    toggle.onclick = () => {
-      document.getElementById("badge-box").classList.toggle("is-open");
-    };
-  }
-
-  document.getElementById("btn-invite").onclick = async () => {
+  $("btn-invite").addEventListener("click", async () => {
     const ok = await HireLink.openModal({
       title: "Inviter un membre",
-      description: "Owner uniquement — Recruteur ou Hiring Manager.",
-      bodyHtml:
-        '<div class="field"><label>Email</label><input id="invite-email" type="email" placeholder="rh@entreprise.ma" /></div>' +
-        '<div class="field"><label>Rôle</label><select id="invite-role">' +
-        '<option value="RECRUTEUR">Recruteur</option>' +
-        '<option value="HIRING_MANAGER">Hiring Manager</option></select></div>',
+      description: "Le compte doit déjà exister avec le profil recruteur.",
+      bodyHtml: '<div class="field"><label>E-mail</label><input id="invite-email" type="email" placeholder="rh@entreprise.ma" /></div>' +
+        '<div class="field"><label>Rôle</label><select id="invite-role"><option value="RECRUTEUR">Recruteur — pipeline et offres</option><option value="HIRING_MANAGER">Hiring Manager — dossiers assignés, scorecard</option></select></div>',
       confirmLabel: "Inviter",
     });
     if (!ok) return;
-    const email = (document.getElementById("invite-email") || {}).value || "";
-    const orgRole = (document.getElementById("invite-role") || {}).value || "RECRUTEUR";
-    if (!email.trim()) {
-      HireLink.toast("Email requis", "", "warn");
-      return;
-    }
+    const email = ($("invite-email") || {}).value || "";
+    if (!email.trim()) { RC.toast("E-mail requis", "Saisissez l’adresse du collègue.", "warn"); return; }
     try {
-      const m = await HireLinkAPI.api("/organizations/mine/invite", {
-        method: "POST",
-        body: { email: email.trim(), orgRole },
-      });
-      HireLink.toast("Invitation", m.email + " · " + m.orgRole, "ok");
+      const m = await HireLinkAPI.api("/organizations/mine/invite", { method: "POST", body: { email: email.trim(), orgRole: ($("invite-role") || {}).value || "RECRUTEUR" } });
+      RC.toast("Invitation", m.email + " · " + (RC.ROLE_FR[m.orgRole] || m.orgRole), "ok");
+      RC.cacheClear("members");
       loadMembers();
-    } catch (err) {
-      HireLink.toast("Invitation", err.message, "danger");
-    }
-  };
+    } catch (err) { RC.toast("Invitation", err.message, "danger"); }
+  });
 
+  $("company-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = e.submitter || e.target.querySelector("button[type=submit]");
+    RC.busy(btn, true);
+    try {
+      const o = await HireLinkAPI.api("/organizations/mine", { method: "PUT", body: {
+        name: $("co-name").value, ice: $("co-ice").value, website: $("co-website").value, sector: $("co-sector").value, city: $("co-city").value, presentation: $("co-bio").value,
+      } });
+      RC.cacheSet("org", o);
+      paintOrg(o);
+      RC.toast("Entreprise", "Fiche enregistrée — la vérification a été relancée.", "ok");
+    } catch (err) { RC.toast("Entreprise", err.message, "danger"); } finally { RC.busy(btn, false); }
+  });
 
-  const copyBadge = document.getElementById("btn-copy-badge");
-  if (copyBadge) {
-    copyBadge.onclick = () => {
-      const t = document.getElementById("badge-html");
-      if (!t || !t.textContent) return;
-      navigator.clipboard.writeText(t.textContent).then(
-        () => HireLink.toast("Badge", "Snippet copié", "ok"),
-        () => HireLink.toast("Badge", "Copie manuelle", "warn")
-      );
-    };
-  }
+  $("co-logo-file").addEventListener("change", async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const o = await HireLinkAPI.api("/organizations/mine/logo", { method: "POST", formData: fd, timeoutMs: 45000 });
+      RC.cacheSet("org", o);
+      paintOrg(o);
+      RC.toast("Logo", "Image enregistrée — visible côté candidats.", "ok");
+    } catch (err) { RC.toast("Logo", err.message, "danger"); } finally { e.target.value = ""; }
+  });
+  $("co-logo-clear").addEventListener("click", async () => {
+    try {
+      const o = await HireLinkAPI.api("/organizations/mine", { method: "PUT", body: { logoUrl: "" } });
+      RC.cacheSet("org", o);
+      paintOrg(o);
+      RC.toast("Logo", "Logo retiré.", "ok");
+    } catch (err) { RC.toast("Logo", err.message, "danger"); }
+  });
+  $("btn-recheck").addEventListener("click", async (e) => {
+    RC.busy(e.currentTarget, true);
+    try {
+      const o = await HireLinkAPI.api("/organizations/mine/verify", { method: "POST" });
+      RC.cacheSet("org", o);
+      paintOrg(o);
+      RC.toast("Vérification", o.verified ? "Badge attribué automatiquement." : o.message || "Dossier transmis à l’administration.", o.verified ? "ok" : "warn");
+    } catch (err) { RC.toast("Vérification", err.message, "danger"); } finally { RC.busy(e.currentTarget, false); }
+  });
+
+  HireLinkAPI.api("/ai/credits")
+    .then((c) => { $("kpi-credits").textContent = c.remaining + " / " + c.limit; $("kpi-plan").textContent = "Palier " + (c.plan || "ACCES") + " · ce mois"; })
+    .catch(() => { $("kpi-credits").textContent = "—"; });
+
+  loadOrg();
+  loadMembers();
 })();

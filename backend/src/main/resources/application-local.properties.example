@@ -1,19 +1,22 @@
 # =============================================================================
-# HireLink — secrets locaux (NE PAS COMMITTER)
-# Copie ce fichier vers : application-local.properties
-# Spring Boot charge automatiquement le profil "local" si tu lances avec :
-#   --spring.profiles.active=local
-# ou mets simplement application-local.properties à côté (voir README agent).
+# HireLink - secrets locaux (NE JAMAIS COMMITTER)
+# Copiez ce fichier en "application-local.properties" a cote de pom.xml (dossier backend/)
+# ou dans backend/src/main/resources/. Il est ignore par Git et charge automatiquement.
+# TOUT EST OPTIONNEL : sans aucune cle, l'application demarre et fonctionne
+# (le scoring IA retombe sur l'analyse locale, la cle JWT est generee automatiquement
+# dans backend/data/jwt.key).
 # =============================================================================
 
+# --- Jeton de session (JWT) : 64 caracteres aleatoires minimum -----------------
+# Generer :  python -c "import secrets;print(secrets.token_urlsafe(64))"
+# hirelink.jwt.secret=COLLER_ICI_UNE_VALEUR_ALEATOIRE_LONGUE
+
+# --- Assistant IA (facultatif) -------------------------------------------------
 hirelink.llm.provider=gemini
 hirelink.llm.fallback-chain=gemini,groq,mistral
-
 hirelink.llm.gemini.api-key=COLLER_CLE_GEMINI_ICI
-hirelink.llm.gemini.model=gemini-2.0-flash
-
 hirelink.llm.groq.api-key=COLLER_CLE_GROQ_ICI
-hirelink.llm.groq.model=llama-3.3-70b-versatile
-
 hirelink.llm.mistral.api-key=COLLER_CLE_MISTRAL_ICI
-hirelink.llm.mistral.model=mistral-small-latest
+
+# --- Connexion Google (facultatif) ---------------------------------------------
+# hirelink.google.client-id=XXXX.apps.googleusercontent.com

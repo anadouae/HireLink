@@ -42,7 +42,7 @@
       ".hl-premium-card{background:#fff;border-radius:18px;max-width:440px;width:100%;padding:1.75rem;box-shadow:0 24px 60px rgba(0,0,0,.22);border:1px solid rgba(122,32,50,.25);transform:translateY(12px);transition:transform .28s ease}" +
       ".hl-premium-overlay.is-open .hl-premium-card{transform:none}" +
       ".hl-premium-card .eyebrow{color:#7a2032;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin:0 0 .35rem}" +
-      ".hl-premium-card h3{font-family:Fraunces,Georgia,serif;font-size:1.55rem;margin:0 0 .35rem;color:#1a1214}" +
+      ".hl-premium-card h3{font-family:var(--font-display);font-size:1.55rem;margin:0 0 .35rem;color:#1a1214}" +
       ".hl-premium-card .sub{color:#5e5558;margin:0 0 1rem;font-size:.95rem}" +
       ".hl-premium-card ul{margin:0 0 1.25rem;padding:0;list-style:none}" +
       ".hl-premium-card li{padding:.45rem 0 .45rem 1.4rem;position:relative;font-size:.92rem;border-bottom:1px solid #eee}" +
@@ -55,7 +55,7 @@
   }
 
   function showPremium(role) {
-    if (localStorage.getItem("hirelink.premium.active." + role) === "1") {
+    if (global.HireLinkAPI && HireLinkAPI.isPremium()) {
       if (global.HireLink) HireLink.toast("Premium", "Votre offre Premium est déjà active.", "ok");
       return;
     }
@@ -112,7 +112,7 @@
   function scheduleNudge(role, delayMs) {
     const dismissed = Number(localStorage.getItem(KEY_DISMISS + role) || 0);
     if (Date.now() - dismissed < 86400000) return;
-    if (localStorage.getItem("hirelink.premium.active." + role)) return;
+    if (global.HireLinkAPI && HireLinkAPI.isPremium()) return;
     setTimeout(() => showPremium(role), delayMs || 18000);
   }
 

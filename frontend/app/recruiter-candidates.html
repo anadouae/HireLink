@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Candidats — HireLink</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
+</head>
+<body class="rc" data-role="RECRUTEUR">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
+          <div>
+            <p class="rc-eyebrow">Recrutement</p>
+            <h1>Candidats</h1>
+            <p>Tous les dossiers de l’organisation, de la réception à la décision.</p>
+          </div>
+          <div class="rc-head-actions"></div>
+        </div>
+        <div class="rc-toolbar">
+          <select id="cand-offer" class="rc-select" aria-label="Filtrer par offre"><option value="all">Toutes les offres</option></select>
+<div class="rc-chips" id="cand-chips" role="tablist"><button type="button" class="rc-chip is-on" data-v="active">En cours</button><button type="button" class="rc-chip" data-v="interview">Entretiens</button><button type="button" class="rc-chip" data-v="rejected">Refusés</button><button type="button" class="rc-chip" data-v="withdrawn">Retirés</button><button type="button" class="rc-chip" data-v="all">Tous</button></div>
+          <span class="rc-spacer"></span>
+          <select id="cand-sort" class="rc-select" aria-label="Trier"><option value="recent">Plus récents</option><option value="match">Meilleur match</option><option value="sla">Échéance de réponse</option><option value="name">Nom (A–Z)</option></select>
+          <span class="rc-pill" id="cand-summary">—</span>
+        </div>
+        <section class="rc-card is-flush">
+          <div class="rc-tablewrap"><table class="rc-table">
+            <thead><tr><th>Candidat</th><th>Offre</th><th>Étape</th><th>Match</th><th>Réponse</th><th>Reçue le</th><th></th></tr></thead>
+            <tbody id="cand-body"></tbody>
+          </table></div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/recruiter-candidates.js?v=20261029a"></script>
+</body>
+</html>

@@ -39,3 +39,15 @@ backend/scripts/gen_cdc_*.py
 # Uploads / local
 *.tmp
 ~$*
+
+# Fichiers déposés pendant les tests (CV, logos)
+backend/data/
+node_modules/
+
+# Journaux d'exécution locaux et fichiers LaTeX intermédiaires
+run-*.out
+run-*.err
+*.aux
+*.toc
+docs/**/main.out
+tools/

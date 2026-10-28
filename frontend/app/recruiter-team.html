@@ -2,149 +2,75 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Organisation — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261027a" />
-  <script src="../js/theme.js?v=20261026d"></script>
-  <style>
-    .org-hero {
-      display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-start;
-      justify-content: space-between; margin-bottom: 1.25rem;
-    }
-    .org-kpis {
-      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .85rem; margin-bottom: 1.25rem;
-    }
-    @media (max-width: 800px) { .org-kpis { grid-template-columns: 1fr; } }
-    .org-kpi {
-      background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 1rem 1.1rem;
-    }
-    .org-kpi .label { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 .35rem; }
-    .org-kpi .value { font-family: var(--font-display); font-size: 1.35rem; margin: 0; }
-    .org-kpi .hint { margin: .35rem 0 0; font-size: .82rem; color: var(--ink-soft); }
-    .member-row {
-      display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
-      padding: .85rem 0; border-bottom: 1px solid var(--line);
-    }
-    .member-row:last-child { border-bottom: 0; }
-    .member-meta { display: flex; flex-direction: column; gap: .15rem; }
-    .badge-snippet { display: none; }
-    .badge-snippet.is-open { display: block; }
-  </style>
+  <title>Entreprise & équipe — HireLink</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="row between">
-        <a class="brand" href="recruiter.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-        <button type="button" class="mobile-toggle" id="close-side">✕</button>
-      </div>
-      <nav class="side-nav">
-        <a class="side-link" href="recruiter.html">Tableau de bord</a>
-        <a class="side-link" href="recruiter-pipeline.html">Pipeline</a>
-        <a class="side-link" href="recruiter-offers.html">Offres</a>
-        <a class="side-link is-active" href="recruiter-team.html">Entreprise</a>
-        <a class="side-link" href="recruiter-settings.html">Paramètres</a>
-      </nav>
-      <div id="nav-user" class="nav-user"></div>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-actions" style="margin-left:auto">
-          <button type="button" class="btn btn-brass btn-sm" id="btn-upgrade">Passer Premium</button>
-          <div class="avatar" id="avatar">R</div>
-        </div>
-      </header>
-      <main class="content">
-        <div class="org-hero">
+<body class="rc" data-role="RECRUTEUR">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
           <div>
-            <p class="eyebrow">Espace recruteur</p>
-            <h1 id="org-name" style="margin:0 0 .35rem">Organisation</h1>
-            <p class="muted" id="org-sub" style="margin:0">—</p>
+            <p class="rc-eyebrow">Organisation</p>
+            <h1><span id="org-name">Entreprise</span></h1>
+            <p><span id="org-sub">—</span></p>
           </div>
-          <div class="row" style="gap:.5rem;flex-wrap:wrap">
-            <a class="btn btn-primary" href="recruiter-offers.html#new">Nouvelle offre</a>
-            <button type="button" class="btn btn-soft" id="btn-invite">Inviter un membre</button>
-          </div>
+          <div class="rc-head-actions"><a class="btn btn-secondary" href="recruiter-offers.html#new" data-manage>Nouvelle offre</a><button type="button" class="btn btn-primary" id="btn-invite" hidden>Inviter un membre</button></div>
         </div>
-
-        <div class="org-kpis">
-          <div class="org-kpi">
-            <p class="label">Statut</p>
-            <p class="value" id="kpi-status">—</p>
-            <p class="hint" id="kpi-ice">ICE —</p>
-          </div>
-          <div class="org-kpi">
-            <p class="label">Crédits IA</p>
-            <p class="value" id="kpi-credits">—</p>
-            <p class="hint" id="kpi-plan">Palier —</p>
-          </div>
-          <div class="org-kpi">
-            <p class="label">Publication</p>
-            <p class="value">Offres</p>
-            <p class="hint">Depuis cette page, une seule action : Nouvelle offre.</p>
-          </div>
+        <div class="rc-kpis">
+          <div class="rc-kpi rc-kpi--warn"><small>Vérification</small><strong id="kpi-status" style="font-size:1.25rem">—</strong><span id="kpi-ice">&nbsp;</span></div>
+          <div class="rc-kpi rc-kpi--info"><small>Crédits IA</small><strong id="kpi-credits">—</strong><span id="kpi-plan">&nbsp;</span></div>
+          <div class="rc-kpi"><small>Membres</small><strong id="kpi-members">—</strong><span>Owner, Recruteurs, Hiring Managers</span></div>
         </div>
-
-        <section class="panel" style="margin-bottom:1.25rem">
-          <div class="panel-head"><h2>Fiche entreprise</h2></div>
-          <form id="company-form" class="panel-body profile-form">
-            <div class="field field-full org-logo-row" id="photo-upload">
-              <div class="org-logo-preview" id="co-logo-box"><span class="muted">Logo</span></div>
-              <div class="org-logo-actions">
-                <p class="muted" id="co-verify-hint" style="margin:0 0 .55rem">Le logo apparaît chez les candidats (Entreprises + fiches d’offres). Carré, fond clair, bien lisible.</p>
-                <div class="row" style="gap:.5rem;flex-wrap:wrap;align-items:center">
-                  <label class="btn btn-primary btn-sm">Choisir une image
-                    <input type="file" id="co-logo-file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" hidden />
-                  </label>
-                  <button type="button" class="btn btn-ghost btn-sm" id="co-logo-clear">Retirer</button>
-                </div>
-                <label class="input-group" style="margin-top:.65rem;max-width:28rem">Ou URL du logo
-                  <input id="co-logo-url" class="form-control" placeholder="https://… ou laissez vide après upload" />
-                </label>
-              </div>
+        <div id="co-error"></div>
+        <div id="co-skel" class="rc-card"><div class="rc-skel-list"><span class="rc-skel" style="height:90px"></span><span class="rc-skel" style="height:44px"></span><span class="rc-skel" style="height:44px"></span></div></div>
+        <section class="rc-card" id="co-body" hidden>
+          <div class="rc-card-head"><div><h2>Fiche entreprise</h2><p id="verify-hint"></p></div></div>
+          <form id="company-form" class="rc-card-body">
+            <div class="rc-logo-row" style="margin-bottom:1.1rem" data-edit>
+              <div class="rc-logo" id="co-logo-box">E</div>
+              <div><p class="rc-muted" style="margin:0 0 .55rem;font-size:.86rem">Le logo apparaît côté candidats (entreprises et offres). Carré, fond clair.</p>
+                <div class="rc-row"><label class="btn btn-soft btn-sm">Choisir une image<input type="file" id="co-logo-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden /></label>
+                <button type="button" class="btn btn-ghost btn-sm" id="co-logo-clear">Retirer</button></div></div>
             </div>
-            <div class="field"><label for="co-name">Nom</label><input id="co-name" /></div>
-            <div class="field"><label for="co-ice">ICE</label><input id="co-ice" placeholder="15 chiffres" /></div>
-            <div class="field"><label for="co-website">Site web</label><input id="co-website" placeholder="https://" /></div>
-            <div class="field"><label for="co-sector">Secteur</label><input id="co-sector" placeholder="Technologie, Banque…" /></div>
-            <div class="field"><label for="co-city">Ville</label><input id="co-city" /></div>
-            <div class="field field-full"><label for="co-bio">Présentation</label><textarea id="co-bio" rows="4" placeholder="Ce que fait l’entreprise, pour qui, et comment elle recrute."></textarea></div>
-            <div class="field-full" style="display:flex;gap:.6rem;flex-wrap:wrap">
-              <button type="submit" class="btn btn-primary">Enregistrer la fiche</button>
-              <button type="button" class="btn btn-soft" id="btn-recheck">Relancer la vérification</button>
+            <div class="rc-form">
+              <div class="rc-field"><label for="co-name">Nom</label><input id="co-name" required /></div>
+              <div class="rc-field"><label for="co-ice">ICE</label><input id="co-ice" placeholder="15 chiffres" inputmode="numeric" /></div>
+              <div class="rc-field"><label for="co-website">Site web</label><input id="co-website" placeholder="https://" /></div>
+              <div class="rc-field"><label for="co-sector">Secteur</label><input id="co-sector" placeholder="Technologie, Banque…" /></div>
+              <div class="rc-field"><label for="co-city">Ville</label><input id="co-city" /></div>
+              <div class="rc-field is-full"><label for="co-bio">Présentation</label><textarea id="co-bio" rows="4" maxlength="1200" placeholder="Ce que fait l’entreprise, pour qui, et comment elle recrute."></textarea></div>
+              <div class="is-full rc-row"><button type="submit" class="btn btn-primary">Enregistrer la fiche</button><button type="button" class="btn btn-soft" id="btn-recheck" hidden>Relancer la vérification</button></div>
             </div>
           </form>
         </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Équipe</h2>
-            <span class="badge badge-chrome" id="members-count">0</span>
-          </div>
-          <div class="panel-body">
-            <p class="muted" style="margin-top:0">Rôles : <strong>Owner</strong> (invite), <strong>Recruteur</strong> (pipeline), <strong>Hiring Manager</strong> (scorecard assignée).</p>
-            <div id="members-list"></div>
-          </div>
+        <section class="rc-card is-flush">
+          <div class="rc-card-head"><div><h2>Équipe</h2><p><b>Owner</b> invite et gère · <b>Recruteur</b> pilote offres et pipeline · <b>Hiring Manager</b> évalue ses dossiers assignés</p></div><span class="rc-pill" id="members-count">0</span></div>
+          <div id="members-list"></div>
         </section>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261027a"></script>
-  <script src="../js/in-app-help.js?v=20261026d"></script>
-  <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261027a"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/recruiter-team.js?v=20261027a"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/recruiter-team.js?v=20261029a"></script>
 </body>
 </html>

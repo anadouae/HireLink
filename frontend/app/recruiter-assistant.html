@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assistant IA — HireLink</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
+</head>
+<body class="rc" data-role="RECRUTEUR">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
+          <div>
+            <p class="rc-eyebrow">Aide à la décision</p>
+            <h1>Assistant IA</h1>
+            <p>Des brouillons à relire : jamais de décision automatique, aucune donnée d’identité envoyée au fournisseur.</p>
+          </div>
+          <div class="rc-head-actions"></div>
+        </div>
+        <section class="rc-card"><div class="rc-card-body rc-credit-ring">
+          <div style="flex:1"><small class="rc-muted" style="font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.7rem">Crédits IA restants</small>
+            <div style="font-size:1.6rem;font-weight:800;letter-spacing:-.02em" id="ai-credits">—</div>
+            <div class="rc-meter"><i id="ai-meter"></i></div>
+            <p class="rc-muted" style="margin:.5rem 0 0;font-size:.82rem" id="ai-plan">&nbsp;</p></div>
+          <a class="btn btn-ghost btn-sm" href="recruiter-settings.html#plans">Formules</a>
+        </div></section>
+        <div class="rc-tabs" role="tablist">
+          <button type="button" class="rc-tab is-on" data-t="kit">Grille d’entretien</button>
+          <button type="button" class="rc-tab" data-t="refusal">Message de refus</button>
+          <button type="button" class="rc-tab" data-t="cv">Synthèse de CV</button>
+        </div>
+        <section class="rc-card rc-panel" id="pane-kit"><div class="rc-card-head"><div><h2>Grille d’entretien structurée</h2><p>5 à 7 questions discriminantes à partir du poste et des compétences.</p></div></div>
+          <div class="rc-card-body"><div class="rc-form">
+            <div class="rc-field is-full"><label for="kit-offer">Offre</label><select id="kit-offer"><option value="">— Saisie libre —</option></select></div>
+            <div class="rc-field"><label for="kit-title">Intitulé du poste</label><input id="kit-title" placeholder="Développeur Full-Stack Java" /></div>
+            <div class="rc-field"><label for="kit-skills">Compétences clés</label><input id="kit-skills" placeholder="Java, Spring Boot, MySQL" /></div>
+            <div class="is-full"><button type="button" class="btn btn-primary" id="kit-go">Générer la grille</button></div>
+            <div class="is-full rc-ai-out" id="kit-out" hidden></div></div></div></section>
+        <section class="rc-card rc-panel" id="pane-refusal" hidden><div class="rc-card-head"><div><h2>Brouillon de message de refus</h2><p>Basé sur un motif du catalogue — le texte reste à valider avant tout envoi.</p></div></div>
+          <div class="rc-card-body"><div class="rc-form">
+            <div class="rc-field"><label for="ref-reason">Motif (catalogue)</label><select id="ref-reason"><option value="">— Choisir un motif —</option></select></div>
+            <div class="rc-field"><label for="ref-offer">Offre</label><select id="ref-offer"><option value="">— Non précisé —</option></select></div>
+            <div class="is-full"><button type="button" class="btn btn-primary" id="ref-go">Rédiger le brouillon</button></div>
+            <div class="is-full rc-ai-out" id="ref-out" hidden></div></div></div></section>
+        <section class="rc-card rc-panel" id="pane-cv" hidden><div class="rc-card-head"><div><h2>Synthèse de CV</h2><p>Résumé en quelques lignes d’un dossier reçu : métier probable, expériences, compétences, point d’attention.</p></div></div>
+          <div class="rc-card-body"><div class="rc-form">
+            <div class="rc-field is-full"><label for="cv-app">Dossier</label><select id="cv-app"><option value="">— Choisir un dossier —</option></select></div>
+            <div class="is-full"><button type="button" class="btn btn-primary" id="cv-go">Résumer le dossier</button></div>
+            <div class="is-full rc-ai-out" id="cv-out" hidden></div></div></div></section>
+      </main>
+    </div>
+  </div>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/recruiter-assistant.js?v=20261029a"></script>
+</body>
+</html>

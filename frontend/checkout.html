@@ -2,11 +2,13 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Paiement — HireLink</title>
+  <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="css/checkout.css?v=20261026d" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="css/checkout.css?v=20261029a" />
 </head>
 <body>
   <header class="pay-top">
@@ -103,6 +105,7 @@
       </div>
     </section>
   </main>
-  <script src="js/checkout.js?v=20261026d"></script>
+  <script src="js/api.js?v=20261029a"></script>
+  <script src="js/checkout.js?v=20261029a"></script>
 </body>
 </html>

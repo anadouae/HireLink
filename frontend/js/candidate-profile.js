@@ -1,7 +1,6 @@
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["CANDIDAT"], hello: false });
+  const session = HireLinkApp.mount({});
   if (!session) return;
-  if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("candidate");
 
   let skillsApi = null;
   let dirty = false;
@@ -25,18 +24,13 @@
     box.hidden = false;
     box.textContent = "Génération…";
     try {
-      const premium = HireLinkProduct && HireLinkProduct.isPremium("candidate");
       const data = await HireLinkAPI.api(endpoint, {
         method: "POST",
-        headers: HireLinkProduct ? HireLinkProduct.premiumHeaders("candidate") : {},
-        body: Object.assign({}, body, { premium }),
+        body,
       });
       box.textContent = (data.title ? data.title + "\n\n" : "") + (data.content || "");
       if (data.tips && data.tips.length) {
         box.textContent += "\n\n— Tips —\n• " + data.tips.join("\n• ");
-      }
-      if (data.premiumLocked && window.HireLinkGrowth) {
-        HireLink.toast("Aperçu freemium", "Premium débloque le script complet", "info");
       }
     } catch (err) {
       box.textContent = err.message;
@@ -108,28 +102,18 @@
   function showPhoto(dataUrl, name) {
     const img = document.getElementById("pf-photo");
     const fallback = document.getElementById("pf-photo-fallback");
-    const avatar = document.getElementById("avatar");
     if (dataUrl && img) {
       img.src = dataUrl;
       img.hidden = false;
       if (fallback) fallback.hidden = true;
-      if (avatar) {
-        avatar.textContent = "";
-        avatar.style.backgroundImage = "url(" + dataUrl + ")";
-        avatar.style.backgroundSize = "cover";
-      }
     } else {
       if (img) img.hidden = true;
       if (fallback) {
         fallback.hidden = false;
         fallback.textContent = initials(name);
       }
-      if (avatar) {
-        avatar.classList.remove("has-art");
-        avatar.style.backgroundImage = "";
-        avatar.textContent = initials(name);
-      }
     }
+    if (window.HireLinkApp) HireLinkApp.paintProfile();
   }
 
   function openPhotoPicker() {
@@ -194,7 +178,8 @@
   function paintFacts(p) {
     const box = document.getElementById("pf-facts");
     if (!box) return;
-    const bits = [p.experienceLevel, p.preferredLocations, p.preferredContracts].filter(Boolean);
+    const list = (v) => String(v || "").split(",").map((x) => x.trim()).filter(Boolean).join(", ");
+    const bits = [p.experienceLevel, list(p.preferredLocations), list(p.preferredContracts)].filter(Boolean);
     box.textContent = bits.join(" · ") || "Complétez la recherche et les compétences.";
   }
 
@@ -262,8 +247,7 @@
     fillSections(sections);
     try {
       const token = HireLinkAPI.getToken();
-      const res = await fetch(HireLinkAPI.API_BASE + "/me/cv", {
-        headers: token ? { Authorization: "Bearer " + token } : {},
+      const res = await HireLinkAPI.authFetch("/me/cv", {
       });
       if (!res.ok) return;
       const blob = await res.blob();
@@ -373,9 +357,8 @@
     fd.append("file", file);
     try {
       const token = HireLinkAPI.getToken();
-      const res = await fetch(HireLinkAPI.API_BASE + "/ocr/cv?applySkills=false", {
+      const res = await HireLinkAPI.authFetch("/ocr/cv?applySkills=false", {
         method: "POST",
-        headers: token ? { Authorization: "Bearer " + token } : {},
         body: fd,
       });
       const data = await res.json();
@@ -390,7 +373,12 @@
       if (file.type.indexOf("image/") === 0 || /\.(png|jpe?g|webp|gif)$/.test(name)) showDocument(cvObjectUrl, "image");
       else if (name.endsWith(".pdf") || file.type === "application/pdf") showDocument(cvObjectUrl, "pdf");
       else showDocument(data.textPreview || "", "text");
-      HireLink.toast("CV lu", "Relisez les sections, puis confirmez", "ok");
+      const edit = document.querySelector("#cv-section .cv-edit") || document.querySelector(".cv-edit");
+      if (edit) {
+        edit.open = true;
+        edit.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      HireLink.toast("CV lu", "Relisez les sections ci-dessous, puis confirmez", "ok");
     } catch (err) {
       HireLink.toast("Import CV", err.message, "danger");
     }
@@ -405,9 +393,8 @@
     fd.append("sections", JSON.stringify(readSections()));
     try {
       const token = HireLinkAPI.getToken();
-      const res = await fetch(HireLinkAPI.API_BASE + "/me/cv", {
+      const res = await HireLinkAPI.authFetch("/me/cv", {
         method: "POST",
-        headers: token ? { Authorization: "Bearer " + token } : {},
         body: fd,
       });
       const data = await res.json();
@@ -418,9 +405,7 @@
         mountSkills(data.skills);
       }
       const box = document.getElementById("cv-empty");
-      if (box && window.HireLinkArt) {
-        box.innerHTML = HireLinkArt.sceneHtml("success") + "<p class='muted'>Sections ajoutées au profil.</p>";
-      }
+      if (box) box.innerHTML = "<p class='muted'>Sections ajoutées au profil.</p>";
       HireLink.toast("CV confirmé", "Les sections font partie du profil", "ok");
     } catch (err) {
       HireLink.toast("CV", err.message, "danger");
@@ -429,8 +414,6 @@
     }
   });
 
-  const prem = document.getElementById("btn-premium");
-  if (prem) prem.onclick = () => HireLinkGrowth && HireLinkGrowth.showPremium("candidate");
 
   const coachLog = document.getElementById("coach-log");
   function cvText() {
@@ -615,10 +598,8 @@
     try {
       const data = await HireLinkAPI.api("/ai/cv-summary", {
         method: "POST",
-        headers: HireLinkProduct ? HireLinkProduct.premiumHeaders("candidate") : {},
         body: {
           cvText: text,
-          premium: !!(HireLinkProduct && HireLinkProduct.isPremium("candidate")),
         },
       });
       pushCoach("Synthèse", data.content || "Pas de synthèse.");

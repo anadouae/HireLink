@@ -1,7 +1,6 @@
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["CANDIDAT"], hello: false });
+  const session = HireLinkApp.mount({ search: { placeholder: "Entreprise, poste, ville, compétence, contrat…", onQuery: () => render() } });
   if (!session) return;
-  if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("candidate");
 
   const offerList = document.getElementById("offer-list");
   let cached = [];
@@ -10,12 +9,8 @@
   let mySkills = "";
 
   const params = new URLSearchParams(location.search);
-  const qParam = params.get("q");
-  if (qParam) {
-    const s = document.getElementById("search-offers");
-    if (s) s.value = qParam;
-  }
   if (params.get("scope") === "mine") scope = "mine";
+  let focusId = params.get("offer");
 
   function inferWorkMode(location, contract) {
     const blob = ((location || "") + " " + (contract || "")).toLowerCase();
@@ -74,7 +69,9 @@
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/\'/g, "&#39;");
   }
 
   function fillSelect(id, values, current) {
@@ -140,7 +137,7 @@
   }
 
   function filtered() {
-    const q = ((document.getElementById("search-offers") || {}).value || "").trim().toLowerCase();
+    const q = ((document.getElementById("rc-search") || {}).value || "").trim().toLowerCase();
     const city = (document.getElementById("f-city") || {}).value || "";
     const company = (document.getElementById("f-company") || {}).value || "";
     const skill = (document.getElementById("f-skill") || {}).value || "";
@@ -181,27 +178,22 @@
 
   function render() {
     const list = filtered().slice().sort((a, b) => {
-      if (scope === "mine") return (b.matchScore || 0) - (a.matchScore || 0);
-      return String(a.title || "").localeCompare(String(b.title || ""), "fr");
+      return (isOpenToApply(b.id) - isOpenToApply(a.id)) || (b.matchScore || 0) - (a.matchScore || 0) || String(a.title || "").localeCompare(String(b.title || ""), "fr");
     });
-    const count = document.getElementById("offers-count");
-    if (count) count.textContent = list.length + " offre" + (list.length > 1 ? "s" : "");
     const summary = document.getElementById("filter-summary");
     if (summary) {
       const active = ["f-city", "f-company", "f-skill", "f-contract", "f-mode", "f-sla", "f-sent", "f-match"].filter(function (id) {
         const node = document.getElementById(id);
         return node && node.value && node.value !== "0";
       }).length;
-      summary.textContent = list.length + " offre" + (list.length > 1 ? "s" : "") + (active ? " · " + active + " critère" + (active > 1 ? "s" : "") : " · aucun critère");
+      summary.textContent = list.length + " offre" + (list.length > 1 ? "s" : "") + (active ? " · " + active + " filtre" + (active > 1 ? "s" : "") : "");
     }
-    const heading = document.getElementById("offers-heading");
-    if (heading) heading.textContent = scope === "mine" ? "Pour vous" : "Toutes les offres";
     const lead = document.getElementById("offers-lead");
     if (lead) {
       lead.textContent =
         scope === "mine"
-          ? "Offres dont au moins 55 % des compétences recoupent votre profil."
-          : "Le pourcentage compare vos compétences à celles demandées par le poste.";
+          ? "Offres compatibles à au moins 55 % avec votre profil."
+          : "La compatibilité compare vos compétences à celles demandées par le poste.";
     }
     offerList.innerHTML = "";
     const detail = document.getElementById("offer-detail");
@@ -244,10 +236,7 @@
         "<span class='badge " +
         matchCls +
         "'></span>" +
-        "<a class='btn btn-soft btn-sm' href='" +
-        companyHref(o) +
-        "'>Entreprise</a>" +
-        (sent
+                (sent
           ? "<a class='btn btn-primary btn-sm' href='candidate-applications.html?id=" +
             st.appId +
             "'>Voir ma candidature</a>"
@@ -259,7 +248,7 @@
       el.querySelector("h3").textContent = o.title;
       el.querySelector(".offer-essentials").textContent = [
         o.location || "Lieu à préciser",
-        workLabel(mode, o.location),
+        new RegExp(workLabel(mode, o.location), "i").test(o.location || "") ? null : workLabel(mode, o.location),
         o.contractType || null,
         o.responseSlaDays != null ? "Réponse " + o.responseSlaDays + " j" : null,
         sent ? "Candidature en cours" : withdrawn ? "Statut : Retirée" : null,
@@ -288,8 +277,10 @@
       el.addEventListener("click", () => selectOffer(el, o));
       offerList.appendChild(el);
     });
-    const first = offerList.querySelector(".offer");
-    if (first) selectOffer(first, list[0]);
+    const focus = list.findIndex((o) => String(o.id) === String(focusId));
+    const target = offerList.querySelectorAll(".offer")[Math.max(0, focus)];
+    if (target) selectOffer(target, list[Math.max(0, focus)]);
+    if (focus >= 0 && target) { target.scrollIntoView({ block: "center" }); focusId = null; }
   }
 
   function selectOffer(el, o) {
@@ -309,9 +300,11 @@
     const body = document.createElement("div");
     body.className = "split-copy";
     body.textContent = o.description || "Le recruteur n’a pas encore rédigé la description.";
-    const skills = document.createElement("p");
-    skills.className = "muted";
-    if (o.requiredSkills) skills.textContent = "Compétences : " + o.requiredSkills;
+    const skills = document.createElement("div");
+    skills.className = "tag-row";
+    const mt = explainMatch(o.requiredSkills);
+    mt.covered.forEach((t) => { const b = document.createElement("span"); b.className = "badge badge-ok"; b.title = "Dans votre profil"; b.textContent = "✓ " + t; skills.appendChild(b); });
+    mt.missing.forEach((t) => { const b = document.createElement("span"); b.className = "badge badge-chrome"; b.title = "Absente de votre profil"; b.textContent = t; skills.appendChild(b); });
     const actions = document.createElement("div");
     actions.className = "row";
     if (sent) {
@@ -331,7 +324,7 @@
     detail.appendChild(h);
     detail.appendChild(sub);
     detail.appendChild(body);
-    if (o.requiredSkills) detail.appendChild(skills);
+    if (skills.children.length) detail.appendChild(skills);
     detail.appendChild(actions);
   }
 
@@ -399,10 +392,6 @@
     const el = document.getElementById(id);
     if (el) el.addEventListener("change", render);
   });
-  const search = document.getElementById("search-offers");
-  if (search && window.HireLinkShell) HireLinkShell.bindSearch(search, render);
-  const prem = document.getElementById("btn-premium");
-  if (prem) prem.addEventListener("click", () => window.HireLinkGrowth && HireLinkGrowth.showPremium("candidate"));
   load();
-  if (window.HireLinkShell && HireLinkShell.watch) HireLinkShell.watch(function () { return load(true); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(true); });
 })();

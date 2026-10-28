@@ -8,8 +8,13 @@ import ma.ensat.hirelink.model.PlanTier;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.model.BillingInvoice;
+import ma.ensat.hirelink.repository.AuditLogRepository;
+import ma.ensat.hirelink.service.AuditService;
+import ma.ensat.hirelink.service.SessionService;
 import ma.ensat.hirelink.service.BillingCatalogService;
 import ma.ensat.hirelink.service.CompanyVerificationService;
+import ma.ensat.hirelink.service.NotificationService;
+import ma.ensat.hirelink.service.OrganizationService;
 import ma.ensat.hirelink.repository.ApplicationRepository;
 import ma.ensat.hirelink.repository.BillingInvoiceRepository;
 import ma.ensat.hirelink.repository.JobOfferRepository;
@@ -22,14 +27,12 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMINISTRATEUR')")
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminController {
@@ -42,6 +45,11 @@ public class AdminController {
     private final BillingCatalogService billingCatalogService;
     private final CompanyVerificationService companyVerificationService;
     private final BillingInvoiceRepository billingInvoiceRepository;
+    private final NotificationService notificationService;
+    private final OrganizationService organizationService;
+    private final AuditService audit;
+    private final SessionService sessionService;
+    private final AuditLogRepository auditLogRepository;
 
     public AdminController(
             UserRepository userRepository,
@@ -51,8 +59,18 @@ public class AdminController {
             MembershipRepository membershipRepository,
             BillingCatalogService billingCatalogService,
             CompanyVerificationService companyVerificationService,
-            BillingInvoiceRepository billingInvoiceRepository
+            BillingInvoiceRepository billingInvoiceRepository,
+            NotificationService notificationService,
+            OrganizationService organizationService,
+            AuditService audit,
+            SessionService sessionService,
+            AuditLogRepository auditLogRepository
     ) {
+        this.audit = audit;
+        this.sessionService = sessionService;
+        this.auditLogRepository = auditLogRepository;
+        this.organizationService = organizationService;
+        this.notificationService = notificationService;
         this.userRepository = userRepository;
         this.jobOfferRepository = jobOfferRepository;
         this.applicationRepository = applicationRepository;
@@ -115,28 +133,44 @@ public class AdminController {
         requireAdmin(admin);
         User u = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User introuvable"));
-        u.setActive(Boolean.TRUE.equals(body.get("active")));
+        boolean active = Boolean.TRUE.equals(body.get("active"));
+        if (!active && u.getId().equals(admin.getId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vous ne pouvez pas désactiver votre propre compte");
+        }
+        u.setActive(active);
         userRepository.save(u);
+        if (!active) {
+            sessionService.revokeAll(u.getId(), "ACCOUNT_SUSPENDED", null);
+        }
+        audit.ok(active ? "USER_REACTIVATED" : "USER_SUSPENDED", admin, "USER", u.getId(), u.getEmail());
         return Map.of("id", u.getId(), "active", u.isActive());
     }
 
-    @PatchMapping("/users/{id}/verify-company")
-    public Map<String, Object> verifyCompany(
-            @AuthenticationPrincipal User admin,
-            @PathVariable Long id
+    /** Journal d'audit : les 200 derniers évènements de sécurité (filtre optionnel par action). */
+    @GetMapping("/audit")
+    public List<Map<String, Object>> auditLog(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) String action
     ) {
-        requireAdmin(admin);
-        User u = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User introuvable"));
-        u.setCompanyVerified(true);
-        u.setVerificationStatus("REGISTRY_MATCH");
-        userRepository.save(u);
-        return Map.of(
-                "id", u.getId(),
-                "companyVerified", true,
-                "verificationStatus", u.getVerificationStatus(),
-                "company", u.getCompany() == null ? "" : u.getCompany()
-        );
+        requireAdmin(user);
+        var page = org.springframework.data.domain.PageRequest.of(0, 200);
+        var rows = action == null || action.isBlank()
+                ? auditLogRepository.findAllByOrderByIdDesc(page)
+                : auditLogRepository.findByActionOrderByIdDesc(action.trim(), page);
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (var a : rows) {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", a.getId());
+            m.put("at", a.getCreatedAt().toString());
+            m.put("actor", a.getActorEmail());
+            m.put("action", a.getAction());
+            m.put("target", a.getTargetType() == null ? null : a.getTargetType() + ":" + a.getTargetId());
+            m.put("ip", a.getIp());
+            m.put("success", a.isSuccess());
+            m.put("detail", a.getDetail());
+            out.add(m);
+        }
+        return out;
     }
 
     @GetMapping("/organizations")
@@ -181,6 +215,7 @@ public class AdminController {
         if (body.containsKey("verified")) {
             boolean verified = Boolean.TRUE.equals(body.get("verified"));
             companyVerificationService.markAdminDecision(org, verified);
+            audit.ok(verified ? "ORG_VERIFIED" : "ORG_VERIFICATION_REMOVED", admin, "ORGANIZATION", org.getId(), org.getName() + " · ICE " + org.getIce());
             for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
                 if (m.getUser().getRole() == Role.RECRUTEUR) {
                     m.getUser().setCompanyVerified(verified);
@@ -189,14 +224,20 @@ public class AdminController {
                     m.getUser().setCompanyIce(org.getIce());
                 }
             }
+            for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
+                notificationService.push(m.getUser().getId(),
+                        verified ? "Entreprise vérifiée" : "Vérification retirée",
+                        verified
+                                ? "« " + org.getName() + " » est vérifiée : vous pouvez publier des offres."
+                                : "La vérification de « " + org.getName() + " » a été retirée par l'administration.",
+                        "SYSTEM");
+            }
         }
         if (body.get("planTier") != null) {
             PlanTier tier = parseTier(String.valueOf(body.get("planTier")));
-            org.setPlanTier(tier);
-            for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
-                if (m.getUser().getRole() == Role.RECRUTEUR) {
-                    m.getUser().setPlanTier(tier);
-                }
+            if (tier != org.getPlanTier()) {
+                organizationService.changePlan(org, tier, String.valueOf(body.get("cycle")));
+                audit.ok("ORG_PLAN_CHANGED", admin, "ORGANIZATION", org.getId(), org.getName() + " → " + tier);
             }
         }
         organizationRepository.save(org);
@@ -207,69 +248,23 @@ public class AdminController {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> invoices(@AuthenticationPrincipal User user) {
         requireAdmin(user);
-        List<Map<String, Object>> rows = new ArrayList<>();
-        for (BillingInvoice inv : billingInvoiceRepository.findAllByOrderByIssuedAtDesc()) {
-            Organization org = inv.getOrganization();
-            Map<String, Object> row = new LinkedHashMap<>();
-            row.put("number", inv.getNumber());
-            row.put("issuedAt", inv.getIssuedAt() == null ? "" : inv.getIssuedAt().toString());
-            row.put("organization", org == null ? "" : org.getName());
-            row.put("ice", org == null || org.getIce() == null ? "" : org.getIce());
-            row.put("plan", inv.getPlanCode());
-            row.put("planLabel", inv.getPlanLabel());
-            row.put("cycle", inv.getCycle());
-            row.put("amountHt", inv.getAmountHt());
-            row.put("tva", inv.getTva());
-            row.put("amountTtc", inv.getAmountTtc());
-            row.put("status", inv.getStatus());
-            row.put("currency", "MAD");
-            rows.add(row);
-        }
-        return rows;
+        return billingCatalogService.invoices().stream().map(billingCatalogService::toInvoice).toList();
     }
 
     @GetMapping("/plans")
     public List<Map<String, Object>> plans(@AuthenticationPrincipal User user) {
         requireAdmin(user);
-        return List.of(
-                plan("ACCES", "Accès recruteur", 0, "Publication et suivi, sans mise en avant"),
-                plan("PREMIUM", "Premium recruteur", 299, "Équipe, offres mises en avant, alertes de délai"),
-                plan("ESSENTIEL", "Essentiel candidat", 0, "Candidatures et matching"),
-                plan("PERFORMANCE", "Performance candidat", 39, "Alertes et préparation d’entretien")
-        );
+        return billingCatalogService.plans().stream().map(billingCatalogService::toPlan).toList();
     }
 
-    @PostMapping("/invoices")
-    @Transactional(readOnly = true)
-    public Map<String, Object> invoice(
+    @PatchMapping("/plans/{code}")
+    public Map<String, Object> updatePlan(
             @AuthenticationPrincipal User admin,
+            @PathVariable String code,
             @RequestBody Map<String, Object> body
     ) {
         requireAdmin(admin);
-        Long orgId = body.get("organizationId") == null ? null : Long.valueOf(String.valueOf(body.get("organizationId")));
-        Organization org = organizationRepository.findById(orgId == null ? -1 : orgId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise introuvable"));
-        String cycle = "year".equals(String.valueOf(body.get("cycle"))) ? "year" : "month";
-        PlanTier tier = body.get("planTier") == null ? org.getPlanTier() : parseTier(String.valueOf(body.get("planTier")));
-        int monthly = monthlyPrice(tier);
-        int ttc = "year".equals(cycle) ? monthly * 10 : monthly;
-        double ht = Math.round((ttc / 1.2) * 100.0) / 100.0;
-        double tva = Math.round((ttc - ht) * 100.0) / 100.0;
-        String number = "HL-" + DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneId.of("Africa/Casablanca")).format(Instant.now())
-                + "-" + org.getId();
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("number", number);
-        out.put("issuedAt", Instant.now().toString());
-        out.put("organization", org.getName());
-        out.put("ice", org.getIce() == null ? "" : org.getIce());
-        out.put("plan", tier.name());
-        out.put("planLabel", planLabel(tier));
-        out.put("cycle", cycle);
-        out.put("amountHt", ht);
-        out.put("tva", tva);
-        out.put("amountTtc", ttc);
-        out.put("currency", "MAD");
-        return out;
+        return billingCatalogService.toPlan(billingCatalogService.update(code, body));
     }
 
     private Map<String, Object> orgSummary(Organization org) {
@@ -297,33 +292,6 @@ public class AdminController {
         row.put("offerCount", offers);
         row.put("createdAt", org.getCreatedAt() == null ? "" : org.getCreatedAt().toString());
         return row;
-    }
-
-    private Map<String, Object> plan(String code, String label, int monthly, String detail) {
-        Map<String, Object> row = new LinkedHashMap<>();
-        row.put("code", code);
-        row.put("label", label);
-        row.put("monthlyMad", monthly);
-        row.put("yearlyMad", monthly * 10);
-        row.put("detail", detail);
-        return row;
-    }
-
-    private int monthlyPrice(PlanTier tier) {
-        return switch (tier) {
-            case PREMIUM -> 299;
-            case PERFORMANCE -> 39;
-            default -> 0;
-        };
-    }
-
-    private String planLabel(PlanTier tier) {
-        return switch (tier) {
-            case PREMIUM -> "Premium recruteur";
-            case PERFORMANCE -> "Performance candidat";
-            case ESSENTIEL -> "Essentiel candidat";
-            case ACCES -> "Accès recruteur";
-        };
     }
 
     private PlanTier parseTier(String raw) {

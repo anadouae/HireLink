@@ -25,6 +25,7 @@ public class JobOfferController {
         return jobOfferService.listPublic(user);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @GetMapping("/mine")
     public List<ApiDtos.JobOfferResponse> mine(@AuthenticationPrincipal User user) {
         return jobOfferService.listMine(user);
@@ -35,6 +36,7 @@ public class JobOfferController {
         return jobOfferService.get(id, user);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PostMapping
     public ApiDtos.JobOfferResponse create(
             @AuthenticationPrincipal User user,
@@ -43,6 +45,7 @@ public class JobOfferController {
         return jobOfferService.create(user, body);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('RECRUTEUR','ADMINISTRATEUR')")
     @PutMapping("/{id}")
     public ApiDtos.JobOfferResponse update(
             @AuthenticationPrincipal User user,
@@ -52,6 +55,7 @@ public class JobOfferController {
         return jobOfferService.update(user, id, body);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('RECRUTEUR','ADMINISTRATEUR')")
     @DeleteMapping("/{id}")
     public Map<String, Object> delete(@AuthenticationPrincipal User user, @PathVariable Long id) {
         jobOfferService.delete(user, id);

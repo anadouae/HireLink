@@ -888,3 +888,10 @@
   .mission-grid { grid-template-columns: 1fr; }
   .sheet-foot { flex-direction: column; align-items: stretch; }
 }
+
+/* —— Double authentification, codes de secours —— */
+.mfa-qr { display: flex; justify-content: center; margin: 0.4rem 0 0.8rem; }
+.mfa-qr img { background: #fff; padding: 8px; border-radius: 12px; border: 1px solid var(--line, #e6dfd8); image-rendering: pixelated; }
+.mfa-secret { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 0.08em; font-size: 0.9rem; }
+.backup-codes { list-style: none; margin: 0.6rem 0 1rem; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.45rem; }
+.backup-codes li { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.95rem; letter-spacing: 0.06em; text-align: center; padding: 0.5rem 0.4rem; border: 1px dashed var(--line, #d9d0c7); border-radius: 10px; background: rgba(0, 0, 0, 0.03); user-select: all; }

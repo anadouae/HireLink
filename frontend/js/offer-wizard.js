@@ -8,12 +8,24 @@
     { id: "publish", label: "Publication" },
   ];
 
+  // requiredSkills mélange compétences et langues « Français (Natif) » : on les sépare pour ne rien dupliquer à la modification.
+  function splitRequirements(csv) {
+    const level = /\(\s*(A1|A2|B1|B2|C1|C2|Natif|Bilingue|Courant|Intermédiaire|Débutant)\s*\)\s*$/i;
+    const skills = [];
+    const langs = [];
+    String(csv || "").split(",").map((x) => x.trim()).filter(Boolean).forEach((x) => {
+      const list = level.test(x) ? langs : skills;
+      if (list.indexOf(x) === -1) list.push(x);
+    });
+    return { skills: skills.join(", "), languages: langs.join(", ") };
+  }
+
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function ensureShellCss() {
@@ -25,7 +37,7 @@
       ".hl-ow-overlay.is-open{opacity:1;pointer-events:auto}" +
       ".hl-ow-card{background:#fff;border-radius:18px;width:min(760px,100%);max-height:min(92vh,900px);display:flex;flex-direction:column;box-shadow:0 28px 70px rgba(0,0,0,.28);border:1px solid rgba(122,32,50,.18);overflow:hidden}" +
       ".hl-ow-top{padding:1.15rem 1.35rem .85rem;border-bottom:1px solid rgba(26,18,20,.08);flex-shrink:0}" +
-      ".hl-ow-top h2{font-family:Fraunces,Georgia,serif;margin:0 0 .25rem;font-size:1.35rem}" +
+      ".hl-ow-top h2{font-family:var(--font-display);margin:0 0 .25rem;font-size:1.35rem}" +
       ".hl-ow-steps{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.85rem}" +
       ".hl-ow-step{flex:1;min-width:72px;text-align:center;font-size:.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a8285;padding:.35rem .2rem;border-radius:999px;background:#f4f0ec}" +
       ".hl-ow-step.is-done{background:rgba(122,32,50,.12);color:#7a2032}" +
@@ -39,6 +51,7 @@
     ensureShellCss();
     if (global.HireLinkSkills) HireLinkSkills.ensureCss();
 
+    const split = splitRequirements(existing && existing.requiredSkills);
     const state = {
       step: 0,
       dir: "fwd",
@@ -49,8 +62,8 @@
       contractType: (existing && existing.contractType) || "CDI",
       responseSlaDays: (existing && existing.responseSlaDays) || 7,
       published: existing ? !!existing.published : true,
-      skillsCsv: (existing && existing.requiredSkills) || "Java, Spring Boot, MySQL",
-      languagesCsv: "Français (Natif), Anglais (B2)",
+      skillsCsv: split.skills || "Java, Spring Boot, MySQL",
+      languagesCsv: existing ? split.languages : "Français (Natif), Anglais (B2)",
       skillsApi: null,
       submitting: false,
     };

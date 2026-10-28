@@ -65,14 +65,11 @@ public class CompanyVerificationService {
         }
         String name = companyName.trim();
 
-        var existing = userRepository.findByCompanyIce(ice);
-        if (existing.isPresent() && (currentUserId == null || !existing.get().getId().equals(currentUserId))) {
-            User other = existing.get();
-            boolean sameFirm = similar(other.getCompany() == null ? "" : other.getCompany(), name) >= 0.72;
-            if (!sameFirm) {
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Cet ICE est déjà lié à un autre compte HireLink");
-            }
+        // Les membres d'une même entreprise partagent son ICE : conflit seulement si aucun autre compte portant cet ICE n'a la même raison sociale.
+        var others = userRepository.findAllByCompanyIce(ice).stream()
+                .filter(u -> currentUserId == null || !u.getId().equals(currentUserId)).toList();
+        if (!others.isEmpty() && others.stream().noneMatch(u -> similar(u.getCompany() == null ? "" : u.getCompany(), name) >= 0.72)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cet ICE est déjà lié à un autre compte HireLink");
         }
         boolean corporateEmail = isCorporateEmail(email);
         var known = CompanyDirectory.byIce(ice);

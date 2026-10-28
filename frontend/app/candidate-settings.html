@@ -2,53 +2,41 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Paramètres — HireLink Candidat</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261026a" />
-  <script src="../js/theme.js"></script>
+  <title>Paramètres Candidat — HireLink</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="row between">
-        <a class="brand" href="candidate.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-        <button type="button" class="mobile-toggle" id="close-side">✕</button>
-      </div>
-      <nav class="side-nav">
-        <a class="side-link" href="candidate-dashboard.html">Tableau de bord</a>
-        <a class="side-link" href="candidate.html">Offres</a>
-        <a class="side-link" href="candidate-applications.html">Mes candidatures</a>
-      </nav>
-      <div id="nav-user" class="nav-user"></div>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-actions" style="margin-left:auto">
-          <div class="avatar" id="avatar">C</div>
-        </div>
-      </header>
-      <main class="content settings-page">
-        <div class="settings-header">
-          <h1>Réglages candidat</h1>
-          <p>Votre identité, votre recherche, et ce que chaque formule change dans l’usage. Pas une facture.</p>
+<body class="rc" data-role="CANDIDAT" data-active="settings">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content settings-page" id="rc-content">
+        <div class="rc-head">
+          <div>
+            <p class="rc-eyebrow">Espace candidat</p>
+            <h1>Paramètres</h1>
+            <p class="rc-muted">Votre identité, votre recherche d’emploi et votre compte.</p>
+          </div>
         </div>
         <div class="settings-layout">
           <nav class="settings-nav" aria-label="Sections">
             <button type="button" class="is-on" data-settings="account">Profil</button>
             <button type="button" data-settings="search">Parcours</button>
-            <button type="button" data-settings="image">Image</button>
             <button type="button" data-settings="cv">CV</button>
-            <button type="button" data-settings="privacy">Paramètres</button>
+            <button type="button" data-settings="privacy">Compte</button>
             <button type="button" data-settings="plans" hidden>Formules</button>
           </nav>
           <div class="settings-panels">
@@ -88,12 +76,6 @@
                   <footer class="card-footer"><button type="submit" class="btn btn-primary">Enregistrer</button></footer>
                 </form>
               </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Apparence</h2><p>Le thème s’applique à tout votre espace.</p></header>
-                <div class="card-body">
-                  <div class="setting-row"><span>Mode sombre</span><label class="switch"><input type="checkbox" data-theme-toggle id="theme-toggle" /><span class="slider"></span></label></div>
-                </div>
-              </article>
             </section>
             <section class="settings-panel" id="set-search" hidden>
               <article class="settings-card">
@@ -132,15 +114,6 @@
                   </div>
                   <footer class="card-footer"><button type="submit" class="btn btn-primary">Enregistrer</button></footer>
                 </form>
-              </article>
-            </section>
-            <section class="settings-panel" id="set-image" hidden>
-              <article class="settings-card">
-                <header class="card-header"><h2>Image</h2><p>HireLink n'affiche pas de photo de profil. Le recruteur lit votre CV.</p></header>
-                <div class="card-body">
-                  <p class="muted">Déposez votre document dans l'onglet CV. C'est ce fichier qui sert à postuler et à la synthèse.</p>
-                  <a class="btn btn-primary" href="candidate-settings.html#cv" id="go-cv-from-image">Ouvrir le CV</a>
-                </div>
               </article>
             </section>
             <section class="settings-panel" id="set-cv" hidden>
@@ -197,39 +170,31 @@
             </section>
             <section class="settings-panel" id="set-privacy" hidden>
               <article class="settings-card">
-                <header class="card-header"><h2>Vos alertes</h2><p>Choisissez ce que la cloche doit vous signaler.</p></header>
-                <div class="card-body">
-                  <div class="setting-row"><span>Alertes de matching</span><label class="switch"><input type="checkbox" id="n-match" checked /><span class="slider"></span></label></div>
-                  <div class="setting-row"><span>Changement d’étape</span><label class="switch"><input type="checkbox" id="n-status" checked /><span class="slider"></span></label></div>
-                  <div class="setting-row"><span>Rappel d’entretien</span><label class="switch"><input type="checkbox" id="n-interview" checked /><span class="slider"></span></label></div>
-                </div>
-                <footer class="card-footer"><button type="button" class="btn btn-primary" id="btn-save-notif">Enregistrer</button></footer>
-              </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Email</h2><p>Contactez le support pour modifier votre email.</p></header>
-                <div class="card-body">
-                  <label class="input-group">Email<input id="set-email-read" class="form-control" disabled /></label>
-                </div>
-              </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Supprimer mon compte</h2><p>Action irréversible — toutes vos données seront effacées.</p></header>
+                <header class="card-header"><h2>Mes données</h2><p>Téléchargez une copie de tout ce que HireLink conserve sur vous.</p></header>
                 <div class="card-body" style="display:flex;justify-content:flex-end">
-                  <button type="button" class="btn btn-ghost" id="btn-delete-account" style="color:#9b2c2c">Supprimer</button>
+                  <button type="button" class="btn btn-secondary" id="btn-export-data">Exporter mes données</button>
+                </div>
+              </article>
+              <article class="settings-card">
+                <header class="card-header"><h2>Sécurité du compte</h2><p>Mot de passe, double authentification, passkeys, appareils connectés, désactivation ou suppression du compte : tout est regroupé sur la page Sécurité.</p></header>
+                <div class="card-body" style="display:flex;justify-content:flex-end">
+                  <a class="btn btn-secondary" href="security.html">Ouvrir la page Sécurité</a>
                 </div>
               </article>
             </section>
           </div>
         </div>
+      
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js"></script>
-  <script src="../js/in-app-help.js"></script>
-  <script src="../js/product.js"></script>
-  <script src="../js/shell.js?v=20261026e"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/suggest.js?v=20261026a"></script>
-  <script src="../js/candidate-settings.js?v=20261026d"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/growth.js?v=20261029a"></script>
+  <script defer src="../js/suggest.js?v=20261029a"></script>
+  <script defer src="../js/candidate-settings.js?v=20261029a"></script>
 </body>
 </html>

@@ -18,12 +18,13 @@ public class ScorecardController {
     }
 
     public record CriteriaRequest(List<Map<String, Object>> criteria) {}
-    public record RateRequest(Long criterionId, Integer score, String comment) {}
+    public record RateRequest(Long criterionId, Integer score, @jakarta.validation.constraints.Size(max = 1000) String comment) {}
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @GetMapping("/offers/{offerId}/scorecard-criteria")
-    public List<Map<String, Object>> getCriteria(@PathVariable Long offerId) {
+    public List<Map<String, Object>> getCriteria(@AuthenticationPrincipal User user, @PathVariable Long offerId) {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (ScorecardCriterion c : scorecardService.criteria(offerId)) {
+        for (ScorecardCriterion c : scorecardService.criteria(user, offerId)) {
             out.add(Map.of(
                     "id", c.getId(),
                     "label", c.getLabel(),
@@ -34,11 +35,12 @@ public class ScorecardController {
         return out;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PutMapping("/offers/{offerId}/scorecard-criteria")
     public List<Map<String, Object>> setCriteria(
             @AuthenticationPrincipal User user,
             @PathVariable Long offerId,
-            @RequestBody CriteriaRequest body
+            @jakarta.validation.Valid @RequestBody CriteriaRequest body
     ) {
         List<ScorecardCriterion> saved = scorecardService.setCriteria(
                 user, offerId, body.criteria() == null ? List.of() : body.criteria());
@@ -49,10 +51,11 @@ public class ScorecardController {
         return out;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @GetMapping("/applications/{appId}/scorecard")
-    public List<Map<String, Object>> entries(@PathVariable Long appId) {
+    public List<Map<String, Object>> entries(@AuthenticationPrincipal User user, @PathVariable Long appId) {
         List<Map<String, Object>> out = new ArrayList<>();
-        for (ScorecardEntry e : scorecardService.entries(appId)) {
+        for (ScorecardEntry e : scorecardService.entries(user, appId)) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("id", e.getId());
             row.put("criterionId", e.getCriterionId());
@@ -65,11 +68,12 @@ public class ScorecardController {
         return out;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PostMapping("/applications/{appId}/scorecard")
     public Map<String, Object> rate(
             @AuthenticationPrincipal User user,
             @PathVariable Long appId,
-            @RequestBody RateRequest body
+            @jakarta.validation.Valid @RequestBody RateRequest body
     ) {
         ScorecardEntry e = scorecardService.rate(user, appId, body.criterionId(),
                 body.score() == null ? 3 : body.score(), body.comment());

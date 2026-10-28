@@ -1,6 +1,7 @@
 package ma.ensat.hirelink.service;
 
 import ma.ensat.hirelink.model.PlanTier;
+import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.AiUsageLogRepository;
 import org.springframework.stereotype.Service;
@@ -21,9 +22,11 @@ import java.util.List;
 public class AiCreditService {
 
     private final AiUsageLogRepository aiUsageLogRepository;
+    private final BillingCatalogService billingCatalogService;
 
-    public AiCreditService(AiUsageLogRepository aiUsageLogRepository) {
+    public AiCreditService(AiUsageLogRepository aiUsageLogRepository, BillingCatalogService billingCatalogService) {
         this.aiUsageLogRepository = aiUsageLogRepository;
+        this.billingCatalogService = billingCatalogService;
     }
 
     public record CreditStatus(
@@ -35,52 +38,23 @@ public class AiCreditService {
             boolean allowed
     ) {}
 
-    public int limitFor(PlanTier tier) {
-        if (tier == null) return 5;
-        return switch (tier) {
-            case ESSENTIEL -> 5;
-            case PERFORMANCE -> 50;
-            case ACCES -> 20;
-            case PREMIUM -> 300;
-        };
+    public PlanTier resolveTier(User user) {
+        if (user.getPlanTier() != null) return user.getPlanTier();
+        return user.getRole() == Role.CANDIDAT ? PlanTier.ESSENTIEL : PlanTier.ACCES;
     }
 
-    public PlanTier resolveTier(User user, boolean premiumHeader) {
-        if (premiumHeader) {
-            return user.getRole().name().contains("CANDIDAT") ? PlanTier.PERFORMANCE : PlanTier.PREMIUM;
-        }
-        if (user.getPlanTier() != null) return user.getPlanTier();
-        return user.getRole().name().contains("CANDIDAT") ? PlanTier.ESSENTIEL : PlanTier.ACCES;
+    /** Le plafond mensuel vient du catalogue de plans (modifiable par l'administration). */
+    public int limitFor(PlanTier tier) {
+        return billingCatalogService.require(tier).getCredits();
     }
 
     @Transactional(readOnly = true)
-    public CreditStatus status(User user, boolean premiumHeader) {
-        PlanTier tier = resolveTier(user, premiumHeader);
+    public CreditStatus status(User user) {
+        PlanTier tier = resolveTier(user);
         int limit = limitFor(tier);
         int u = usedThisMonth(user.getId());
-        return new CreditStatus(tier.name(), limit, u, Math.max(0, limit - u), false, u < limit);
-    }
-
-    /** Ne pas appeler avant succès LLM (R16). */
-    @Transactional(readOnly = true)
-    public CreditStatus consumeAfterSuccess(User user, boolean premiumHeader) {
-        // Le débit réel est l'insertion AiUsageLog (creditsSpent=1) faite par le controller.
-        // Ici on recalcule le statut après écriture.
-        return status(user, premiumHeader);
-    }
-
-    /** @deprecated use status(User, boolean) */
-    @Transactional(readOnly = true)
-    public CreditStatus status(Long userId, String role, boolean premium) {
-        int limit = premium ? 300 : ("RECRUTEUR".equalsIgnoreCase(role) || "ADMINISTRATEUR".equalsIgnoreCase(role) ? 20 : 5);
-        int u = usedThisMonth(userId);
-        return new CreditStatus(premium ? "PREMIUM" : "ESSENTIEL", limit, u, Math.max(0, limit - u), false, u < limit);
-    }
-
-    /** @deprecated */
-    @Transactional(readOnly = true)
-    public CreditStatus consume(Long userId, String role, boolean premium) {
-        return status(userId, role, premium);
+        boolean paid = tier == PlanTier.PREMIUM || tier == PlanTier.PERFORMANCE;
+        return new CreditStatus(tier.name(), limit, u, Math.max(0, limit - u), paid, u < limit);
     }
 
     private int usedThisMonth(Long userId) {

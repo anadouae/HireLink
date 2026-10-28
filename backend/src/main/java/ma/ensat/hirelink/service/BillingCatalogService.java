@@ -6,6 +6,8 @@ import ma.ensat.hirelink.model.Organization;
 import ma.ensat.hirelink.model.PlanTier;
 import ma.ensat.hirelink.repository.BillingInvoiceRepository;
 import ma.ensat.hirelink.repository.CommercialPlanRepository;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,13 +33,11 @@ public class BillingCatalogService {
 
     @Transactional
     public List<CommercialPlan> plans() {
-        ensureDefaults();
         return planRepository.findAll();
     }
 
     @Transactional
     public CommercialPlan update(String code, Map<String, Object> body) {
-        ensureDefaults();
         CommercialPlan plan = planRepository.findByCode(code.trim().toUpperCase())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan introuvable"));
         if (body.get("label") != null && !String.valueOf(body.get("label")).isBlank()) {
@@ -61,7 +61,6 @@ public class BillingCatalogService {
     }
 
     public CommercialPlan require(PlanTier tier) {
-        ensureDefaults();
         return planRepository.findByCode(tier.name())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan introuvable"));
     }
@@ -131,7 +130,9 @@ public class BillingCatalogService {
         return "HL-" + day + "-" + orgId + "-" + (invoiceRepository.count() + 1);
     }
 
-    private void ensureDefaults() {
+    /** Catalogue des plans créé une fois au démarrage (jamais pendant une requête de lecture). */
+    @EventListener(ApplicationReadyEvent.class)
+    public void ensureDefaults() {
         if (planRepository.count() > 0) return;
         seed("ACCES", "Accès", "RECRUTEUR", 0, 0, 20, "Publication d’offres\nSuivi des candidatures\n1 recruteur");
         seed("PREMIUM", "Premium", "RECRUTEUR", 299, 2990, 200, "Équipe\nOffres mises en avant\nAlertes de délai");

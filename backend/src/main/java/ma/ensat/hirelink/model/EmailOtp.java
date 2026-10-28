@@ -28,6 +28,9 @@ public class EmailOtp {
     @Column(nullable = false)
     private boolean consumed = false;
 
+    @Column(nullable = false)
+    private int attempts = 0;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -43,6 +46,8 @@ public class EmailOtp {
     public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
     public boolean isConsumed() { return consumed; }
     public void setConsumed(boolean consumed) { this.consumed = consumed; }
+    public int getAttempts() { return attempts; }
+    public void setAttempts(int attempts) { this.attempts = attempts; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

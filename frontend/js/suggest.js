@@ -29,7 +29,7 @@
 
     function paint(list) {
       rows = list || [];
-      if (!rows.length) { close(); return; }
+      if (!rows.length || document.activeElement !== input) { close(); return; }
       menu.innerHTML = rows.map(function (row, i) {
         const label = labelOf(row);
         const flag = row && row.flag ? row.flag + " " : "";

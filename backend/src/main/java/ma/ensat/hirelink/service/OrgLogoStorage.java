@@ -16,7 +16,7 @@ import java.util.UUID;
 public class OrgLogoStorage {
 
     private static final int MAX_BYTES = 2_000_000;
-    private static final Set<String> ALLOWED = Set.of("png", "jpg", "jpeg", "webp", "gif", "svg");
+    private static final Set<String> ALLOWED = Set.of("png", "jpg", "webp", "gif");
     private final Path root;
 
     public OrgLogoStorage(@Value("${hirelink.logo.dir:data/org-logos}") String dir) throws IOException {
@@ -24,6 +24,7 @@ public class OrgLogoStorage {
         Files.createDirectories(root);
     }
 
+    /** Logo : PNG, JPEG, WEBP ou GIF reconnus par leur contenu (SVG refusé : il peut embarquer du JavaScript). */
     public String save(Long orgId, String originalName, byte[] bytes) throws IOException {
         if (bytes == null || bytes.length == 0) {
             throw new IllegalArgumentException("Fichier vide");
@@ -31,11 +32,11 @@ public class OrgLogoStorage {
         if (bytes.length > MAX_BYTES) {
             throw new IllegalArgumentException("Logo trop lourd (2 Mo maximum)");
         }
-        String ext = extension(originalName);
-        if (!ALLOWED.contains(ext)) {
-            throw new IllegalArgumentException("Formats acceptés : PNG, JPG, WEBP, GIF, SVG");
+        FileSignature.Kind kind = FileSignature.detect(bytes);
+        if (kind == null || kind == FileSignature.PDF || kind == FileSignature.TEXT) {
+            throw new IllegalArgumentException("Formats acceptés : PNG, JPG, WEBP, GIF");
         }
-        String relative = "org-" + orgId + "/" + UUID.randomUUID() + "." + ext;
+        String relative = "org-" + orgId + "/" + UUID.randomUUID() + "." + kind.ext();
         Path dest = resolve(relative);
         Files.createDirectories(dest.getParent());
         Files.write(dest, bytes);
@@ -55,7 +56,6 @@ public class OrgLogoStorage {
             case "jpg", "jpeg" -> "image/jpeg";
             case "webp" -> "image/webp";
             case "gif" -> "image/gif";
-            case "svg" -> "image/svg+xml";
             default -> "application/octet-stream";
         };
     }

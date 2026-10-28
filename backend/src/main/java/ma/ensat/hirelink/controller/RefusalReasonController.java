@@ -21,20 +21,26 @@ public class RefusalReasonController {
         this.service = service;
     }
 
-    public record RefusalBody(String code, String label, Boolean active) {}
+    public record RefusalBody(@jakarta.validation.constraints.Size(max = 40) String code, @jakarta.validation.constraints.Size(max = 160) String label, Boolean active) {}
 
     @GetMapping
-    public List<Map<String, Object>> list(@RequestParam(defaultValue = "false") boolean all) {
+    public List<Map<String, Object>> list(@AuthenticationPrincipal User user, @RequestParam(defaultValue = "false") boolean all) {
+        if (all && (user == null || user.getRole() != ma.ensat.hirelink.model.Role.ADMINISTRATEUR)) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Réservé à l'administration");
+        }
         return all ? service.listAll() : service.listActive();
     }
 
     @GetMapping("/{id}")
-    public Map<String, Object> get(@PathVariable Long id) {
+    public Map<String, Object> get(@AuthenticationPrincipal User user, @PathVariable Long id) {
+        if (user == null || user.getRole() != ma.ensat.hirelink.model.Role.ADMINISTRATEUR) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.FORBIDDEN, "Réservé à l'administration");
+        }
         return service.get(id);
     }
 
     @PostMapping
-    public Map<String, Object> create(@AuthenticationPrincipal User user, @RequestBody RefusalBody body) {
+    public Map<String, Object> create(@AuthenticationPrincipal User user, @jakarta.validation.Valid @RequestBody RefusalBody body) {
         boolean active = body.active() == null || body.active();
         return service.create(user, body.code(), body.label(), active);
     }
@@ -43,7 +49,7 @@ public class RefusalReasonController {
     public Map<String, Object> update(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestBody RefusalBody body
+            @jakarta.validation.Valid @RequestBody RefusalBody body
     ) {
         return service.update(user, id, body.code(), body.label(), body.active());
     }

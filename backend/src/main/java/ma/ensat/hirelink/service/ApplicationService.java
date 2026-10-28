@@ -18,19 +18,27 @@ import java.util.stream.Collectors;
 /**
  * Pipeline ATS — machine d'états R01, isolation org R02, checklist R05,
  * catalogue refus R04, retrait candidat R11, HM R14.
- * Périmètre produit : le parcours positif s'arrête à INTERVIEW
- * (OFFER / ACCEPTED hors gestion réelle — refus / retrait restent possibles).
+ * Périmètre produit : le parcours positif s'arrête à INTERVIEW (refus / retrait restent possibles).
  */
 @Service
 public class ApplicationService {
 
+
     private static final Set<ApplicationStatus> TERMINAL = EnumSet.of(
-            ApplicationStatus.INTERVIEW, ApplicationStatus.ACCEPTED,
-            ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN
+            ApplicationStatus.INTERVIEW, ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN
     );
 
-    private static final Set<ApplicationStatus> OUT_OF_SCOPE = EnumSet.of(
-            ApplicationStatus.OFFER, ApplicationStatus.ACCEPTED
+    private static final Map<ApplicationStatus, String> STATUS_FR = Map.of(
+            ApplicationStatus.SUBMITTED, "Envoyée",
+            ApplicationStatus.SCREENING, "Présélection",
+            ApplicationStatus.SHORTLISTED, "Shortlist",
+            ApplicationStatus.INTERVIEW, "Entretien",
+            ApplicationStatus.REJECTED, "Refusée",
+            ApplicationStatus.WITHDRAWN, "Retirée"
+    );
+
+    private static final Map<String, String> INTERVIEW_TYPE_FR = Map.of(
+            "PHONE", "Téléphone", "VISIO", "Visio", "ONSITE", "Présentiel", "ASYNC", "Asynchrone"
     );
 
     private static final int MAX_APPLY_PER_DAY = 25;
@@ -53,6 +61,7 @@ public class ApplicationService {
     private final OrganizationService organizationService;
     private final MembershipRepository membershipRepository;
     private final CvStorage cvStorage;
+    private final AuditService audit;
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
@@ -64,8 +73,10 @@ public class ApplicationService {
             NotificationService notificationService,
             OrganizationService organizationService,
             MembershipRepository membershipRepository,
-            CvStorage cvStorage
+            CvStorage cvStorage,
+            AuditService audit
     ) {
+        this.audit = audit;
         this.applicationRepository = applicationRepository;
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
@@ -120,15 +131,12 @@ public class ApplicationService {
         app.setMatchScore(score);
         app.setCvSource(cvSource);
         app.setCvFileName(req.cvFileName() != null && !req.cvFileName().isBlank()
-                ? req.cvFileName().trim()
+                ? FileSignature.safeName(req.cvFileName())
                 : (cvSource.equals("PROFILE") ? "Profil HireLink" : null));
         if (req.coverLetter() != null && !req.coverLetter().isBlank()) {
             String letter = req.coverLetter().trim();
             if (letter.length() > 8000) letter = letter.substring(0, 8000);
             app.setCoverLetter(letter);
-        }
-        if (req.photoFileName() != null && !req.photoFileName().isBlank()) {
-            app.setPhotoFileName(req.photoFileName().trim());
         }
         String sections = cleanSections(req.cvSections());
         if (sections == null && "PROFILE".equals(cvSource)) {
@@ -162,10 +170,12 @@ public class ApplicationService {
         timelineService.append(app.getId(), reopen ? ApplicationStatus.WITHDRAWN.name() : null,
                 ApplicationStatus.SUBMITTED.name(),
                 candidate.getId(), "{\"event\":\"" + (reopen ? "REAPPLY" : "APPLY") + "\",\"match\":" + Math.round(score) + "}");
-        notificationService.push(offer.getRecruiter().getId(),
-                "Nouvelle candidature",
-                candidate.getFullName() + " a postulé à « " + offer.getTitle() + " »",
-                "APPLICATION");
+        for (Long target : organizationService.offerNotificationTargets(offer)) {
+            notificationService.push(target,
+                    "Nouvelle candidature",
+                    candidate.getFullName() + " a postulé à « " + offer.getTitle() + " »",
+                    "APPLICATION");
+        }
         notificationService.push(candidate.getId(),
                 "Candidature envoyée",
                 "Votre dossier pour « " + offer.getTitle() + " » est soumis. SLA : "
@@ -213,52 +223,6 @@ public class ApplicationService {
                 .map(this::toDto).toList();
     }
 
-    /** Métriques funnel SaaS (conversion par étape). */
-    @Transactional(readOnly = true)
-    public Map<String, Object> pipelineFunnel(User recruiter) {
-        List<ApiDtos.ApplicationResponse> apps = pipelineForRecruiter(recruiter);
-        LinkedHashMap<String, Long> byStatus = new LinkedHashMap<>();
-        for (ApplicationStatus s : ApplicationStatus.values()) {
-            byStatus.put(s.name(), 0L);
-        }
-        long breached = 0;
-        long hot = 0;
-        for (ApiDtos.ApplicationResponse a : apps) {
-            byStatus.merge(a.status().name(), 1L, Long::sum);
-            if (a.slaBreached()) breached++;
-            if (a.matchScore() != null && a.matchScore() >= 75) hot++;
-        }
-        long active = apps.stream().filter(a -> !TERMINAL.contains(a.status())).count();
-        long decided = byStatus.getOrDefault("ACCEPTED", 0L) + byStatus.getOrDefault("REJECTED", 0L);
-        long submitted = Math.max(1, apps.size());
-        double conversionToInterview = 100.0 * (byStatus.getOrDefault("INTERVIEW", 0L)
-                + byStatus.getOrDefault("OFFER", 0L)
-                + byStatus.getOrDefault("ACCEPTED", 0L)) / submitted;
-        double hireRate = 100.0 * byStatus.getOrDefault("ACCEPTED", 0L) / submitted;
-
-        Map<String, Object> growth = new LinkedHashMap<>();
-        growth.put("hint", "Réduire le temps en SCREENING et respecter le SLA augmente la conversion et le score de fiabilité.");
-        if (breached > 0) {
-            growth.put("nudge", "Upgrade Performance : alertes SLA + kit entretien IA pour traiter les " + breached + " dossiers en retard.");
-        } else if (active > 8) {
-            growth.put("nudge", "Volume élevé — scorecards F12 + assignation HM accélèrent la shortlist.");
-        } else {
-            growth.put("nudge", null);
-        }
-
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("total", apps.size());
-        m.put("active", active);
-        m.put("decided", decided);
-        m.put("slaBreached", breached);
-        m.put("hotMatches", hot);
-        m.put("byStatus", byStatus);
-        m.put("conversionToInterviewPct", Math.round(conversionToInterview * 10) / 10.0);
-        m.put("hireRatePct", Math.round(hireRate * 10) / 10.0);
-        m.put("growth", growth);
-        return m;
-    }
-
     @Transactional
     public ApiDtos.ApplicationResponse assignHm(User actor, Long appId, Long hmUserId) {
         Application app = applicationRepository.findById(appId)
@@ -280,8 +244,7 @@ public class ApplicationService {
         }
         app.setAssignedHmUserId(hmUserId);
         applicationRepository.save(app);
-        timelineService.append(app.getId(), app.getStatus().name(), app.getStatus().name(),
-                actor.getId(), "{\"event\":\"ASSIGN_HM\",\"hmUserId\":" + hmUserId + "}");
+        audit.ok("HM_ASSIGNED", actor, "APPLICATION", app.getId(), "HM " + hmUserId);
         if (hmUserId != null) {
             notificationService.push(hmUserId, "Dossier assigné",
                     "Vous êtes Hiring Manager sur « " + app.getJobOffer().getTitle() + " »", "ASSIGN");
@@ -296,29 +259,26 @@ public class ApplicationService {
 
         ApplicationStatus from = app.getStatus();
 
-        if (OUT_OF_SCOPE.contains(req.status())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Hors périmètre HireLink : le pipeline s'arrête à INTERVIEW (pas d'étape Offre / Accepté).");
-        }
-
         if (req.status() == ApplicationStatus.WITHDRAWN) {
             if (!app.getCandidate().getId().equals(actor.getId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le candidat peut retirer (R11)");
             }
             // Retrait possible tant que non rejeté / déjà retiré (INTERVIEW reste retirable).
-            if (from == ApplicationStatus.REJECTED || from == ApplicationStatus.WITHDRAWN
-                    || from == ApplicationStatus.ACCEPTED) {
+            if (from == ApplicationStatus.REJECTED || from == ApplicationStatus.WITHDRAWN) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Retrait impossible à cette étape (R11)");
             }
             app.setStatus(ApplicationStatus.WITHDRAWN);
             applicationRepository.save(app);
+            audit.ok("STAGE_CHANGE", actor, "APPLICATION", app.getId(), from + " → WITHDRAWN");
             timelineService.append(app.getId(), from.name(), ApplicationStatus.WITHDRAWN.name(),
                     actor.getId(), "{\"event\":\"WITHDRAW\"}");
-            notificationService.push(app.getJobOffer().getRecruiter().getId(),
-                    "Candidature retirée",
-                    app.getCandidate().getFullName() + " a retiré sa candidature",
-                    "STATUS");
+            for (Long target : organizationService.offerNotificationTargets(app.getJobOffer())) {
+                notificationService.push(target,
+                        "Candidature retirée",
+                        app.getCandidate().getFullName() + " a retiré sa candidature",
+                        "STATUS");
+            }
             return toDto(app);
         }
 
@@ -360,21 +320,36 @@ public class ApplicationService {
         app.setStatus(req.status());
         applicationRepository.save(app);
 
+        audit.ok("STAGE_CHANGE", actor, "APPLICATION", app.getId(), from + " → " + req.status());
         String payload = buildTimelinePayload(app, req);
         timelineService.append(app.getId(), from.name(), req.status().name(), actor.getId(), payload);
-        notificationService.push(app.getCandidate().getId(),
-                "Mise à jour candidature",
-                "« " + app.getJobOffer().getTitle() + " » → " + req.status().name()
-                        + (req.status() == ApplicationStatus.REJECTED && app.getRejectionReason() != null
-                        ? " — " + app.getRejectionReason() : ""),
-                "STATUS");
+        String jobTitle = app.getJobOffer().getTitle();
+        if (req.status() == ApplicationStatus.INTERVIEW) {
+            notificationService.push(app.getCandidate().getId(), "Entretien planifié",
+                    "« " + jobTitle + " » — " + interviewSummary(app), "INTERVIEW");
+        } else if (req.status() == ApplicationStatus.REJECTED) {
+            notificationService.push(app.getCandidate().getId(), "Candidature refusée",
+                    "« " + jobTitle + " »" + (app.getRejectionReason() != null ? " — " + app.getRejectionReason() : ""), "STATUS");
+        } else {
+            notificationService.push(app.getCandidate().getId(), "Votre candidature avance",
+                    "« " + jobTitle + " » est maintenant en étape « " + STATUS_FR.get(req.status()) + " ».", "STATUS");
+        }
         if (app.getAssignedHmUserId() != null && !app.getAssignedHmUserId().equals(actor.getId())) {
             notificationService.push(app.getAssignedHmUserId(),
                     "Pipeline mis à jour",
-                    app.getCandidate().getFullName() + " → " + req.status().name(),
+                    app.getCandidate().getFullName() + " → " + STATUS_FR.get(req.status()),
                     "STATUS");
         }
         return toDto(app);
+    }
+
+    /** « 05/11/2026 à 10:30 · Visio · lien ou lieu » — heure de Casablanca. */
+    private String interviewSummary(Application app) {
+        String when = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm")
+                .withZone(java.time.ZoneId.of("Africa/Casablanca")).format(app.getInterviewAt());
+        String type = INTERVIEW_TYPE_FR.getOrDefault(app.getInterviewType(), app.getInterviewType());
+        String where = app.getInterviewLocation() == null || app.getInterviewLocation().isBlank() ? "" : " · " + app.getInterviewLocation();
+        return when + " · " + type + where;
     }
 
     private void assertCanActOnPipeline(User actor, Application app) {
@@ -459,15 +434,10 @@ public class ApplicationService {
         }
     }
 
+    /** Seul le refus porte une information utile en plus du changement d'étape : son motif. */
     private static String buildTimelinePayload(Application app, ApiDtos.AdvanceRequest req) {
-        StringBuilder sb = new StringBuilder(128);
-        sb.append("{\"rejectionReason\":\"").append(jsonEsc(app.getRejectionReason())).append("\"");
-        sb.append(",\"refusalCode\":\"").append(jsonEsc(app.getRefusalReasonCode())).append("\"");
-        if (req.interviewType() != null) {
-            sb.append(",\"interviewType\":\"").append(jsonEsc(req.interviewType())).append("\"");
-        }
-        sb.append("}");
-        return sb.toString();
+        if (req.status() != ApplicationStatus.REJECTED || app.getRejectionReason() == null) return null;
+        return "{\"reason\":\"" + jsonEsc(app.getRejectionReason()) + "\"}";
     }
 
     private static String jsonEsc(String s) {
@@ -481,7 +451,7 @@ public class ApplicationService {
         if (deadline == null && app.getSubmittedAt() != null) {
             deadline = app.getSubmittedAt().plus(o.getResponseSlaDays(), ChronoUnit.DAYS);
         }
-        long remaining = 0;
+        Long remaining = null; // le délai de réponse ne s’applique plus une fois entretien, refus ou retrait
         boolean breached = false;
         if (deadline != null && !TERMINAL.contains(app.getStatus())) {
             remaining = ChronoUnit.DAYS.between(Instant.now(), deadline);
@@ -502,7 +472,6 @@ public class ApplicationService {
                 app.getCvSource(),
                 app.getCvFileName(),
                 app.getCoverLetter(),
-                app.getPhotoFileName(),
                 app.getInterviewType(),
                 app.getInterviewAt(),
                 app.getInterviewLocation(),
@@ -520,7 +489,7 @@ public class ApplicationService {
         );
     }
 
-    public record CvFile(Resource resource, String filename) {}
+    public record CvFile(Resource resource, String filename, String mediaType) {}
 
     @Transactional
     public ApiDtos.ApplicationResponse attachCv(User candidate, Long appId, MultipartFile file, String sections) {
@@ -534,7 +503,7 @@ public class ApplicationService {
         }
         try {
             app.setCvStorageName(cvStorage.save("applications", file.getOriginalFilename(), file.getBytes()));
-            app.setCvFileName(file.getOriginalFilename());
+            app.setCvFileName(FileSignature.safeName(file.getOriginalFilename()));
             app.setCvSource("UPLOAD");
             String clean = cleanSections(sections);
             if (clean != null) app.setCvSections(clean);
@@ -552,7 +521,7 @@ public class ApplicationService {
         Application app = applicationRepository.findById(appId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
         if (!actor.getId().equals(app.getCandidate().getId())) {
-            organizationService.assertSameOrg(actor, app.getJobOffer());
+            organizationService.assertCanAccessApplication(actor, app);
         }
         if (app.getCvStorageName() == null || app.getCvStorageName().isBlank()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucun CV joint");
@@ -562,7 +531,7 @@ public class ApplicationService {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Fichier CV introuvable");
         }
         String name = app.getCvFileName() == null || app.getCvFileName().isBlank() ? "cv" : app.getCvFileName();
-        return new CvFile(resource, name);
+        return new CvFile(resource, name, cvStorage.mediaType(app.getCvStorageName()));
     }
 
     private String cleanSections(String raw) {

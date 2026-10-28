@@ -17,13 +17,13 @@ public class OfferReportController {
         this.jobOfferService = jobOfferService;
     }
 
-    public record ReportBody(String reason) {}
+    public record ReportBody(@jakarta.validation.constraints.Size(max = 500) String reason) {}
 
     @PostMapping("/{id}/report")
     public Map<String, Object> report(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestBody(required = false) ReportBody body
+            @jakarta.validation.Valid @RequestBody(required = false) ReportBody body
     ) {
         return jobOfferService.report(user, id, body == null ? null : body.reason());
     }
