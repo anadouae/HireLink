@@ -60,7 +60,7 @@ public class MeController {
             if (hasFile) {
                 String stored = cvStorage.save("profiles", file.getOriginalFilename(), file.getBytes());
                 user.setCvStorageName(stored);
-                user.setCvFileName(file.getOriginalFilename());
+                user.setCvFileName(ma.ensat.hirelink.service.FileSignature.safeName(file.getOriginalFilename()));
             }
             if (json != null) {
                 user.setCvSections(json);
@@ -93,9 +93,10 @@ public class MeController {
         if (resource == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Fichier CV introuvable");
         }
-        String name = user.getCvFileName() == null ? "cv" : user.getCvFileName();
+        String name = user.getCvFileName() == null ? "cv" : user.getCvFileName().replaceAll("[^\\p{L}\\p{N}._ -]", "_");
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name.replace("\"", "") + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
+                .contentType(MediaType.parseMediaType(cvStorage.mediaType(user.getCvStorageName())))
                 .body(resource);
     }
 
@@ -107,7 +108,7 @@ public class MeController {
     @PatchMapping
     public ApiDtos.UserProfile update(
             @AuthenticationPrincipal User user,
-            @RequestBody ApiDtos.UpdateProfile body
+            @jakarta.validation.Valid @RequestBody ApiDtos.UpdateProfile body
     ) {
         if (body.fullName() != null && !body.fullName().isBlank()) {
             user.setFullName(body.fullName().trim());

@@ -46,34 +46,34 @@ public class ApiDtos {
     ) {}
 
     public record UpdateProfile(
-            String fullName,
-            String skills,
-            String company,
-            String companyIce,
-            String soughtRoles,
-            String preferredLocations,
-            String preferredContracts,
-            String experienceLevel,
-            String companyPresentation,
-            String firstName,
-            String lastName,
-            String phone,
-            String phoneCountry,
-            String city,
-            String nationality,
-            String birthDate,
-            String school,
-            String workMode,
-            String gender,
-            String availability
+            @jakarta.validation.constraints.Size(max = 120) String fullName,
+            @jakarta.validation.constraints.Size(max = 500) String skills,
+            @jakarta.validation.constraints.Size(max = 120) String company,
+            @jakarta.validation.constraints.Size(max = 20) String companyIce,
+            @jakarta.validation.constraints.Size(max = 400) String soughtRoles,
+            @jakarta.validation.constraints.Size(max = 300) String preferredLocations,
+            @jakarta.validation.constraints.Size(max = 120) String preferredContracts,
+            @jakarta.validation.constraints.Size(max = 40) String experienceLevel,
+            @jakarta.validation.constraints.Size(max = 800) String companyPresentation,
+            @jakarta.validation.constraints.Size(max = 80) String firstName,
+            @jakarta.validation.constraints.Size(max = 80) String lastName,
+            @jakarta.validation.constraints.Size(max = 30) String phone,
+            @jakarta.validation.constraints.Size(max = 8) String phoneCountry,
+            @jakarta.validation.constraints.Size(max = 80) String city,
+            @jakarta.validation.constraints.Size(max = 60) String nationality,
+            @jakarta.validation.constraints.Size(max = 10) String birthDate,
+            @jakarta.validation.constraints.Size(max = 160) String school,
+            @jakarta.validation.constraints.Size(max = 40) String workMode,
+            @jakarta.validation.constraints.Size(max = 20) String gender,
+            @jakarta.validation.constraints.Size(max = 40) String availability
     ) {}
 
     public record JobOfferRequest(
-            @NotBlank String title,
-            @NotBlank String description,
-            String requiredSkills,
-            String location,
-            String contractType,
+            @NotBlank @jakarta.validation.constraints.Size(max = 160) String title,
+            @NotBlank @jakarta.validation.constraints.Size(max = 10000) String description,
+            @jakarta.validation.constraints.Size(max = 2000) String requiredSkills,
+            @jakarta.validation.constraints.Size(max = 120) String location,
+            @jakarta.validation.constraints.Size(max = 40) String contractType,
             @Min(1) int responseSlaDays,
             boolean published
     ) {}
@@ -103,11 +103,10 @@ public class ApiDtos {
 
     public record ApplyRequest(
             Long jobOfferId,
-            String cvSource,
-            String cvFileName,
-            String coverLetter,
-            String photoFileName,
-            String cvSections
+            @jakarta.validation.constraints.Size(max = 20) String cvSource,
+            @jakarta.validation.constraints.Size(max = 160) String cvFileName,
+            @jakarta.validation.constraints.Size(max = 5000) String coverLetter,
+            @jakarta.validation.constraints.Size(max = 20000) String cvSections
     ) {}
 
     public record ApplicationResponse(
@@ -125,7 +124,6 @@ public class ApiDtos {
             String cvSource,
             String cvFileName,
             String coverLetter,
-            String photoFileName,
             String interviewType,
             Instant interviewAt,
             String interviewLocation,
@@ -144,12 +142,12 @@ public class ApiDtos {
 
     public record AdvanceRequest(
             @NotNull ApplicationStatus status,
-            String rejectionReason,
-            String advanceNote,
-            String interviewType,
+            @jakarta.validation.constraints.Size(max = 600) String rejectionReason,
+            @jakarta.validation.constraints.Size(max = 1000) String advanceNote,
+            @jakarta.validation.constraints.Size(max = 20) String interviewType,
             Instant interviewAt,
-            String interviewLocation,
-            String interviewNotes,
+            @jakarta.validation.constraints.Size(max = 300) String interviewLocation,
+            @jakarta.validation.constraints.Size(max = 2000) String interviewNotes,
             Boolean confirmIdentity,
             Boolean confirmCvReviewed,
             Boolean confirmSlaAware

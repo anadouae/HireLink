@@ -270,7 +270,7 @@ h2 {
 }
 
 .btn-secondary {
-  background: #fff;
+  background: var(--surface, #fff);
   color: var(--ink);
   border-color: var(--line-strong);
 }
@@ -293,7 +293,7 @@ h2 {
 }
 
 .btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--surface-2, rgba(255, 255, 255, 0.7));
   border-color: var(--rose);
 }
 
@@ -739,3 +739,8 @@ h2 {
   clip: rect(0, 0, 0, 0);
   border: 0;
 }
+
+/* Thème sombre : survols lisibles pour les boutons secondaires */
+html[data-theme="dark"] .btn-ghost:hover { background: rgba(255, 255, 255, 0.08); }
+html[data-theme="dark"] .btn-soft { background: rgba(214, 92, 112, 0.18); color: #f4b8c2; }
+html[data-theme="dark"] .btn-soft:hover { background: rgba(214, 92, 112, 0.28); }

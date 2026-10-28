@@ -7,11 +7,13 @@ import ma.ensat.hirelink.model.Membership;
 import ma.ensat.hirelink.model.OfferReport;
 import ma.ensat.hirelink.model.Organization;
 import ma.ensat.hirelink.model.Role;
+import ma.ensat.hirelink.model.Tag;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.ApplicationRepository;
 import ma.ensat.hirelink.repository.JobOfferRepository;
 import ma.ensat.hirelink.repository.MembershipRepository;
 import ma.ensat.hirelink.repository.OfferReportRepository;
+import ma.ensat.hirelink.repository.TagRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,7 +22,9 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -43,6 +47,8 @@ public class JobOfferService {
     private final OfferReportRepository offerReportRepository;
     private final NotificationService notificationService;
     private final MembershipRepository membershipRepository;
+    private final OrganizationService organizationService;
+    private final TagRepository tagRepository;
 
     public JobOfferService(
             JobOfferRepository jobOfferRepository,
@@ -52,8 +58,12 @@ public class JobOfferService {
             FraudOfferScanService fraudOfferScanService,
             OfferReportRepository offerReportRepository,
             NotificationService notificationService,
-            MembershipRepository membershipRepository
+            MembershipRepository membershipRepository,
+            OrganizationService organizationService,
+            TagRepository tagRepository
     ) {
+        this.tagRepository = tagRepository;
+        this.organizationService = organizationService;
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
         this.applicationRepository = applicationRepository;
@@ -81,7 +91,13 @@ public class JobOfferService {
 
     @Transactional(readOnly = true)
     public List<ApiDtos.JobOfferResponse> listMine(User recruiter) {
-        return jobOfferRepository.findByRecruiterId(recruiter.getId()).stream()
+        // Offres de toute l'organisation (R02) : un collègue voit et pilote les mêmes offres que le pipeline.
+        List<Long> authors = recruiter.getRole() == Role.ADMINISTRATEUR
+                ? List.of(recruiter.getId())
+                : organizationService.orgMemberIds(recruiter);
+        return jobOfferRepository.findByRecruiterIdIn(authors).stream()
+                .sorted(Comparator.comparing(JobOffer::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(o -> toDto(o, null))
                 .toList();
     }
@@ -90,7 +106,7 @@ public class JobOfferService {
     public ApiDtos.JobOfferResponse get(Long id, User viewer) {
         JobOffer o = jobOfferRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
-        boolean owner = viewer != null && viewer.getId().equals(o.getRecruiter().getId());
+        boolean owner = viewer != null && organizationService.canManageOffer(viewer, o);
         boolean admin = viewer != null && viewer.getRole() == Role.ADMINISTRATEUR;
         if ((!o.isPublished() || o.isSuspended()) && !owner && !admin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Offre non publique");
@@ -116,7 +132,7 @@ public class JobOfferService {
     public ApiDtos.JobOfferResponse update(User recruiter, Long id, ApiDtos.JobOfferRequest req) {
         JobOffer o = jobOfferRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
-        if (!o.getRecruiter().getId().equals(recruiter.getId()) && recruiter.getRole() != Role.ADMINISTRATEUR) {
+        if (!organizationService.canManageOffer(recruiter, o)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Pas propriétaire");
         }
         boolean wantPublish = req.published();
@@ -136,11 +152,14 @@ public class JobOfferService {
     public void delete(User recruiter, Long id) {
         JobOffer o = jobOfferRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
-        if (!o.getRecruiter().getId().equals(recruiter.getId()) && recruiter.getRole() != Role.ADMINISTRATEUR) {
+        if (!organizationService.canManageOffer(recruiter, o)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Pas propriétaire");
         }
-        List<Application> apps = applicationRepository.findByJobOfferId(id);
-        applicationRepository.deleteAll(apps);
+        // Cohérence recruteur ↔ candidat : on ne supprime jamais l'historique d'un candidat.
+        if (!applicationRepository.findByJobOfferId(id).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cette offre a déjà des candidatures : dépubliez-la plutôt que de la supprimer (les candidats gardent leur historique).");
+        }
         jobOfferRepository.delete(o);
     }
 
@@ -192,10 +211,26 @@ public class JobOfferService {
     /** Middleware logique : Inscription libre ≠ Publication libre. */
     private void assertCanPublish(User recruiter) {
         if (recruiter.getRole() == Role.ADMINISTRATEUR) return;
-        if (recruiter.isCompanyVerified()) return;
+        if (recruiter.isCompanyVerified() || organizationService.isOrgVerified(recruiter)) return;
         String status = recruiter.getVerificationStatus() == null ? "PENDING" : recruiter.getVerificationStatus();
         throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                 companyVerificationService.publishBlockReason(status));
+    }
+
+    /** Les compétences demandées alimentent la relation N–N JobOffer ↔ Tag (un tag partagé entre offres). */
+    private Set<Tag> resolveTags(String skills) {
+        Set<Tag> tags = new LinkedHashSet<>();
+        if (skills == null) return tags;
+        for (String raw : skills.split("[,;]")) {
+            String name = raw.trim();
+            if (name.isEmpty() || name.length() > 64 || name.contains("(")) continue; // les langues « Français (Natif) » ne sont pas des tags
+            tags.add(tagRepository.findByNameIgnoreCase(name).orElseGet(() -> {
+                Tag t = new Tag();
+                t.setName(name);
+                return tagRepository.save(t);
+            }));
+        }
+        return tags;
     }
 
     private void applyWithFraudGate(JobOffer o, ApiDtos.JobOfferRequest req, boolean wantPublish) {
@@ -205,6 +240,7 @@ public class JobOfferService {
         o.setTitle(req.title().trim());
         o.setDescription(req.description().trim());
         o.setRequiredSkills(req.requiredSkills());
+        o.setTags(resolveTags(req.requiredSkills()));
         o.setLocation(req.location());
         o.setContractType(req.contractType());
         o.setResponseSlaDays(req.responseSlaDays());

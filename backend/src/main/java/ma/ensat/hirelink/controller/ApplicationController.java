@@ -24,6 +24,7 @@ public class ApplicationController {
         this.applicationService = applicationService;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('CANDIDAT')")
     @PostMapping
     public ApiDtos.ApplicationResponse apply(
             @AuthenticationPrincipal User user,
@@ -32,16 +33,19 @@ public class ApplicationController {
         return applicationService.apply(user, body);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('CANDIDAT')")
     @GetMapping("/mine")
     public List<ApiDtos.ApplicationResponse> mine(@AuthenticationPrincipal User user) {
         return applicationService.mineAsCandidate(user);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @GetMapping("/pipeline")
     public List<ApiDtos.ApplicationResponse> pipeline(@AuthenticationPrincipal User user) {
         return applicationService.pipelineForRecruiter(user);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @GetMapping("/by-offer/{offerId}")
     public List<ApiDtos.ApplicationResponse> byOffer(
             @AuthenticationPrincipal User user,
@@ -61,12 +65,35 @@ public class ApplicationController {
 
     public record AssignHmRequest(Long hmUserId) {}
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PatchMapping("/{id}/assign-hm")
     public ApiDtos.ApplicationResponse assignHm(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
-            @RequestBody AssignHmRequest body
+            @jakarta.validation.Valid @RequestBody AssignHmRequest body
     ) {
         return applicationService.assignHm(user, id, body.hmUserId());
+    }
+
+    /** Le candidat joint un fichier CV à sa candidature (choix « Nouveau CV » de l'assistant). */
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('CANDIDAT')")
+    @PostMapping(value = "/{id}/cv", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ApiDtos.ApplicationResponse attachCv(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @RequestPart("file") MultipartFile file,
+            @RequestParam(value = "sections", required = false) String sections
+    ) {
+        return applicationService.attachCv(user, id, file, sections);
+    }
+
+    /** CV joint : le candidat lui-même ou l'équipe de l'organisation qui a publié l'offre. */
+    @GetMapping("/{id}/cv")
+    public ResponseEntity<Resource> downloadCv(@AuthenticationPrincipal User user, @PathVariable Long id) {
+        ApplicationService.CvFile cv = applicationService.loadApplicationCv(user, id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + cv.filename().replaceAll("[^\\p{L}\\p{N}._ -]", "_") + "\"")
+                .contentType(MediaType.parseMediaType(cv.mediaType()))
+                .body(cv.resource());
     }
 }

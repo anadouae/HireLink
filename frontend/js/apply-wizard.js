@@ -15,7 +15,7 @@
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
   function ensureCss() {
@@ -28,7 +28,7 @@
       ".hl-apply-card{background:#fff;border-radius:20px;width:min(760px,100%);max-height:min(92vh,900px);display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.32);border:1px solid rgba(122,32,50,.16);overflow:hidden;transform:translateY(16px) scale(.98);transition:transform .35s cubic-bezier(.22,1,.36,1)}" +
       ".hl-apply-overlay.is-open .hl-apply-card{transform:none}" +
       ".hl-apply-top{padding:1.2rem 1.4rem .9rem;border-bottom:1px solid rgba(26,18,20,.08);flex-shrink:0;background:linear-gradient(180deg,#fffaf7,#fff)}" +
-      ".hl-apply-top h2{font-family:Fraunces,Georgia,serif;margin:0 0 .2rem;font-size:1.4rem;color:#1a1214}" +
+      ".hl-apply-top h2{font-family:var(--font-display);margin:0 0 .2rem;font-size:1.4rem;color:#1a1214}" +
       ".hl-apply-top .sub{margin:0;color:#5e5558;font-size:.9rem}" +
       ".hl-apply-steps{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.9rem}" +
       ".hl-apply-step{flex:1;min-width:56px;text-align:center;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a8285;padding:.4rem .2rem;border-radius:999px;background:#f4f0ec;transition:all .25s ease}" +
@@ -80,8 +80,6 @@
       cvFileName: "",
       cvFile: null,
       coverLetter: "",
-      letterFileName: "",
-      letterFile: null,
       skillsCsv: profile.skills || "",
       languagesCsv: "",
       skillsApi: null,
@@ -192,15 +190,8 @@
         return (
           '<div class="' +
           anim +
-          '"><p class="muted" style="margin-top:0"><span class="hl-optional">Optionnel</span> — Lettre de motivation (PDF ou DOCX)</p>' +
-          '<label class="btn btn-soft btn-sm" style="cursor:pointer">Choisir un fichier' +
-          '<input type="file" id="hl-letter-file" accept=".pdf,.doc,.docx,application/pdf" hidden /></label>' +
-          '<p class="muted" id="hl-letter-name" style="margin:.55rem 0 0">' +
-          (state.letterFileName ? "Fichier : " + esc(state.letterFileName) : "Aucune lettre") +
-          "</p>" +
-          (state.letterFileName
-            ? '<button type="button" class="btn btn-ghost btn-sm" id="hl-letter-preview" style="margin-top:.65rem">Aperçu de la lettre</button>'
-            : "") +
+          '"><p class="muted" style="margin-top:0"><span class="hl-optional">Optionnel</span> — Un mot pour le recruteur (lettre de motivation)</p>' +
+          '<textarea id="hl-letter-text" class="input" rows="7" maxlength="4000" placeholder="Pourquoi ce poste, pourquoi vous ?" style="width:100%">' + esc(state.coverLetter) + "</textarea>" +
           "</div>"
         );
       }
@@ -224,7 +215,7 @@
         (state.cvSource === "UPLOAD" ? "Nouveau · " + esc(state.cvFileName || "—") : "Profil HireLink") +
         "</span></div>" +
         "<div><strong>Lettre</strong><span>" +
-        (state.letterFileName ? esc(state.letterFileName) : "Non jointe") +
+        (state.coverLetter ? "Rédigée (" + state.coverLetter.length + " caractères)" : "Non jointe") +
         "</span></div></div></div>"
       );
     }
@@ -235,7 +226,8 @@
         state.languagesCsv = state.skillsApi.getLanguagesCsv();
       }
       if (state.step === 3) {
-        state.coverLetter = state.letterFileName || "";
+        const ta = overlay.querySelector("#hl-letter-text");
+        if (ta) state.coverLetter = ta.value.trim();
       }
     }
 
@@ -302,9 +294,8 @@
               const fd = new FormData();
               fd.append("file", f);
               const token = HireLinkAPI.getToken();
-              const res = await fetch(HireLinkAPI.API_BASE + "/ocr/cv", {
+              const res = await HireLinkAPI.authFetch("/ocr/cv", {
                 method: "POST",
-                headers: token ? { Authorization: "Bearer " + token } : {},
                 body: fd,
               });
               const data = await res.json().catch(() => ({}));
@@ -335,26 +326,6 @@
           };
         }
       }
-      if (state.step === 3) {
-        const file = overlay.querySelector("#hl-letter-file");
-        if (file) {
-          file.onchange = () => {
-            const f = file.files && file.files[0];
-            if (!f) return;
-            const ok = /\.(pdf|doc|docx)$/i.test(f.name || "");
-            if (!ok) {
-              HireLink.toast("Lettre", "PDF ou DOCX uniquement", "warn");
-              return;
-            }
-            state.letterFile = f;
-            state.letterFileName = f.name;
-            state.coverLetter = f.name;
-            paint();
-          };
-        }
-        const lp = overlay.querySelector("#hl-letter-preview");
-        if (lp) lp.onclick = () => previewFile(state.letterFile, "Aperçu de la lettre");
-      }
     }
 
     function canGoNext() {
@@ -383,7 +354,7 @@
             await HireLinkAPI.api("/me", { method: "PATCH", body: { skills: combined } });
           } catch (_) {}
         }
-        await HireLinkAPI.api("/applications", {
+        const created = await HireLinkAPI.api("/applications", {
           method: "POST",
           body: {
             jobOfferId: state.offer.id,
@@ -392,10 +363,18 @@
               state.cvSource === "UPLOAD"
                 ? state.cvFileName
                 : state.cvFileName || "Profil HireLink",
-            coverLetter: state.letterFileName || null,
-            photoFileName: null,
+            coverLetter: state.coverLetter || null,
           },
         });
+        if (state.cvSource === "UPLOAD" && state.cvFile && created && created.id) {
+          const fd = new FormData();
+          fd.append("file", state.cvFile);
+          try {
+            await HireLinkAPI.api("/applications/" + created.id + "/cv", { method: "POST", formData: fd });
+          } catch (err) {
+            HireLink.toast("CV", "Candidature envoyée, mais le fichier n'a pas pu être joint : " + err.message, "warn");
+          }
+        }
         close();
         HireLink.toast("Candidature envoyée", "Suivez-la dans Mes candidatures", "ok");
         if (typeof state.onDone === "function") state.onDone();
@@ -457,8 +436,6 @@
       if (skip) {
         skip.onclick = () => {
           state.coverLetter = "";
-          state.letterFileName = "";
-          state.letterFile = null;
           state.dir = "fwd";
           state.step++;
           paint();

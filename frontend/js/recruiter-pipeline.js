@@ -1,11 +1,15 @@
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["RECRUTEUR"], hello: false });
+  const RC = HireLinkApp;
+  const session = RC.mount({
+    active: "pipeline",
+    title: "Pipeline",
+    search: { placeholder: "Candidat, offre, statut…", onQuery: () => paint() },
+  });
   if (!session) return;
-  if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("recruiter");
 
   // Périmètre : fin positive à INTERVIEW (pas d'étape Offre / Accepté).
   const COLUMNS = [
-    { key: "SUBMITTED", label: "Soumises", tone: "neutral" },
+    { key: "SUBMITTED", label: "Reçues", tone: "neutral" },
     { key: "SCREENING", label: "Présélection", tone: "warn" },
     { key: "SHORTLISTED", label: "Shortlist", tone: "info" },
     { key: "INTERVIEW", label: "Entretien", tone: "ok", end: true },
@@ -19,15 +23,6 @@
     SCREENING: "Présélection : CV et compétences vs fiche de poste.",
     SHORTLISTED: "Shortlist : candidat retenu pour un échange humain.",
     INTERVIEW: "Planifiez l’entretien : type, date et lieu ou lien.",
-  };
-
-  const STATUS_FR = {
-    SUBMITTED: "Soumises",
-    SCREENING: "Présélection",
-    SHORTLISTED: "Shortlist",
-    INTERVIEW: "Entretien",
-    REJECTED: "Refusées",
-    WITHDRAWN: "Retirées",
   };
 
   let allApps = [];
@@ -115,31 +110,18 @@
     const entered = active + refused + (by.WITHDRAWN || 0);
     const conv =
       entered > 0 ? Math.round((interviews / entered) * 1000) / 10 : 0;
+    const stat = (label, val, cls) =>
+      '<div class="' + (cls || "") + '"><small>' + esc(label) + "</small><strong>" + esc(String(val)) + "</strong></div>";
     el.innerHTML =
-      (scopeLabel
-        ? '<p class="funnel-scope">Vue filtrée · <strong>' + esc(scopeLabel) + "</strong></p>"
-        : '<p class="funnel-scope">Vue globale · toutes les offres</p>') +
-      '<div class="kpi-row">' +
-      metric("Actifs", active, "neutral") +
-      metric("Retards réponse", slaBreached, slaBreached ? "danger" : "neutral") +
-      metric("Match ≥75%", hotMatches, "ok") +
-      metric("En entretien", interviews, "info") +
-      metric("→ Entretien", conv + "%", "info") +
-      metric("Refus", refused, refused ? "warn" : "neutral") +
-      "</div>" +
-      '<div class="funnel-status-row">' +
-      ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "REJECTED", "WITHDRAWN"]
-        .map(
-          (k) =>
-            '<span class="status-pill status-pill--' +
-            k.toLowerCase() +
-            '">' +
-            esc(STATUS_FR[k] || k) +
-            " <b>" +
-            (by[k] || 0) +
-            "</b></span>"
-        )
-        .join("") +
+      '<div class="rc-funnel">' +
+      '<div style="flex:1 1 100%;flex-direction:row;gap:.5rem;align-items:center"><span class="rc-pill rc-pill--info">' +
+      (scopeLabel ? "Vue filtrée · " + esc(scopeLabel) : "Toutes les offres") + "</span></div>" +
+      stat("Dossiers actifs", active) +
+      stat("Retards de réponse", slaBreached, slaBreached ? "is-danger" : "") +
+      stat("Match ≥ 75 %", hotMatches) +
+      stat("En entretien", interviews) +
+      stat("Conversion → entretien", conv + " %") +
+      stat("Refus", refused) +
       "</div>";
   }
 
@@ -171,7 +153,9 @@
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/\'/g, "&#39;");
   }
 
   function initials(name) {
@@ -286,19 +270,15 @@
       const html =
         !rows.length
           ? "<p class='muted'>Aucun événement.</p>"
-          : "<ol>" +
+          : '<ol class="rc-timeline">' +
             rows
-              .map(
-                (h) =>
-                  "<li><strong>" +
-                  esc(h.from || "—") +
-                  " → " +
-                  esc(h.to) +
-                  "</strong> · " +
-                  esc(h.at) +
-                  (h.payload ? "<br/><code style='font-size:0.75rem'>" + esc(h.payload) + "</code>" : "") +
-                  "</li>"
-              )
+              .map((h) => {
+                let extra = "";
+                try { extra = h.payload ? JSON.parse(h.payload).reason || "" : ""; } catch (_) {}
+                const from = RC.STATUS_FR[h.from] || h.from;
+                return "<li><strong>" + (from ? esc(from) + " → " : "") + esc(RC.STATUS_FR[h.to] || h.to) + "</strong> · <span class='muted'>" +
+                  esc(RC.fmtDateTime(h.at)) + "</span>" + (extra ? "<br/><span class='muted'>Motif : " + esc(extra) + "</span>" : "") + "</li>";
+              })
               .join("") +
             "</ol>";
       await HireLink.openModal({
@@ -314,9 +294,41 @@
     }
   }
 
+  function scoreSummaryHtml(criteria, entries) {
+    if (!entries.length) return '<p class="muted" style="margin:.2rem 0 .8rem">Aucune évaluation enregistrée pour ce dossier.</p>';
+    const rows = criteria.map((cr) => {
+      const list = entries.filter((e) => e.criterionId === cr.id);
+      if (!list.length) return "";
+      const avg = list.reduce((t, e) => t + e.score, 0) / list.length;
+      return '<div class="hl-fact"><span class="k">' + esc(cr.label) + '</span><span class="v">' + avg.toFixed(1) + " / 5 · " + RC.plural(list.length, "avis", "avis") + "</span></div>";
+    }).join("");
+    return '<div class="hl-dossier-section"><h5>Synthèse des évaluateurs</h5><div class="hl-fact-grid">' + rows + "</div></div>";
+  }
+
+  async function saveQuickScores(c, scores) {
+    try {
+      const criteria = await HireLinkAPI.api("/offers/" + c.jobOfferId + "/scorecard-criteria");
+      const map = { tech: /tech/i, soft: /soft/i, culture: /cultur/i };
+      for (const cr of criteria) {
+        const key = Object.keys(map).find((k) => map[k].test(cr.label));
+        if (key && scores[key]) {
+          await HireLinkAPI.api("/applications/" + c.id + "/scorecard", {
+            method: "POST",
+            body: { criterionId: Number(cr.id), score: Number(scores[key]), comment: null },
+          });
+        }
+      }
+    } catch (_) { /* best effort : la note texte reste enregistrée */ }
+  }
+
   async function rateScorecard(c) {
     try {
       let criteria = await HireLinkAPI.api("/offers/" + c.jobOfferId + "/scorecard-criteria");
+      if (!criteria.length && RC.isHM()) {
+        HireLink.toast("Scorecard", "Aucun critère défini pour cette offre — demandez à un recruteur de les créer.", "warn");
+        return;
+      }
+      const entries = await HireLinkAPI.api("/applications/" + c.id + "/scorecard").catch(() => []);
       if (!criteria.length) {
         criteria = await HireLinkAPI.api("/offers/" + c.jobOfferId + "/scorecard-criteria", {
           method: "PUT",
@@ -331,7 +343,8 @@
       }
       const body =
         dossierHtml(c, { compact: true }) +
-        '<div class="hl-dossier-section"><h5>Scorecard · 1 à 5</h5>' +
+        scoreSummaryHtml(criteria, entries) +
+        '<div class="hl-dossier-section"><h5>Ma notation · 1 à 5</h5>' +
         '<div class="hl-score-row">' +
         criteria
           .map((cr) =>
@@ -352,6 +365,11 @@
         wide: true,
         onReady: (api) => {
           bindStars(api.root);
+          criteria.forEach((cr) => {
+            const mine = entries.filter((e) => e.criterionId === cr.id && e.evaluatorUserId === session.userId).pop();
+            const btn = mine && api.root.querySelector('.hl-stars[data-for="sc-' + cr.id + '"] button[data-v="' + mine.score + '"]');
+            if (btn) btn.click();
+          });
           const refresh = () => {
             const okAll = criteria.every((cr) => {
               const el = document.getElementById("sc-" + cr.id);
@@ -393,6 +411,12 @@
     );
   }
 
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-open-cv]");
+    if (!b) return;
+    HireLinkAPI.openFile("/applications/" + b.getAttribute("data-open-cv") + "/cv").catch((err) => HireLink.toast("CV", err.message, "danger"));
+  });
+
   function dossierHtml(c, opts) {
     opts = opts || {};
     const matchPct = c.matchScore != null ? Math.round(c.matchScore) : null;
@@ -400,7 +424,7 @@
     const slaTxt = slaBreached
       ? "Délai dépassé"
       : c.slaRemainingDays == null
-        ? "Non défini"
+        ? "Sans objet"
         : c.slaRemainingDays === 0
           ? "Dernier jour"
           : c.slaRemainingDays + " j restants";
@@ -411,7 +435,7 @@
         : "Non fourni";
     const letterFile = c.coverLetter && /\.(pdf|docx?|txt)$/i.test(String(c.coverLetter).trim());
     const letterTxt = !c.coverLetter ? "Non jointe" : letterFile ? c.coverLetter : "Texte joint";
-    const statusLabel = STATUS_FR[c.status] || c.status;
+    const statusLabel = RC.STATUS_FR[c.status] || c.status;
 
     let html =
       '<div class="hl-dossier' +
@@ -456,7 +480,6 @@
         '<div class="hl-dossier-section"><h5>2. Profil</h5><div class="hl-fact-grid">' +
         fact("Nom", c.candidateName || "—") +
         fact("E-mail", c.candidateEmail || "—") +
-        fact("Photo", c.photoFileName || "Non jointe") +
         "</div>" +
         (c.candidateSkills
           ? "<div style='margin-top:.65rem'>" + skillTags(c.candidateSkills) + "</div>"
@@ -466,7 +489,9 @@
         esc(cvTxt) +
         "</strong><p class='muted'>" +
         esc(cvOrigin) +
-        "</p></article></div>";
+        "</p>" +
+        (c.hasCvFile ? '<button type="button" class="btn btn-soft btn-sm" style="margin-top:.5rem" data-open-cv="' + c.id + '">Ouvrir le CV</button>' : "") +
+        "</article></div>";
       if (!opts.hideLetter) {
         html +=
           '<div class="hl-dossier-section"><h5>4. Lettre de motivation</h5>' +
@@ -607,9 +632,9 @@
     const needInterview = next === "INTERVIEW";
     const body =
       '<div class="hl-step-banner"><div><strong>' +
-      esc(STATUS_FR[c.status] || c.status) +
+      esc(RC.STATUS_FR[c.status] || c.status) +
       " → " +
-      esc(STATUS_FR[next] || next) +
+      esc(RC.STATUS_FR[next] || next) +
       "</strong>" +
       esc(STEP_HINT[next] || "") +
       "</div></div>" +
@@ -705,8 +730,9 @@
         method: "PATCH",
         body: payload,
       });
-      HireLink.toast("Étape validée", c.candidateName + " → " + (STATUS_FR[next] || next), "ok");
-      load();
+      if (st || ss || scul) saveQuickScores(c, { tech: st, soft: ss, culture: scul });
+      HireLink.toast("Étape validée", c.candidateName + " → " + (RC.STATUS_FR[next] || next), "ok");
+      load(true);
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
     }
@@ -764,17 +790,47 @@
         },
       });
       HireLink.toast("Candidature refusée", "Motif catalogue enregistré", "ok");
-      load();
+      load(true);
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
     }
+  }
+
+  function mountHmAssign(c) {
+    const slot = document.getElementById("hm-slot");
+    if (!slot) return;
+    RC.swr("members", "/organizations/mine/members", (members) => {
+      const eligible = (members || []).filter((m) => m.orgRole === "HIRING_MANAGER" || m.orgRole === "RECRUTEUR");
+      if (!eligible.length || !document.getElementById("hm-slot")) return;
+      slot.innerHTML =
+        "<h5>Hiring Manager assigné</h5>" +
+        '<div class="rc-row"><select id="hm-select" class="rc-select" style="flex:1"><option value="">— Aucun —</option>' +
+        eligible.map((m) => '<option value="' + m.userId + '"' + (Number(c.assignedHmUserId) === Number(m.userId) ? " selected" : "") + ">" +
+          esc(m.fullName || m.email) + " · " + esc(RC.ROLE_FR[m.orgRole] || m.orgRole) + "</option>").join("") +
+        '</select><button type="button" class="btn btn-soft btn-sm" id="hm-save">Assigner</button></div>' +
+        '<p class="muted" style="margin:.4rem 0 0;font-size:.78rem">Le Hiring Manager ne voit que les dossiers qui lui sont assignés et reçoit une notification.</p>';
+      document.getElementById("hm-save").onclick = async (e) => {
+        const v = document.getElementById("hm-select").value;
+        RC.busy(e.currentTarget, true);
+        try {
+          const updated = await HireLinkAPI.api("/applications/" + c.id + "/assign-hm", { method: "PATCH", body: { hmUserId: v ? Number(v) : null } });
+          c.assignedHmUserId = updated.assignedHmUserId;
+          RC.data.invalidate();
+          RC.toast("Assignation", v ? "Hiring Manager assigné" : "Assignation retirée", "ok");
+        } catch (err) {
+          RC.toast("Assignation", err.message, "danger");
+        } finally {
+          RC.busy(e.currentTarget, false);
+        }
+      };
+    });
   }
 
   async function openDossier(c) {
     const canAdvance = !!NEXT[c.status];
     await HireLink.openDrawer({
       title: "Dossier · " + c.candidateName,
-      description: (c.jobTitle || "") + " · " + (STATUS_FR[c.status] || c.status),
+      description: (c.jobTitle || "") + " · " + (RC.STATUS_FR[c.status] || c.status),
       bodyHtml:
         dossierHtml(c) +
         '<div class="hl-drawer-actions-inline">' +
@@ -786,11 +842,13 @@
           ? '<button type="button" class="btn btn-primary btn-sm" id="btn-adv-from">Avancer</button>'
           : "") +
         '<button type="button" class="btn btn-ghost btn-sm" id="btn-rej-from">Refuser</button>' +
-        "</div>",
+        "</div>" +
+        (RC.canManage() ? '<div class="hl-dossier-section" id="hm-slot"></div>' : ""),
       confirmLabel: "Fermer",
       hideCancel: true,
       wide: true,
       onReady: () => {
+        mountHmAssign(c);
         const sum = document.getElementById("btn-sum");
         if (sum) {
           sum.onclick = async () => {
@@ -804,8 +862,7 @@
             try {
               const data = await HireLinkAPI.api("/ai/cv-summary", {
                 method: "POST",
-                headers: HireLinkProduct ? HireLinkProduct.premiumHeaders("recruiter") : {},
-                body: { cvText, premium: !!(HireLinkProduct && HireLinkProduct.isPremium("recruiter")) },
+                body: { cvText },
               });
               HireLink.openModal({
                 title: "Synthèse du CV",
@@ -830,7 +887,7 @@
               c.candidateName || "",
               c.candidateEmail || "",
               "Poste : " + (c.jobTitle || ""),
-              "Statut : " + (STATUS_FR[c.status] || c.status || ""),
+              "Statut : " + (RC.STATUS_FR[c.status] || c.status || ""),
               "CV : " + (c.cvFileName || c.cvSource || "Non fourni"),
               "Lettre : " + (c.coverLetter || "Non jointe"),
               "Compétences : " + (c.candidateSkills || ""),
@@ -905,7 +962,7 @@
         badge.textContent = String(chipCounts[key] || 0);
       });
     }
-    const q = ((document.getElementById("search-pipeline") || {}).value || "").trim().toLowerCase();
+    const q = ((document.getElementById("rc-search") || {}).value || "").trim().toLowerCase();
     let filtered = appsForScope();
     if (filter === "urgent") {
       filtered = filtered.filter((a) => a.slaRemainingDays != null && a.slaRemainingDays <= 2 && !a.slaBreached);
@@ -938,78 +995,58 @@
           return (b.matchScore || 0) - (a.matchScore || 0);
         });
       const el = document.createElement("div");
-      el.className = "kanban-col kanban-col--" + (col.tone || "neutral") + (col.end ? " is-end" : "");
-      el.innerHTML =
-        '<div class="kanban-col-head"><div class="kanban-col-title"><span></span></div><span class="col-count"></span></div>' +
-        '<div class="kanban-col-body"></div>';
-      el.querySelector(".kanban-col-title > span").textContent = col.label;
-      el.querySelector(".col-count").textContent = String(cards.length);
-      const body = el.querySelector(".kanban-col-body");
+      el.className = "rc-col rc-col--" + (col.tone || "neutral");
+      el.innerHTML = '<div class="rc-col-head"><span></span><em></em></div><div class="rc-col-body"></div>';
+      el.querySelector(".rc-col-head span").textContent = col.label;
+      el.querySelector(".rc-col-head em").textContent = String(cards.length);
+      const body = el.querySelector(".rc-col-body");
       if (!cards.length) {
-        body.innerHTML = '<p class="kanban-empty muted">Aucun dossier</p>';
+        body.innerHTML = '<p class="rc-empty-col">Aucun dossier</p>';
       }
-      cards.forEach((c) => {
+      cards.forEach((c, idx) => {
         const card = document.createElement("article");
         const breached = !!(c.slaBreached || (c.slaRemainingDays != null && c.slaRemainingDays < 0));
-        const urgent = breached || (c.slaRemainingDays != null && c.slaRemainingDays <= 2);
-        card.className =
-          "kanban-card" +
-          (breached ? " is-breached" : urgent ? " is-urgent" : "") +
-          ((c.matchScore || 0) >= 75 ? " is-hot" : "");
+        const urgent = !breached && c.slaRemainingDays != null && c.slaRemainingDays <= 2;
+        card.className = "rc-card-k" + (breached ? " is-late" : urgent ? " is-urgent" : "");
+        card.style.animationDelay = Math.min(idx, 8) * 30 + "ms";
+        card.tabIndex = 0;
+        card.setAttribute("role", "button");
         const sla = c.slaRemainingDays;
-        const slaTxt = breached
-          ? "Retard"
-          : sla == null
-            ? "—"
-            : sla === 0
-              ? "Dernier jour"
-              : "sous " + sla + " j";
+        const slaTxt = breached ? "Retard" : sla == null ? "—" : sla === 0 ? "Dernier jour" : "sous " + sla + " j";
         const canAdvance = !!NEXT[c.status];
         const matchPct = c.matchScore != null ? Math.round(c.matchScore) : null;
         card.innerHTML =
-          (breached ? '<div class="card-urgency">Délai de réponse dépassé</div>' : "") +
-          "<h3></h3><p></p><div class='match-bar'><span></span></div>" +
-          "<div class='kanban-meta'><span class='badge'></span>" +
-          "<span class='sla-pill'></span></div>" +
-          "<div class='row-actions'>" +
-          "<button type='button' class='btn btn-sm btn-soft js-view' title='Dossier'><span class='ico' aria-hidden='true'>☰</span> Dossier</button>" +
-          (canAdvance
-            ? "<button type='button' class='btn btn-sm btn-primary js-adv' title='Avancer'><span class='ico' aria-hidden='true'>→</span> Avancer</button>"
-            : "") +
-          "<button type='button' class='btn btn-sm btn-ghost js-rej' title='Refuser'><span class='ico' aria-hidden='true'>✕</span></button></div>";
-        card.querySelector("h3").textContent = c.candidateName;
+          "<h3></h3><p></p><div class='rc-bar'><i></i></div>" +
+          "<div class='rc-card-meta'><span class='badge'></span><span class='rc-pill js-sla'></span></div>" +
+          "<div class='rc-card-act'>" +
+          "<button type='button' class='btn btn-sm btn-soft js-view'>Dossier</button>" +
+          (canAdvance ? "<button type='button' class='btn btn-sm btn-primary js-adv'>Avancer →</button>" : "") +
+          "<button type='button' class='btn btn-sm btn-ghost rc-ico-only js-rej' title='Refuser' aria-label='Refuser'>✕</button></div>";
+        card.querySelector("h3").textContent = c.candidateName || "Candidat";
         const scoped = selectedOfferId() != null;
         let sub = scoped ? "" : c.jobTitle || "";
         if (c.interviewType) {
-          sub +=
-            (sub ? " · " : "") +
-            c.interviewType +
+          sub += (sub ? " · " : "") + (RC.INTERVIEW_TYPE_FR[c.interviewType] || c.interviewType) +
             (c.interviewAt ? " " + new Date(c.interviewAt).toLocaleDateString("fr-FR") : "");
         }
         card.querySelector("p").textContent = sub || (scoped ? "Dossier sur ce poste" : "");
-        card.querySelector(".match-bar > span").style.width = Math.min(100, c.matchScore || 0) + "%";
+        card.querySelector(".rc-bar > i").style.width = Math.min(100, c.matchScore || 0) + "%";
         const mb = card.querySelector(".badge");
         mb.className = "badge " + matchBadgeClass(matchPct);
-        mb.textContent = matchPct != null ? matchPct + "%" : "—";
-        const pill = card.querySelector(".sla-pill");
-        pill.textContent = "Réponse " + slaTxt;
-        const sc = slaClass(sla, c.slaBreached);
-        if (sc) pill.classList.add(sc);
-        card.querySelector(".js-view").onclick = (e) => {
-          e.stopPropagation();
-          openDossier(c);
-        };
-        const advBtn = card.querySelector(".js-adv");
-        if (advBtn) {
-          advBtn.onclick = (e) => {
-            e.stopPropagation();
-            advance(c);
-          };
+        mb.textContent = matchPct != null ? matchPct + " % match" : "Match —";
+        const pill = card.querySelector(".js-sla");
+        if (sla == null && !breached) pill.remove();
+        else {
+          pill.textContent = "Réponse " + slaTxt;
+          const sc = slaClass(sla, c.slaBreached);
+          if (sc) pill.classList.add("rc-pill--" + sc);
         }
-        card.querySelector(".js-rej").onclick = (e) => {
-          e.stopPropagation();
-          rejectFlow(c);
-        };
+        card.onclick = () => openDossier(c);
+        card.onkeydown = (e) => { if (e.key === "Enter") openDossier(c); };
+        card.querySelector(".js-view").onclick = (e) => { e.stopPropagation(); openDossier(c); };
+        const advBtn = card.querySelector(".js-adv");
+        if (advBtn) advBtn.onclick = (e) => { e.stopPropagation(); advance(c); };
+        card.querySelector(".js-rej").onclick = (e) => { e.stopPropagation(); rejectFlow(c); };
         body.appendChild(card);
       });
       root.appendChild(el);
@@ -1020,57 +1057,59 @@
     }
   }
 
-  async function load() {
-    const root = document.getElementById("kanban");
-    root.innerHTML = '<div class="skeleton" style="height:200px;grid-column:1/-1"></div>';
-    try {
-      if (!refusalCatalog.length) {
-        try {
-          refusalCatalog = await HireLinkAPI.api("/refusal-reasons");
-        } catch (_) {
-          refusalCatalog = [];
-        }
-      }
-      const pendingApp = new URLSearchParams(location.search).get("app");
-      if (pendingApp) {
-        const found = allApps.find((a) => String(a.id) === String(pendingApp));
-        if (found) openDossier(found);
-        history.replaceState(null, "", location.pathname);
-      }
-      allApps = await HireLinkAPI.api("/applications/pipeline");
-      rebuildOfferSelect();
-      paint();
-    } catch (err) {
-      root.innerHTML = "<p class='muted'>" + err.message + "</p>";
+  let pendingApp = new URLSearchParams(location.search).get("app");
+  let loaded = false;
+
+  function onData(apps) {
+    allApps = apps || [];
+    rebuildOfferSelect();
+    paint();
+    loaded = true;
+    if (pendingApp) {
+      const found = allApps.find((a) => String(a.id) === String(pendingApp));
+      pendingApp = null;
+      history.replaceState(null, "", location.pathname);
+      if (found) openDossier(found);
+      else RC.toast("Dossier introuvable", "Ce dossier n’existe plus ou n’est pas dans votre périmètre.", "warn");
     }
   }
 
-  const params = new URLSearchParams(location.search);
-  const qParam = params.get("q");
-  if (qParam) {
-    const inp = document.getElementById("search-pipeline");
-    if (inp) inp.value = qParam;
+  function load(force) {
+    const root = document.getElementById("kanban");
+    if (force) RC.data.invalidate();
+    if (!loaded) {
+      root.innerHTML = '<span class="rc-skel" style="height:240px;grid-column:1/-1"></span>';
+    }
+    if (!refusalCatalog.length) {
+      HireLinkAPI.api("/refusal-reasons").then((r) => { refusalCatalog = r || []; }).catch(() => {});
+    }
+    return RC.data.pipeline(onData, (err) => {
+      document.getElementById("funnel-strip").innerHTML = "";
+      RC.errorState(root, err.message, () => load(true));
+      root.style.display = "block";
+    });
   }
+
+  const params = new URLSearchParams(location.search);
   const offerParam = params.get("offer") || params.get("offerId");
   if (offerParam) {
     const offerSel = document.getElementById("pipe-offer");
     if (offerSel) offerSel.dataset.pending = String(offerParam);
   }
 
-  document.getElementById("btn-refresh").addEventListener("click", load);
+  const refreshBtn = document.getElementById("btn-refresh");
+  if (refreshBtn) refreshBtn.addEventListener("click", async () => { RC.busy(refreshBtn, true); await load(true); RC.busy(refreshBtn, false); });
   const filt = document.getElementById("pipe-filter");
-  if (filt) filt.addEventListener("change", paint);
   const pipeChips = document.getElementById("pipe-chips");
   if (pipeChips && filt) {
     pipeChips.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-pipe]");
       if (!btn) return;
       filt.value = btn.getAttribute("data-pipe") || "all";
-      filt.dispatchEvent(new Event("change"));
+      paint();
     });
   }
   const offerFilt = document.getElementById("pipe-offer");
   if (offerFilt) offerFilt.addEventListener("change", paint);
-  HireLinkShell.bindSearch(document.getElementById("search-pipeline"), () => paint());
   load();
 })();

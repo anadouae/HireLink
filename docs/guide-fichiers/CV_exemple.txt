@@ -1,0 +1,18 @@
+Sara EL AMRANI
+Étudiante ingénieure — Tétouan, Maroc
+sara.elamrani@example.com | +212 6 12 34 56 78
+
+EXPÉRIENCES
+Stage développeur Java / Spring Boot — Atlas Digital (juillet - septembre 2025)
+- API REST avec Spring Boot et MySQL
+- Interface React, tests avec JUnit, gestion du code avec Git
+
+FORMATION
+ENSA Tétouan — Cycle ingénieur, Génie Informatique (2023 - 2026)
+Baccalauréat Sciences Mathématiques B (2023)
+
+COMPÉTENCES
+Java, Spring Boot, MySQL, REST, Git, React, Docker
+
+LANGUES
+Français (courant), Anglais (B2), Arabe (langue maternelle)

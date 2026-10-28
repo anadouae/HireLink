@@ -56,9 +56,6 @@ public class Application {
     @Column(name = "cover_letter", columnDefinition = "TEXT")
     private String coverLetter;
 
-    @Column(name = "photo_file_name", length = 255)
-    private String photoFileName;
-
     /** PHONE | VISIO | ONSITE | ASYNC */
     @Column(name = "interview_type", length = 32)
     private String interviewType;
@@ -140,8 +137,6 @@ public class Application {
     public String getCoverLetter() { return coverLetter; }
     public void setCoverLetter(String coverLetter) { this.coverLetter = coverLetter; }
 
-    public String getPhotoFileName() { return photoFileName; }
-    public void setPhotoFileName(String photoFileName) { this.photoFileName = photoFileName; }
 
     public String getInterviewType() { return interviewType; }
     public void setInterviewType(String interviewType) { this.interviewType = interviewType; }

@@ -34,17 +34,17 @@ public class OrganizationController {
         this.orgLogoStorage = orgLogoStorage;
     }
 
-    public record InviteRequest(String email, String orgRole) {}
+    public record InviteRequest(@jakarta.validation.constraints.Size(max = 254) String email, @jakarta.validation.constraints.Size(max = 30) String orgRole) {}
 
     public record OrgUpdate(
-            String name,
-            String ice,
-            String website,
-            String sector,
-            String city,
-            String presentation,
-            String employeeRange,
-            String logoUrl
+            @jakarta.validation.constraints.Size(max = 160) String name,
+            @jakarta.validation.constraints.Size(max = 20) String ice,
+            @jakarta.validation.constraints.Size(max = 200) String website,
+            @jakarta.validation.constraints.Size(max = 80) String sector,
+            @jakarta.validation.constraints.Size(max = 100) String city,
+            @jakarta.validation.constraints.Size(max = 4000) String presentation,
+            @jakarta.validation.constraints.Size(max = 30) String employeeRange,
+            @jakarta.validation.constraints.Size(max = 300) String logoUrl
     ) {}
 
     @GetMapping("/public")
@@ -52,6 +52,7 @@ public class OrganizationController {
         return organizationService.listPublic();
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @GetMapping("/mine")
     public Map<String, Object> mine(@AuthenticationPrincipal User user) {
         Organization org = organizationService.ensureForRecruiter(user);
@@ -59,6 +60,7 @@ public class OrganizationController {
         return toBody(org, me);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @GetMapping("/mine/members")
     public List<Map<String, Object>> members(@AuthenticationPrincipal User user) {
         List<Map<String, Object>> out = new ArrayList<>();
@@ -73,8 +75,9 @@ public class OrganizationController {
         return out;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PostMapping("/mine/invite")
-    public Map<String, Object> invite(@AuthenticationPrincipal User user, @RequestBody InviteRequest body) {
+    public Map<String, Object> invite(@AuthenticationPrincipal User user, @jakarta.validation.Valid @RequestBody InviteRequest body) {
         OrgRole role = OrgRole.RECRUTEUR;
         if (body.orgRole() != null && body.orgRole().equalsIgnoreCase("HIRING_MANAGER")) {
             role = OrgRole.HIRING_MANAGER;
@@ -88,8 +91,9 @@ public class OrganizationController {
         );
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PutMapping("/mine")
-    public Map<String, Object> updateMine(@AuthenticationPrincipal User user, @RequestBody OrgUpdate body) {
+    public Map<String, Object> updateMine(@AuthenticationPrincipal User user, @jakarta.validation.Valid @RequestBody OrgUpdate body) {
         Organization org = organizationService.updateMine(
                 user,
                 body.name(),
@@ -105,6 +109,7 @@ public class OrganizationController {
         return toBody(org, me);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PostMapping(value = "/mine/logo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public Map<String, Object> uploadLogo(
             @AuthenticationPrincipal User user,
@@ -126,6 +131,7 @@ public class OrganizationController {
         }
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PostMapping("/mine/verify")
     public Map<String, Object> recheck(@AuthenticationPrincipal User user) {
         Organization org = organizationService.recheck(user);
@@ -140,6 +146,7 @@ public class OrganizationController {
         return body;
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @DeleteMapping("/mine/members/{userId}")
     public Map<String, Object> remove(@AuthenticationPrincipal User user, @PathVariable Long userId) {
         organizationService.removeMember(user, userId);

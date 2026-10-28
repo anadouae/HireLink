@@ -2,117 +2,112 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Administration — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="ADMINISTRATEUR" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <a class="brand" href="admin.html">
-        <span class="brand-mark"></span>
-        <span class="brand-name">Hire<span style="color:#d9ba6a">Link</span></span>
-      </a>
-      <nav class="side-nav" id="admin-nav">
-        <a class="side-link is-active" href="#dash" data-view="dash">Tableau de bord</a>
-        <a class="side-link" href="#orgs" data-view="orgs">Entreprises</a>
-        <a class="side-link" href="#plans" data-view="plans">Plans et factures</a>
-        <a class="side-link" href="#users" data-view="users">Comptes</a>
-      </nav>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <div><strong>Administration</strong></div>
-        <div class="topbar-actions" style="margin-left:auto">
-          <span class="muted" style="font-size:.85rem">Vérification · plans · comptes</span>
-          <div class="avatar" id="avatar">A</div>
-        </div>
-      </header>
-      <main class="content">
+<body class="rc" data-role="ADMINISTRATEUR" data-active="dash">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
         <section id="view-dash">
-          <div class="page-title"><div><p class="eyebrow">Admin</p><h1>Tableau de bord</h1></div></div>
-          <div class="stat-grid" id="stats"></div>
-          <section class="panel">
-            <div class="panel-head"><h2>Vérification à traiter</h2></div>
-            <div class="panel-body" id="dash-pending"><p class="muted">Chargement…</p></div>
-            <div class="panel-head"><h2>Entreprises à suivre</h2></div>
-            <div class="panel-body" id="dash-orgs"><p class="muted">Chargement…</p></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Administration</p><h1>Tableau de bord</h1><p>Vue d’ensemble de la plateforme : comptes, entreprises, offres et candidatures.</p></div></div>
+          <div class="rc-kpis" id="stats"></div>
+          <div class="rc-grid rc-grid--2">
+            <section class="rc-card"><div class="rc-card-head"><h2>Candidatures par statut</h2></div><div class="rc-card-body"><div class="rc-bars" id="chart-apps"></div></div></section>
+            <section class="rc-card"><div class="rc-card-head"><h2>Entreprises par plan</h2></div><div class="rc-card-body"><div class="rc-bars" id="chart-plans"></div></div></section>
+          </div>
+          <section class="rc-card" style="margin-top:1rem">
+            <div class="rc-card-head"><div><h2>Entreprises à vérifier</h2><p>Les badges automatiques (ICE + e-mail professionnel) passent sans revue.</p></div></div>
+            <div class="rc-card-body" id="dash-pending"></div>
           </section>
         </section>
 
         <section id="view-orgs" hidden>
-          <div class="page-title"><div><p class="eyebrow">Entreprises</p><h1>Gestion des entreprises</h1></div></div>
-          <section class="panel">
-            <div class="panel-body" style="padding:0 1.1rem .5rem;overflow:auto">
-              <table class="table">
-                <thead><tr><th>Entreprise</th><th>ICE</th><th>Plan</th><th>Statut</th><th>Membres</th><th>Offres</th><th></th></tr></thead>
-                <tbody id="orgs-body"></tbody>
-              </table>
-            </div>
-          </section>
-          <section class="panel" id="org-detail" hidden>
-            <div class="panel-head"><h2 id="org-detail-title">Détail</h2></div>
-            <div class="panel-body" id="org-detail-body"></div>
-          </section>
-        </section>
-
-        <section id="view-plans" hidden>
-          <div class="page-title"><div><p class="eyebrow">Facturation</p><h1>Plans et factures</h1></div></div>
-          <div class="stat-grid" id="plan-cards"></div>
-          <section class="panel">
-            <div class="panel-head"><h2>Générer une facture</h2></div>
-            <div class="panel-body">
-              <form id="invoice-form" class="profile-form">
-                <div class="field">
-                  <label for="inv-org">Entreprise</label>
-                  <select id="inv-org"></select>
-                </div>
-                <div class="field">
-                  <label for="inv-plan">Plan</label>
-                  <select id="inv-plan"></select>
-                </div>
-                <div class="field">
-                  <label for="inv-cycle">Période</label>
-                  <select id="inv-cycle">
-                    <option value="month">Mensuelle</option>
-                    <option value="year">Annuelle</option>
-                  </select>
-                </div>
-                <div class="field field-full">
-                  <button type="submit" class="btn btn-primary">Générer la facture</button>
-                </div>
-              </form>
-            </div>
-          </section>
+          <div class="rc-head"><div><p class="rc-eyebrow">Entreprises</p><h1>Gestion des entreprises</h1><p>Vérification, plan et équipe de chaque organisation.</p></div></div>
+          <div class="rc-toolbar">
+            <div class="rc-chips" id="org-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="pending">À vérifier</button><button type="button" class="rc-chip" data-f="verified">Vérifiées</button><button type="button" class="rc-chip" data-f="premium">Premium</button></div>
+            <span class="rc-spacer"></span>
+            <input id="org-search" class="rc-search-input" type="search" placeholder="Rechercher une entreprise…" aria-label="Rechercher une entreprise" />
+          </div>
+          <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
+            <thead><tr><th>Entreprise</th><th>ICE</th><th>Plan</th><th>Statut</th><th>Équipe</th><th>Offres</th><th></th></tr></thead>
+            <tbody id="orgs-body"></tbody>
+          </table></div></section>
         </section>
 
         <section id="view-users" hidden>
-          <div class="page-title"><div><p class="eyebrow">Comptes</p><h1>Utilisateurs</h1></div></div>
-          <p><input id="user-search" type="search" placeholder="Rechercher un compte…" style="max-width:320px" /></p>
-          <section class="panel">
-            <div class="panel-body" style="padding:0 1.1rem .5rem;overflow:auto">
-              <table class="table">
-                <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Actif</th><th></th></tr></thead>
-                <tbody id="users-body"></tbody>
-              </table>
+          <div class="rc-head"><div><p class="rc-eyebrow">Comptes</p><h1>Utilisateurs</h1><p>Activez ou désactivez un compte. Un compte désactivé ne peut plus se connecter.</p></div></div>
+          <div class="rc-toolbar">
+            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Admins</button></div>
+            <span class="rc-spacer"></span>
+            <input id="user-search" class="rc-search-input" type="search" placeholder="Rechercher un compte…" aria-label="Rechercher un compte" />
+          </div>
+          <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
+            <thead><tr><th>Compte</th><th>Rôle</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="users-body"></tbody>
+          </table></div></section>
+        </section>
+
+        <section id="view-plans" hidden>
+          <div class="rc-head"><div><p class="rc-eyebrow">Facturation</p><h1>Plans et factures</h1><p>Les factures sont émises automatiquement à chaque changement de plan d’une entreprise.</p></div></div>
+          <div class="rc-grid rc-grid--2" id="plan-cards"></div>
+          <section class="rc-card is-flush" style="margin-top:1rem">
+            <div class="rc-card-head"><h2>Factures émises</h2></div>
+            <div class="rc-tablewrap"><table class="rc-table">
+              <thead><tr><th>N°</th><th>Date</th><th>Entreprise</th><th>Plan</th><th>Total TTC</th><th>Statut</th><th></th></tr></thead>
+              <tbody id="invoices-body"></tbody>
+            </table></div>
+          </section>
+        </section>
+
+        <section id="view-refusals" hidden>
+          <div class="rc-head"><div><p class="rc-eyebrow">Référentiel</p><h1>Motifs de refus</h1><p>Catalogue proposé aux recruteurs lorsqu’ils refusent une candidature.</p></div></div>
+          <section class="rc-card">
+            <div class="rc-card-body">
+              <form id="rr-form" class="rc-form" style="grid-template-columns:minmax(150px,240px) 1fr auto;align-items:end">
+                <div class="rc-field"><label for="rr-code">Code</label><input id="rr-code" placeholder="PROFIL_INADEQUAT" required pattern="[A-Za-z0-9_]+" /></div>
+                <div class="rc-field"><label for="rr-label">Libellé</label><input id="rr-label" placeholder="Libellé affiché" required /></div>
+                <button class="btn btn-primary" type="submit">Ajouter</button>
+              </form>
             </div>
           </section>
+          <section class="rc-card is-flush" style="margin-top:1rem"><div class="rc-tablewrap"><table class="rc-table">
+            <thead><tr><th>Code</th><th>Libellé</th><th>Statut</th><th></th></tr></thead>
+            <tbody id="rr-body"></tbody>
+          </table></div></section>
+        </section>
+
+        <section id="view-audit" hidden>
+          <div class="rc-head"><div><p class="rc-eyebrow">Sécurité</p><h1>Journal d’audit</h1><p>Connexions, échecs, changements de rôle ou d’étape, décisions ICE, exports de données : les 200 derniers évènements. Aucun mot de passe ni jeton n’y est enregistré.</p></div>
+            <div class="rc-head-actions"><select id="audit-filter" aria-label="Filtrer par action"><option value="">Toutes les actions</option><option>LOGIN_FAILURE</option><option>LOGIN_LOCKED</option><option>LOGIN_SUCCESS</option><option>MFA_FAILURE</option><option>SESSION_TOKEN_REUSE</option><option>ACCESS_DENIED</option><option>USER_SUSPENDED</option><option>ORG_VERIFIED</option><option>STAGE_CHANGE</option><option>DATA_EXPORT</option><option>ACCOUNT_ERASED</option></select><button type="button" class="btn btn-soft btn-sm" id="audit-refresh">Actualiser</button></div></div>
+          <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
+            <thead><tr><th>Date</th><th>Action</th><th>Compte</th><th>Cible</th><th>IP</th><th>Détail</th></tr></thead>
+            <tbody id="audit-body"></tbody>
+          </table></div></section>
         </section>
       </main>
     </div>
   </div>
-  <script src="../js/config.js"></script>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js"></script>
-  <script src="../js/admin.js?v=20261026d"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/admin.js?v=20261029a"></script>
 </body>
 </html>

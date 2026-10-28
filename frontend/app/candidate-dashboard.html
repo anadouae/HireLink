@@ -2,109 +2,61 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Tableau de bord — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261026e" />
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <a class="brand" href="candidate-dashboard.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-      <nav class="side-nav"></nav>
-      <div id="nav-user" class="nav-user"></div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-search">
-          <span aria-hidden="true">⌕</span>
-          <input type="search" id="dash-search" placeholder="Poste, ville, compétence…" autocomplete="off" />
+<body class="rc" data-role="CANDIDAT" data-active="dashboard">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
+          <div>
+            <p class="rc-eyebrow">Espace candidat</p>
+            <h1 id="hello">Bonjour</h1>
+            <p id="hello-line" class="rc-muted">Chargement…</p>
+          </div>
+          <div class="rc-head-actions"><a class="btn btn-secondary" href="candidate-applications.html">Mes candidatures</a><a class="btn btn-primary" href="candidate.html">Parcourir les offres</a></div>
         </div>
-      </header>
-      <main class="content cand-home">
-        <div class="cand-home-grid">
-          <aside class="cand-col">
-            <section class="cand-id">
-              <h1 id="hello">—</h1>
-              <p id="hello-email" class="muted"></p>
-              <dl class="id-rows">
-                <div><dt>Nationalité</dt><dd id="id-nat">—</dd></div>
-                <div><dt>Niveau formation</dt><dd id="id-level">—</dd></div>
-                <div><dt>Disponibilité</dt><dd id="id-avail">—</dd></div>
-              </dl>
-              <a class="btn btn-primary btn-block" href="candidate-settings.html">Mon profil</a>
-            </section>
-            <section class="cand-score">
-              <p>Score CV</p>
-              <strong id="dash-score">—</strong>
-              <div class="score-track"><span id="dash-score-bar"></span></div>
-              <a href="candidate-settings.html#cv">Voir plus</a>
-            </section>
-            <section class="cand-cv-mini">
-              <header>
-                <div>
-                  <h2>Prévisualisation CV</h2>
-                  <p class="muted">Visualisez et gérez votre CV</p>
-                </div>
-              </header>
-              <a id="cv-open" class="btn btn-ghost btn-sm" href="candidate-settings.html#cv">Ouvrir dans un nouvel onglet</a>
-              <div class="cv-stage cv-stage-mini" id="dash-cv-stage">
-                <iframe id="dash-cv-frame" title="CV" hidden></iframe>
-                <p id="dash-cv-empty" class="muted">Aucun CV pour le moment.</p>
-              </div>
-              <label class="btn btn-primary btn-block">Upload CV
-                <input type="file" id="dash-cv-file" accept=".pdf,.txt,.md" hidden />
-              </label>
-            </section>
-          </aside>
-          <section class="cand-feed">
-            <div class="cand-stats" aria-label="Indicateurs">
-              <article><span>Candidatures envoyées</span><strong id="st-sent">0</strong></article>
-              <article><span>Visibilité CVthèque</span><strong id="st-visible">0</strong></article>
-              <article><span>Candidature spontanée</span><strong id="st-spont">0</strong></article>
-            </div>
-            <section class="panel">
-              <div class="panel-head">
-                <h2>Offres recommandées</h2>
-                <a href="candidate.html?scope=mine">Voir toutes les offres</a>
-              </div>
-              <div class="panel-body" id="reco-list"></div>
-            </section>
+        <div id="dash-banners"></div>
+        <div class="rc-kpis" aria-label="Indicateurs">
+          <div class="rc-kpi rc-kpi--info"><small>Candidatures en cours</small><strong id="st-active">—</strong><span>Dossiers encore ouverts</span></div>
+          <div class="rc-kpi rc-kpi--ok"><small>Entretiens</small><strong id="st-interviews">—</strong><span>Planifiés ou à planifier</span></div>
+          <div class="rc-kpi rc-kpi--warn"><small>Nouvelles offres</small><strong id="st-offers">—</strong><span>Pas encore postulées</span></div>
+        </div>
+        <div class="rc-grid rc-grid--2">
+          <section class="rc-card is-flush">
+            <div class="rc-card-head"><div><h2>Offres qui vous correspondent</h2><p>Classées par compatibilité avec votre profil</p></div><a class="btn btn-ghost btn-sm" href="candidate.html">Toutes les offres</a></div>
+            <div class="rc-card-body"><div class="rc-list" id="reco-list"></div></div>
           </section>
-          <aside class="cand-col">
-            <section class="cand-premium">
-              <p class="eyebrow">Parcours Premium</p>
-              <h2>Boostez votre carrière</h2>
-              <ul>
-                <li>Synthèse du CV déjà déposé</li>
-                <li>Alerte quand une offre correspond</li>
-                <li>Profil montré en premier aux recruteurs</li>
-              </ul>
-              <a class="btn btn-primary btn-block" href="candidate-settings.html#plans">Passer au Premium</a>
-            </section>
-            <section class="cand-activity">
-              <h2>Statistiques d'activité</h2>
-              <p>Profil complété <strong id="ready-score">0%</strong></p>
-              <div class="score-track"><span id="ready-bar"></span></div>
-              <p class="muted" id="hello-line"></p>
-            </section>
-            <section class="cand-activity">
-              <h2>Actions rapides</h2>
-              <div id="next-actions"></div>
-            </section>
-          </aside>
+          <section class="rc-card is-flush">
+            <div class="rc-card-head"><h2>Mes candidatures récentes</h2><a class="btn btn-ghost btn-sm" href="candidate-applications.html">Tout voir</a></div>
+            <div class="rc-card-body"><div class="rc-list" id="recent-list"></div></div>
+          </section>
         </div>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261026e"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/candidate-dashboard.js?v=20261026d"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/growth.js?v=20261029a"></script>
+  <script defer src="../js/candidate-dashboard.js?v=20261029a"></script>
 </body>
 </html>

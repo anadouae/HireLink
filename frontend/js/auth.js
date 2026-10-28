@@ -28,14 +28,24 @@
     otp: document.getElementById("form-otp"),
     profile: document.getElementById("form-profile"),
     password: document.getElementById("form-password"),
+    mfa: document.getElementById("form-mfa"),
+    enroll: document.getElementById("form-enroll"),
+    backup: document.getElementById("form-backup"),
+    forgot: document.getElementById("form-forgot"),
+    reset: document.getElementById("form-reset"),
   };
+  const NO_GOOGLE = ["otp", "profile", "mfa", "enroll", "backup", "forgot", "reset"];
+  const NO_PIPE = ["password", "profile", "mfa", "enroll", "backup", "forgot", "reset"];
+  let mfaToken = "";
+  let enrollToken = "";
+  let pendingAuth = null;
 
   function showPanel(name) {
     Object.keys(panels).forEach((key) => {
       if (panels[key]) panels[key].classList.toggle("is-active", key === name);
     });
-    if (googleBlock) googleBlock.hidden = name === "otp" || name === "profile";
-    if (pipe) pipe.classList.toggle("is-hidden", mode !== "register" || name === "password" || name === "profile");
+    if (googleBlock) googleBlock.hidden = NO_GOOGLE.indexOf(name) >= 0;
+    if (pipe) pipe.classList.toggle("is-hidden", mode !== "register" || NO_PIPE.indexOf(name) >= 0);
     const card = document.querySelector(".auth-card");
     if (card) card.classList.toggle("is-wide", name === "profile");
   }
@@ -130,11 +140,23 @@
     }
   }
 
+  /** Retour vers la page demandée avant la connexion (même espace uniquement, chemin relatif sûr). */
+  function nextTarget(authRole) {
+    const n = params.get("next");
+    if (!n || !/^[a-z0-9-]+\.html([?#].*)?$/i.test(n)) return null;
+    const prefix = authRole === "RECRUTEUR" ? "recruiter" : authRole === "ADMINISTRATEUR" ? "admin" : "candidate";
+    return n.indexOf(prefix) === 0 ? "app/" + n : null;
+  }
+
+  if (params.get("expired") === "1") {
+    setTimeout(() => HireLink.toast("Session expirée", "Reconnectez-vous pour continuer.", "warn"), 400);
+  }
+
   function enterApp(auth) {
     HireLinkAPI.setAuth(auth);
     HireLink.toast("Bienvenue", auth.fullName || auth.email, "ok");
     setTimeout(() => {
-      location.href = HireLinkAPI.redirectForRole(auth.role);
+      location.href = nextTarget(auth.role) || HireLinkAPI.redirectForRole(auth.role);
     }, 280);
   }
 
@@ -154,6 +176,145 @@
     setPipe(3);
     showPanel("profile");
     paintProfile();
+  }
+
+  /** Réponse d'authentification : défi TOTP, enrôlement obligatoire (administrateur) ou session ouverte. */
+  function afterAuth(auth, viaProfile) {
+    if (auth.mfaRequired && auth.mfaToken) {
+      mfaToken = auth.mfaToken;
+      mode = "login";
+      title.textContent = "Double authentification";
+      sub.textContent = "Un second facteur est demandé pour protéger ce compte.";
+      showPanel("mfa");
+      setTimeout(() => document.getElementById("mfa-code").focus(), 50);
+      return;
+    }
+    if (auth.mfaEnrollRequired && auth.enrollToken) {
+      startEnroll(auth.enrollToken);
+      return;
+    }
+    if (viaProfile) enterApp(auth);
+    else land(auth);
+  }
+
+  async function startEnroll(token) {
+    enrollToken = token;
+    try {
+      const r = await HireLinkAPI.api("/auth/mfa/enroll/start", { method: "POST", body: { enrollToken: token } });
+      document.getElementById("enroll-qr").src = r.qr;
+      document.getElementById("enroll-secret").value = r.secret;
+      title.textContent = "Activez la double authentification";
+      sub.textContent = "Obligatoire pour le compte administrateur.";
+      showPanel("enroll");
+      setTimeout(() => document.getElementById("enroll-code").focus(), 50);
+    } catch (err) {
+      HireLink.toast("Double authentification", err.message, "danger");
+    }
+  }
+
+  function backToLogin() {
+    mode = "login";
+    history.replaceState(null, "", "auth.html?mode=login");
+    mfaToken = "";
+    enrollToken = "";
+    applyMode();
+  }
+  document.querySelectorAll("[data-back-login]").forEach((b) => b.addEventListener("click", backToLogin));
+
+  panels.mfa.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = document.getElementById("mfa-code").value.trim();
+    try {
+      const auth = await HireLinkAPI.api("/auth/mfa/verify", { method: "POST", body: { mfaToken, code } });
+      document.getElementById("mfa-code").value = "";
+      enterApp(auth);
+    } catch (err) {
+      HireLink.toast("Code refusé", err.message, "danger");
+    }
+  });
+
+  panels.enroll.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const code = document.getElementById("enroll-code").value.trim();
+    try {
+      const auth = await HireLinkAPI.api("/auth/mfa/enroll/finish", { method: "POST", body: { enrollToken, code } });
+      pendingAuth = auth;
+      HireLinkAPI.setAuth(auth);
+      const list = document.getElementById("backup-list");
+      list.innerHTML = "";
+      (auth.backupCodes || []).forEach((c) => {
+        const li = document.createElement("li");
+        li.textContent = c;
+        list.appendChild(li);
+      });
+      title.textContent = "Codes de secours";
+      sub.textContent = "À conserver en lieu sûr.";
+      showPanel("backup");
+    } catch (err) {
+      HireLink.toast("Code refusé", err.message, "danger");
+    }
+  });
+
+  document.getElementById("btn-backup-copy").addEventListener("click", async () => {
+    const text = Array.from(document.querySelectorAll("#backup-list li")).map((li) => li.textContent).join("\n");
+    try {
+      await navigator.clipboard.writeText(text);
+      HireLink.toast("Copié", "Codes de secours copiés.", "ok");
+    } catch (_) {
+      HireLink.toast("Copie impossible", "Sélectionnez les codes et copiez-les à la main.", "warn");
+    }
+  });
+  panels.backup.addEventListener("submit", (e) => {
+    e.preventDefault();
+    if (pendingAuth) enterApp(pendingAuth);
+  });
+
+  document.getElementById("btn-forgot").addEventListener("click", () => {
+    mode = "login";
+    title.textContent = "Mot de passe oublié";
+    sub.textContent = "Nous vous envoyons un lien de réinitialisation.";
+    const typed = document.getElementById("email-pw").value.trim();
+    if (typed) document.getElementById("forgot-email").value = typed;
+    showPanel("forgot");
+  });
+  panels.forgot.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const r = await HireLinkAPI.api("/auth/forgot-password", { method: "POST", body: { email: document.getElementById("forgot-email").value.trim() } });
+      HireLink.toast("Demande envoyée", r.message, "ok");
+    } catch (err) {
+      HireLink.toast("Échec", err.message, "danger");
+    }
+  });
+  panels.reset.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const r = await HireLinkAPI.api("/auth/reset-password", {
+        method: "POST",
+        body: { token: params.get("token") || "", newPassword: document.getElementById("reset-password").value },
+      });
+      HireLink.toast("Mot de passe modifié", r.message, "ok");
+      history.replaceState(null, "", "auth.html?mode=login");
+      document.getElementById("reset-password").value = "";
+      backToLogin();
+    } catch (err) {
+      HireLink.toast("Réinitialisation impossible", err.message, "danger");
+    }
+  });
+
+  const passkeyBtn = document.getElementById("btn-passkey");
+  if (passkeyBtn && window.HireLinkWebAuthn && HireLinkWebAuthn.supported()) {
+    passkeyBtn.hidden = false;
+    passkeyBtn.addEventListener("click", async () => {
+      try {
+        const opts = await HireLinkAPI.api("/auth/passkey/login/options", { method: "POST", body: {} });
+        const credential = await HireLinkWebAuthn.get(opts);
+        const auth = await HireLinkAPI.api("/auth/passkey/login/finish", { method: "POST", body: { requestId: opts.requestId, credential } });
+        enterApp(auth);
+      } catch (err) {
+        HireLink.toast("Passkey", err.message || "Échec", "danger");
+      }
+    });
   }
 
   function land(auth) {
@@ -237,7 +398,7 @@
         method: "POST",
         body: { email: pendingEmail, code, role: "CANDIDAT" },
       });
-      land(auth);
+      afterAuth(auth);
     } catch (err) {
       HireLink.toast("Code invalide", err.message, "danger");
     }
@@ -256,8 +417,8 @@
       HireLink.toast("Téléphone", "Indiquez le numéro sans l'indicatif, par exemple 6 12 34 56 78.", "warn");
       return false;
     }
-    if (!viaGoogle && document.getElementById("reg-password").value.length < 6) {
-      HireLink.toast("Mot de passe", "6 caractères minimum, pour vous reconnecter.", "warn");
+    if (!viaGoogle && document.getElementById("reg-password").value.length < 12) {
+      HireLink.toast("Mot de passe", "12 caractères minimum : une phrase de passe convient très bien (ex. Atlas-Vert-Soleil-2026).", "warn");
       return false;
     }
     return true;
@@ -320,7 +481,7 @@
           password: document.getElementById("password").value,
         },
       });
-      enterApp(auth);
+      afterAuth(auth, true);
     } catch (err) {
       HireLink.toast("Connexion refusée", err.message, "danger");
     }
@@ -355,7 +516,7 @@
       method: "POST",
       body: Object.assign({ idToken: idToken || null, role: null }, extra || {}),
     });
-    land(auth);
+    afterAuth(auth);
   }
 
   async function mountGoogleButton(clientId) {
@@ -495,5 +656,15 @@
   });
 
   selectRole(role);
-  applyMode();
+  if (params.get("mode") === "reset" && params.get("token")) {
+    mode = "login";
+    document.getElementById("tab-login").classList.add("is-active");
+    document.getElementById("tab-register").classList.remove("is-active");
+    if (pill) pill.classList.add("is-login");
+    title.textContent = "Nouveau mot de passe";
+    sub.textContent = "Choisissez un mot de passe que vous n’utilisez nulle part ailleurs.";
+    showPanel("reset");
+  } else {
+    applyMode();
+  }
 })();

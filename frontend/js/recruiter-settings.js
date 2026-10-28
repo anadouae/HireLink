@@ -1,206 +1,122 @@
+/** Paramètres recruteur : compte, photo, alertes, apparence, formules. */
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["RECRUTEUR"], hello: false });
+  const RC = HireLinkApp;
+  const session = RC.mount({ active: "settings", title: "Paramètres" });
   if (!session) return;
-
+  const $ = (id) => document.getElementById(id);
   const NOTIF_KEY = "hirelink.notif.recruiter";
-
-  document.querySelectorAll("[data-settings]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-settings");
-      document.querySelectorAll(".settings-panel").forEach((panel) => {
-        panel.hidden = panel.id !== "set-" + id;
-      });
-      document.querySelectorAll("[data-settings]").forEach((other) => {
-        other.classList.toggle("is-on", other === btn);
-      });
-    });
-  });
+  const photoKey = "hirelink.photo." + (session.userId || "me");
 
   function openTab(id) {
-    const btn = document.querySelector('[data-settings="' + id + '"]');
-    if (btn) btn.click();
+    document.querySelectorAll(".rc-tab").forEach((b) => b.classList.toggle("is-on", b.dataset.t === id));
+    document.querySelectorAll(".rc-panel").forEach((p) => (p.hidden = p.id !== "tab-" + id));
   }
+  document.querySelector(".rc-tabs").addEventListener("click", (e) => {
+    const b = e.target.closest(".rc-tab");
+    if (!b) return;
+    openTab(b.dataset.t);
+    history.replaceState(null, "", "#" + b.dataset.t);
+  });
+  const hash = () => { const h = location.hash.slice(1); openTab(["compte", "alertes", "apparence", "plans"].includes(h) ? h : h === "image" || h === "photo-upload" ? "compte" : "compte"); };
+  hash();
+  window.addEventListener("hashchange", hash);
 
-  function refreshBilling() {
-    const prem = HireLinkProduct && HireLinkProduct.isPremium("recruiter");
-    const essentiel = document.querySelector('[data-plan-mark="essentiel"]');
-    const performance = document.querySelector('[data-plan-mark="performance"]');
-    if (essentiel) essentiel.textContent = prem ? "Toujours disponible" : "Formule en cours";
-    if (performance) performance.textContent = prem ? "Formule en cours" : "À activer";
-    const foldE = document.getElementById("fold-essentiel");
-    const foldP = document.getElementById("fold-performance");
-    if (foldE) foldE.open = !prem;
-    if (foldP) foldP.open = !!prem;
-    const cancel = document.getElementById("btn-billing-cancel");
-    const go = document.getElementById("btn-billing-premium");
-    if (cancel) cancel.hidden = !prem;
-    if (go) go.hidden = !!prem;
-  }
+  /* Compte */
+  HireLinkAPI.api("/me").then((p) => {
+    $("set-name").value = (p.fullName || "").replace(/\s*\(alias\)\s*/i, "");
+    $("set-email").value = p.email || session.email || "";
+    $("set-role").textContent = (RC.getOrg() && RC.ROLE_FR[RC.getOrg().myRole]) || "Recruteur";
+    paintPhoto();
+  }).catch((err) => RC.toast("Profil", err.message, "danger"));
+  document.addEventListener("rc:org", (e) => { $("set-role").textContent = RC.ROLE_FR[e.detail.myRole] || "Recruteur"; });
 
-  HireLinkAPI.api("/me")
-    .then((p) => {
-      document.getElementById("set-name").value = p.fullName || "";
-      document.getElementById("set-company").value = p.company || "";
-      document.getElementById("set-ice").value = p.companyIce || "";
-      const userId = p.id || session.userId || session.id || "me";
-      const photoKey = "hirelink.photo." + userId;
-      const photo = document.getElementById("pf-photo");
-      const fallback = document.getElementById("pf-photo-fallback");
-      const parts = String(p.fullName || "R").trim().split(/\s+/).filter(Boolean);
-      const letters = ((parts[0] || "R")[0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
-      function paint(url) {
-        if (url && photo) {
-          photo.src = url;
-          photo.hidden = false;
-          if (fallback) fallback.hidden = true;
-        } else {
-          if (photo) photo.hidden = true;
-          if (fallback) {
-            fallback.hidden = false;
-            fallback.textContent = letters;
-          }
-        }
-        if (window.HireLinkShell && HireLinkShell.refreshProfileChip) {
-          HireLinkShell.refreshProfileChip();
-        }
-      }
-      let stored = "";
-      try { stored = localStorage.getItem(photoKey) || ""; } catch (_) {}
-      paint(stored);
-      const file = document.getElementById("pf-photo-file");
-      const open = () => file && file.click();
-      const btn = document.getElementById("btn-photo");
-      const pick = document.getElementById("btn-photo-pick");
-      const clear = document.getElementById("btn-photo-clear");
-      if (btn) {
-        btn.addEventListener("click", open);
-        btn.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            open();
-          }
-        });
-      }
-      if (pick) pick.addEventListener("click", open);
-      if (clear) {
-        clear.addEventListener("click", () => {
-          try { localStorage.removeItem(photoKey); } catch (_) {}
-          paint("");
-          HireLink.toast("Photo", "Image retirée", "ok");
-        });
-      }
-      if (file) {
-        file.addEventListener("change", () => {
-          const picked = file.files && file.files[0];
-          if (!picked) return;
-          const reader = new FileReader();
-          reader.onload = () => {
-            const img = new Image();
-            img.onload = () => {
-              const size = 320;
-              const canvas = document.createElement("canvas");
-              canvas.width = size;
-              canvas.height = size;
-              const ctx = canvas.getContext("2d");
-              const side = Math.min(img.width, img.height);
-              ctx.drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
-              const url = canvas.toDataURL("image/jpeg", 0.82);
-              try { localStorage.setItem(photoKey, url); } catch (_) {
-                HireLink.toast("Photo", "Image trop lourde pour ce navigateur", "danger");
-                return;
-              }
-              paint(url);
-              HireLink.toast("Photo", "Image enregistrée — visible en haut à droite", "ok");
-            };
-            img.src = reader.result;
-          };
-          reader.readAsDataURL(picked);
-        });
-      }
-      if (location.hash === "#photo-upload" || location.hash === "#image") {
-        openTab("image");
-        const node = document.getElementById("photo-upload");
-        if (node) setTimeout(() => node.scrollIntoView({ behavior: "smooth", block: "start" }), 80);
-      }
-    })
-    .catch((err) => HireLink.toast("Profil", err.message, "danger"));
-
-  document.getElementById("settings-profile").addEventListener("submit", async (e) => {
+  $("form-account").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const name = $("set-name").value.trim();
+    if (!name) { RC.toast("Nom requis", "Indiquez votre nom complet.", "warn"); return; }
+    const btn = e.submitter;
+    RC.busy(btn, true);
     try {
-      await HireLinkAPI.api("/me", {
-        method: "PATCH",
-        body: {
-          fullName: document.getElementById("set-name").value,
-          company: document.getElementById("set-company").value,
-          companyIce: document.getElementById("set-ice").value,
-        },
-      });
-      HireLink.toast("Enregistré", "Fiche organisation mise à jour", "ok");
-    } catch (err) {
-      HireLink.toast("Erreur", err.message, "danger");
-    }
+      const p = await HireLinkAPI.api("/me", { method: "PATCH", body: { fullName: name } });
+      const s = HireLinkAPI.getSession();
+      if (s) { s.fullName = p.fullName || name; localStorage.setItem("hirelink.session", JSON.stringify(s)); }
+      RC.toast("Compte", "Profil mis à jour", "ok");
+      RC.paintProfile();
+    } catch (err) { RC.toast("Compte", err.message, "danger"); } finally { RC.busy(btn, false); }
   });
 
-  const themeToggle = document.getElementById("theme-toggle");
-  if (themeToggle && window.HireLinkTheme) {
-    themeToggle.checked = HireLinkTheme.current() === "dark";
-    themeToggle.addEventListener("change", () => {
-      HireLinkTheme.apply(themeToggle.checked ? "dark" : "light");
-    });
+  function paintPhoto() {
+    let url = "";
+    try { url = localStorage.getItem(photoKey) || ""; } catch (_) {}
+    const img = $("pf-photo"), fb = $("pf-photo-fallback");
+    fb.textContent = RC.initials($("set-name").value || session.fullName);
+    img.hidden = !url; fb.hidden = !!url;
+    if (url) img.src = url;
+    RC.paintProfile();
   }
+  $("btn-photo-pick").addEventListener("click", () => $("pf-photo-file").click());
+  $("btn-photo-clear").addEventListener("click", () => { try { localStorage.removeItem(photoKey); } catch (_) {} paintPhoto(); RC.toast("Photo", "Image retirée", "ok"); });
+  $("pf-photo-file").addEventListener("change", (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const size = 256, c = document.createElement("canvas");
+        c.width = c.height = size;
+        const side = Math.min(img.width, img.height);
+        c.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
+        try { localStorage.setItem(photoKey, c.toDataURL("image/jpeg", 0.82)); } catch (_) { RC.toast("Photo", "Image trop lourde pour ce navigateur", "danger"); return; }
+        paintPhoto();
+        RC.toast("Photo", "Image enregistrée sur cet appareil", "ok");
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(f);
+    e.target.value = "";
+  });
 
-  document.getElementById("btn-billing-premium").onclick = () => {
-    if (window.HireLinkGrowth) HireLinkGrowth.showPremium("recruiter");
-    setTimeout(refreshBilling, 400);
-  };
-  document.getElementById("btn-billing-cancel").onclick = () => {
-    localStorage.removeItem("hirelink.premium.active.recruiter");
-    HireLink.toast("Plan", "Retour au Gratuit", "info");
-    refreshBilling();
-  };
-
+  /* Alertes */
   try {
     const n = JSON.parse(localStorage.getItem(NOTIF_KEY) || "{}");
-    if (n.sla === false) document.getElementById("n-sla").checked = false;
-    if (n.neu === false) document.getElementById("n-new").checked = false;
-    if (n.interview === false) document.getElementById("n-interview").checked = false;
+    $("n-sla").checked = n.sla !== false; $("n-new").checked = n.neu !== false; $("n-interview").checked = n.interview !== false;
   } catch (_) {}
-
-  document.getElementById("btn-save-notif").onclick = () => {
-    localStorage.setItem(
-      NOTIF_KEY,
-      JSON.stringify({
-        sla: document.getElementById("n-sla").checked,
-        neu: document.getElementById("n-new").checked,
-        interview: document.getElementById("n-interview").checked,
-      })
-    );
-    HireLink.toast("Notifications", "Préférences enregistrées", "ok");
-  };
-
-  // refresh after premium modal CTA
-  HireLinkAPI.api("/applications/pipeline")
-    .then((apps) => {
-      const open = (apps || []).filter((a) => !["REJECTED", "WITHDRAWN"].includes(a.status));
-      const late = open.filter((a) => a.slaRemainingDays != null && a.slaRemainingDays < 0);
-      const note = document.getElementById("cabinet-advice");
-      const side = document.getElementById("side-advice-text");
-      const line = late.length
-        ? late.length + " dossier" + (late.length > 1 ? "s ont" : " a") + " dépassé le délai publié. Ouvrez-les avant le reste. Le score de compatibilité aide à lire, il ne retient personne."
-        : "Aucun délai dépassé. Gardez la file triée par échéance : le candidat voit la date que vous avez promise.";
-      if (note) note.textContent = line;
-      if (side) side.textContent = late.length
-        ? "Ce mois-ci : " + late.length + " dossier" + (late.length > 1 ? "s" : "") + " hors délai. Traitez-les en premier."
-        : "Ce mois-ci : les délais promis sont tenus. La lecture d’un CV ne remplace pas votre décision.";
-    })
-    .catch(() => {});
-
-  refreshBilling();
-  if (location.hash === "#plans") openTab("plans");
-  if (location.hash === "#photo-upload" || location.hash === "#image") openTab("image");
-  window.addEventListener("hashchange", function () {
-    if (location.hash === "#plans") openTab("plans");
-    if (location.hash === "#photo-upload" || location.hash === "#image") openTab("image");
+  $("btn-save-notif").addEventListener("click", () => {
+    localStorage.setItem(NOTIF_KEY, JSON.stringify({ sla: $("n-sla").checked, neu: $("n-new").checked, interview: $("n-interview").checked }));
+    RC.toast("Alertes", "Préférences enregistrées sur cet appareil", "ok");
   });
+
+  /* Apparence */
+  const dark = $("theme-toggle");
+  dark.checked = HireLinkTheme.current() === "dark";
+  dark.addEventListener("change", () => {
+    HireLinkTheme.apply(dark.checked ? "dark" : "light");
+    const t = $("rc-theme");
+    if (t) t.innerHTML = RC.svg(dark.checked ? "sun" : "moon");
+  });
+
+  /* Formules */
+  function refreshBilling() {
+    const prem = HireLinkAPI.isPremium();
+    $("plan-access").classList.toggle("is-current", !prem);
+    $("plan-premium").classList.toggle("is-current", prem);
+    $("mark-access").textContent = prem ? "Toujours disponible" : "Formule en cours";
+    $("mark-premium").textContent = prem ? "Formule en cours" : "À activer";
+    $("btn-billing-cancel").hidden = !prem;
+    $("btn-billing-premium").hidden = prem;
+  }
+  $("btn-billing-premium").addEventListener("click", () => { HireLinkGrowth.showPremium("recruiter"); });
+  $("btn-billing-cancel").addEventListener("click", async () => {
+    try {
+      const r = await HireLinkAPI.api("/billing/subscription", { method: "DELETE" });
+      HireLinkAPI.setPlanTier(r.planTier);
+      RC.toast("Formule", "Retour à la formule Accès", "info");
+      refreshBilling();
+    } catch (err) {
+      RC.toast("Formule", err.message, "danger");
+    }
+  });
+  window.addEventListener("focus", refreshBilling);
+  refreshBilling();
 })();

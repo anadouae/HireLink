@@ -2,43 +2,28 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mon profil — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261026b" />
-  <script src="../js/theme.js?v=20261026d"></script>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="row between">
-        <a class="brand" href="candidate.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-        <button type="button" class="mobile-toggle" id="close-side">✕</button>
-      </div>
-      <nav class="side-nav">
-        <a class="side-link" href="candidate-dashboard.html">Tableau de bord</a>
-        <a class="side-link" href="candidate.html">Offres</a>
-        <a class="side-link" href="candidate-applications.html">Mes candidatures</a>
-      </nav>
-      <div id="nav-user" class="nav-user"></div>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-actions" style="margin-left:auto">
-          <button type="button" class="btn btn-brass btn-sm" id="btn-premium">Premium</button>
-          <div class="avatar" id="avatar">C</div>
-        </div>
-      </header>
-      <main class="content">
+<body class="rc" data-role="CANDIDAT" data-active="profile">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
         <div class="page-title">
           <div>
             <p class="eyebrow">Profil</p>
@@ -174,16 +159,17 @@
             <button type="button" class="btn btn-primary" id="coach-analyze">Faire la synthèse</button>
           </aside>
         </section>
+      
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261026d"></script>
-  <script src="../js/in-app-help.js?v=20261026d"></script>
-  <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261026e"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/skills-catalog.js?v=20261026d"></script>
-  <script src="../js/candidate-profile.js?v=20261026e"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/growth.js?v=20261029a"></script>
+  <script defer src="../js/skills-catalog.js?v=20261029a"></script>
+  <script defer src="../js/candidate-profile.js?v=20261029a"></script>
 </body>
 </html>

@@ -31,7 +31,7 @@ public class NotificationService {
 
     @Transactional(readOnly = true)
     public List<InAppNotification> mine(User user) {
-        return repository.findByUserIdOrderByCreatedAtDesc(user.getId());
+        return repository.findByUserIdOrderByCreatedAtDescIdDesc(user.getId());
     }
 
     @Transactional

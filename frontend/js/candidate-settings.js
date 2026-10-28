@@ -1,5 +1,5 @@
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["CANDIDAT"], hello: false });
+  const session = HireLinkApp.mount({});
   if (!session) return;
 
   document.querySelectorAll("[data-settings]").forEach((btn) => {
@@ -13,12 +13,6 @@
       });
     });
   });
-
-  const NOTIF_KEY = "hirelink.notif.candidate";
-
-  function esc(s) {
-    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
 
   function openTab(id) {
     const btn = document.querySelector('[data-settings="' + id + '"]');
@@ -35,7 +29,6 @@
     const hash = (location.hash || "").replace("#", "");
     if (hash === "plans" || hash === "set-plans") openTab("plans");
     else if (hash === "cv" || hash === "set-cv") openTab("cv");
-    else if (hash === "image" || hash === "photo") openTab("image");
     else if (hash === "search" || hash === "parcours") openTab("search");
     else if (hash === "privacy" || hash === "parameters") openTab("privacy");
   }
@@ -43,7 +36,7 @@
   window.addEventListener("hashchange", applyHash);
 
   function refreshBilling() {
-    const prem = HireLinkProduct && HireLinkProduct.isPremium("candidate");
+    const prem = HireLinkAPI.isPremium();
     const essentiel = document.querySelector('[data-plan-mark="essentiel"]');
     const performance = document.querySelector('[data-plan-mark="performance"]');
     if (essentiel) essentiel.textContent = prem ? "Toujours disponible" : "Formule en cours";
@@ -64,11 +57,9 @@
       document.getElementById("set-first").value = p.firstName || bits[0] || "";
       document.getElementById("set-last").value = p.lastName || bits.slice(1).join(" ") || "";
       document.getElementById("set-email").value = p.email || session.email || "";
-      const emailRead = document.getElementById("set-email-read");
-      if (emailRead) emailRead.value = p.email || session.email || "";
       showSettingsCv(p);
       document.getElementById("set-nat").value = p.nationality || "";
-      document.getElementById("set-city").value = p.city || p.preferredLocations || "";
+      document.getElementById("set-city").value = p.city || "";
       document.getElementById("set-birth").value = p.birthDate || "";
       document.getElementById("set-gender").value = p.gender || "";
       const dial = (p.phone || "").match(/^\+(\d+)/);
@@ -127,40 +118,30 @@
   document.getElementById("settings-account").addEventListener("submit", saveProfile);
   document.getElementById("settings-path").addEventListener("submit", saveProfile);
 
-  const themeToggle = document.getElementById("theme-toggle");
-  if (themeToggle && window.HireLinkTheme) {
-    themeToggle.checked = HireLinkTheme.current() === "dark";
-    themeToggle.addEventListener("change", () => HireLinkTheme.apply(themeToggle.checked ? "dark" : "light"));
-  }
-
   document.getElementById("btn-billing-premium").onclick = () => {
     if (window.HireLinkGrowth) HireLinkGrowth.showPremium("candidate");
-    setTimeout(refreshBilling, 400);
   };
-  document.getElementById("btn-billing-cancel").onclick = () => {
-    localStorage.removeItem("hirelink.premium.active.candidate");
-    HireLink.toast("Plan", "Essentiel réactivé", "info");
-    refreshBilling();
+  document.getElementById("btn-billing-cancel").onclick = async () => {
+    try {
+      const r = await HireLinkAPI.api("/billing/subscription", { method: "DELETE" });
+      HireLinkAPI.setPlanTier(r.planTier);
+      HireLink.toast("Plan", "Essentiel réactivé", "info");
+      refreshBilling();
+    } catch (err) {
+      HireLink.toast("Plan", err.message, "danger");
+    }
   };
 
-  try {
-    const n = JSON.parse(localStorage.getItem(NOTIF_KEY) || "{}");
-    if (n.match === false) document.getElementById("n-match").checked = false;
-    if (n.status === false) document.getElementById("n-status").checked = false;
-    if (n.interview === false) document.getElementById("n-interview").checked = false;
-  } catch (_) {}
-
-  document.getElementById("btn-save-notif").onclick = () => {
-    localStorage.setItem(
-      NOTIF_KEY,
-      JSON.stringify({
-        match: document.getElementById("n-match").checked,
-        status: document.getElementById("n-status").checked,
-        interview: document.getElementById("n-interview").checked,
-      })
-    );
-    HireLink.toast("Notifications", "OK", "ok");
-  };
+  HireLinkAPI.api("/ai/credits")
+    .then((c) => {
+      const line = document.getElementById("credits-line");
+      if (line) {
+        line.textContent = c.premium
+          ? "Performance est active : " + c.remaining + " synthèse(s) du CV restante(s) ce mois-ci, sur " + c.limit + "."
+          : "Essentiel : " + c.remaining + " synthèse" + (Number(c.remaining) > 1 ? "s" : "") + " du CV ce mois-ci, sur " + c.limit + ".";
+      }
+    })
+    .catch(() => {});
 
   Promise.all([
     HireLinkAPI.api("/me").catch(function () { return null; }),
@@ -168,52 +149,19 @@
   ]).then(function (pack) {
     const me = pack[0];
     const apps = pack[1] || [];
-    const readout = document.getElementById("search-readout");
-    if (readout && me) {
-      const skills = String(me.skills || "").trim();
-      const roles = String(me.soughtRoles || "").trim();
-      const cv = me.cvFileName ? "CV déposé" : "CV pas encore déposé";
-      readout.innerHTML =
-        "<p><strong>" + esc(cv) + "</strong></p>" +
-        "<p>Métier visé : " + esc(roles || "non renseigné") + "</p>" +
-        "<p>Compétences : " + esc(skills || "non renseignées — le classement des offres reste vide") + "</p>";
-    }
     const box = document.getElementById("advice-box");
-    if (box) {
-      const tips = [];
-      if (!me || !me.cvFileName) tips.push("Déposez votre CV. La synthèse n’a rien à lire tant que le document n’est pas là.");
-      else if (!String(me.cvSections || "").trim()) tips.push("Confirmez les sections extraites du CV. Sans ça, le classement des offres travaille sur un texte incomplet.");
-      else tips.push("Le CV est lisible. Lancez la synthèse pour voir ce qui manque pour le métier visé, puis ajustez les compétences.");
-      const late = apps.filter(function (a) {
-        return a.slaRemainingDays != null && a.slaRemainingDays < 0 && a.status !== "REJECTED" && a.status !== "WITHDRAWN";
-      });
-      if (late.length) tips.push(late.length + " employeur" + (late.length > 1 ? "s ont" : " a") + " dépassé le délai publié sur l’offre.");
-      const interviews = apps.filter(function (a) { return a.status === "INTERVIEW"; });
-      if (interviews.length) tips.push("Un entretien est ouvert. Relisez le poste avant le jour J. La synthèse ne répond pas à votre place.");
-      box.innerHTML = tips.map(function (t) { return "<p>" + t + "</p>"; }).join("");
-    }
-    const side = document.getElementById("side-advice-text");
-    if (side && me) {
-      if (!me.cvFileName) side.textContent = "Ce mois-ci : déposez le CV. C’est lui que la synthèse et le classement des offres lisent.";
-      else if (apps.some(function (a) { return a.status === "INTERVIEW"; })) side.textContent = "Ce mois-ci : un entretien est ouvert. Relisez le poste. La synthèse ne répond pas à votre place.";
-      else side.textContent = "Ce mois-ci : la synthèse peut relire votre CV. Elle indique ce qui manque. Elle ne postule pas.";
-    }
+    if (!box) return;
+    const tips = [];
+    if (!me || !me.cvFileName) tips.push("Déposez votre CV. La synthèse n’a rien à lire tant que le document n’est pas là.");
+    else if (!String(me.cvSections || "").trim()) tips.push("Confirmez les sections extraites du CV. Sans ça, le classement des offres travaille sur un texte incomplet.");
+    else tips.push("Le CV est lisible. Lancez la synthèse pour voir ce qui manque pour le métier visé, puis ajustez les compétences.");
+    const late = apps.filter(function (a) {
+      return a.slaRemainingDays != null && a.slaRemainingDays < 0 && a.status !== "REJECTED" && a.status !== "WITHDRAWN";
+    });
+    if (late.length) tips.push(late.length + " employeur" + (late.length > 1 ? "s ont" : " a") + " dépassé le délai publié sur l’offre.");
+    if (apps.some(function (a) { return a.status === "INTERVIEW"; })) tips.push("Un entretien est ouvert. Relisez le poste avant le jour J. La synthèse ne répond pas à votre place.");
+    box.innerHTML = tips.map(function (t) { return "<p>" + t + "</p>"; }).join("");
   });
-
-  HireLinkAPI.api("/ai/credits", {
-    headers: HireLinkProduct ? HireLinkProduct.premiumHeaders("candidate") : {},
-  })
-    .then((c) => {
-      const badge = document.getElementById("credits-badge");
-      const line = document.getElementById("credits-line");
-      if (badge) badge.textContent = c.premium ? "⚡ Illimité" : "⚡ " + c.remaining + "/" + c.limit;
-      if (line) {
-        line.textContent = c.premium
-          ? "Performance est active : la synthèse du CV est sans plafond."
-          : "Essentiel : " + c.remaining + " synthèse" + (Number(c.remaining) > 1 ? "s" : "") + " du CV ce mois-ci, sur " + c.limit + ".";
-      }
-    })
-    .catch(() => {});
 
   const exportBtn = document.getElementById("btn-export-data");
   if (exportBtn) {
@@ -232,59 +180,6 @@
     };
   }
 
-  const consentBtn = document.getElementById("btn-consent");
-  if (consentBtn) {
-    consentBtn.onclick = async () => {
-      try {
-        await HireLinkAPI.api("/me/consents", {
-          method: "POST",
-          body: { purpose: "recruitment", granted: true },
-        });
-        HireLink.toast("Invitation", "Les entreprises peuvent maintenant consulter votre profil.", "ok");
-      } catch (err) {
-        HireLink.toast("Consentement", err.message, "danger");
-      }
-    };
-  }
-
-  HireLinkAPI.api("/notifications")
-    .then((list) => {
-      const box = document.getElementById("notif-inbox");
-      if (!box) return;
-      if (!list.length) {
-        box.innerHTML =
-          (window.HireLinkArt ? HireLinkArt.sceneHtml("empty") : "") +
-          "<p class='muted'>Aucune notification in-app.</p>";
-        return;
-      }
-      box.innerHTML =
-        "<p class='muted' style='font-weight:600'>Messages du compte</p>" +
-        list
-          .slice(0, 8)
-          .map(
-            (n) =>
-              "<div class='notif-row' style='margin-bottom:0.4rem'>" +
-              (window.HireLinkArt ? HireLinkArt.avatarHtml(n.title || n.id, "msg-avatar", HireLinkArt.moodOf((n.title || "") + " " + (n.body || ""))) : "") +
-              "<div><strong>" +
-              (n.title || "") +
-              "</strong><br/>" +
-              (n.body || "") +
-              "<br/><span class='muted' style='font-size:0.75rem'>" +
-              (n.at || "") +
-              (n.read ? "" : " · non lu") +
-              "</span></div></div>"
-          )
-          .join("");
-    })
-    .catch(() => {});
-
-  const params = new URLSearchParams(location.search);
-  if (params.get("ref")) {
-    try {
-      localStorage.setItem("hirelink.referral.code", params.get("ref"));
-    } catch (_) {}
-  }
-
   async function showSettingsCv(me) {
     const frame = document.getElementById("set-cv-frame");
     const empty = document.getElementById("set-cv-empty");
@@ -296,8 +191,7 @@
     }
     try {
       const token = HireLinkAPI.getToken();
-      const res = await fetch(HireLinkAPI.API_BASE + "/me/cv", {
-        headers: token ? { Authorization: "Bearer " + token } : {},
+      const res = await HireLinkAPI.authFetch("/me/cv", {
       });
       if (!res.ok) return;
       const url = URL.createObjectURL(await res.blob());
@@ -316,9 +210,8 @@
       fd.append("file", file);
       try {
         const token = HireLinkAPI.getToken();
-        const res = await fetch(HireLinkAPI.API_BASE + "/me/cv", {
+        const res = await HireLinkAPI.authFetch("/me/cv", {
           method: "POST",
-          headers: token ? { Authorization: "Bearer " + token } : {},
           body: fd,
         });
         if (!res.ok) throw new Error("Envoi impossible");
@@ -330,34 +223,5 @@
     });
   }
 
-  const del = document.getElementById("btn-delete-account");
-  if (del) {
-    del.addEventListener("click", async function () {
-      const ok = await HireLink.openModal({
-        title: "Supprimer le compte ?",
-        description: "Action irréversible. Toutes vos données seront effacées.",
-        confirmLabel: "Supprimer",
-        danger: true,
-      });
-      if (!ok) return;
-      HireLink.toast("Compte", "La suppression se fait auprès du support pour ce moment.", "info");
-    });
-  }
-
-  const goCv = document.getElementById("go-cv-from-image");
-  if (goCv) {
-    goCv.addEventListener("click", function (e) {
-      e.preventDefault();
-      location.hash = "cv";
-      openTab("cv");
-    });
-  }
-
   refreshBilling();
-  if (location.hash === "#plans") openTab("plans");
-  if (location.hash === "#cv" || location.hash === "#set-cv") openTab("cv");
-  window.addEventListener("hashchange", function () {
-    if (location.hash === "#plans") openTab("plans");
-    if (location.hash === "#cv" || location.hash === "#set-cv") openTab("cv");
-  });
 })();

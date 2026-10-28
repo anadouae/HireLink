@@ -2,124 +2,87 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vue d’ensemble — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261027a" />
-  <script src="../js/theme.js?v=20261026d"></script>
+  <title>Tableau de bord — HireLink</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="row between">
-        <a class="brand" href="recruiter.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-        <button type="button" class="mobile-toggle" id="close-side">✕</button>
-      </div>
-      <nav class="side-nav">
-        <a class="side-link is-active" href="recruiter.html">Tableau de bord</a>
-        <a class="side-link" href="recruiter-pipeline.html">Pipeline</a>
-        <a class="side-link" href="recruiter-offers.html">Offres</a>
-        <a class="side-link" href="recruiter-team.html">Entreprise</a>
-        <a class="side-link" href="recruiter-settings.html">Paramètres</a>
-      </nav>
-      <div id="nav-user" class="nav-user"></div>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-search"><span aria-hidden="true">⌕</span><input type="search" id="search-home" placeholder="Candidat, offre…" autocomplete="off" /></div>
-        <div class="topbar-actions">
-          <button type="button" class="btn btn-soft btn-sm" id="btn-upgrade">Passer Premium</button>
-          <div class="avatar" id="avatar">R</div>
-        </div>
-      </header>
-      <main class="content">
-        <div class="nudge" id="sla-nudge">
+<body class="rc" data-role="RECRUTEUR">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
           <div>
-            <strong id="sla-nudge-title">Délais de 1ʳᵉ réponse</strong>
-            <span id="sla-nudge-sub">Chargement…</span>
+            <p class="rc-eyebrow">Espace recruteur</p>
+            <h1 id="hello">Bonjour</h1>
+            <p id="wins-wrap"><span id="wins-line">Chargement des indicateurs…</span></p>
           </div>
+          <div class="rc-head-actions"><a class="btn btn-secondary" href="recruiter-pipeline.html">Ouvrir le pipeline</a><a class="btn btn-primary" href="recruiter-offers.html#new" data-manage>Nouvelle offre</a></div>
+        </div>
+        <div id="verify-banner" class="rc-banner" hidden>
+          <div><strong>Votre entreprise n’est pas encore vérifiée</strong><span>Vous pouvez préparer des brouillons ; la publication s’ouvre dès la validation (ICE) par l’administration.</span></div>
+          <a class="btn btn-primary btn-sm" href="recruiter-team.html">Voir mon entreprise</a>
+        </div>
+        <div id="sla-nudge" class="rc-banner rc-banner--danger" hidden>
+          <div><strong id="sla-nudge-title">Délais de 1ʳᵉ réponse</strong><span id="sla-nudge-sub"></span></div>
           <a class="btn btn-primary btn-sm" href="recruiter-pipeline.html">Voir le pipeline</a>
         </div>
-
-        <section class="welcome-strip">
-          <div>
-            <p class="eyebrow">Espace recruteur</p>
-            <h1 id="hello">Tableau de bord</h1>
-            <p id="wins-line">Chargement des indicateurs…</p>
-          </div>
-          <div class="welcome-actions">
-            <a class="btn btn-secondary" href="recruiter-pipeline.html">Pipeline</a>
-            <a class="btn btn-primary" href="recruiter-offers.html#new">Nouvelle offre</a>
-          </div>
-        </section>
-
-        <div class="stat-grid kpi-top" aria-label="Indicateurs clés">
-          <div class="stat"><div class="label">Offres actives</div><div class="value" id="st-offers">—</div><div class="delta" id="st-offers-d">Publiées</div></div>
-          <div class="stat"><div class="label">Candidatures</div><div class="value" id="st-apps">—</div><div class="delta" id="st-apps-d">Pipeline</div></div>
-          <div class="stat"><div class="label">Délais tenus</div><div class="value" id="st-sla">—</div><div class="delta">Indice de réactivité</div></div>
-          <div class="stat"><div class="label">Compatibilité moyenne</div><div class="value" id="st-match">—</div><div class="delta">Profils vs postes</div></div>
+        <div class="rc-kpis" aria-label="Indicateurs clés">
+          <div class="rc-kpi"><small>Offres publiées</small><strong id="st-offers">—</strong><span id="st-offers-d">&nbsp;</span></div>
+          <div class="rc-kpi rc-kpi--info"><small>Candidatures en cours</small><strong id="st-apps">—</strong><span id="st-apps-d">&nbsp;</span></div>
+          <div class="rc-kpi rc-kpi--ok"><small>Délais tenus</small><strong id="st-sla">—</strong><span>Dossiers en attente de réponse</span></div>
+          <div class="rc-kpi rc-kpi--warn"><small>Compatibilité moyenne</small><strong id="st-match">—</strong><span>Profils vs postes</span></div>
         </div>
-
-        <div class="stat-grid" style="grid-template-columns:1.4fr 1fr;align-items:stretch">
-          <section class="panel" style="margin:0">
-            <div class="panel-head">
-              <h2>Inbox prioritaire</h2>
-              <span class="badge badge-chrome">SLA · Match</span>
-            </div>
-            <div class="panel-body">
-              <div class="inbox-list" id="inbox-list"></div>
-            </div>
+        <div class="rc-grid rc-grid--2">
+          <section class="rc-card is-flush">
+            <div class="rc-card-head"><div><h2>Inbox prioritaire</h2><p>Triée par échéance de réponse puis compatibilité</p></div><a class="btn btn-ghost btn-sm" href="recruiter-candidates.html">Tous les candidats</a></div>
+            <div class="rc-card-body"><div class="rc-list" id="inbox-list"></div></div>
           </section>
-          <section class="panel" style="margin:0">
-            <div class="panel-head"><h2>Répartition</h2></div>
-            <div class="panel-body">
-              <div class="chart-bars" id="chart-bars"></div>
-              <p class="muted" id="conversion" style="margin-top:0.8rem"></p>
-            </div>
+          <section class="rc-card">
+            <div class="rc-card-head"><h2>Répartition du pipeline</h2></div>
+            <div class="rc-card-body"><div class="rc-bars" id="chart-bars"></div><p class="rc-muted" id="conversion" style="margin:1rem 0 0;font-size:.86rem"></p></div>
           </section>
         </div>
-
-        <section class="panel">
-          <div class="panel-head"><h2>Accès rapides</h2></div>
-          <div class="panel-body">
-            <div class="quick-grid">
-              <a class="quick-card" href="recruiter-offers.html">
-                <strong>Offres</strong>
-                <span>Publier &amp; piloter</span>
-              </a>
-              <a class="quick-card" href="recruiter-pipeline.html">
-                <strong>Kanban</strong>
-                <span>Avancer chaque dossier</span>
-              </a>
-              <a class="quick-card" href="recruiter-team.html">
-                <strong>Entreprise</strong>
-                <span>Organisation &amp; sièges RH</span>
-              </a>
-              <a class="quick-card" href="recruiter-settings.html">
-                <strong>Paramètres</strong>
-                <span>Billing · thème · notifs</span>
-              </a>
-            </div>
-          </div>
+        <div class="rc-grid rc-grid--2">
+          <section class="rc-card is-flush">
+            <div class="rc-card-head"><h2>Prochains entretiens</h2><a class="btn btn-ghost btn-sm" href="recruiter-interviews.html">Agenda</a></div>
+            <div class="rc-card-body"><div class="rc-list" id="upcoming"></div></div>
+          </section>
+          <section class="rc-card is-flush">
+            <div class="rc-card-head"><h2>Activité récente</h2><a class="btn btn-ghost btn-sm" href="notifications.html">Tout voir</a></div>
+            <div class="rc-card-body"><div class="rc-list" id="activity"></div></div>
+          </section>
+        </div>
+        <section class="rc-card">
+          <div class="rc-card-head"><h2>Accès rapides</h2></div>
+          <div class="rc-card-body"><div class="rc-quick">
+            <a href="recruiter-offers.html" data-manage><strong>Offres</strong><span>Publier et piloter</span></a>
+            <a href="recruiter-pipeline.html"><strong>Pipeline</strong><span>Avancer chaque dossier</span></a>
+            <a href="recruiter-assistant.html"><strong>Assistant IA</strong><span>Grille d’entretien, refus, synthèse CV</span></a>
+            <a href="recruiter-team.html"><strong>Entreprise &amp; équipe</strong><span>Fiche, vérification, membres</span></a>
+          </div></div>
         </section>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261026d"></script>
-  <script src="../js/in-app-help.js?v=20261026d"></script>
-  <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261027a"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/recruiter-home.js?v=20261026d"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/recruiter-home.js?v=20261029a"></script>
 </body>
 </html>

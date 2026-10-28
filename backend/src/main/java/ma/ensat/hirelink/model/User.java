@@ -146,9 +146,20 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    /** Offres publiées par ce recruteur (@OneToMany). */
-    @OneToMany(mappedBy = "recruiter")
-    private List<JobOffer> jobOffers = new ArrayList<>();
+    /** Double authentification TOTP (RFC 6238). Le secret est chiffré (AES-GCM) ; jamais renvoyé au client après activation. */
+    @Column(name = "mfa_enabled", nullable = false)
+    private boolean mfaEnabled = false;
+
+    @Column(name = "mfa_secret_enc", length = 255)
+    private String mfaSecretEnc;
+
+    /** Empreintes (HMAC) des codes de secours encore valides, séparées par des virgules. */
+    @Column(name = "mfa_backup_hashes", length = 1000)
+    private String mfaBackupHashes;
+
+    @Column(name = "password_changed_at")
+    private Instant passwordChangedAt;
+
 
     /** Candidatures déposées par ce candidat (@OneToMany). */
     @OneToMany(mappedBy = "candidate")
@@ -157,6 +168,15 @@ public class User {
     /** Appartenances org via Membership — N–N User↔Organization (@OneToMany côté association). */
     @OneToMany(mappedBy = "user")
     private List<Membership> memberships = new ArrayList<>();
+
+    public boolean isMfaEnabled() { return mfaEnabled; }
+    public void setMfaEnabled(boolean mfaEnabled) { this.mfaEnabled = mfaEnabled; }
+    public String getMfaSecretEnc() { return mfaSecretEnc; }
+    public void setMfaSecretEnc(String mfaSecretEnc) { this.mfaSecretEnc = mfaSecretEnc; }
+    public String getMfaBackupHashes() { return mfaBackupHashes; }
+    public void setMfaBackupHashes(String mfaBackupHashes) { this.mfaBackupHashes = mfaBackupHashes; }
+    public Instant getPasswordChangedAt() { return passwordChangedAt; }
+    public void setPasswordChangedAt(Instant passwordChangedAt) { this.passwordChangedAt = passwordChangedAt; }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -272,8 +292,6 @@ public class User {
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
-    public List<JobOffer> getJobOffers() { return jobOffers; }
-    public void setJobOffers(List<JobOffer> jobOffers) { this.jobOffers = jobOffers; }
 
     public List<Application> getApplications() { return applications; }
     public void setApplications(List<Application> applications) { this.applications = applications; }

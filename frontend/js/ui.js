@@ -2,47 +2,6 @@
  * HireLink UI — toasts, modals, onboarding (pas de second système d'auth)
  */
 (function (global) {
-  function artBase() {
-    return location.pathname.indexOf("/app/") >= 0 ? "../img/" : "img/";
-  }
-
-  function hashSeed(value) {
-    let h = 0;
-    const str = String(value || "hirelink");
-    for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
-    return h;
-  }
-
-  function moodOf(text, danger) {
-    if (danger) return "danger";
-    const s = String(text || "").toLowerCase();
-    if (/refus|retir|désactiv|desactiv|erreur|dépass|depass|suspend|impossible|échou|echou/.test(s)) return "danger";
-    if (/envoy|enregistr|confirm|vérif|verif|réussi|reussi|ajout|premium|bravo/.test(s)) return "ok";
-    if (/\?|revoir|attente|attention|délai|delai|limite/.test(s)) return "warn";
-    return "info";
-  }
-
-  function avatarSrc(seed, tone) {
-    const moods = { ok: 1, info: 1, warn: 1, danger: 1 };
-    const mood = moods[tone] ? tone : "info";
-    const n = (hashSeed(seed) % 16) + 1;
-    return artBase() + "avatars/p" + String(n).padStart(2, "0") + "-" + mood + ".svg";
-  }
-
-  function avatarHtml() {
-    return "";
-  }
-
-  function sceneHtml() {
-    return "";
-  }
-
-  global.HireLinkArt = { avatarSrc: avatarSrc, avatarHtml: avatarHtml, sceneHtml: sceneHtml, moodOf: moodOf };
-
-  function apiBase() {
-    return (global.HIRELINK_API_BASE || "http://localhost:8081/api/v1");
-  }
-
   function ensureHosts() {
     if (!document.querySelector(".toast-host")) {
       const host = document.createElement("div");
@@ -67,8 +26,7 @@
     ensureHosts();
     const el = document.createElement("div");
     el.className = "toast" + (tone ? " toast-" + tone : "");
-    const toastMood = tone === "danger" ? "danger" : tone === "warn" ? "warn" : tone === "ok" ? "ok" : moodOf((title || "") + " " + (message || ""));
-    el.innerHTML = avatarHtml(title || "message", "msg-avatar", toastMood) + "<div><strong></strong><span></span></div>";
+    el.innerHTML = "<div><strong></strong><span></span></div>";
     el.querySelector("strong").textContent = title;
     el.querySelector("span").textContent = message || "";
     document.querySelector(".toast-host").appendChild(el);
@@ -94,9 +52,36 @@
     ok.className = "btn " + (options.danger ? "btn-danger" : "btn-primary");
     ok.textContent = options.confirmLabel || "Confirmer";
     ok.disabled = !!options.confirmDisabled;
-    ok.onclick = () => {
+    ok.onclick = async () => {
       if (ok.disabled) return;
       if (typeof options.beforeConfirm === "function" && options.beforeConfirm() === false) return;
+      if (typeof options.onConfirm === "function") {
+        // Action asynchrone : la fenêtre reste ouverte (avec le message d'erreur) tant que le serveur refuse.
+        const panel = ok.closest(".modal, .drawer");
+        const old = panel && panel.querySelector(".modal-error");
+        if (old) old.remove();
+        ok.disabled = true;
+        ok.classList.add("is-loading");
+        try {
+          const r = await options.onConfirm();
+          ok.disabled = false;
+          ok.classList.remove("is-loading");
+          if (r === false) return;
+          closeModal(r === undefined ? true : r);
+        } catch (err) {
+          ok.disabled = false;
+          ok.classList.remove("is-loading");
+          if (panel) {
+            const p = document.createElement("p");
+            p.className = "modal-error";
+            p.setAttribute("role", "alert");
+            p.textContent = (err && err.message) || "Action impossible";
+            const actions = panel.querySelector(".modal-actions");
+            actions.parentNode.insertBefore(p, actions);
+          }
+        }
+        return;
+      }
       closeModal(true);
     };
     if (!options.hideCancel) actions.appendChild(cancel);
@@ -123,64 +108,6 @@
     return overlay.querySelector(".modal, .drawer");
   }
 
-  function renderBrief(raw) {
-    const lines = String(raw || "").replace(/\r/g, "").split("\n");
-    const html = [];
-    lines.forEach((line) => {
-      let t = line.trim();
-      if (!t) return;
-      if (/^\|?\s*:?-{3,}/.test(t)) return;
-      const heading = /^#{1,6}\s+/.test(t);
-      t = t.replace(/^#{1,6}\s+/, "");
-      if (t.indexOf("|") >= 0) {
-        const cells = t
-          .split("|")
-          .map((c) => c.trim())
-          .filter(Boolean);
-        if (!cells.length || cells[0] === "#" || /^question/i.test(cells[0])) return;
-        t = cells.join(" — ");
-      }
-      t = t.replace(/\*\*/g, "").replace(/\*/g, "").replace(/[#`]/g, "").replace(/^[-•]\s+/, "").trim();
-      if (!t) return;
-      const safe = t
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
-      if (heading || (/^[A-ZÀ-Ü0-9].{0,42}$/.test(t) && !/[.?!]$/.test(t) && t.split(" ").length <= 6)) {
-        html.push('<p class="brief-title">' + safe + "</p>");
-      } else if (t.indexOf("?") >= 0) {
-        html.push('<p class="brief-q">' + safe + "</p>");
-      } else {
-        html.push('<p class="brief-line">' + safe + "</p>");
-      }
-    });
-    return '<article class="brief-sheet">' + (html.join("") || '<p class="brief-line">Aucun texte.</p>') + "</article>";
-  }
-
-  function mountLottie(root) {
-    const slot = root.querySelector("[data-lottie]");
-    if (!slot) return;
-    const path = slot.getAttribute("data-lottie");
-    function play() {
-      if (!global.lottie) return;
-      global.lottie.loadAnimation({
-        container: slot,
-        renderer: "svg",
-        loop: true,
-        autoplay: true,
-        path: path,
-      });
-    }
-    if (global.lottie) {
-      play();
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js";
-    script.onload = play;
-    document.head.appendChild(script);
-  }
-
   function openModal(options) {
     ensureHosts();
     previouslyFocused = document.activeElement;
@@ -188,11 +115,8 @@
     overlay.classList.remove("overlay--drawer");
     const modal = dialogPanel(overlay);
     modal.className = "modal" + (options.large ? " modal-lg" : "");
-    const anim = options.animationSource || "";
     modal.innerHTML =
-      (anim ? '<div class="dialog-lottie" data-lottie="' + anim.replace(/"/g, "") + '"></div>' : "") +
       '<div class="dialog-lead">' +
-      avatarHtml(options.title || "hirelink", "dialog-avatar", options.tone || moodOf((options.title || "") + " " + (options.description || ""), options.danger)) +
       '<div><h3 class="modal-title" id="hl-modal-title"></h3>' +
       '<p class="modal-desc" id="hl-modal-desc"></p></div></div>' +
       '<div class="modal-body"></div>' +
@@ -206,7 +130,6 @@
     else modalBody.remove();
     const ok = wireActions(modal.querySelector(".modal-actions"), options);
     overlay.classList.add("is-open");
-    mountLottie(modal);
     readyApi(modal, ok, options);
     return new Promise((resolve) => {
       modalResolver = resolve;
@@ -226,7 +149,6 @@
       (options.danger ? " drawer--danger" : "");
     panel.innerHTML =
       '<div class="drawer-head">' +
-      avatarHtml(options.title || "hirelink", "dialog-avatar", options.tone || moodOf((options.title || "") + " " + (options.description || ""), options.danger)) +
       '<div class="drawer-head-text">' +
       '<h3 class="modal-title" id="hl-modal-title"></h3>' +
       '<p class="modal-desc" id="hl-modal-desc"></p>' +
@@ -298,16 +220,6 @@
     }
   });
 
-  async function apiHealth() {
-    try {
-      const res = await fetch(apiBase() + "/health");
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      return await res.json();
-    } catch (e) {
-      return null;
-    }
-  }
-
   function bindScrollProgress() {
     const bar = document.querySelector(".scroll-progress");
     if (!bar) return;
@@ -318,34 +230,11 @@
     });
   }
 
-  function initOnboarding(key, options) {
-    if (localStorage.getItem(key)) return;
-    setTimeout(async () => {
-      const ok = await openModal({
-        title: options.title,
-        description: options.description,
-        bodyHtml: options.bodyHtml || "",
-        confirmLabel: options.confirmLabel || "Commencer",
-        cancelLabel: "Plus tard",
-        large: true,
-      });
-      if (ok) localStorage.setItem(key, "1");
-      if (ok && options.onConfirm) options.onConfirm();
-    }, 700);
-  }
-
   global.HireLink = {
-    get API_BASE() {
-      return apiBase();
-    },
     toast,
     openModal,
     openDrawer,
-    renderBrief,
     closeModal,
-    apiHealth,
-    bindScrollProgress,
-    initOnboarding,
   };
 
   document.addEventListener("DOMContentLoaded", () => {

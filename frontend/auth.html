@@ -2,16 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Accès — HireLink</title>
+  <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="css/components.css?v=20261026d" />
-  <link rel="stylesheet" href="css/auth.css?v=20261025g" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="css/auth.css?v=20261029a" />
+  <link rel="stylesheet" href="css/motion.css?v=20261029a" />
 </head>
 <body class="auth-body">
   <div class="auth-layout">
@@ -142,7 +144,8 @@
                 </div>
                 <div class="field" id="field-password">
                   <label for="reg-password">Mot de passe *</label>
-                  <input id="reg-password" type="password" minlength="6" autocomplete="new-password" placeholder="Pour vous reconnecter ensuite" />
+                  <input id="reg-password" type="password" autocomplete="new-password" placeholder="12 caractères minimum" />
+                  <p class="field-hint">12 caractères minimum : une phrase de passe est idéale (ex. « Atlas-Vert-Soleil-2026 »). Les mots de passe trop courants sont refusés.</p>
                 </div>
               </div>
 
@@ -194,10 +197,74 @@
             </div>
             <div class="field">
               <label for="password">Mot de passe</label>
-              <input id="password" type="password" required minlength="6" autocomplete="current-password" />
+              <input id="password" type="password" required autocomplete="current-password" />
             </div>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
+              <button type="button" class="btn btn-secondary btn-block" id="btn-passkey" hidden>Se connecter avec une passkey</button>
+              <button type="button" class="btn btn-ghost btn-block" id="btn-forgot">Mot de passe oublié ?</button>
+            </div>
+          </form>
+
+          <form id="form-mfa" class="auth-step auth-form" data-panel="mfa" novalidate>
+            <p class="field-hint">Ouvrez votre application d’authentification (ou le script <code>totp.py</code>) et saisissez le code à 6 chiffres affiché pour HireLink. En cas de perte de téléphone, saisissez un code de secours.</p>
+            <div class="field">
+              <label for="mfa-code">Code à 6 chiffres (ou code de secours)</label>
+              <input id="mfa-code" inputmode="text" maxlength="12" required placeholder="123456" autocomplete="one-time-code" />
+            </div>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary btn-block">Valider</button>
+              <button type="button" class="btn btn-ghost btn-block" data-back-login>Retour</button>
+            </div>
+          </form>
+
+          <form id="form-enroll" class="auth-step auth-form" data-panel="enroll" novalidate>
+            <p class="field-hint"><strong>Étape obligatoire pour l’administrateur.</strong> 1) Scannez le QR code avec une application d’authentification, ou saisissez la clé manuellement (ou donnez-la à <code>docs/outils/totp.py</code>). 2) Saisissez le code à 6 chiffres affiché.</p>
+            <div class="mfa-qr"><img id="enroll-qr" alt="QR code à scanner avec votre application d’authentification" width="190" height="190" /></div>
+            <div class="field">
+              <label for="enroll-secret">Clé manuelle</label>
+              <input id="enroll-secret" readonly class="mfa-secret" />
+            </div>
+            <div class="field">
+              <label for="enroll-code">Code à 6 chiffres</label>
+              <input id="enroll-code" inputmode="numeric" maxlength="6" required placeholder="123456" autocomplete="one-time-code" />
+            </div>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary btn-block">Activer et continuer</button>
+              <button type="button" class="btn btn-ghost btn-block" data-back-login>Annuler</button>
+            </div>
+          </form>
+
+          <form id="form-backup" class="auth-step auth-form" data-panel="backup" novalidate>
+            <p class="field-hint"><strong>Notez ces 10 codes de secours.</strong> Chacun ne sert qu’une fois et remplace le code de l’application si vous la perdez. Ils ne seront plus affichés.</p>
+            <ul class="backup-codes" id="backup-list"></ul>
+            <div class="auth-actions">
+              <button type="button" class="btn btn-secondary btn-block" id="btn-backup-copy">Copier les codes</button>
+              <button type="submit" class="btn btn-primary btn-block">J’ai noté mes codes — continuer</button>
+            </div>
+          </form>
+
+          <form id="form-forgot" class="auth-step auth-form" data-panel="forgot" novalidate>
+            <p class="field-hint">Indiquez l’adresse de votre compte. Si elle existe, un lien valable 30 minutes vous est envoyé (en démonstration locale, il s’affiche dans la console du serveur).</p>
+            <div class="field">
+              <label for="forgot-email">Email</label>
+              <input id="forgot-email" type="email" required autocomplete="username" placeholder="vous@exemple.ma" />
+            </div>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary btn-block">Envoyer le lien</button>
+              <button type="button" class="btn btn-ghost btn-block" data-back-login>Retour</button>
+            </div>
+          </form>
+
+          <form id="form-reset" class="auth-step auth-form" data-panel="reset" novalidate>
+            <p class="field-hint" id="reset-rules">12 caractères minimum. Une phrase de passe est idéale, par exemple « Atlas-Vert-Soleil-2026 ».</p>
+            <div class="field">
+              <label for="reset-password">Nouveau mot de passe</label>
+              <input id="reset-password" type="password" required autocomplete="new-password" />
+            </div>
+            <div class="auth-actions">
+              <button type="submit" class="btn btn-primary btn-block">Changer le mot de passe</button>
+              <button type="button" class="btn btn-ghost btn-block" data-back-login>Retour</button>
             </div>
           </form>
         </div>
@@ -215,12 +282,13 @@
     </section>
   </div>
 
-  <script src="js/config.js?v=20261026d"></script>
-  <script src="js/ui.js?v=20261026d"></script>
-  <script src="js/api.js?v=20261026d"></script>
-  <script src="js/password-toggle.js?v=20261026d"></script>
-  <script src="js/auth-timeline.js?v=20261026d"></script>
-  <script src="js/suggest.js?v=20261025g"></script>
-  <script src="js/auth.js?v=20261025g"></script>
+  <script src="js/config.js?v=20261029a"></script>
+  <script src="js/ui.js?v=20261029a"></script>
+  <script src="js/api.js?v=20261029a"></script>
+  <script src="js/password-toggle.js?v=20261029a"></script>
+  <script src="js/auth-timeline.js?v=20261029a"></script>
+  <script src="js/suggest.js?v=20261029a"></script>
+  <script src="js/webauthn.js?v=20261029a"></script>
+  <script src="js/auth.js?v=20261029a"></script>
 </body>
 </html>

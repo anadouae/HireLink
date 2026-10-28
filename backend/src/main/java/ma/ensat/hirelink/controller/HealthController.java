@@ -36,18 +36,13 @@ public class HealthController {
         return ResponseEntity.ok(body);
     }
 
+    /** Pas de version, de nom de base ni de message d'erreur : rien d'utile à un attaquant (A05). */
     private Map<String, Object> probeDatabase() {
         Map<String, Object> db = new LinkedHashMap<>();
         try (Connection connection = dataSource.getConnection()) {
-            db.put("vendor", "MySQL");
-            db.put("connected", true);
-            db.put("catalog", connection.getCatalog());
-            db.put("product", connection.getMetaData().getDatabaseProductName());
-            db.put("version", connection.getMetaData().getDatabaseProductVersion());
+            db.put("connected", connection.isValid(2));
         } catch (Exception ex) {
-            db.put("vendor", "MySQL");
             db.put("connected", false);
-            db.put("error", ex.getMessage());
         }
         return db;
     }

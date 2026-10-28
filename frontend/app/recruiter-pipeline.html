@@ -2,93 +2,58 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pipeline — HireLink</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261027a" />
-  <script src="../js/theme.js?v=20261026d"></script>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="row between">
-        <a class="brand" href="recruiter.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-        <button type="button" class="mobile-toggle" id="close-side">✕</button>
-      </div>
-      <nav class="side-nav">
-        <a class="side-link" href="recruiter.html">Tableau de bord</a>
-        <a class="side-link is-active" href="recruiter-pipeline.html">Pipeline</a>
-        <a class="side-link" href="recruiter-offers.html">Offres</a>
-        <a class="side-link" href="recruiter-team.html">Entreprise</a>
-        <a class="side-link" href="recruiter-settings.html">Paramètres</a>
-      </nav>
-      <div id="nav-user" class="nav-user"></div>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-search"><span aria-hidden="true">⌕</span><input type="search" id="search-pipeline" placeholder="Candidat, offre, statut…" autocomplete="off" /></div>
-        <div class="topbar-actions">
-          <div class="avatar" id="avatar">R</div>
-        </div>
-      </header>
-      <main class="content">
-        <div class="page-title">
+<body class="rc" data-role="RECRUTEUR">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
           <div>
-            <p class="eyebrow">Recrutement · Pipeline</p>
+            <p class="rc-eyebrow">Recrutement</p>
             <h1>Pipeline</h1>
-            <p class="muted">Suivez chaque dossier jusqu’à l’entretien · délai de 1ʳᵉ réponse · refus motivé.</p>
+            <p>Suivez chaque dossier jusqu’à l’entretien · délai de 1ʳᵉ réponse · refus motivé.</p>
           </div>
+          <div class="rc-head-actions"><button type="button" class="btn btn-ghost" id="btn-refresh">Actualiser</button></div>
         </div>
-        <div class="pipe-toolbar" role="toolbar" aria-label="Filtres pipeline">
-          <label class="pipe-offer-filter">
-            <span class="pipe-offer-label">Filtrer par offre</span>
-            <select id="pipe-offer" aria-label="Filtrer par offre">
-              <option value="all">Toutes les offres</option>
-            </select>
-          </label>
-          <select id="pipe-filter" class="pipe-filter-native" aria-label="Filtrer les dossiers">
-            <option value="all">Tous les dossiers</option>
-            <option value="urgent">Réponse ≤ 2 j</option>
-            <option value="breached">Délai dépassé</option>
-            <option value="hot">Match ≥ 75%</option>
-            <option value="interview">Entretiens</option>
-          </select>
-          <div class="cand-filters" id="pipe-chips" role="tablist" aria-label="Lecture du pipeline">
-            <button type="button" class="is-on" data-pipe="all">Tous</button>
-            <button type="button" data-pipe="urgent">Réponse ≤ 2 j</button>
-            <button type="button" data-pipe="breached">Délai dépassé</button>
-            <button type="button" data-pipe="hot">Match ≥ 75 %</button>
-            <button type="button" data-pipe="interview">Entretiens</button>
+        <div class="rc-toolbar" role="toolbar" aria-label="Filtres du pipeline">
+          <select id="pipe-offer" class="rc-select" aria-label="Filtrer par offre"><option value="all">Toutes les offres</option></select>
+          <select id="pipe-filter" hidden><option value="all">Tous</option><option value="urgent">urgent</option><option value="breached">breached</option><option value="hot">hot</option><option value="interview">interview</option></select>
+          <div class="rc-chips" id="pipe-chips" role="tablist" aria-label="Lecture du pipeline">
+            <button type="button" class="rc-chip is-on" data-pipe="all">Tous</button>
+            <button type="button" class="rc-chip" data-pipe="urgent">Réponse ≤ 2 j</button>
+            <button type="button" class="rc-chip" data-pipe="breached">Délai dépassé</button>
+            <button type="button" class="rc-chip" data-pipe="hot">Match ≥ 75 %</button>
+            <button type="button" class="rc-chip" data-pipe="interview">Entretiens</button>
           </div>
+          <span class="rc-spacer"></span><span class="rc-pill" id="kanban-total">—</span>
         </div>
-        <div id="funnel-strip" class="funnel-kpi panel" style="margin-bottom:1rem;padding:0.95rem 1.15rem">
-          <div class="muted" style="font-size:0.8rem">Chargement des indicateurs…</div>
-        </div>
-        <section class="panel">
-          <div class="panel-head">
-            <h2>Kanban</h2>
-            <span class="badge badge-chrome" id="kanban-total">—</span>
-          </div>
-          <div class="panel-body"><div class="kanban kanban--4" id="kanban"></div></div>
-        </section>
+        <section class="rc-card" id="funnel-strip"><span class="rc-skel" style="height:62px;margin:.9rem 1.2rem"></span></section>
+        <div class="rc-kanban" id="kanban"><span class="rc-skel" style="height:240px;grid-column:1/-1"></span></div>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261026d"></script>
-  <script src="../js/in-app-help.js?v=20261026d"></script>
-  <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261027a"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/recruiter-pipeline.js?v=20261026d"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/recruiter-pipeline.js?v=20261029a"></script>
 </body>
 </html>

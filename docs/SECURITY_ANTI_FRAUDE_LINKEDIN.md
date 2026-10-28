@@ -35,7 +35,7 @@ Code : `JobOfferService.assertCanPublish`.
 UI : bouton **Signaler** sur `candidate-offers.js`.
 
 ## Admin
-`PATCH /api/v1/admin/users/{id}/verify-company` → force `companyVerified=true` + `REGISTRY_MATCH`.
+`PATCH /api/v1/admin/organizations/{id}` avec `{"verified": true}` → vérifie l’organisation (et ses recruteurs) ; une décision admin remplace la vérification automatique.
 
 ## Phrase orale
 > « On s’inspire de LinkedIn : inscription libre sans documents ; la publication d’annonces est un droit vérifié a posteriori (e-mail pro, registre, scan contenu, signalements). »

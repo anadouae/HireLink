@@ -19,12 +19,18 @@ public class OrganizationService {
     private final UserRepository userRepository;
     private final CompanyVerificationService companyVerificationService;
     private final JobOfferRepository jobOfferRepository;
+    private final BillingCatalogService billingCatalogService;
+    private final NotificationService notificationService;
 
     public OrganizationService(OrganizationRepository organizationRepository,
                                MembershipRepository membershipRepository,
                                UserRepository userRepository,
                                CompanyVerificationService companyVerificationService,
-                               JobOfferRepository jobOfferRepository) {
+                               JobOfferRepository jobOfferRepository,
+                               BillingCatalogService billingCatalogService,
+                               NotificationService notificationService) {
+        this.notificationService = notificationService;
+        this.billingCatalogService = billingCatalogService;
         this.organizationRepository = organizationRepository;
         this.membershipRepository = membershipRepository;
         this.userRepository = userRepository;
@@ -72,6 +78,95 @@ public class OrganizationService {
         return org;
     }
 
+    /**
+     * Rattache un compte existant à une organisation (ex. compte seed « recruteur@hirelink.ma »).
+     * Idempotent : désactive les autres appartenances et active/crée celle-ci.
+     */
+    @Transactional
+    public Membership joinOrganization(User user, Organization org, OrgRole role) {
+        for (Membership other : membershipRepository.findByUserIdAndActiveTrue(user.getId())) {
+            if (!other.getOrganization().getId().equals(org.getId())) {
+                other.setActive(false);
+                membershipRepository.save(other);
+            }
+        }
+        Membership m = membershipRepository.findByOrganizationIdAndUserId(org.getId(), user.getId())
+                .orElseGet(() -> {
+                    Membership created = new Membership();
+                    created.setOrganization(org);
+                    created.setUser(user);
+                    return created;
+                });
+        m.setActive(true);
+        m.setOrgRole(role);
+        if (user.getRole() == Role.RECRUTEUR) {
+            user.setPlanTier(org.getPlanTier());
+            userRepository.save(user);
+        }
+        return membershipRepository.save(m);
+    }
+
+    /** Change le plan de l'organisation, l'applique à ses recruteurs et émet la facture correspondante. */
+    @Transactional
+    public BillingInvoice changePlan(Organization org, PlanTier tier, String cycle) {
+        org.setPlanTier(tier);
+        organizationRepository.save(org);
+        for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
+            if (m.getUser().getRole() == Role.RECRUTEUR) {
+                m.getUser().setPlanTier(tier);
+                userRepository.save(m.getUser());
+            }
+        }
+        return billingCatalogService.issueForPlanChange(org, tier, cycle);
+    }
+
+    /** Identifiants des comptes actifs de l'organisation de l'utilisateur (au minimum lui-même). */
+    @Transactional(readOnly = true)
+    public List<Long> orgMemberIds(User user) {
+        List<Long> ids = membershipRepository.findByUserIdAndActiveTrue(user.getId()).stream()
+                .findFirst()
+                .map(m -> membershipRepository.findByOrganizationIdAndActiveTrue(m.getOrganization().getId()).stream()
+                        .map(x -> x.getUser().getId())
+                        .toList())
+                .orElse(List.of());
+        if (ids.isEmpty()) return List.of(user.getId());
+        return ids;
+    }
+
+    /** Destinataires d'une alerte « dossier » : l'auteur de l'offre + les Owners actifs de son organisation. */
+    @Transactional(readOnly = true)
+    public Set<Long> offerNotificationTargets(JobOffer offer) {
+        Set<Long> ids = new LinkedHashSet<>();
+        Long authorId = offer.getRecruiter().getId();
+        ids.add(authorId);
+        membershipRepository.findByUserIdAndActiveTrue(authorId).stream().findFirst()
+                .ifPresent(m -> membershipRepository.findByOrganizationIdAndActiveTrue(m.getOrganization().getId())
+                        .stream().filter(x -> x.getOrgRole() == OrgRole.OWNER)
+                        .forEach(x -> ids.add(x.getUser().getId())));
+        return ids;
+    }
+
+    /** L'organisation de l'utilisateur est-elle vérifiée ? (un membre invité hérite du badge de l'organisation). */
+    @Transactional(readOnly = true)
+    public boolean isOrgVerified(User user) {
+        return membershipRepository.findByUserIdAndActiveTrue(user.getId()).stream().findFirst()
+                .map(m -> m.getOrganization().isVerified())
+                .orElse(false);
+    }
+
+    /** Owner/Recruteur de l'organisation peut gérer les offres de ses collègues (pas le Hiring Manager). */
+    @Transactional(readOnly = true)
+    public boolean canManageOffer(User actor, JobOffer offer) {
+        if (actor.getRole() == Role.ADMINISTRATEUR) return true;
+        Long authorId = offer.getRecruiter().getId();
+        if (authorId.equals(actor.getId())) return true;
+        return membershipRepository.findByUserIdAndActiveTrue(actor.getId()).stream().findFirst()
+                .filter(m -> m.getOrgRole() != OrgRole.HIRING_MANAGER)
+                .flatMap(m -> membershipRepository.findByOrganizationIdAndUserId(m.getOrganization().getId(), authorId))
+                .filter(Membership::isActive)
+                .isPresent();
+    }
+
     @Transactional(readOnly = true)
     public Membership requireMembership(User user) {
         Membership m = membershipRepository.findByUserIdAndActiveTrue(user.getId()).stream()
@@ -80,6 +175,17 @@ public class OrganizationService {
         m.getOrganization().getName();
         m.getUser().getEmail();
         return m;
+    }
+
+    /** Accès à un dossier : même organisation que l'offre, et un Hiring Manager ne voit que les dossiers qui lui sont assignés (R14). */
+    @Transactional(readOnly = true)
+    public void assertCanAccessApplication(User actor, ma.ensat.hirelink.model.Application app) {
+        if (actor.getRole() == Role.ADMINISTRATEUR) return;
+        assertSameOrg(actor, app.getJobOffer());
+        Membership m = requireMembership(actor);
+        if (m.getOrgRole() == OrgRole.HIRING_MANAGER && !actor.getId().equals(app.getAssignedHmUserId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Dossier non assigné (R14)");
+        }
     }
 
     @Transactional(readOnly = true)
@@ -109,22 +215,29 @@ public class OrganizationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible d'inviter un Owner");
         }
         User u = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable — créez le compte d'abord"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucun compte recruteur avec cet e-mail. La personne doit d’abord créer son compte (rôle Recruteur)"));
         if (u.getRole() != Role.RECRUTEUR) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "L'invité doit être un compte recruteur");
         }
-        Optional<Membership> existing = membershipRepository.findByOrganizationIdAndUserId(om.getOrganization().getId(), u.getId());
-        if (existing.isPresent()) {
-            Membership m = existing.get();
-            m.setActive(true);
-            m.setOrgRole(role);
-            return membershipRepository.save(m);
+        Organization org = om.getOrganization();
+        for (Membership other : membershipRepository.findByUserIdAndActiveTrue(u.getId())) {
+            Organization theirs = other.getOrganization();
+            if (theirs.getId().equals(org.getId())) continue;
+            // Une organisation vide (compte tout juste créé) peut être quittée ; sinon on ne débauche personne.
+            boolean alone = membershipRepository.findByOrganizationIdAndActiveTrue(theirs.getId()).size() == 1;
+            if (!alone || !jobOfferRepository.findByRecruiterId(u.getId()).isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Ce recruteur fait déjà partie de « " + theirs.getName() + " »");
+            }
         }
-        Membership m = new Membership();
-        m.setOrganization(om.getOrganization());
-        m.setUser(u);
-        m.setOrgRole(role);
-        return membershipRepository.save(m);
+        boolean already = membershipRepository.findByOrganizationIdAndUserId(org.getId(), u.getId())
+                .filter(Membership::isActive).isPresent();
+        Membership m = joinOrganization(u, org, role);
+        if (!already) {
+            notificationService.push(u.getId(), "Vous avez rejoint « " + org.getName() + " »",
+                    "Rôle : " + (role == OrgRole.HIRING_MANAGER ? "Hiring Manager" : "Recruteur") + ". Retrouvez l'équipe dans votre espace.", "SYSTEM");
+        }
+        return m;
     }
 
     @Transactional

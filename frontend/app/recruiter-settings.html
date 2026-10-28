@@ -2,158 +2,85 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Paramètres — HireLink Recruteur</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/app.css?v=20261026d" />
-  <link rel="stylesheet" href="../css/components.css?v=20261027a" />
-  <script src="../js/theme.js?v=20261026d"></script>
+  <title>Paramètres — HireLink</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261029a"></script>
+  <script src="../js/theme.js?v=20261029a"></script>
 </head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="row between">
-        <a class="brand" href="recruiter.html"><span class="brand-mark"></span><span class="brand-name">Hire<span style="color:#e2c98a">Link</span></span></a>
-        <button type="button" class="mobile-toggle" id="close-side">✕</button>
-      </div>
-      <nav class="side-nav">
-        <a class="side-link" href="recruiter.html">Tableau de bord</a>
-        <a class="side-link" href="recruiter-pipeline.html">Pipeline</a>
-        <a class="side-link" href="recruiter-offers.html">Offres</a>
-        <a class="side-link" href="recruiter-team.html">Entreprise</a>
-        <a class="side-link is-active" href="recruiter-settings.html">Paramètres</a>
-      </nav>
-      <div id="nav-user" class="nav-user"></div>
-      <div class="side-footer">
-        <div id="side-user">—</div>
-        <button type="button" class="btn btn-ghost btn-sm" id="btn-logout" style="margin-top:0.75rem;color:#fff;border-color:rgba(255,255,255,.2)">Déconnexion</button>
-      </div>
-    </aside>
-    <div class="app-main">
-      <header class="topbar">
-        <button type="button" class="btn btn-ghost btn-sm" id="open-side" style="display:none">Menu</button>
-        <div class="topbar-actions" style="margin-left:auto">
-          <div class="avatar" id="avatar">R</div>
+<body class="rc" data-role="RECRUTEUR">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content" id="rc-content">
+        <div class="rc-head">
+          <div>
+            <p class="rc-eyebrow">Espace recruteur</p>
+            <h1>Paramètres</h1>
+            <p>Votre compte, vos alertes, l’apparence et la formule de l’organisation.</p>
+          </div>
+          <div class="rc-head-actions"></div>
         </div>
-      </header>
-      <main class="content cabinet-page">
-        <div class="settings-header">
-          <p class="eyebrow">Espace recruteur</p>
-          <h1>Réglages du cabinet</h1>
-          <p>L’entreprise, les délais de réponse, et ce que la formule Premium change dans le travail de l’équipe. Pas une page de facture.</p>
+        <div class="rc-tabs" role="tablist">
+          <button type="button" class="rc-tab is-on" data-t="compte">Compte</button>
+          <button type="button" class="rc-tab" data-t="alertes">Alertes</button>
+          <button type="button" class="rc-tab" data-t="apparence">Apparence</button>
+          <button type="button" class="rc-tab" data-t="plans">Formules</button>
         </div>
-        <div class="settings-layout">
-          <nav class="settings-nav" aria-label="Sections du cabinet">
-            <button type="button" class="is-on" data-settings="org">Cabinet</button>
-            <button type="button" data-settings="image">Image</button>
-            <button type="button" data-settings="deadlines">Délais</button>
-            <button type="button" data-settings="plans">Formules</button>
-          </nav>
-          <div class="settings-panels">
-            <section class="settings-panel" id="set-org">
-              <article class="settings-card">
-                <header class="card-header"><h2>Organisation</h2><p>Le nom publié sur les offres et l’identifiant légal utilisé pour la vérification.</p></header>
-                <form id="settings-profile">
-                  <div class="card-body form-grid">
-                    <label class="input-group">Nom du recruteur<input id="set-name" class="form-control" /></label>
-                    <label class="input-group">Entreprise<input id="set-company" class="form-control" /></label>
-                    <label class="input-group">ICE<input id="set-ice" class="form-control" placeholder="Identifiant commun de l’entreprise" /></label>
-                  </div>
-                  <footer class="card-footer"><button type="submit" class="btn btn-primary">Enregistrer le cabinet</button></footer>
-                </form>
-              </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Apparence</h2><p>Le thème reste local à votre écran.</p></header>
-                <div class="card-body">
-                  <div class="setting-row"><span>Mode sombre</span><label class="switch"><input type="checkbox" data-theme-toggle id="theme-toggle" /><span class="slider"></span></label></div>
-                </div>
-              </article>
-            </section>
-            <section class="settings-panel" id="set-image" hidden>
-              <article class="settings-card" id="photo-upload">
-                <header class="card-header">
-                  <h2>Photo de profil</h2>
-                  <p>Elle apparaît en cercle en haut à droite (à côté de la cloche). Format carré recommandé (JPG ou PNG).</p>
-                </header>
-                <div class="card-body photo-upload">
-                  <div class="profile-photo" id="btn-photo" title="Changer la photo" role="button" tabindex="0">
-                    <img id="pf-photo" alt="" hidden />
-                    <span id="pf-photo-fallback">R</span>
-                  </div>
-                  <div>
-                    <p class="muted" style="margin:0 0 0.65rem">Cliquez sur le cercle ou sur le bouton pour choisir une image. Elle remplace l’icône générique.</p>
-                    <button type="button" class="btn btn-primary" id="btn-photo-pick">Ajouter / changer l’image</button>
-                    <button type="button" class="btn btn-ghost" id="btn-photo-clear" style="margin-left:0.4rem">Retirer</button>
-                    <input type="file" id="pf-photo-file" accept="image/jpeg,image/png,image/webp" hidden />
-                  </div>
-                </div>
-              </article>
-            </section>
-            <section class="settings-panel" id="set-deadlines" hidden>
-              <article class="settings-card">
-                <header class="card-header"><h2>Ce que la cloche doit remonter</h2><p>Le délai promis sur l’offre est visible du candidat. Ces alertes servent à le tenir.</p></header>
-                <div class="card-body">
-                  <div class="setting-row"><span>Dossier proche du délai promis</span><label class="switch"><input type="checkbox" id="n-sla" checked /><span class="slider"></span></label></div>
-                  <div class="setting-row"><span>Nouvelle candidature</span><label class="switch"><input type="checkbox" id="n-new" checked /><span class="slider"></span></label></div>
-                  <div class="setting-row"><span>Entretien la veille</span><label class="switch"><input type="checkbox" id="n-interview" checked /><span class="slider"></span></label></div>
-                </div>
-                <footer class="card-footer"><button type="button" class="btn btn-primary" id="btn-save-notif">Enregistrer</button></footer>
-              </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Lecture des dossiers</h2><p id="cabinet-advice">Les dossiers en retard passent devant. Le score de compatibilité aide à lire, il ne retient personne à votre place.</p></header>
-                <footer class="card-footer"><a class="btn btn-primary" href="recruiter-pipeline.html">Ouvrir le pipeline</a></footer>
-              </article>
-            </section>
-            <section class="settings-panel" id="set-plans" hidden>
-              <article class="settings-card">
-                <header class="card-header">
-                  <h2>Deux façons de recruter</h2>
-                  <p>Ouvrez une formule pour voir ce qu’elle change dans le cabinet. Le montant n’est pas affiché ici.</p>
-                </header>
-                <div class="card-body plan-folds">
-                  <details class="plan-fold" id="fold-essentiel" open>
-                    <summary><span>Accès</span><em data-plan-mark="essentiel">Formule de départ</em></summary>
-                    <ul>
-                      <li>Un siège pour publier et suivre le pipeline</li>
-                      <li>Délai de réponse affiché sur chaque offre</li>
-                      <li>Vérification de l’entreprise avant publication</li>
-                      <li>Dossier candidat : CV, étapes, motif de refus</li>
-                    </ul>
-                    <p>Vous voyez qui correspond au poste. La shortlist reste une décision humaine.</p>
-                  </details>
-                  <details class="plan-fold" id="fold-performance">
-                    <summary><span>Premium</span><em data-plan-mark="performance">À activer</em></summary>
-                    <ul>
-                      <li>Plusieurs sièges pour l’équipe RH (Owner, Recruteur, Hiring Manager)</li>
-                      <li>Offres mises en avant dans le catalogue candidat</li>
-                      <li>File pipeline classée par délai dépassé puis par compatibilité</li>
-                      <li>Alertes SLA dès qu’un dossier dépasse le délai promis</li>
-                      <li>Lecture assistée CV ↔ poste (écarts, sans décider à votre place)</li>
-                      <li>Reporting simple : volume, délais tenus, motifs de refus</li>
-                    </ul>
-                    <p><strong>299 MAD / mois.</strong> Même pipeline qu’Accès. L’équipe voit les mêmes dossiers ; les retards remontent en premier. Désactivation possible à tout moment.</p>
-                  </details>
-                </div>
-                <footer class="card-footer">
-                  <button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Revenir à Accès</button>
-                  <button type="button" class="btn btn-primary" id="btn-billing-premium">Activer Premium</button>
-                </footer>
-              </article>
-            </section>
+        <div class="rc-panel" id="tab-compte">
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Mon compte</h2><p>Les informations de l’entreprise se gèrent dans <a href="recruiter-team.html" style="color:var(--burgundy);font-weight:600">Entreprise &amp; équipe</a>.</p></div></div>
+            <form id="form-account" class="rc-card-body"><div class="rc-form">
+              <div class="rc-field"><label for="set-name">Nom complet</label><input id="set-name" autocomplete="name" /></div>
+              <div class="rc-field"><label for="set-email">E-mail</label><input id="set-email" readonly /></div>
+              <div class="rc-field"><label>Rôle dans l’organisation</label><div id="set-role" class="rc-pill" style="margin-top:.3rem">…</div></div>
+              <div class="is-full"><button type="submit" class="btn btn-primary">Enregistrer</button></div>
+            </div></form></section>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Photo de profil</h2><p>Affichée en haut à droite. Stockée sur cet appareil.</p></div></div>
+            <div class="rc-card-body rc-logo-row"><div class="rc-logo" style="border-radius:50%"><img id="pf-photo" alt="" hidden /><span id="pf-photo-fallback">R</span></div>
+              <div class="rc-row"><button type="button" class="btn btn-primary btn-sm" id="btn-photo-pick">Ajouter / changer</button><button type="button" class="btn btn-ghost btn-sm" id="btn-photo-clear">Retirer</button>
+              <input type="file" id="pf-photo-file" accept="image/jpeg,image/png,image/webp" hidden /></div></div></section>
+        </div>
+        <div class="rc-panel" id="tab-alertes" hidden>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Ce que la cloche doit remonter</h2><p>Le délai promis sur l’offre est visible du candidat. Ces alertes servent à le tenir.</p></div></div>
+            <div class="rc-card-body">
+              <div class="rc-setting"><div>Dossier proche du délai promis<small>Rappel avant l’échéance de première réponse</small></div><label class="switch"><input type="checkbox" id="n-sla" checked /><span class="slider"></span></label></div>
+              <div class="rc-setting"><div>Nouvelle candidature<small>À chaque dépôt sur vos offres</small></div><label class="switch"><input type="checkbox" id="n-new" checked /><span class="slider"></span></label></div>
+              <div class="rc-setting"><div>Entretien la veille<small>Rappel de préparation</small></div><label class="switch"><input type="checkbox" id="n-interview" checked /><span class="slider"></span></label></div>
+            </div><div class="rc-card-foot"><button type="button" class="btn btn-primary" id="btn-save-notif">Enregistrer</button></div></section>
+        </div>
+        <div class="rc-panel" id="tab-apparence" hidden>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Apparence</h2><p>Le thème est mémorisé sur cet appareil.</p></div></div>
+            <div class="rc-card-body"><div class="rc-setting"><div>Mode sombre<small>Réduit la fatigue visuelle en faible luminosité</small></div><label class="switch"><input type="checkbox" id="theme-toggle" /><span class="slider"></span></label></div></div></section>
+        </div>
+        <div class="rc-panel" id="tab-plans" hidden>
+          <div class="rc-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+            <section class="rc-card rc-plan" id="plan-access"><div class="rc-card-head"><div><h2>Accès</h2><p id="mark-access">Formule en cours</p></div></div><div class="rc-card-body"><ul class="rc-checks">
+              <li>Un siège pour publier et suivre le pipeline</li><li>Délai de réponse affiché sur chaque offre</li><li>Vérification de l’entreprise avant publication</li><li>Dossier candidat : CV, étapes, motif de refus</li></ul></div></section>
+            <section class="rc-card rc-plan" id="plan-premium"><div class="rc-card-head"><div><h2>Premium · 299 MAD / mois</h2><p id="mark-premium">À activer</p></div></div><div class="rc-card-body"><ul class="rc-checks">
+              <li>Plusieurs sièges (Owner, Recruteur, Hiring Manager)</li><li>Offres mises en avant dans le catalogue candidat</li><li>Alertes SLA dès qu’un dossier dépasse le délai promis</li><li>Plafond de crédits IA relevé</li><li>Reporting : volume, délais tenus, motifs de refus</li></ul></div>
+              <div class="rc-card-foot"><button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Revenir à Accès</button><button type="button" class="btn btn-primary" id="btn-billing-premium">Activer Premium</button></div></section>
           </div>
         </div>
       </main>
     </div>
   </div>
-  <script src="../js/ui.js?v=20261026d"></script>
-  <script src="../js/api.js?v=20261026d"></script>
-  <script src="../js/in-app-help.js?v=20261026d"></script>
-  <script src="../js/product.js?v=20261026d"></script>
-  <script src="../js/shell.js?v=20261027a"></script>
-  <script src="../js/growth.js?v=20261026d"></script>
-  <script src="../js/recruiter-settings.js?v=20261027a"></script>
+  <div class="rc-scrim" id="rc-scrim"></div>
+  <script defer src="../js/ui.js?v=20261029a"></script>
+  <script defer src="../js/api.js?v=20261029a"></script>
+  <script defer src="../js/in-app-help.js?v=20261029a"></script>
+  <script defer src="../js/app-shell.js?v=20261029a"></script>
+  <script defer src="../js/growth.js?v=20261029a"></script>
+  <script defer src="../js/recruiter-settings.js?v=20261029a"></script>
 </body>
 </html>

@@ -39,8 +39,15 @@ public class GoogleTokenService {
         try {
             JsonNode node = mapper.readTree(body);
             String aud = node.path("aud").asText();
-            if (isConfigured() && !clientId.equals(aud)) {
+            String iss = node.path("iss").asText();
+            if (!isConfigured() || !clientId.equals(aud)) {
                 throw new IllegalArgumentException("Audience Google invalide");
+            }
+            if (!"accounts.google.com".equals(iss) && !"https://accounts.google.com".equals(iss)) {
+                throw new IllegalArgumentException("Émetteur Google invalide");
+            }
+            if (!"true".equalsIgnoreCase(node.path("email_verified").asText("false"))) {
+                throw new IllegalArgumentException("E-mail Google non vérifié");
             }
             String email = node.path("email").asText(null);
             if (email == null || email.isBlank()) {
@@ -50,12 +57,12 @@ public class GoogleTokenService {
                     node.path("sub").asText(),
                     email.toLowerCase(),
                     node.path("name").asText(email),
-                    node.path("email_verified").asBoolean(true)
+                    true
             );
         } catch (IllegalArgumentException e) {
             throw e;
         } catch (Exception e) {
-            throw new IllegalArgumentException("Token Google invalide: " + e.getMessage());
+            throw new IllegalArgumentException("Token Google invalide");
         }
     }
 

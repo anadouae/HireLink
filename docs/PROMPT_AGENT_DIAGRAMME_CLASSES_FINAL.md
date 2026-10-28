@@ -1,6 +1,6 @@
 # PROMPT AGENT — Diagramme de classes exhaustif HireLink
 
-Copie-colle le bloc ci-dessous tel quel dans ton agent (Cursor / ChatGPT / autre).
+Copie-colle le bloc ci-dessous tel quel dans ton agent (assistant de code ou de diagrammes).
 
 ---
 
@@ -76,7 +76,7 @@ IMPORTANT
 ---
 
 ## Utilisation
-1. Ouvre un nouvel agent Cursor sur le projet `HireLink`.
+1. Ouvre un nouvel agent sur le projet `HireLink`.
 2. Colle le prompt.
 3. Vérifie que les 2 fichiers FINAL sont créés dans `docs/diagrammes/`.
 4. Remplace éventuellement l’ancien PNG dans ton rapport oral.

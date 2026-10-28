@@ -1,4 +1,5 @@
 (function () {
+  function cleanLogo(u) { return /google\.com\/s2\/favicons|gstatic\.com\/faviconV2/i.test(u || "") ? "" : (u || ""); }
   const name = new URLSearchParams(location.search).get("name") || "";
   const base = window.HIRELINK_API_BASE || "http://localhost:8081/api/v1";
   const title = document.getElementById("co-name");
@@ -14,7 +15,9 @@
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/\'/g, "&#39;");
   }
 
   function initials(value) {
@@ -39,7 +42,12 @@
         : /^https?:\/\//i.test(url)
           ? url
           : (base.replace(/\/api\/v1\/?$/, "") + (url.startsWith("/") ? url : "/" + url));
-    logo.innerHTML = '<img alt="" src="' + esc(src) + '" onerror="this.remove()" />';
+    logo.textContent = "";
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = src;
+    img.addEventListener("error", () => img.remove());
+    logo.appendChild(img);
   }
 
   fetch(base + "/offers/public")
@@ -62,7 +70,7 @@
           });
       });
       const verified = list[0] && list[0].companyVerified;
-      if (list[0] && list[0].companyLogo) setLogo(list[0].companyLogo);
+      if (list[0] && cleanLogo(list[0].companyLogo)) setLogo(cleanLogo(list[0].companyLogo));
       if (meta) {
         meta.textContent = list.length
           ? (verified ? "Entreprise vérifiée · " : "") +

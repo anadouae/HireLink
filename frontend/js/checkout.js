@@ -160,16 +160,24 @@
     return "";
   }
 
-  function receipt(method) {
+  /** Active la formule côté serveur ; le reçu n'est affiché qu'une fois l'abonnement enregistré. */
+  async function activate() {
+    const r = await HireLinkAPI.api("/billing/subscribe", { method: "POST", body: { cycle } });
+    HireLinkAPI.setPlanTier(r.planTier);
+    return r.invoice;
+  }
+
+  function receipt(method, invoice) {
     const ttc = totalTtc();
-    const id = "HL-" + Date.now().toString().slice(-8);
+    const id = invoice ? invoice.number : "HL-" + Date.now().toString().slice(-8);
     const when = new Date().toLocaleString("fr-FR");
-    localStorage.setItem("hirelink.premium.active." + plan, "1");
     const esc = (s) =>
       String(s == null ? "" : s)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/\'/g, "&#39;");
     const rows = [
       ["N° de reçu", id],
       ["Date", when],
@@ -191,14 +199,21 @@
   document.getElementById("pay-demo").addEventListener("click", () => {
     showError("");
     const email = (document.getElementById("pay-email").value || (session && session.email) || "demo@hirelink.ma").trim();
-    receipt({
-      brand: "Démo",
-      last4: "4242",
-      holder: (document.getElementById("pay-holder").value || (session && session.fullName) || "Démonstration").trim(),
-      email: email,
-      city: document.getElementById("pay-city").value.trim() || "Tétouan",
-      country: document.getElementById("pay-country").value || "Maroc",
-    });
+    activate()
+      .then((invoice) =>
+        receipt(
+          {
+            brand: "Démo",
+            last4: "4242",
+            holder: (document.getElementById("pay-holder").value || (session && session.fullName) || "Démonstration").trim(),
+            email: email,
+            city: document.getElementById("pay-city").value.trim() || "Tétouan",
+            country: document.getElementById("pay-country").value || "Maroc",
+          },
+          invoice
+        )
+      )
+      .catch((err) => showError(err.message || "Activation impossible"));
   });
 
   document.getElementById("pay-form").addEventListener("submit", (e) => {
@@ -235,8 +250,15 @@
     }
     const btn = document.getElementById("pay-submit");
     btn.disabled = true;
+    const label = btn.textContent;
     btn.textContent = "Paiement en cours…";
-    setTimeout(() => receipt(method), 900);
+    activate()
+      .then((invoice) => receipt(method, invoice))
+      .catch((err) => {
+        showError(err.message || "Activation impossible");
+        btn.disabled = false;
+        btn.textContent = label;
+      });
   });
 
   document.getElementById("pay-change").addEventListener("click", () => {

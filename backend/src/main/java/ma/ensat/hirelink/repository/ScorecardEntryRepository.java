@@ -8,4 +8,7 @@ import java.util.Optional;
 
 public interface ScorecardEntryRepository extends JpaRepository<ScorecardEntry, Long> {
     List<ScorecardEntry> findByApplicationId(Long applicationId);
+
+    Optional<ScorecardEntry> findFirstByApplicationIdAndCriterionIdAndEvaluatorUserId(
+            Long applicationId, Long criterionId, Long evaluatorUserId);
 }

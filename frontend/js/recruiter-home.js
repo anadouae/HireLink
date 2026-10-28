@@ -1,239 +1,157 @@
+/** Tableau de bord recruteur — KPI, inbox prioritaire, répartition, entretiens à venir. */
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["RECRUTEUR"] });
+  const RC = HireLinkApp;
+  const session = RC.mount({
+    active: "dashboard",
+    title: "Tableau de bord",
+    search: { placeholder: "Filtrer l’inbox : candidat, offre, statut…", onQuery: () => renderInbox() },
+  });
   if (!session) return;
-  if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("recruiter");
+  const $ = (id) => document.getElementById(id);
+  const esc = RC.esc;
+  const CLOSED = ["REJECTED", "WITHDRAWN"];
+  let apps = [];
+  let offers = [];
+  let ready = { apps: false, offers: false };
 
-  function slaClass(days) {
-    if (days == null) return "";
-    if (days < 0) return "danger";
-    if (days <= 2) return "warn";
-    return "";
-  }
-
-  const STATUS_FR = {
-    SUBMITTED: "Soumise",
-    SCREENING: "Présélection",
-    SHORTLISTED: "Shortlist",
-    INTERVIEW: "Entretien",
-    REJECTED: "Refusée",
-    WITHDRAWN: "Retirée",
-  };
+  const first = String(session.fullName || "").replace(/\s*\(alias\)\s*/i, "").trim().split(/\s+/)[0] || "";
+  $("hello").textContent = "Bonjour" + (first ? ", " + first : "");
+  if (!RC.canManage()) document.querySelectorAll("[data-manage]").forEach((n) => (n.hidden = true));
 
   function scoreTier(score) {
     if (score == null) return { label: "—", cls: "badge-chrome" };
-    if (score >= 80) return { label: "Excellent", cls: "badge-ok match-hot" };
+    if (score >= 80) return { label: "Excellent", cls: "badge-ok" };
     if (score >= 55) return { label: "Bon", cls: "badge-info" };
     return { label: "Faible", cls: "badge-rose" };
   }
 
-  function renderInbox(apps) {
-    const root = document.getElementById("inbox-list");
-    if (!root) return;
-    const q = ((document.getElementById("search-home") || {}).value || "").trim().toLowerCase();
-    const open = apps.filter((a) => !["REJECTED", "WITHDRAWN", "ACCEPTED"].includes(a.status));
+  function renderInbox() {
+    const root = $("inbox-list");
+    if (!ready.apps) return;
+    const q = (($("rc-search") || {}).value || "").trim().toLowerCase();
+    const open = apps.filter((a) => !CLOSED.includes(a.status));
     const matched = q
-      ? open.filter((a) =>
-          ((a.candidateName || "") + " " + (a.jobTitle || "") + " " + (a.status || ""))
-            .toLowerCase()
-            .includes(q)
-        )
+      ? open.filter((a) => ((a.candidateName || "") + " " + (a.jobTitle || "") + " " + (RC.STATUS_FR[a.status] || "")).toLowerCase().includes(q))
       : open;
     const sorted = matched.slice().sort((a, b) => {
       const sa = a.slaRemainingDays == null ? 99 : a.slaRemainingDays;
       const sb = b.slaRemainingDays == null ? 99 : b.slaRemainingDays;
-      if (sa !== sb) return sa - sb;
-      return (b.matchScore || 0) - (a.matchScore || 0);
+      return sa !== sb ? sa - sb : (b.matchScore || 0) - (a.matchScore || 0);
     });
-    const top = sorted.slice(0, q ? 20 : 8);
+    const top = sorted.slice(0, q ? 20 : 7);
     if (!top.length) {
-      root.innerHTML = q
-        ? '<p class="muted">Aucun résultat pour « ' + q + ' ».</p>'
-        : '<p class="muted">Inbox vide — publiez une offre pour recevoir des candidatures.</p>';
+      RC.empty(root, q
+        ? { icon: "search", title: "Aucun résultat", text: "Aucun dossier ne correspond à « " + q + " »." }
+        : { icon: "inbox", title: "Inbox vide", text: "Publiez une offre pour recevoir des candidatures.", action: RC.canManage() ? { href: "recruiter-offers.html#new", label: "Nouvelle offre" } : null });
       return;
     }
-    root.innerHTML = "";
-    top.forEach((c) => {
-      const item = document.createElement("article");
-      const urgent = c.slaRemainingDays != null && c.slaRemainingDays <= 2;
+    root.innerHTML = top.map((c) => {
       const tier = scoreTier(c.matchScore);
-      item.className = "inbox-item" + (urgent ? " is-urgent" : "") + (tier.cls ? " " + tier.cls : "");
       const sla = c.slaRemainingDays;
-      const slaTxt = sla == null ? "—" : sla < 0 ? "Retard " + Math.abs(sla) + " j" : sla + " j";
-      item.innerHTML =
-        "<div><strong></strong><p class='muted'></p>" +
-        "<div class='kanban-meta' style='margin-top:0.45rem'>" +
-        "<span class='badge js-match'></span>" +
-        "<span class='sla-pill'></span>" +
-        "<span class='badge badge-chrome js-status'></span></div></div>" +
-        "<div class='stack'><a class='btn btn-sm btn-primary' href='recruiter-pipeline.html?app=" +
-        encodeURIComponent(c.id) +
-        "'>Ouvrir le dossier</a></div>";
-      item.querySelector("strong").textContent = c.candidateName || "Candidat";
-      item.querySelector("p").textContent =
-        (c.jobTitle || "") + " · " + (STATUS_FR[c.status] || c.status || "");
-      const matchBadge = item.querySelector(".js-match");
-      matchBadge.className = "badge " + tier.cls;
-      matchBadge.textContent =
-        c.matchScore != null ? Math.round(c.matchScore) + "% · " + tier.label : "Match —";
-      const pill = item.querySelector(".sla-pill");
-      pill.textContent = "Réponse " + slaTxt;
-      const sc = slaClass(sla);
-      if (sc) pill.classList.add(sc);
-      item.querySelector(".js-status").textContent = STATUS_FR[c.status] || c.status;
-      root.appendChild(item);
-    });
+      const late = c.slaBreached || (sla != null && sla < 0);
+      const slaTxt = late ? "En retard" : sla == null ? "—" : sla === 0 ? "Dernier jour" : "sous " + sla + " j";
+      const slaCls = late ? "rc-pill--danger" : sla != null && sla <= 2 ? "rc-pill--warn" : "";
+      return '<div class="rc-item rc-fade"><div class="rc-avatar">' + esc(RC.initials(c.candidateName)) + '</div><div class="rc-item-main"><strong>' +
+        esc(c.candidateName || "Candidat") + "</strong><span>" + esc(c.jobTitle || "") + " · " + esc(RC.STATUS_FR[c.status] || c.status) + "</span></div>" +
+        '<span class="badge ' + tier.cls + '">' + (c.matchScore != null ? Math.round(c.matchScore) + " %" : "—") + '</span><span class="rc-pill ' + slaCls + '">' + slaTxt +
+        '</span><a class="btn btn-sm btn-soft" href="recruiter-pipeline.html?app=' + encodeURIComponent(c.id) + '">Ouvrir</a></div>';
+    }).join("");
   }
 
-  let cachedApps = [];
+  function renderStats() {
+    if (!ready.apps) return;
+    const published = offers.filter((o) => o.published).length;
+    const screening = apps.filter((a) => a.status === "SCREENING").length;
+    const withMatch = apps.filter((a) => a.matchScore != null);
+    const avg = withMatch.length ? Math.round(withMatch.reduce((s, a) => s + a.matchScore, 0) / withMatch.length) : null;
+    const activeApps = apps.filter((a) => !CLOSED.includes(a.status));
+    const watched = activeApps.filter((a) => a.slaRemainingDays != null);
+    const onTime = watched.filter((a) => !a.slaBreached && a.slaRemainingDays >= 0).length;
+    const slaPct = watched.length ? Math.round((onTime / watched.length) * 100) : 100;
+    const urgent = activeApps.filter((a) => a.slaBreached || (a.slaRemainingDays != null && a.slaRemainingDays <= 2));
+    const interviews = apps.filter((a) => a.status === "INTERVIEW").length;
 
-  async function showVerifyBanner() {
-    try {
-      const me = await HireLinkAPI.api("/me");
-      const host = document.querySelector(".content") || document.querySelector("main");
-      if (!host || me.companyVerified) {
-        const old = document.getElementById("hl-verify-banner");
-        if (old) old.remove();
-        return;
-      }
-      let ban = document.getElementById("hl-verify-banner");
-      if (!ban) {
-        ban = document.createElement("div");
-        ban.id = "hl-verify-banner";
-        ban.className = "panel";
-        ban.style.cssText = "margin:0 0 1rem;padding:0.9rem 1.1rem;border:1px solid #e8b4a0;background:#fff7f2";
-        host.insertBefore(ban, host.firstChild);
-      }
-      const st = me.verificationStatus || "PENDING";
-      ban.innerHTML =
-        "<strong>Votre entreprise n’est pas encore vérifiée</strong>" +
-        '<p class="muted" style="margin:0.35rem 0 0.7rem;font-size:0.9rem">Vous pouvez préparer des brouillons. La publication s’ouvre dès que l’administration valide votre entreprise.</p>' +
-        '<a class="btn btn-primary btn-sm" href="recruiter-settings.html">Voir mon entreprise</a>';
-    } catch (_) {}
+    $("st-offers").textContent = published;
+    $("st-offers-d").textContent = RC.plural(offers.length, "offre") + " au total";
+    $("st-apps").textContent = activeApps.length;
+    $("st-apps-d").textContent = screening + " en présélection";
+    $("st-sla").textContent = slaPct + " %";
+    $("st-match").textContent = avg == null ? "—" : avg + " %";
+    document.querySelectorAll(".rc-kpi").forEach((k) => k.classList.remove("is-skel"));
+
+    $("wins-line").textContent =
+      RC.plural(interviews, "entretien") + " · " + RC.plural(urgent.length, "dossier") + " à traiter en priorité · " + RC.plural(activeApps.length, "candidature") + " en cours";
+
+    const nudge = $("sla-nudge");
+    if (urgent.length) {
+      nudge.hidden = false;
+      $("sla-nudge-title").textContent = RC.plural(urgent.length, "dossier") + " proche" + (urgent.length > 1 ? "s" : "") + " du délai promis";
+      $("sla-nudge-sub").textContent = "Le dépassement du délai de 1ʳᵉ réponse est visible côté candidat. Traitez d’abord : " + (urgent[0].candidateName || "ce candidat") + ".";
+    } else nudge.hidden = true;
+
+    const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
+    const labels = ["Reçues", "Présélection", "Shortlist", "Entretien"];
+    const counts = keys.map((k) => apps.filter((a) => a.status === k).length);
+    const max = Math.max(1, ...counts);
+    $("chart-bars").innerHTML = keys.map((k, i) =>
+      '<div class="rc-barrow"><span>' + labels[i] + '</span><div class="rc-track"><i data-w="' + Math.round((counts[i] / max) * 100) + '"></i></div><b>' + counts[i] + "</b></div>").join("");
+    requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("#chart-bars i").forEach((i) => (i.style.width = i.dataset.w + "%"))));
+    const received = counts.reduce((a, b) => a + b, 0);
+    const moved = counts[1] + counts[2] + counts[3];
+    $("conversion").textContent = !received
+      ? "Aucune candidature ouverte pour l’instant."
+      : RC.plural(moved, "dossier") + " " + (moved > 1 ? "ont" : "a") + " quitté la réception, sur " + received + " ouverts.";
+
+    renderInbox();
+    renderInterviews();
   }
 
-  async function load() {
-    try {
-      showVerifyBanner();
-      const [apps, offers] = await Promise.all([
-        HireLinkAPI.api("/applications/pipeline"),
-        HireLinkAPI.api("/offers/mine"),
-      ]);
-      cachedApps = apps;
-      const published = offers.filter((o) => o.published).length;
-      const screening = apps.filter((a) => a.status === "SCREENING").length;
-      const withMatch = apps.filter((a) => a.matchScore != null);
-      const avg = withMatch.length
-        ? Math.round(withMatch.reduce((s, a) => s + a.matchScore, 0) / withMatch.length)
-        : 0;
-      const onTime = apps.filter((a) => a.slaRemainingDays == null || a.slaRemainingDays >= 0).length;
-      const slaPct = apps.length ? Math.round((onTime / apps.length) * 100) : 100;
-      const urgent = apps.filter(
-        (a) =>
-          a.slaRemainingDays != null &&
-          a.slaRemainingDays <= 2 &&
-          !["REJECTED", "WITHDRAWN", "ACCEPTED"].includes(a.status)
-      );
-
-      document.getElementById("st-offers").textContent = String(published);
-      document.getElementById("st-offers-d").textContent = offers.length + " au total";
-      document.getElementById("st-apps").textContent = String(apps.length);
-      document.getElementById("st-apps-d").textContent = screening + " en présélection";
-      document.getElementById("st-sla").textContent = slaPct + "%";
-      document.getElementById("st-match").textContent = withMatch.length ? avg + "%" : "—";
-      document.getElementById("sla-nudge-title").textContent =
-        urgent.length +
-        " candidature" +
-        (urgent.length > 1 ? "s" : "") +
-        " proche" +
-        (urgent.length > 1 ? "s" : "") +
-        " du délai";
-      if (urgent.length) {
-        const first = urgent[0];
-        document.getElementById("sla-nudge-sub").textContent =
-          "Si le dossier de " +
-          (first.candidateName || "ce candidat") +
-          " n’est pas traité avant l’échéance SLA, le dépassement sera visible côté candidat.";
-      } else {
-        document.getElementById("sla-nudge-sub").textContent =
-          "Tous vos délais sont sous contrôle — engagement de confiance tenu.";
-      }
-
-      const decided = apps.filter((a) => ["INTERVIEW", "REJECTED"].includes(a.status)).length;
-      const interviews = apps.filter((a) => a.status === "INTERVIEW" || a.interviewType).length;
-      const wins = document.getElementById("wins-line");
-      if (wins) {
-        wins.textContent =
-          interviews +
-          " entretien" +
-          (interviews > 1 ? "s" : "") +
-          " · " +
-          decided +
-          " dossier" +
-          (decided > 1 ? "s" : "") +
-          " en phase finale · " +
-          urgent.length +
-          " urgent" +
-          (urgent.length > 1 ? "s" : "") +
-          " SLA";
-      }
-
-      const side = document.getElementById("side-advice-text");
-      if (side) {
-        side.textContent = urgent.length
-          ? "Ce mois-ci : " + urgent.length + " dossier" + (urgent.length > 1 ? "s sont" : " est") + " proche du délai promis. Ouvrez-les avant le reste."
-          : "Ce mois-ci : les délais promis sont tenus. Le score aide à lire un CV, il ne retient personne.";
-      }
-
-      const counts = { SUBMITTED: 0, SCREENING: 0, SHORTLISTED: 0, INTERVIEW: 0 };
-      apps.forEach((a) => {
-        if (counts[a.status] != null) counts[a.status]++;
-      });
-      const max = Math.max(1, ...Object.values(counts));
-      const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
-      const labels = ["Reçues", "En étude", "Retenues", "Entretien"];
-      document.getElementById("chart-bars").innerHTML = keys
-        .map((k, i) => {
-          const h = Math.round((counts[k] / max) * 100);
-          return (
-            '<div class="chart-bar"><span style="--h:' +
-            Math.max(8, h) +
-            "%;--i:" +
-            i +
-            '"></span><small>' +
-            labels[i] +
-            "</small></div>"
-          );
-        })
-        .join("");
-
-      const received = counts.SUBMITTED + counts.SCREENING + counts.SHORTLISTED + counts.INTERVIEW;
-      const moved = counts.SCREENING + counts.SHORTLISTED + counts.INTERVIEW;
-      const conv = document.getElementById("conversion");
-      if (conv) {
-        conv.textContent = !received
-          ? "Aucune candidature ouverte. L’avancement se calcule dès la première réception."
-          : moved === 0
-            ? "Les " + received + " dossiers ouverts sont encore à la réception. Le délai promis court depuis le dépôt."
-            : moved + " dossier" + (moved > 1 ? "s ont quitté" : " a quitté") + " la réception, sur " + received + " ouverts. Le délai promis court depuis le dépôt.";
-      }
-
-      renderInbox(cachedApps);
-    } catch (err) {
-      HireLink.toast("Tableau de bord", err.message, "danger");
+  function renderInterviews() {
+    const root = $("upcoming");
+    const now = Date.now();
+    const list = apps.filter((a) => a.status === "INTERVIEW" && a.interviewAt && new Date(a.interviewAt).getTime() >= now - 3600e3)
+      .sort((a, b) => new Date(a.interviewAt) - new Date(b.interviewAt)).slice(0, 4);
+    if (!list.length) {
+      RC.empty(root, { icon: "calendar", title: "Aucun entretien planifié", text: "Les entretiens apparaissent ici dès qu’un dossier passe à l’étape Entretien.", action: { href: "recruiter-pipeline.html", label: "Ouvrir le pipeline" } });
+      return;
     }
+    root.innerHTML = list.map((a) => {
+      const d = new Date(a.interviewAt);
+      return '<div class="rc-item"><div class="rc-datebox"><b>' + d.getDate() + "</b><small>" + d.toLocaleDateString("fr-FR", { month: "short" }) +
+        '</small></div><div class="rc-item-main"><strong>' + esc(a.candidateName) + "</strong><span>" + esc(a.jobTitle || "") + " · " +
+        esc(RC.INTERVIEW_TYPE_FR[a.interviewType] || a.interviewType || "") + " · " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) +
+        '</span></div><a class="btn btn-sm btn-ghost" href="recruiter-pipeline.html?app=' + a.id + '">Dossier</a></div>';
+    }).join("");
   }
 
-  HireLinkShell.bindSearch(document.getElementById("search-home"), () => renderInbox(cachedApps));
-  const searchHome = document.getElementById("search-home");
-  if (searchHome) {
-    searchHome.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        const q = (searchHome.value || "").trim();
-        if (q) location.href = "recruiter-pipeline.html?q=" + encodeURIComponent(q);
-      }
-    });
+  function renderActivity(rows) {
+    const root = $("activity");
+    const list = (rows || []).slice(0, 5);
+    if (!list.length) { RC.empty(root, { icon: "bell", title: "Rien de nouveau", text: "Les nouvelles candidatures et rappels s’afficheront ici." }); return; }
+    root.innerHTML = list.map((n) =>
+      '<div class="rc-item"><div class="rc-avatar" style="' + (n.read ? "" : "background:var(--burgundy);color:#fff") + '">' + RC.svg("bell").replace("<svg", '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"') +
+      '</div><div class="rc-item-main"><strong>' + esc(n.title) + "</strong><span>" + esc(n.body) + '</span></div><small class="rc-muted">' + esc(RC.ago(n.at)) + "</small></div>").join("");
   }
 
-  if (window.HireLinkGrowth) HireLinkGrowth.scheduleNudge("recruiter", 28000);
+  function verifyBanner(org) {
+    const box = $("verify-banner");
+    if (!org || org.verified) { box.hidden = true; return; }
+    box.hidden = false;
+  }
+
+  function fail(err) {
+    ["inbox-list", "upcoming"].forEach((id) => RC.errorState($(id), err.message, load));
+  }
+
+  function load() {
+    RC.skeleton($("inbox-list"), 4, 52);
+    RC.data.pipeline((a) => { apps = a || []; ready.apps = true; renderStats(); }, fail);
+    RC.data.offers((o) => { offers = o || []; ready.offers = true; renderStats(); }, () => {});
+  }
+
+  document.addEventListener("rc:org", (e) => verifyBanner(e.detail));
+  verifyBanner(RC.getOrg());
+  document.addEventListener("rc:notifications", (e) => renderActivity(e.detail));
+  renderActivity(RC.notifications.all());
   load();
 })();

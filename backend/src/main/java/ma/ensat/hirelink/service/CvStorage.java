@@ -21,6 +21,10 @@ public class CvStorage {
         Files.createDirectories(root);
     }
 
+    /**
+     * Enregistre un CV. Le type est déterminé par le contenu (PDF, PNG, JPEG, WEBP, texte) ; le nom sur le disque est
+     * un UUID généré par le serveur avec l'extension déduite du contenu : le nom envoyé par le client n'est jamais utilisé.
+     */
     public String save(String folder, String originalName, byte[] bytes) throws IOException {
         if (bytes == null || bytes.length == 0) {
             throw new IllegalArgumentException("Fichier vide");
@@ -28,13 +32,29 @@ public class CvStorage {
         if (bytes.length > MAX_BYTES) {
             throw new IllegalArgumentException("CV trop lourd (8 Mo maximum)");
         }
-        String safe = originalName == null ? "cv" : originalName.replaceAll("[^a-zA-Z0-9._-]", "_");
-        if (safe.length() > 80) safe = safe.substring(safe.length() - 80);
-        String relative = folder + "/" + UUID.randomUUID() + "_" + safe;
+        FileSignature.Kind kind = FileSignature.detect(bytes);
+        if (kind == null || kind == FileSignature.GIF) {
+            throw new IllegalArgumentException("Format de CV non accepté : PDF, PNG, JPG, WEBP ou texte (.txt).");
+        }
+        if (!folder.matches("[a-z]{3,16}")) throw new IllegalArgumentException("Dossier invalide");
+        String relative = folder + "/" + UUID.randomUUID() + "." + kind.ext();
         Path dest = resolve(relative);
         Files.createDirectories(dest.getParent());
         Files.write(dest, bytes);
         return relative;
+    }
+
+    public void delete(String storageName) {
+        try {
+            Files.deleteIfExists(resolve(storageName));
+        } catch (Exception ignored) {
+            // effacement au mieux ; le fichier n'est plus référencé de toute façon
+        }
+    }
+
+    public String mediaType(String storageName) {
+        int dot = storageName == null ? -1 : storageName.lastIndexOf('.');
+        return FileSignature.mimeForExt(dot < 0 ? "" : storageName.substring(dot + 1));
     }
 
     public String copy(String storageName, String folder) throws IOException {
@@ -42,7 +62,7 @@ public class CvStorage {
         if (!Files.exists(src)) {
             throw new IllegalArgumentException("CV original introuvable");
         }
-        return save(folder, src.getFileName().toString(), Files.readAllBytes(src));
+        return save(folder, null, Files.readAllBytes(src));
     }
 
     public Resource load(String storageName) {

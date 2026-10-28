@@ -1,26 +1,16 @@
 (function () {
-  const session = HireLinkShell.mountShell({ roles: ["CANDIDAT"], hello: false });
+  const session = HireLinkApp.mount({ search: { placeholder: "Rechercher une candidature…", onQuery: () => renderList() } });
   if (!session) return;
-  if (window.HireLinkProduct) HireLinkProduct.mountPremiumBar("candidate");
 
-  const STATUS_LABEL = {
-    SUBMITTED: "Soumise",
-    SCREENING: "Présélection",
-    SHORTLISTED: "Shortlist",
-    INTERVIEW: "Entretien",
-    REJECTED: "Refusée",
-    WITHDRAWN: "Retirée",
-  };
+  const STATUS_LABEL = HireLinkApp.STATUS_FR;
 
   /** Fin positive produit = INTERVIEW (pas d'étape Offre / Accepté). */
   const PIPELINE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
 
   let apps = [];
-  let profile = null;
   let selectedId = null;
   let statusFilter = "all";
 
-  const viewList = document.getElementById("view-list");
   const viewDetail = document.getElementById("view-detail");
   const listRoot = document.getElementById("apps-list");
 
@@ -58,18 +48,12 @@
     if (node) node.textContent = text;
   }
 
-  function showList() {
-    selectedId = apps[0] ? apps[0].id : null;
-    if (viewDetail) viewDetail.hidden = !selectedId;
-    history.replaceState(null, "", location.pathname);
-    if (selectedId) paintDetail(apps[0]);
-  }
-
-  function showDetail(app) {
+  function showDetail(app, scroll) {
     selectedId = app.id;
     if (viewDetail) viewDetail.hidden = false;
     paintDetail(app);
     history.replaceState(null, "", "?id=" + app.id);
+    if (scroll && window.matchMedia("(max-width: 980px)").matches && viewDetail) viewDetail.scrollIntoView({ behavior: "smooth", block: "start" });
     document.querySelectorAll(".cand-app-row").forEach(function (row) {
       row.classList.toggle("is-selected", row.dataset.id === String(app.id));
     });
@@ -77,7 +61,7 @@
 
   function renderList() {
     if (!listRoot) return;
-    const filter = el("filter-apps");
+    const filter = el("rc-search");
     const q = ((filter && filter.value) || "").trim().toLowerCase();
     const filtered = apps.filter((a) => {
       if (statusFilter === "active" && ["REJECTED", "WITHDRAWN"].includes(a.status)) return false;
@@ -110,7 +94,12 @@
     }
     const summary = el("apps-summary");
     if (summary) {
-      summary.textContent = filtered.length + " dossier" + (filtered.length > 1 ? "s" : "") + " affiché" + (filtered.length > 1 ? "s" : "");
+      summary.textContent = HireLinkApp.plural(filtered.length, "candidature") + (statusFilter === "all" && !q ? "" : " affichée" + (filtered.length > 1 ? "s" : ""));
+    }
+
+    if (viewDetail && !filtered.some((a) => a.id === selectedId)) {
+      if (filtered.length) showDetail(filtered[0]);
+      else { selectedId = null; viewDetail.hidden = true; }
     }
 
     if (!filtered.length) {
@@ -118,7 +107,7 @@
         listRoot,
         q
           ? '<p class="muted">Aucun résultat pour « ' + q + " ».</p>"
-          : '<p class="muted">Aucune candidature — <a href="candidate-offers.html">voir les offres</a>.</p>'
+          : '<p class="muted">Aucune candidature — <a href="candidate.html?scope=mine">voir les offres</a>.</p>'
       );
       return;
     }
@@ -131,7 +120,7 @@
       row.dataset.id = String(a.id);
       const sla = a.slaRemainingDays;
       const slaTxt =
-        ["REJECTED", "WITHDRAWN"].includes(a.status)
+        ["INTERVIEW", "REJECTED", "WITHDRAWN"].includes(a.status)
           ? ""
           : sla == null
             ? ""
@@ -169,7 +158,7 @@
         if (sla != null && sla < 0) pill.classList.add("danger");
         else if (sla != null && sla <= 2) pill.classList.add("warn");
       }
-      row.addEventListener("click", () => showDetail(a));
+      row.addEventListener("click", () => showDetail(a, true));
       listRoot.appendChild(row);
     });
   }
@@ -187,6 +176,26 @@
     if (sIdx < idx) return "done";
     if (sIdx === idx) return "now";
     return "todo";
+  }
+
+  const INTERVIEW_TYPE_FR = HireLinkApp.INTERVIEW_TYPE_FR;
+
+  /** Bloc « Votre entretien » : date, format, lieu ou lien, consignes de l'entreprise. */
+  function paintInterview(app) {
+    const box = el("d-interview");
+    if (!box) return;
+    if (app.status !== "INTERVIEW" || !app.interviewAt) { box.hidden = true; return; }
+    const loc = app.interviewLocation || "";
+    const where = /^https?:\/\//i.test(loc)
+      ? '<a href="' + HireLinkApp.esc(loc) + '" target="_blank" rel="noopener">Rejoindre l’entretien</a>'
+      : HireLinkApp.esc(loc || "À préciser par l’entreprise");
+    box.hidden = false;
+    box.className = "cand-interview";
+    box.innerHTML =
+      '<h3 class="timeline-title" style="margin-top:0">Votre entretien</h3>' +
+      '<p style="margin:0 0 .25rem"><strong>' + HireLinkApp.esc(HireLinkApp.fmtDateTime(app.interviewAt)) + "</strong> · " + HireLinkApp.esc(INTERVIEW_TYPE_FR[app.interviewType] || app.interviewType || "") + "</p>" +
+      '<p style="margin:0 0 .25rem">' + where + "</p>" +
+      (app.interviewNotes ? '<p class="muted" style="margin:0">' + HireLinkApp.esc(app.interviewNotes) + "</p>" : "");
   }
 
   async function paintDetail(app) {
@@ -208,20 +217,6 @@
     const bar = el("d-match-bar");
     if (bar) bar.style.width = (pct != null ? pct : 0) + "%";
 
-    const skillsEl = el("d-skills");
-    const skillsRaw = (profile && profile.skills) || "";
-    const tags = skillsRaw
-      .split(/[,;|]/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .slice(0, 12);
-    setHtml(
-      skillsEl,
-      tags.length
-        ? tags.map((t) => '<span class="tag">' + t + "</span>").join("")
-        : '<span class="muted" style="font-size:0.85rem">Complète ton profil pour afficher tes compétences.</span>'
-    );
-
     let rows = [];
     try {
       rows = await HireLinkAPI.api("/applications/" + app.id + "/timeline");
@@ -229,70 +224,29 @@
       rows = [];
     }
 
-    const tl = el("d-timeline");
-    if (tl) tl.innerHTML = "";
+    paintInterview(app);
 
-    if (tl && rows && rows.length) {
-      rows.forEach((h, i) => {
-        const last = i === rows.length - 1;
+    const tl = el("d-timeline");
+    if (tl) {
+      tl.innerHTML = "";
+      const when = {};
+      rows.forEach((h) => { if (h.to) when[h.to] = h.at; });
+      PIPELINE.forEach((key) => {
+        const state = stepState(app.status, key);
         const div = document.createElement("div");
-        div.className = "hl-tstep " + (last ? "now" : "done");
-        div.innerHTML =
-          '<div class="hl-ttime"></div><strong></strong><div class="muted" style="font-size:0.82rem"></div>';
-        setText(div.querySelector(".hl-ttime"), fmtWhen(h.at || h.occurredAt || h.createdAt));
-        setText(
-          div.querySelector("strong"),
-          (h.to && (STATUS_LABEL[h.to] || h.to)) ||
-            (h.from
-              ? (STATUS_LABEL[h.from] || h.from) + " → " + (STATUS_LABEL[h.to] || h.to)
-              : "Mise à jour")
-        );
-        setText(
-          div.querySelector(".muted"),
-          (h.from ? (STATUS_LABEL[h.from] || h.from) + " → " : "") +
-            (STATUS_LABEL[h.to] || h.to || "")
-        );
+        div.className = "hl-tstep " + state;
+        div.innerHTML = '<div class="hl-ttime"></div><strong></strong>';
+        setText(div.querySelector(".hl-ttime"), when[key] ? fmtWhen(when[key]) : state === "now" ? "En cours" : "");
+        setText(div.querySelector("strong"), STATUS_LABEL[key]);
         tl.appendChild(div);
       });
-    } else if (tl) {
-      const steps = [
-        { key: "SUBMITTED", label: "Soumise", note: app.cvFileName || app.cvSource || "Dossier reçu" },
-        { key: "SCREENING", label: "Présélection", note: pct != null ? "Match " + pct + "%" : "En revue" },
-        { key: "SHORTLISTED", label: "Shortlist", note: "Sélection RH" },
-        {
-          key: "INTERVIEW",
-          label: "Entretien",
-          note: app.interviewType
-            ? app.interviewType + (app.interviewAt ? " · " + fmtWhen(app.interviewAt) : "")
-            : "Planification",
-        },
-      ];
-      steps.forEach((s) => {
-        const stt = stepState(app.status, s.key);
-        const div = document.createElement("div");
-        div.className = "hl-tstep " + stt;
-        div.innerHTML =
-          '<div class="hl-ttime"></div><strong></strong><div class="muted" style="font-size:0.82rem"></div>';
-        setText(
-          div.querySelector(".hl-ttime"),
-          stt === "now" ? "En cours" : stt === "done" ? "Validé" : ""
-        );
-        setText(div.querySelector("strong"), s.label);
-        setText(div.querySelector(".muted"), s.note || "");
-        tl.appendChild(div);
-      });
-      if (app.status === "REJECTED") {
+      if (app.status === "REJECTED" || app.status === "WITHDRAWN") {
         const div = document.createElement("div");
         div.className = "hl-tstep now";
-        div.innerHTML =
-          '<div class="hl-ttime">Refus</div><strong>Refusée</strong><div class="muted" style="font-size:0.82rem"></div>';
-        setText(div.querySelector(".muted"), app.rejectionReason || "Motif communiqué");
-        tl.appendChild(div);
-      } else if (app.status === "WITHDRAWN") {
-        const div = document.createElement("div");
-        div.className = "hl-tstep now";
-        div.innerHTML =
-          '<div class="hl-ttime">Clôture</div><strong>Retirée</strong><div class="muted" style="font-size:0.82rem">Vous avez retiré cette candidature</div>';
+        div.innerHTML = '<div class="hl-ttime"></div><strong></strong><div class="muted" style="font-size:0.82rem"></div>';
+        setText(div.querySelector(".hl-ttime"), fmtWhen(when[app.status]));
+        setText(div.querySelector("strong"), STATUS_LABEL[app.status]);
+        setText(div.querySelector(".muted"), app.status === "REJECTED" ? app.rejectionReason || "" : "Vous avez retiré cette candidature");
         tl.appendChild(div);
       }
     }
@@ -333,10 +287,8 @@
       }
       const data = await HireLinkAPI.api("/ai/cv-summary", {
         method: "POST",
-        headers: HireLinkProduct ? HireLinkProduct.premiumHeaders("candidate") : {},
         body: {
           cvText: cvText,
-          premium: !!(HireLinkProduct && HireLinkProduct.isPremium("candidate")),
         },
       });
       const escaped = (data.content || "Pas de synthèse.")
@@ -377,7 +329,6 @@
         "ok"
       );
       await load();
-      showList();
     } catch (err) {
       HireLink.toast("Retrait impossible", err.message || "Réessayez", "danger");
     }
@@ -385,12 +336,9 @@
 
   async function load() {
     try {
-      const [mine, me] = await Promise.all([
-        HireLinkAPI.api("/applications/mine"),
-        HireLinkAPI.api("/me").catch(() => null),
-      ]);
+      const mine = await HireLinkAPI.api("/applications/mine");
       apps = Array.isArray(mine) ? mine : [];
-      profile = me;
+      const wanted = apps.find((x) => String(x.id) === new URLSearchParams(location.search).get("id"));
       const statusBar = el("app-status-filter");
       if (statusBar) {
         statusBar.querySelectorAll("button").forEach((b) => {
@@ -398,26 +346,13 @@
         });
       }
       renderList();
-      const params = new URLSearchParams(location.search);
-      const id = params.get("id");
-      if (id) {
-        const found = apps.find((a) => String(a.id) === String(id));
-        if (found) showDetail(found);
-        else if (apps[0]) showDetail(apps[0]);
-      } else if (apps[0]) {
-        showDetail(apps[0]);
-      }
+      if (wanted && wanted.id !== selectedId) showDetail(wanted);
     } catch (err) {
       HireLink.toast("Candidatures", err.message, "danger");
       setHtml(listRoot, '<p class="muted">Impossible de charger les candidatures.</p>');
     }
   }
 
-  const back = el("btn-back-list");
-  if (back) back.addEventListener("click", showList);
-  HireLinkShell.bindSearch(el("filter-apps"), () => {
-    if (!viewList || !viewList.hidden) renderList();
-  });
   const statusBar = el("app-status-filter");
   if (statusBar) {
     statusBar.addEventListener("click", (e) => {
@@ -425,12 +360,9 @@
       if (!btn) return;
       statusFilter = btn.getAttribute("data-st") || "all";
       statusBar.querySelectorAll("button").forEach((b) => b.classList.toggle("is-on", b === btn));
-      showList();
       renderList();
     });
   }
-  const prem = el("btn-premium");
-  if (prem) prem.onclick = () => HireLinkGrowth && HireLinkGrowth.showPremium("candidate");
 
   if (!listRoot) {
     HireLink.toast(

@@ -40,21 +40,6 @@ public class NotificationController {
         return Map.of("status", "READ", "id", id);
     }
 
-    public record CreateNotif(String title, String body, String kind) {}
-
-    @PostMapping
-    public Map<String, Object> create(@AuthenticationPrincipal User user, @RequestBody CreateNotif body) {
-        InAppNotification n = notificationService.create(user, body.title(), body.body(), body.kind());
-        Map<String, Object> row = new LinkedHashMap<>();
-        row.put("id", n.getId());
-        row.put("title", n.getTitle());
-        row.put("body", n.getBody());
-        row.put("kind", n.getKind());
-        row.put("read", n.isReadFlag());
-        row.put("at", n.getCreatedAt().toString());
-        return row;
-    }
-
     @DeleteMapping("/{id}")
     public Map<String, Object> delete(@AuthenticationPrincipal User user, @PathVariable Long id) {
         notificationService.delete(user, id);
