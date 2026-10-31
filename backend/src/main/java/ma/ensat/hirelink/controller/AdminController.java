@@ -13,7 +13,7 @@ import ma.ensat.hirelink.service.AuditService;
 import ma.ensat.hirelink.service.SessionService;
 import ma.ensat.hirelink.service.BillingCatalogService;
 import ma.ensat.hirelink.service.CompanyVerificationService;
-import ma.ensat.hirelink.service.NotificationService;
+import ma.ensat.hirelink.service.EventNotifier;
 import ma.ensat.hirelink.service.OrganizationService;
 import ma.ensat.hirelink.repository.ApplicationRepository;
 import ma.ensat.hirelink.repository.BillingInvoiceRepository;
@@ -45,7 +45,7 @@ public class AdminController {
     private final BillingCatalogService billingCatalogService;
     private final CompanyVerificationService companyVerificationService;
     private final BillingInvoiceRepository billingInvoiceRepository;
-    private final NotificationService notificationService;
+    private final EventNotifier eventNotifier;
     private final OrganizationService organizationService;
     private final AuditService audit;
     private final SessionService sessionService;
@@ -60,7 +60,7 @@ public class AdminController {
             BillingCatalogService billingCatalogService,
             CompanyVerificationService companyVerificationService,
             BillingInvoiceRepository billingInvoiceRepository,
-            NotificationService notificationService,
+            EventNotifier eventNotifier,
             OrganizationService organizationService,
             AuditService audit,
             SessionService sessionService,
@@ -70,7 +70,7 @@ public class AdminController {
         this.sessionService = sessionService;
         this.auditLogRepository = auditLogRepository;
         this.organizationService = organizationService;
-        this.notificationService = notificationService;
+        this.eventNotifier = eventNotifier;
         this.userRepository = userRepository;
         this.jobOfferRepository = jobOfferRepository;
         this.applicationRepository = applicationRepository;
@@ -225,12 +225,7 @@ public class AdminController {
                 }
             }
             for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
-                notificationService.push(m.getUser().getId(),
-                        verified ? "Entreprise vérifiée" : "Vérification retirée",
-                        verified
-                                ? "« " + org.getName() + " » est vérifiée : vous pouvez publier des offres."
-                                : "La vérification de « " + org.getName() + " » a été retirée par l'administration.",
-                        "SYSTEM");
+                eventNotifier.organizationDecision(org, verified, m.getUser().getId());
             }
         }
         if (body.get("planTier") != null) {

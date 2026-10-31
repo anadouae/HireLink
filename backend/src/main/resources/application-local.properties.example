@@ -20,3 +20,16 @@ hirelink.llm.mistral.api-key=COLLER_CLE_MISTRAL_ICI
 
 # --- Connexion Google (facultatif) ---------------------------------------------
 # hirelink.google.client-id=XXXX.apps.googleusercontent.com
+
+# --- E-mails (SMTP) ------------------------------------------------------------
+# Exemple Gmail : activez la validation en 2 etapes puis creez un "mot de passe d'application"
+# (compte Google > Securite > Mots de passe des applications). Ne jamais utiliser le mot de passe habituel du compte.
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=votre.adresse@gmail.com
+spring.mail.password=COLLER_ICI_LE_MOT_DE_PASSE_D_APPLICATION_A_16_CARACTERES
+hirelink.mail.from=HireLink <votre.adresse@gmail.com>
+# Autre serveur SMTP : changer host / port / username / password. Serveur sans chiffrement (outil de test local) :
+# spring.mail.properties.mail.smtp.starttls.enable=false
+# spring.mail.properties.mail.smtp.starttls.required=false
+# spring.mail.properties.mail.smtp.auth=false

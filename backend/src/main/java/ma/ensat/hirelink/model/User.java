@@ -48,6 +48,10 @@ public class User {
     @Column(name = "google_sub", length = 128, unique = true)
     private String googleSub;
 
+    /** Préférence : e-mails de suivi (candidatures, entretiens). Les e-mails de sécurité sont toujours envoyés ; {@code null} = oui. */
+    @Column(name = "email_notifications")
+    private Boolean emailNotifications;
+
     @Column(length = 500)
     private String skills;
 
@@ -210,6 +214,9 @@ public class User {
 
     public String getGoogleSub() { return googleSub; }
     public void setGoogleSub(String googleSub) { this.googleSub = googleSub; }
+
+    public boolean isEmailNotifications() { return emailNotifications == null || emailNotifications; }
+    public void setEmailNotifications(boolean emailNotifications) { this.emailNotifications = emailNotifications; }
 
     public String getSkills() { return skills; }
     public void setSkills(String skills) { this.skills = skills; }

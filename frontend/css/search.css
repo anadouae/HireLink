@@ -1,0 +1,71 @@
+/* Recherche partagée (js/search.js) : liste de suggestions, surlignage, état vide, drapeau dans le champ */
+
+.hl-combo { position: relative; min-width: 0; }
+.hl-combo > input { width: 100%; }
+.hl-combo > input.has-flag, .hl-combo > input[type].has-flag { padding-left: 2.35rem; }
+.hl-input-flag {
+  position: absolute;
+  left: 0.8rem;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  font-size: 1.15rem;
+  pointer-events: none;
+}
+
+.hl-combo-menu {
+  position: absolute;
+  z-index: 60;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 0.3rem;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(122, 32, 50, 0.2);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px rgba(42, 16, 22, 0.16);
+  animation: hl-combo-in 0.14s var(--ease, ease);
+}
+.hl-combo-menu[hidden] { display: none; }
+@keyframes hl-combo-in { from { opacity: 0; transform: translateY(-4px); } }
+
+.hl-combo-option {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+.hl-combo-option.is-active { background: var(--burgundy-soft, rgba(122, 32, 50, 0.1)); }
+.hl-combo-option.is-disabled { opacity: 0.5; cursor: not-allowed; }
+.hl-combo-option.is-custom { margin-top: 0.2rem; border-top: 1px dashed var(--line-strong, rgba(26, 18, 20, 0.16)); border-radius: 0 0 8px 8px; font-weight: 600; color: var(--burgundy, #7a2032); }
+.hl-combo-label { flex: 1; min-width: 0; }
+.hl-combo-hint { display: block; font-size: 0.74rem; color: var(--ink-faint, #8a8285); }
+.hl-combo-flag { font-size: 1.1rem; line-height: 1; }
+.hl-combo-sub { flex: none; font-size: 0.72rem; font-weight: 600; color: var(--ink-faint, #8a8285); }
+.hl-combo-empty { padding: 0.7rem 0.8rem; font-size: 0.85rem; color: var(--ink-soft, #5e5558); }
+
+mark.hl-mark {
+  padding: 0 0.1em;
+  border-radius: 3px;
+  color: inherit;
+  background: var(--champagne-soft, rgba(201, 166, 107, 0.4));
+  box-shadow: inset 0 -2px 0 var(--champagne, #c9a66b);
+}
+
+.hl-noresult {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--ink-soft, #5e5558);
+}
+.hl-noresult strong { color: var(--ink, #1a1214); font-size: 1rem; }
+.hl-noresult p { margin: 0; max-width: 42ch; font-size: 0.88rem; }
+.hl-noresult-mascotte { width: 112px; }

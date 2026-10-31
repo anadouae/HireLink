@@ -9,11 +9,11 @@
 
   /* ------------------------------------------------------------------ utils */
   var STATUS_FR = {
-    SUBMITTED: "Envoyée", SCREENING: "Présélection", SHORTLISTED: "Shortlist", INTERVIEW: "Entretien",
+    SUBMITTED: "Envoyée", SCREENING: "Présélection", SHORTLISTED: "Shortlist", INTERVIEW: "Entretien", OFFER: "Offre", HIRED: "Embauché(e)",
     REJECTED: "Refusée", WITHDRAWN: "Retirée",
   };
-  var ACTIVE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
-  var INTERVIEW_TYPE_FR = { PHONE: "Téléphone", VISIO: "Visio", ONSITE: "Présentiel", ASYNC: "Asynchrone" };
+  var ACTIVE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER"];
+  var INTERVIEW_TYPE_FR = { PHONE: "Téléphone", VISIO: "Visioconférence", ONSITE: "Sur site" };
   var ROLE_FR = { OWNER: "Owner", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Hiring Manager" };
 
   function esc(s) {
@@ -137,17 +137,17 @@
   function empty(el, o) {
     o = o || {};
     el.innerHTML =
-      '<div class="rc-state rc-fade"><div class="rc-state-ico">' + svg(o.icon || "inbox") + "</div><h3>" + esc(o.title || "Rien à afficher") + "</h3><p>" +
+      '<div class="rc-state rc-fade"><div class="rc-state-mascotte">' + Mascotte.markup({ pose: "vide" }) + "</div><h3>" + esc(o.title || "Rien à afficher") + "</h3><p>" +
       esc(o.text || "") + "</p>" + (o.action ? '<a class="btn btn-primary btn-sm" href="' + esc(o.action.href) + '">' + esc(o.action.label) + "</a>" : "") + "</div>";
   }
   function errorState(el, message, retry) {
     el.innerHTML =
-      '<div class="rc-state is-error rc-fade"><div class="rc-state-ico">' + svg("alert") + "</div><h3>Chargement impossible</h3><p>" + esc(message || "Erreur réseau") +
+      '<div class="rc-state is-error rc-fade"><div class="rc-state-mascotte">' + Mascotte.markup({ pose: "erreur" }) + "</div><h3>Chargement impossible</h3><p>" + esc(message || "Erreur réseau") +
       '</p><button type="button" class="btn btn-primary btn-sm" data-retry>Réessayer</button></div>';
     var b = el.querySelector("[data-retry]");
     if (b && retry) b.addEventListener("click", retry);
   }
-  function toast(t, m, tone) { if (global.HireLink) HireLink.toast(t, m, tone); }
+  var toast = Mascotte.toast;
   function busy(btn, on) { if (btn) { btn.classList.toggle("is-loading", !!on); btn.disabled = !!on; } }
 
   /* --------------------------------------------------------------- session */
@@ -205,6 +205,7 @@
         { id: "refusals", href: "admin.html#refusals", label: "Motifs de refus", icon: "ban" },
         { section: "Sécurité" },
         { id: "audit", href: "admin.html#audit", label: "Journal d’audit", icon: "file" },
+        { id: "emails", href: "admin.html#emails", label: "E-mails envoyés", icon: "inbox" },
         { id: "security", href: "security.html", label: "Mon compte", icon: "shield" },
       ],
       menu: [["security.html", "shield", "Sécurité du compte"]],
@@ -339,15 +340,71 @@
     var c = document.getElementById("rc-nav-count");
     if (c) { c.hidden = !unread; c.textContent = unread > 99 ? "99+" : String(unread); }
   }
+  var lastUnread = null;
+  /** Une notification arrive : embauche = célébration de la mascotte, sinon toast. Un seul passage, quelle que soit la voie (flux ou lecture). */
+  function announce(n) {
+    if (n.kind === "HIRED") Mascotte.celebrate({ title: n.title, description: n.body });
+    else toast(n.title, n.body, "info");
+  }
+  /** Lecture périodique : annonce la plus récente non lue si le compteur a augmenté depuis la dernière actualisation. */
+  function announceNewNotification(unread) {
+    var fresh = lastUnread !== null && unread > lastUnread && notifRows.find(function (n) { return !n.read; });
+    lastUnread = unread;
+    if (fresh) announce(fresh);
+  }
   function pullNotifs() {
     if (document.hidden) return Promise.resolve();
     return HireLinkAPI.api("/notifications").then(function (rows) {
       notifRows = rows || [];
-      paintBell(notifRows.filter(function (n) { return !n.read; }).length);
+      var unread = notifRows.filter(function (n) { return !n.read; }).length;
+      paintBell(unread);
+      announceNewNotification(unread);
       if (pops["rc-pop-notif"] && pops["rc-pop-notif"].classList.contains("is-open")) renderNotifPop();
       document.dispatchEvent(new CustomEvent("rc:notifications", { detail: notifRows }));
     }).catch(function () {});
   }
+  /**
+   * Temps réel : flux SSE ouvert avec un ticket à usage unique (le jeton d'accès ne passe pas dans l'URL).
+   * Reconnexion automatique avec attente croissante ; la lecture périodique reste le filet de sécurité.
+   */
+  var live = false;
+  var liveSource = null;
+  var liveRetry = 2000;
+  var liveStopped = false;
+  function onPush(n) {
+    if (notifRows.some(function (x) { return x.id === n.id; })) return;
+    notifRows.unshift(n);
+    var unread = notifRows.filter(function (x) { return !x.read; }).length;
+    lastUnread = unread;
+    paintBell(unread);
+    if (pops["rc-pop-notif"] && pops["rc-pop-notif"].classList.contains("is-open")) renderNotifPop();
+    document.dispatchEvent(new CustomEvent("rc:notifications", { detail: notifRows }));
+    document.dispatchEvent(new CustomEvent("hirelink:push", { detail: n }));
+    announce(n);
+  }
+  function openStream() {
+    if (liveStopped || !global.EventSource) return;
+    HireLinkAPI.api("/notifications/stream-ticket", { method: "POST" }).then(function (t) {
+      if (liveStopped) return;
+      var es = new EventSource(HireLinkAPI.API_BASE + "/notifications/stream?ticket=" + encodeURIComponent(t.ticket));
+      liveSource = es;
+      es.addEventListener("ready", function () { live = true; liveRetry = 2000; pullNotifs(); });
+      es.addEventListener("notification", function (e) { try { onPush(JSON.parse(e.data)); } catch (_) { /* message illisible : ignoré */ } });
+      es.onerror = function () {
+        es.close();
+        live = false;
+        if (!liveStopped) setTimeout(openStream, liveRetry = Math.min(liveRetry * 2, 60000));
+      };
+    }).catch(function () {
+      live = false;
+      if (!liveStopped) setTimeout(openStream, liveRetry = Math.min(liveRetry * 2, 60000));
+    });
+  }
+  document.addEventListener("hirelink:signout", function () {
+    liveStopped = true;
+    live = false;
+    if (liveSource) liveSource.close();
+  });
   function renderNotifPop() {
     var pop = pops["rc-pop-notif"];
     var rows = notifRows.slice(0, 6);
@@ -415,9 +472,10 @@
   }
 
   function logout() {
-    HireLink.openModal({ title: "Se déconnecter ?", description: "Vous devrez vous reconnecter pour accéder à votre espace.", confirmLabel: "Déconnexion", danger: true }).then(function (ok) {
+    Mascotte.confirm({ title: "Voulez-vous vraiment vous déconnecter ?", description: "Vous devrez vous reconnecter pour accéder à votre espace.", confirmLabel: "Déconnexion", danger: true }).then(function (ok) {
       if (!ok) return;
       cacheClear("");
+      Mascotte.goodbye(session);
       HireLinkAPI.logout().then(function () { location.href = "../auth.html?mode=login"; });
     });
   }
@@ -458,11 +516,14 @@
     if (want === "RECRUTEUR") data.org(function (o) { orgInfo = o; paintOrg(); document.dispatchEvent(new CustomEvent("rc:org", { detail: o })); });
     if (!CFG.noBell) {
       pullNotifs();
-      setInterval(pullNotifs, 45000);
+      openStream();
+      setInterval(function () { if (!live) pullNotifs(); }, 45000);
+      setInterval(pullNotifs, 300000);
       document.addEventListener("visibilitychange", function () { if (!document.hidden) pullNotifs(); });
     }
     window.addEventListener("storage", function (e) { if (String(e.key || "").indexOf("hirelink.photo.") === 0) paintProfile(); });
     if (CFG.premiumKey) syncPlan();
+    Mascotte.welcome(session);
     return session;
   }
 

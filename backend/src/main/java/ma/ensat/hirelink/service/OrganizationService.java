@@ -302,6 +302,8 @@ public class OrganizationService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Modification réservée Owner/Recruteur");
         }
         Organization org = m.getOrganization();
+        String previousName = org.getName();
+        String previousIce = org.getIce();
         if (name != null && !name.isBlank()) org.setName(name.trim());
         if (ice != null) org.setIce(ice.isBlank() ? null : ice.trim());
         if (website != null) org.setWebsite(website.isBlank() ? null : website.trim());
@@ -325,7 +327,10 @@ public class OrganizationService {
                 org.setLogoUrl(url);
             }
         }
-        if (org.getIce() != null && !org.getIce().isBlank() && org.getName() != null) {
+        // L'identité légale (nom + ICE) ne se revérifie que si elle change : enregistrer une présentation, un logo ou une
+        // ville ne retire jamais le statut « vérifiée » (y compris par l'admin). Changer le nom ou l'ICE relance la vérification.
+        boolean identityChanged = !sameText(previousName, org.getName()) || !sameText(previousIce, org.getIce());
+        if (identityChanged && org.getIce() != null && !org.getIce().isBlank() && org.getName() != null) {
             var result = companyVerificationService.verify(org.getIce(), org.getName(), user.getId(), user.getEmail());
             companyVerificationService.apply(user, result);
             companyVerificationService.applyToOrg(org, result);
@@ -336,6 +341,21 @@ public class OrganizationService {
         user.setCompanyIce(org.getIce());
         userRepository.save(user);
         return organizationRepository.save(org);
+    }
+
+    /** Nom d'entreprise affiché pour une offre : organisation du recruteur, sinon son entreprise déclarée, sinon son nom. */
+    public String companyNameOf(JobOffer offer) {
+        User recruiter = offer.getRecruiter();
+        return membershipRepository.findByUserIdAndActiveTrue(recruiter.getId()).stream()
+                .map(m -> m.getOrganization().getName())
+                .filter(n -> n != null && !n.isBlank())
+                .findFirst()
+                .orElseGet(() -> recruiter.getCompany() != null && !recruiter.getCompany().isBlank()
+                        ? recruiter.getCompany() : recruiter.getFullName());
+    }
+
+    private static boolean sameText(String a, String b) {
+        return (a == null ? "" : a.replaceAll("\\s+", "")).equalsIgnoreCase(b == null ? "" : b.replaceAll("\\s+", ""));
     }
 
     @Transactional

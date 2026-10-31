@@ -2,7 +2,6 @@
   const session = HireLinkApp.mount({});
   if (!session) return;
 
-  let skillsApi = null;
   let dirty = false;
   const saveBar = document.getElementById("profile-save-bar");
 
@@ -12,7 +11,7 @@
   }
 
   function bindDirty() {
-    ["pf-roles", "pf-loc", "pf-contracts", "pf-level"].forEach((id) => {
+    ["pf-level"].forEach((id) => {
       const node = document.getElementById(id);
       if (node) node.addEventListener("input", () => setDirty(true));
       if (node) node.addEventListener("change", () => setDirty(true));
@@ -22,7 +21,7 @@
   async function showAi(endpoint, body) {
     const box = document.getElementById("ai-result");
     box.hidden = false;
-    box.textContent = "Génération…";
+    box.innerHTML = Mascotte.waiting("Génération en cours…");
     try {
       const data = await HireLinkAPI.api(endpoint, {
         method: "POST",
@@ -38,51 +37,27 @@
     }
   }
 
-  function mountSkills(csv) {
-    const root = document.getElementById("pf-skills-picker");
-    const parts = (csv || "")
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
-    const langs = [];
-    const skills = [];
-    const knownLangs = new Set(
-      (window.HireLinkSkills && HireLinkSkills.LANGUAGES) || ["Français", "Arabe", "Anglais"]
-    );
-    parts.forEach((p) => {
-      const m = p.match(/^(.+?)\s*\(([^)]+)\)\s*$/);
-      const name = m ? m[1].trim() : p;
-      if (knownLangs.has(name) || m) {
-        langs.push({ name, level: m ? m[2].trim() : "B2" });
-      } else {
-        skills.push(name);
-      }
-    });
-    if (window.HireLinkSkills) {
-      skillsApi = HireLinkSkills.mount(root, {
-        selected: skills,
-        languages: langs.length ? langs : [],
-        onChange: (v) => {
-          document.getElementById("pf-skills").value = [v.skillsCsv, v.languagesCsv]
-            .filter(Boolean)
-            .join(", ");
-          setDirty(true);
-        },
-      });
-    }
+  function paintSkillBoxes() {
+    HireLinkSkills.renderBoxes(document.getElementById("pf-skill-boxes"), document.getElementById("pf-skills").value,
+      { empty: "Ajoutez vos compétences : elles seront classées automatiquement par catégorie." });
   }
 
-  const ROLE_CHOICES = [
-    "Développeuse Full-Stack Java",
-    "Développeur Full-Stack",
-    "Data Analyst",
-    "Ingénieur DevOps",
-    "QA / Test",
-    "Product Manager",
-    "UX Designer",
-  ];
-  const LOC_CHOICES = ["Tétouan", "Tanger", "Casablanca", "Rabat", "Fès", "Marrakech", "Remote", "Hybride", "Présentiel"];
-  const CONTRACT_CHOICES = ["CDI", "CDD", "Stage", "Alternance", "Freelance"];
+  function mountSkills(csv) {
+    document.getElementById("pf-skills").value = csv;
+    HireLinkSkills.mount(document.getElementById("pf-skills-picker"), {
+      value: csv,
+      onChange: (v) => {
+        document.getElementById("pf-skills").value = v;
+        paintSkillBoxes();
+        setDirty(true);
+      },
+    });
+    paintSkillBoxes();
+  }
+
+  const MODES = ["Remote", "Hybride", "Présentiel"];
+  const pickers = {};
+
   let meId = session.userId || session.id || "me";
   let pendingFile = null;
   let cvObjectUrl = "";
@@ -121,58 +96,84 @@
     if (input) input.click();
   }
 
-  function paintChips(rootId, inputId, options) {
+  /**
+   * Sélection multiple : pastilles retirables, propositions pendant la saisie (avec drapeaux pour les lieux),
+   * saisie libre acceptée avec Entrée, et choix rapides (modes de travail, types de contrat).
+   * La valeur est conservée dans un champ caché, séparée par des virgules.
+   */
+  function multiPicker(rootId, hiddenId, o) {
     const root = document.getElementById(rootId);
-    const input = document.getElementById(inputId);
-    if (!root || !input) return;
-    const have = input.value
-      .split(",")
-      .map((s) => s.trim().toLowerCase())
-      .filter(Boolean);
-    root.innerHTML = options
-      .map((opt) => {
-        const label = typeof opt === "object" && opt ? (opt.label || "") : String(opt || "");
-        const flag = typeof opt === "object" && opt && opt.flag ? opt.flag + " " : "";
-        const on = have.indexOf(label.toLowerCase()) >= 0;
-        return '<button type="button" class="choice-chip' + (on ? " is-on" : "") + '" data-v="' + label.replace(/"/g, "") + '">' + flag + label + "</button>";
-      })
-      .join("");
-    root.querySelectorAll("button").forEach((btn) => {
-      btn.onclick = () => {
-        const v = btn.getAttribute("data-v");
-        const cur = input.value.split(",").map((s) => s.trim()).filter(Boolean);
-        const i = cur.findIndex((x) => x.toLowerCase() === v.toLowerCase());
-        if (i >= 0) cur.splice(i, 1);
-        else cur.push(v);
-        input.value = cur.join(", ");
-        setDirty(true);
-        paintChips(rootId, inputId, options);
-      };
-    });
-  }
+    const hidden = document.getElementById(hiddenId);
+    root.classList.add("mp");
+    const selected = document.createElement("div");
+    selected.className = "choice-chips";
+    selected.setAttribute("aria-live", "polite");
+    const quick = document.createElement("div");
+    quick.className = "choice-chips";
+    root.append(selected);
+    let input = null;
+    if (o.kind) {
+      input = document.createElement("input");
+      input.type = "text";
+      input.className = "form-control mp-input";
+      input.placeholder = o.placeholder;
+      input.setAttribute("aria-label", o.label);
+      root.append(input);
+    }
+    if (o.quick) root.append(quick);
 
-  function bindSuggest(valueId, chipsId, kind) {
-    const chips = document.getElementById(chipsId);
-    if (!chips || chips.dataset.suggest === "1") return;
-    chips.dataset.suggest = "1";
-    const box = document.createElement("input");
-    box.type = "search";
-    box.className = "form-control";
-    box.placeholder = kind === "place" ? "Rechercher une ville…" : "Rechercher un métier…";
-    box.setAttribute("autocomplete", "off");
-    box.style.margin = "0.35rem 0 0.5rem";
-    chips.parentElement.insertBefore(box, chips);
-    let timer = 0;
-    box.addEventListener("input", () => {
-      clearTimeout(timer);
-      const q = box.value.trim();
-      if (q.length < 2) return;
-      timer = setTimeout(() => {
-        HireLinkAPI.api("/catalog/suggest?kind=" + kind + "&q=" + encodeURIComponent(q))
-          .then((rows) => paintChips(chipsId, valueId, rows || []))
-          .catch(() => {});
-      }, 220);
-    });
+    const values = () => hidden.value.split(",").map((x) => x.trim()).filter(Boolean);
+    const has = (v) => values().some((x) => HireLinkSearch.compact(x) === HireLinkSearch.compact(v));
+    function write(list) {
+      hidden.value = list.join(", ");
+      setDirty(true);
+      paint();
+    }
+    function toggle(v) {
+      const list = values();
+      const i = list.findIndex((x) => HireLinkSearch.compact(x) === HireLinkSearch.compact(v));
+      if (i >= 0) list.splice(i, 1);
+      else list.push(v);
+      write(list);
+    }
+    function chip(label, on, flag) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "choice-chip" + (on ? " is-on" : "");
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+      b.textContent = (flag ? flag + " " : "") + label;
+      b.addEventListener("click", () => toggle(label));
+      return b;
+    }
+    function paint() {
+      selected.replaceChildren();
+      values().forEach((v) => {
+        const b = chip(v, true, o.flags ? HireLinkPlaces.flagOf(v) : "");
+        b.textContent += "  ✕";
+        b.setAttribute("aria-label", "Retirer " + v);
+        selected.appendChild(b);
+      });
+      quick.replaceChildren();
+      (o.quick || []).forEach((v) => { if (!has(v)) quick.appendChild(chip(v, false, "")); });
+    }
+    function add(v) {
+      const clean = String(v || "").replace(/\s+/g, " ").trim();
+      if (clean && !has(clean)) write(values().concat(clean));
+      if (input) input.value = "";
+    }
+    if (input) {
+      HireLinkSearch.combobox(input, {
+        minChars: 1,
+        emptyText: "Aucune proposition : Entrée pour ajouter votre saisie.",
+        fetch: (q) => HireLinkAPI.api("/catalog/suggest?kind=" + o.kind + "&q=" + encodeURIComponent(q))
+          .then((rows) => (rows || []).map((r) => ({ key: r.label, label: r.label, flag: r.flag, sub: r.country })))
+          .catch(() => []),
+        onPick: (item) => add(item.label),
+        onEnter: add,
+      });
+    }
+    paint();
+    return { refresh: paint };
   }
 
   function paintFacts(p) {
@@ -272,11 +273,14 @@
       document.getElementById("pf-loc").value = p.preferredLocations || "";
       document.getElementById("pf-contracts").value = p.preferredContracts || "";
       document.getElementById("pf-level").value = p.experienceLevel || "";
-      paintChips("pf-role-chips", "pf-roles", []);
-      paintChips("pf-loc-chips", "pf-loc", []);
-      paintChips("pf-contract-chips", "pf-contracts", CONTRACT_CHOICES);
-      bindSuggest("pf-roles", "pf-role-chips", "job");
-      bindSuggest("pf-loc", "pf-loc-chips", "place");
+      await HireLinkPlaces.ready();
+      const contracts = await HireLinkAPI.api("/catalog/suggest?kind=contract&q=").catch(() => []);
+      if (!pickers.roles) {
+        pickers.roles = multiPicker("pf-role-chips", "pf-roles", { kind: "job", label: "Ajouter un métier recherché", placeholder: "Un métier : Développeuse Full-Stack, Data Analyst…" });
+        pickers.loc = multiPicker("pf-loc-chips", "pf-loc", { kind: "place", flags: true, quick: MODES, label: "Ajouter un lieu", placeholder: "Une ville ou un pays : Tétouan, Paris…" });
+        pickers.contracts = multiPicker("pf-contract-chips", "pf-contracts", { quick: (contracts || []).map((c) => c.label) });
+      }
+      Object.values(pickers).forEach((x) => x.refresh());
       paintFacts(p);
       showPhoto(localStorage.getItem(photoKey()), p.fullName);
       if (location.hash === "#photo-upload") {
@@ -292,9 +296,7 @@
 
   document.getElementById("profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const skills =
-      (skillsApi && skillsApi.getCombinedCsv()) ||
-      document.getElementById("pf-skills").value;
+    const skills = document.getElementById("pf-skills").value;
     const btn = document.getElementById("btn-save-profile");
     if (btn) btn.disabled = true;
     try {
@@ -309,7 +311,7 @@
         },
       });
       setDirty(false);
-      HireLink.toast("Profil enregistré", "Vos offres seront mises à jour", "ok");
+      toastSaved("Profil enregistré", "Vos offres seront mises à jour");
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
     } finally {
@@ -406,7 +408,7 @@
       }
       const box = document.getElementById("cv-empty");
       if (box) box.innerHTML = "<p class='muted'>Sections ajoutées au profil.</p>";
-      HireLink.toast("CV confirmé", "Les sections font partie du profil", "ok");
+      toastSaved("CV confirmé", "Les sections font partie du profil");
     } catch (err) {
       HireLink.toast("CV", err.message, "danger");
     } finally {
@@ -506,6 +508,13 @@
 
   function scoreOf(s) {
     return scoreBreakdown(s).total;
+  }
+
+  /** Profil à 100 % : grand moment (une seule fois par compte) ; sinon simple confirmation. */
+  function toastSaved(title, message) {
+    const complete = scoreOf(sectionState()) === 100 &&
+      Mascotte.celebrate({ cle: "profil-complet", title: "Profil à 100 % !", description: "Votre dossier est complet : les recruteurs vous découvrent sous votre meilleur jour." });
+    if (!complete) HireLink.toast(title, message, "ok");
   }
 
   function paintAnalysis() {

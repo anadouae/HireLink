@@ -4,8 +4,7 @@
 
   const STATUS_LABEL = HireLinkApp.STATUS_FR;
 
-  /** Fin positive produit = INTERVIEW (pas d'étape Offre / Accepté). */
-  const PIPELINE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
+  const PIPELINE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"];
 
   let apps = [];
   let selectedId = null;
@@ -16,7 +15,7 @@
 
   function statusBadgeClass(st) {
     if (st === "REJECTED" || st === "WITHDRAWN") return "badge-danger";
-    if (st === "INTERVIEW") return "badge-ok";
+    if (st === "INTERVIEW" || st === "OFFER" || st === "HIRED") return "badge-ok";
     if (st === "SHORTLISTED") return "badge-rose";
     if (st === "SCREENING") return "badge-info";
     return "badge-chrome";
@@ -62,15 +61,16 @@
   function renderList() {
     if (!listRoot) return;
     const filter = el("rc-search");
-    const q = ((filter && filter.value) || "").trim().toLowerCase();
-    const filtered = apps.filter((a) => {
-      if (statusFilter === "active" && ["REJECTED", "WITHDRAWN"].includes(a.status)) return false;
-      if (statusFilter !== "all" && statusFilter !== "active" && a.status !== statusFilter) return false;
-      if (!q) return true;
-      return ((a.jobTitle || "") + " " + (a.status || "") + " " + (a.rejectionReason || ""))
-        .toLowerCase()
-        .includes(q);
+    const q = ((filter && filter.value) || "").trim();
+    const byStatus = apps.filter((a) => {
+      if (statusFilter === "active") return !["REJECTED", "WITHDRAWN"].includes(a.status);
+      return statusFilter === "all" || a.status === statusFilter;
     });
+    const filtered = HireLinkSearch.rank(byStatus, q, [
+      { get: (a) => a.jobTitle, weight: 3 },
+      { get: (a) => STATUS_LABEL[a.status], weight: 2 },
+      { get: (a) => a.rejectionReason, weight: 1 },
+    ]);
 
     const statusBar = el("app-status-filter");
     if (statusBar) {
@@ -103,12 +103,11 @@
     }
 
     if (!filtered.length) {
-      setHtml(
-        listRoot,
-        q
-          ? '<p class="muted">Aucun résultat pour « ' + q + " ».</p>"
-          : '<p class="muted">Aucune candidature — <a href="candidate.html?scope=mine">voir les offres</a>.</p>'
-      );
+      if (q) {
+        HireLinkSearch.emptyState(listRoot, q, { onClear: () => { filter.value = ""; renderList(); } });
+      } else {
+        HireLinkApp.empty(listRoot, { title: "Aucune candidature", text: "Postulez à une offre pour suivre ici chaque étape.", action: { href: "candidate.html?scope=mine", label: "Voir les offres" } });
+      }
       return;
     }
 
@@ -120,7 +119,7 @@
       row.dataset.id = String(a.id);
       const sla = a.slaRemainingDays;
       const slaTxt =
-        ["INTERVIEW", "REJECTED", "WITHDRAWN"].includes(a.status)
+        ["INTERVIEW", "OFFER", "HIRED", "REJECTED", "WITHDRAWN"].includes(a.status)
           ? ""
           : sla == null
             ? ""
@@ -161,6 +160,7 @@
       row.addEventListener("click", () => showDetail(a, true));
       listRoot.appendChild(row);
     });
+    HireLinkSearch.mark(listRoot, q);
   }
 
   function stepState(status, step) {
@@ -172,31 +172,26 @@
     const idx = PIPELINE.indexOf(status);
     const sIdx = PIPELINE.indexOf(step);
     if (sIdx < 0 || idx < 0) return "todo";
-    if (status === "INTERVIEW" && step === "INTERVIEW") return "done";
+    if (status === "HIRED" && step === "HIRED") return "done";
     if (sIdx < idx) return "done";
     if (sIdx === idx) return "now";
     return "todo";
   }
 
-  const INTERVIEW_TYPE_FR = HireLinkApp.INTERVIEW_TYPE_FR;
-
-  /** Bloc « Votre entretien » : date, format, lieu ou lien, consignes de l'entreprise. */
+  /** Bloc « Votre entretien » : carte complète avec confirmation de présence et export calendrier. */
   function paintInterview(app) {
     const box = el("d-interview");
     if (!box) return;
-    if (app.status !== "INTERVIEW" || !app.interviewAt) { box.hidden = true; return; }
-    const loc = app.interviewLocation || "";
-    const where = /^https?:\/\//i.test(loc)
-      ? '<a href="' + HireLinkApp.esc(loc) + '" target="_blank" rel="noopener">Rejoindre l’entretien</a>'
-      : HireLinkApp.esc(loc || "À préciser par l’entreprise");
+    box.replaceChildren();
+    if (!app.interviewAt) { box.hidden = true; return; }
     box.hidden = false;
-    box.className = "cand-interview";
-    box.innerHTML =
-      '<h3 class="timeline-title" style="margin-top:0">Votre entretien</h3>' +
-      '<p style="margin:0 0 .25rem"><strong>' + HireLinkApp.esc(HireLinkApp.fmtDateTime(app.interviewAt)) + "</strong> · " + HireLinkApp.esc(INTERVIEW_TYPE_FR[app.interviewType] || app.interviewType || "") + "</p>" +
-      '<p style="margin:0 0 .25rem">' + where + "</p>" +
-      (app.interviewNotes ? '<p class="muted" style="margin:0">' + HireLinkApp.esc(app.interviewNotes) + "</p>" : "");
+    const title = document.createElement("h3");
+    title.className = "timeline-title";
+    title.textContent = "Votre entretien";
+    const reload = () => load();
+    box.append(title, HireLinkInterview.card(app, { role: app.status === "INTERVIEW" ? "candidate" : "readonly", onChange: reload }));
   }
+
 
   async function paintDetail(app) {
     setText(el("d-title"), app.jobTitle || "Candidature");
@@ -309,7 +304,7 @@
   }
 
   async function withdraw(c) {
-    const ok = await HireLink.openModal({
+    const ok = await Mascotte.confirm({
       title: "Retirer cette candidature ?",
       description: c.jobTitle,
       confirmLabel: "Retirer",
@@ -347,6 +342,10 @@
       }
       renderList();
       if (wanted && wanted.id !== selectedId) showDetail(wanted);
+      else {
+        const current = apps.find((x) => x.id === selectedId);
+        if (current) paintDetail(current);
+      }
     } catch (err) {
       HireLink.toast("Candidatures", err.message, "danger");
       setHtml(listRoot, '<p class="muted">Impossible de charger les candidatures.</p>');
@@ -373,4 +372,6 @@
     return;
   }
   load();
+  // Une notification en direct (statut, entretien) met la liste à jour sans recharger la page.
+  document.addEventListener("hirelink:push", () => load());
 })();

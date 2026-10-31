@@ -69,6 +69,51 @@ public class Application {
     @Column(name = "interview_notes", length = 1000)
     private String interviewNotes;
 
+    /** Nature de l'entretien : HR, TECHNICAL, MANAGER ou FINAL. */
+    @Column(name = "interview_kind", length = 16)
+    private String interviewKind;
+
+    @Column(name = "interview_duration_minutes")
+    private Integer interviewDurationMinutes;
+
+    /** Fuseau horaire dans lequel l'heure a été saisie (Africa/Casablanca par défaut). */
+    @Column(name = "interview_time_zone", length = 40)
+    private String interviewTimeZone;
+
+    /** Lien de visioconférence (https). */
+    @Column(name = "interview_video_url", length = 300)
+    private String interviewVideoUrl;
+
+    @Column(name = "interview_phone", length = 30)
+    private String interviewPhone;
+
+    /** Lien de plan (https) pour un entretien sur site. */
+    @Column(name = "interview_map_url", length = 300)
+    private String interviewMapUrl;
+
+    /** Personnes qui mènent l'entretien. */
+    @Column(name = "interview_participants", length = 300)
+    private String interviewParticipants;
+
+    /** SCHEDULED ou CANCELLED ; {@code null} pour un entretien antérieur à ce champ (planifié). */
+    @Column(name = "interview_status", length = 16)
+    private String interviewStatus;
+
+    @Column(name = "interview_cancel_reason", length = 300)
+    private String interviewCancelReason;
+
+    /** Réponse du candidat : PENDING, CONFIRMED ou UNAVAILABLE. */
+    @Column(name = "interview_confirmation", length = 16)
+    private String interviewConfirmation;
+
+    /** Message du candidat s'il n'est pas disponible. */
+    @Column(name = "interview_candidate_note", length = 300)
+    private String interviewCandidateNote;
+
+    /** Rappel 24 h avant déjà envoyé. */
+    @Column(name = "interview_reminder_sent")
+    private Boolean interviewReminderSent;
+
     /** Note interne RH lors d’une avancée d’étape */
     @Column(name = "advance_note", length = 1000)
     private String advanceNote;
@@ -149,6 +194,42 @@ public class Application {
 
     public String getInterviewNotes() { return interviewNotes; }
     public void setInterviewNotes(String interviewNotes) { this.interviewNotes = interviewNotes; }
+
+    public String getInterviewKind() { return interviewKind; }
+    public void setInterviewKind(String interviewKind) { this.interviewKind = interviewKind; }
+
+    public Integer getInterviewDurationMinutes() { return interviewDurationMinutes; }
+    public void setInterviewDurationMinutes(Integer interviewDurationMinutes) { this.interviewDurationMinutes = interviewDurationMinutes; }
+
+    public String getInterviewTimeZone() { return interviewTimeZone; }
+    public void setInterviewTimeZone(String interviewTimeZone) { this.interviewTimeZone = interviewTimeZone; }
+
+    public String getInterviewVideoUrl() { return interviewVideoUrl; }
+    public void setInterviewVideoUrl(String interviewVideoUrl) { this.interviewVideoUrl = interviewVideoUrl; }
+
+    public String getInterviewPhone() { return interviewPhone; }
+    public void setInterviewPhone(String interviewPhone) { this.interviewPhone = interviewPhone; }
+
+    public String getInterviewMapUrl() { return interviewMapUrl; }
+    public void setInterviewMapUrl(String interviewMapUrl) { this.interviewMapUrl = interviewMapUrl; }
+
+    public String getInterviewParticipants() { return interviewParticipants; }
+    public void setInterviewParticipants(String interviewParticipants) { this.interviewParticipants = interviewParticipants; }
+
+    public String getInterviewStatus() { return interviewStatus; }
+    public void setInterviewStatus(String interviewStatus) { this.interviewStatus = interviewStatus; }
+
+    public String getInterviewCancelReason() { return interviewCancelReason; }
+    public void setInterviewCancelReason(String interviewCancelReason) { this.interviewCancelReason = interviewCancelReason; }
+
+    public String getInterviewConfirmation() { return interviewConfirmation; }
+    public void setInterviewConfirmation(String interviewConfirmation) { this.interviewConfirmation = interviewConfirmation; }
+
+    public String getInterviewCandidateNote() { return interviewCandidateNote; }
+    public void setInterviewCandidateNote(String interviewCandidateNote) { this.interviewCandidateNote = interviewCandidateNote; }
+
+    public Boolean getInterviewReminderSent() { return interviewReminderSent; }
+    public void setInterviewReminderSent(Boolean interviewReminderSent) { this.interviewReminderSent = interviewReminderSent; }
 
     public String getAdvanceNote() { return advanceNote; }
     public void setAdvanceNote(String advanceNote) { this.advanceNote = advanceNote; }

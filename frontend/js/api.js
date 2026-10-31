@@ -99,6 +99,7 @@
   function clearAuth() {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(SESSION_KEY);
+    document.dispatchEvent(new Event("hirelink:signout"));
   }
 
   function getSession() {

@@ -81,8 +81,9 @@ public class SecurityConfig {
                     auth.requestMatchers("/error").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/offers/public").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/organizations/public").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/v1/notifications/stream").permitAll() // authentifié par ticket à usage unique
                             .requestMatchers(HttpMethod.GET, "/api/v1/media/org-logos/**").permitAll()
-                            .requestMatchers(HttpMethod.GET, "/api/v1/catalog/suggest").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/v1/catalog/suggest", "/api/v1/catalog/places").permitAll()
                             .requestMatchers("/api/v1/admin/**").hasRole("ADMINISTRATEUR")
                             .anyRequest().authenticated();
                 })

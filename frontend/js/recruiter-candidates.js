@@ -16,11 +16,12 @@
   const GROUPS = {
     active: (a) => RC.ACTIVE.includes(a.status),
     interview: (a) => a.status === "INTERVIEW",
+    hired: (a) => a.status === "HIRED",
     rejected: (a) => a.status === "REJECTED",
     withdrawn: (a) => a.status === "WITHDRAWN",
     all: () => true,
   };
-  const TONE = { SUBMITTED: "", SCREENING: "warn", SHORTLISTED: "info", INTERVIEW: "ok", REJECTED: "danger", WITHDRAWN: "" };
+  const TONE = { SUBMITTED: "", SCREENING: "warn", SHORTLISTED: "info", INTERVIEW: "ok", OFFER: "ok", HIRED: "ok", REJECTED: "danger", WITHDRAWN: "" };
 
   function offerOptions() {
     const m = new Map();
@@ -34,7 +35,7 @@
 
   function paint() {
     if (!loaded) return;
-    const q = (($("rc-search") || {}).value || "").trim().toLowerCase();
+    const q = (($("rc-search") || {}).value || "").trim();
     const oid = $("cand-offer").value;
     const scoped = apps.filter((a) => oid === "all" || String(a.jobOfferId) === oid);
     $("cand-chips").querySelectorAll("button").forEach((b) => {
@@ -45,9 +46,12 @@
       em.textContent = scoped.filter(GROUPS[k]).length;
     });
     let list = scoped.filter(GROUPS[view]);
-    if (q) list = list.filter((a) => ((a.candidateName || "") + " " + (a.candidateEmail || "") + " " + (a.jobTitle || "") + " " + (a.candidateSkills || "")).toLowerCase().includes(q));
+    list = HireLinkSearch.rank(list, q, [
+      { get: (a) => a.candidateName, weight: 3 }, { get: (a) => a.jobTitle, weight: 2 },
+      { get: (a) => a.candidateSkills, weight: 2 }, { get: (a) => a.candidateEmail, weight: 1 },
+    ]);
     const sort = $("cand-sort").value;
-    list.sort((a, b) => {
+    if (!q) list.sort((a, b) => {
       if (sort === "match") return (b.matchScore || 0) - (a.matchScore || 0);
       if (sort === "sla") return (a.slaRemainingDays == null ? 999 : a.slaRemainingDays) - (b.slaRemainingDays == null ? 999 : b.slaRemainingDays);
       if (sort === "name") return String(a.candidateName).localeCompare(String(b.candidateName), "fr");
@@ -57,9 +61,10 @@
     const body = $("cand-body");
     if (!list.length) {
       body.innerHTML = '<tr><td colspan="7"></td></tr>';
+      if (q) { HireLinkSearch.emptyState(body.firstChild.firstChild, q, { onClear: () => { $("rc-search").value = ""; paint(); } }); return; }
       RC.empty(body.firstChild.firstChild, apps.length
-        ? { icon: "search", title: "Aucun candidat ne correspond", text: "Changez de filtre ou de recherche." }
-        : { icon: "users", title: "Aucune candidature reçue", text: "Les candidatures apparaîtront ici dès que des candidats postuleront à vos offres publiées." });
+        ? { title: "Aucun candidat ne correspond", text: "Changez de filtre." }
+        : { title: "Aucune candidature reçue", text: "Les candidatures apparaîtront ici dès que des candidats postuleront à vos offres publiées." });
       return;
     }
     body.innerHTML = list.map((a) => {
@@ -74,6 +79,7 @@
         (m != null ? '<span class="badge ' + (m >= 80 ? "badge-ok" : m >= 55 ? "badge-info" : "badge-rose") + '">' + m + " %</span>" : "—") +
         "</td><td>" + slaCell + "</td><td>" + RC.fmtDate(a.submittedAt) + '</td><td><div class="rc-row-actions"><a class="btn btn-soft btn-sm" href="recruiter-pipeline.html?app=' + a.id + '">Ouvrir le dossier</a></div></td></tr>';
     }).join("");
+    HireLinkSearch.mark(body, q);
   }
 
   function load(force) {

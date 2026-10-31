@@ -25,7 +25,6 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -38,6 +37,8 @@ import java.util.stream.Stream;
 public class JobOfferService {
 
     public static final int REPORT_SUSPEND_THRESHOLD = 3;
+    /** Score à partir duquel une offre « correspond au profil » du candidat. */
+    public static final double PROFILE_MATCH_THRESHOLD = 50.0;
 
     private final JobOfferRepository jobOfferRepository;
     private final SkillMatchingService matchingService;
@@ -49,6 +50,9 @@ public class JobOfferService {
     private final MembershipRepository membershipRepository;
     private final OrganizationService organizationService;
     private final TagRepository tagRepository;
+    private final SkillCatalogService skillCatalog;
+    private final OfferTermsService offerTerms;
+    private final TextMatcher textMatcher;
 
     public JobOfferService(
             JobOfferRepository jobOfferRepository,
@@ -60,9 +64,15 @@ public class JobOfferService {
             NotificationService notificationService,
             MembershipRepository membershipRepository,
             OrganizationService organizationService,
-            TagRepository tagRepository
+            TagRepository tagRepository,
+            SkillCatalogService skillCatalog,
+            OfferTermsService offerTerms,
+            TextMatcher textMatcher
     ) {
         this.tagRepository = tagRepository;
+        this.skillCatalog = skillCatalog;
+        this.offerTerms = offerTerms;
+        this.textMatcher = textMatcher;
         this.organizationService = organizationService;
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
@@ -79,6 +89,7 @@ public class JobOfferService {
         Stream<ApiDtos.JobOfferResponse> stream = jobOfferRepository
                 .findByPublishedTrueAndSuspendedFalse()
                 .stream()
+                .filter(o -> !isExpired(o))
                 .map(o -> toDto(o, viewer));
         if (viewer != null && viewer.getRole() == Role.CANDIDAT) {
             return stream
@@ -239,11 +250,11 @@ public class JobOfferService {
         }
         o.setTitle(req.title().trim());
         o.setDescription(req.description().trim());
-        o.setRequiredSkills(req.requiredSkills());
-        o.setTags(resolveTags(req.requiredSkills()));
+        o.setRequiredSkills(skillCatalog.normaliseList(req.requiredSkills(), 500));
+        o.setTags(resolveTags(o.getRequiredSkills()));
         o.setLocation(req.location());
-        o.setContractType(req.contractType());
         o.setResponseSlaDays(req.responseSlaDays());
+        offerTerms.apply(o, req);
 
         var scan = fraudOfferScanService.scan(req.title(), req.description());
         if (wantPublish && scan.blockPublish()) {
@@ -268,10 +279,13 @@ public class JobOfferService {
 
     private ApiDtos.JobOfferResponse toDto(JobOffer o, User viewer) {
         Double match = null;
+        List<String> matched = List.of();
+        List<String> missing = List.of();
         if (viewer != null && viewer.getRole() == Role.CANDIDAT) {
-            double base = matchingService.computeMatchScore(viewer.getSkills(), o.getRequiredSkills());
-            double boost = preferenceBoost(viewer, o);
-            match = Math.min(100.0, Math.round((base + boost) * 100.0) / 100.0);
+            var detail = matchingService.explain(viewer.getSkills(), o.getRequiredSkills());
+            match = Math.min(100.0, Math.round((detail.score() + preferenceBoost(viewer, o)) * 100.0) / 100.0);
+            matched = detail.covered();
+            missing = detail.missing();
         }
         return new ApiDtos.JobOfferResponse(
                 o.getId(),
@@ -293,8 +307,34 @@ public class JobOfferService {
                 companyVerified(o),
                 companyLogo(o),
                 companyWebsite(o),
-                companySector(o)
+                companySector(o),
+                o.getCompensationType(),
+                o.getSalaryMin(),
+                o.getSalaryMax(),
+                o.getSalaryPeriod(),
+                o.getSalaryBasis(),
+                o.getCurrency(),
+                o.getDurationMonths(),
+                o.getStartDate(),
+                o.getStartAsap(),
+                o.getAgreementRequired(),
+                o.getHiringPossible(),
+                o.getProbationMonths(),
+                o.getSchedule(),
+                o.getWorkMode(),
+                o.getExperienceLevel(),
+                o.getEducationLevel(),
+                o.getPositions(),
+                o.getDeadline(),
+                o.getBenefits(),
+                matched,
+                missing,
+                match != null && match >= PROFILE_MATCH_THRESHOLD
         );
+    }
+
+    private static boolean isExpired(JobOffer o) {
+        return o.getDeadline() != null && o.getDeadline().isBefore(java.time.LocalDate.now());
     }
 
     private Organization orgOf(JobOffer o) {
@@ -305,12 +345,7 @@ public class JobOfferService {
     }
 
     private String companyName(JobOffer o) {
-        Organization org = orgOf(o);
-        if (org != null && org.getName() != null && !org.getName().isBlank()) return org.getName();
-        if (o.getRecruiter().getCompany() != null && !o.getRecruiter().getCompany().isBlank()) {
-            return o.getRecruiter().getCompany();
-        }
-        return o.getRecruiter().getFullName();
+        return organizationService.companyNameOf(o);
     }
 
     private boolean companyVerified(JobOffer o) {
@@ -345,12 +380,10 @@ public class JobOfferService {
 
     private boolean tokenOverlap(String csv, String haystack) {
         if (csv == null || csv.isBlank() || haystack == null || haystack.isBlank()) return false;
-        String hay = haystack.toLowerCase(Locale.ROOT);
         return Arrays.stream(csv.split("[,;|/]+"))
                 .map(String::trim)
-                .filter(s -> s.length() >= 2)
-                .map(s -> s.toLowerCase(Locale.ROOT))
-                .anyMatch(hay::contains);
+                .filter(t -> t.length() >= 2)
+                .anyMatch(t -> textMatcher.contains(t, haystack));
     }
 
     private String safe(String s) {

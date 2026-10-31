@@ -10,13 +10,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
-  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261029a"></script>
-  <script src="../js/theme.js?v=20261029a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/offer-card.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
+  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101a"></script>
+  <script src="../js/theme.js?v=20261101a"></script>
 </head>
 <body class="rc" data-role="CANDIDAT" data-active="offers">
   <div class="rc-app">
@@ -34,10 +38,10 @@
 
         <div class="filter-board">
           <div class="filter-board-head">
-            <div class="cand-filters" id="offer-scope" role="tablist">
-              <button type="button" class="is-on" data-scope="all">Toutes les offres</button>
-              <button type="button" data-scope="mine">Pour vous</button>
-            </div>
+            <label class="match-toggle">
+              <span class="switch"><input type="checkbox" id="match-only" role="switch" /><span class="slider"></span></span>
+              <span class="match-toggle-text"><strong>Offres qui correspondent à mon profil</strong><small id="match-hint"></small></span>
+            </label>
             <span class="muted" id="filter-summary"></span>
             <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-filters">Effacer les filtres</button>
           </div>
@@ -107,14 +111,18 @@
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/ui.js?v=20261029a"></script>
-  <script defer src="../js/api.js?v=20261029a"></script>
-  <script defer src="../js/in-app-help.js?v=20261029a"></script>
-  <script defer src="../js/app-shell.js?v=20261029a"></script>
-  <script defer src="../js/growth.js?v=20261029a"></script>
-  <script defer src="../js/skills-catalog.js?v=20261029a"></script>
-  <script defer src="../js/apply-wizard.js?v=20261029a"></script>
-  <script defer src="../js/suggest.js?v=20261029a"></script>
-  <script defer src="../js/candidate-home.js?v=20261029a"></script>
+  <script defer src="../js/mascotte.js?v=20261101a"></script>
+  <script defer src="../js/ui.js?v=20261101a"></script>
+  <script defer src="../js/api.js?v=20261101a"></script>
+  <script defer src="../js/search.js?v=20261101a"></script>
+  <script defer src="../js/places.js?v=20261101a"></script>
+  <script defer src="../js/in-app-help.js?v=20261101a"></script>
+  <script defer src="../js/app-shell.js?v=20261101a"></script>
+  <script defer src="../js/growth.js?v=20261101a"></script>
+  <script defer src="../js/skills.js?v=20261101a"></script>
+  <script defer src="../js/offer-card.js?v=20261101a"></script>
+  <script defer src="../js/apply-wizard.js?v=20261101a"></script>
+  <script defer src="../js/suggest.js?v=20261101a"></script>
+  <script defer src="../js/candidate-home.js?v=20261101a"></script>
 </body>
 </html>

@@ -275,6 +275,9 @@ public class DataSeeder {
                 """.stripIndent().replace("\n", " ").trim(),
                 "Java,Spring Boot,MySQL,REST,Git,React",
                 "Tétouan · Hybride", "CDI", 5, true, now.minus(18, ChronoUnit.DAYS));
+        paid(offers, oJava, 12000, 16000, PayPeriod.MONTH, PayBasis.GROSS);
+        terms(offers, oJava, WorkMode.HYBRID, ExperienceLevel.INTERMEDIATE, EducationLevel.BAC_5, 2,
+                "Assurance santé, Tickets restaurant, Télétravail partiel, Formation continue");
 
         JobOffer oData = offer(offers, nadia,
                 "Data Analyst — matching & reporting recrutement",
@@ -285,6 +288,8 @@ public class DataSeeder {
                 """.stripIndent().replace("\n", " ").trim(),
                 "Python,SQL,ETL,Pandas,Power BI",
                 "Tanger · Présentiel 3j/semaine", "CDI", 7, true, now.minus(12, ChronoUnit.DAYS));
+        paid(offers, oData, 10000, 13000, PayPeriod.MONTH, PayBasis.GROSS);
+        terms(offers, oData, WorkMode.HYBRID, ExperienceLevel.JUNIOR, EducationLevel.BAC_5, 1, "Assurance santé, Transport");
 
         JobOffer oQa = offer(offers, karim,
                 "Ingénieur QA — automatisation pipeline recrutement",
@@ -294,6 +299,8 @@ public class DataSeeder {
                 """.stripIndent().replace("\n", " ").trim(),
                 "Selenium,JUnit,Postman,Cypress,API testing",
                 "Remote Maroc", "CDI", 4, true, now.minus(9, ChronoUnit.DAYS));
+        terms(offers, oQa, WorkMode.REMOTE, ExperienceLevel.JUNIOR, EducationLevel.BAC_5, 1, "Matériel fourni, Horaires flexibles");
+        negotiable(offers, oQa);
 
         JobOffer oUx = offer(offers, nadia,
                 "Product Designer UX — parcours candidat & recruteur",
@@ -303,6 +310,8 @@ public class DataSeeder {
                 """.stripIndent().replace("\n", " ").trim(),
                 "Figma,UX Research,UI,Design system",
                 "Rabat · Remote possible", "CDI", 5, true, now.minus(6, ChronoUnit.DAYS));
+        paid(offers, oUx, 9000, 12000, PayPeriod.MONTH, PayBasis.GROSS);
+        terms(offers, oUx, WorkMode.HYBRID, ExperienceLevel.INTERMEDIATE, EducationLevel.BAC_5, 1, "Assurance santé, Primes annuelles");
 
         JobOffer oDevops = offer(offers, karim,
                 "Ingénieur DevOps junior — CI/CD & staging",
@@ -312,6 +321,8 @@ public class DataSeeder {
                 """.stripIndent().replace("\n", " ").trim(),
                 "Docker,Linux,CI/CD,Git,Kubernetes",
                 "Casablanca · Hybride", "CDI", 6, true, now.minus(4, ChronoUnit.DAYS));
+        paid(offers, oDevops, 8000, 10000, PayPeriod.MONTH, PayBasis.GROSS);
+        terms(offers, oDevops, WorkMode.HYBRID, ExperienceLevel.JUNIOR, EducationLevel.BAC_5, 1, "Assurance santé, Tickets restaurant");
 
         JobOffer oDraft = offer(offers, nadia,
                 "Chargé(e) de recrutement IT — Nord du Maroc",
@@ -321,6 +332,37 @@ public class DataSeeder {
                 """.stripIndent().replace("\n", " ").trim(),
                 "Recrutement,ATS,Communication,IT",
                 "Tétouan", "CDI", 5, false, now.minus(2, ChronoUnit.DAYS));
+
+        JobOffer oPfe = offer(offers, karim,
+                "Stage PFE — moteur de recommandation de profils",
+                """
+                Au sein de l'équipe data d'Atlas Digital, vous concevez un moteur qui rapproche les compétences \
+                des candidats de celles des offres. Encadrement par un data analyst senior, revues hebdomadaires.
+                """.stripIndent().replace("\n", " ").trim(),
+                "Python,Pandas,SQL,Machine Learning,Anglais (B2)",
+                "Tétouan · Hybride", "PFE", 6, true, now.minus(3, ChronoUnit.DAYS));
+        paid(offers, oPfe, 3000, 3000, PayPeriod.MONTH, PayBasis.NET);
+        oPfe.setSalaryMax(null);
+        oPfe.setDurationMonths(6);
+        oPfe.setAgreementRequired(true);
+        oPfe.setHiringPossible(true);
+        terms(offers, oPfe, WorkMode.HYBRID, ExperienceLevel.NONE, EducationLevel.BAC_5, 1, "Transport, Tickets restaurant, Matériel fourni");
+        oPfe.setStartAsap(false);
+        oPfe.setStartDate(java.time.LocalDate.now().plusDays(75));
+        offers.save(oPfe);
+
+        JobOffer oFree = offer(offers, nadia,
+                "Mission freelance — intégration d'une API de paiement",
+                """
+                Mission de deux mois pour intégrer une API de paiement dans notre module de facturation \
+                (Spring Boot, tests d'intégration, documentation).
+                """.stripIndent().replace("\n", " ").trim(),
+                "Java,Spring Boot,REST,Git,Français (Natif)",
+                "Remote Maroc", "Freelance", 4, true, now.minus(2, ChronoUnit.DAYS));
+        paid(offers, oFree, 2500, 3200, PayPeriod.DAY, PayBasis.GROSS);
+        terms(offers, oFree, WorkMode.REMOTE, ExperienceLevel.SENIOR, null, 1, "Horaires flexibles");
+        oFree.setDurationMonths(2);
+        offers.save(oFree);
 
         // Scorecard sur l'offre Java
         ScorecardCriterion cTech = criterion(criteria, oJava.getId(), "Maîtrise Java / Spring", 3, false);
@@ -337,6 +379,10 @@ public class DataSeeder {
         a1.setInterviewAt(now.plus(3, ChronoUnit.DAYS));
         a1.setInterviewLocation("Google Meet");
         a1.setInterviewNotes("Entretien technique 45 min + culture culture");
+        a1.setInterviewKind("TECHNICAL");
+        a1.setInterviewTimeZone("Africa/Casablanca");
+        a1.setInterviewDurationMinutes(45);
+        a1.setInterviewVideoUrl("https://meet.google.com/atl-java-demo");
         a1.setAssignedHmUserId(hm.getId());
         a1.setAdvanceNote("Bon niveau Spring — à confirmer sur étude de cas");
         applications.save(a1);
@@ -370,6 +416,10 @@ public class DataSeeder {
         a6.setInterviewType("PHONE");
         a6.setInterviewAt(now.plus(1, ChronoUnit.DAYS));
         a6.setInterviewLocation("+212 6 XX XX XX XX");
+        a6.setInterviewPhone("+212 6 00 00 00 00");
+        a6.setInterviewKind("HR");
+        a6.setInterviewTimeZone("Africa/Casablanca");
+        a6.setInterviewDurationMinutes(30);
         a6.setAssignedHmUserId(hm.getId());
         applications.save(a6);
 
@@ -391,6 +441,20 @@ public class DataSeeder {
                 "Stage DevOps GitLab CI / Docker chez un intégrateur Casa.",
                 "CV_Imane_Chraibi.pdf", "PROFILE");
 
+        // Issues positives : une offre d'embauche en attente de réponse, une embauche confirmée
+        Application a10 = apply(applications, matching, imane, oPfe, ApplicationStatus.OFFER,
+                now.minus(12, ChronoUnit.DAYS),
+                "PFE de fin d'études sur la recommandation de contenus : le sujet correspond à mon parcours.",
+                "CV_Imane_Chraibi.pdf", "PROFILE");
+        a10.setAdvanceNote("Excellent entretien technique, proposition de stage PFE envoyée.");
+        applications.save(a10);
+        Application a11 = apply(applications, matching, omar, oFree, ApplicationStatus.HIRED,
+                now.minus(20, ChronoUnit.DAYS),
+                "Disponible dès maintenant pour une mission de deux mois, déjà intégré des API de paiement.",
+                "CV_Omar_Fassi.pdf", "UPLOAD");
+        a11.setAdvanceNote("Embauché pour la mission : démarrage la semaine prochaine.");
+        applications.save(a11);
+
         // Timeline
         hist(history, a1.getId(), null, "SUBMITTED", sara.getId(), now.minus(10, ChronoUnit.DAYS), null);
         hist(history, a1.getId(), "SUBMITTED", "SCREENING", nadia.getId(), now.minus(8, ChronoUnit.DAYS),
@@ -398,6 +462,18 @@ public class DataSeeder {
         hist(history, a1.getId(), "SCREENING", "SHORTLISTED", karim.getId(), now.minus(6, ChronoUnit.DAYS), null);
         hist(history, a1.getId(), "SHORTLISTED", "INTERVIEW", hm.getId(), now.minus(4, ChronoUnit.DAYS),
                 "{\"type\":\"VISIO\"}");
+
+        hist(history, a10.getId(), null, "SUBMITTED", imane.getId(), now.minus(12, ChronoUnit.DAYS), null);
+        hist(history, a10.getId(), "SUBMITTED", "SCREENING", karim.getId(), now.minus(10, ChronoUnit.DAYS), null);
+        hist(history, a10.getId(), "SCREENING", "SHORTLISTED", karim.getId(), now.minus(8, ChronoUnit.DAYS), null);
+        hist(history, a10.getId(), "SHORTLISTED", "INTERVIEW", hm.getId(), now.minus(6, ChronoUnit.DAYS), "{\"type\":\"VISIO\"}");
+        hist(history, a10.getId(), "INTERVIEW", "OFFER", karim.getId(), now.minus(2, ChronoUnit.DAYS), null);
+        hist(history, a11.getId(), null, "SUBMITTED", omar.getId(), now.minus(20, ChronoUnit.DAYS), null);
+        hist(history, a11.getId(), "SUBMITTED", "SCREENING", nadia.getId(), now.minus(18, ChronoUnit.DAYS), null);
+        hist(history, a11.getId(), "SCREENING", "SHORTLISTED", nadia.getId(), now.minus(16, ChronoUnit.DAYS), null);
+        hist(history, a11.getId(), "SHORTLISTED", "INTERVIEW", nadia.getId(), now.minus(14, ChronoUnit.DAYS), "{\"type\":\"PHONE\"}");
+        hist(history, a11.getId(), "INTERVIEW", "OFFER", nadia.getId(), now.minus(10, ChronoUnit.DAYS), null);
+        hist(history, a11.getId(), "OFFER", "HIRED", nadia.getId(), now.minus(8, ChronoUnit.DAYS), null);
 
         hist(history, a4.getId(), null, "SUBMITTED", youssef.getId(), now.minus(8, ChronoUnit.DAYS), null);
         hist(history, a4.getId(), "SUBMITTED", "SCREENING", nadia.getId(), now.minus(6, ChronoUnit.DAYS), null);
@@ -427,6 +503,10 @@ public class DataSeeder {
                 "Imane Chraibi a postulé sur Ingénieur DevOps junior.", "APPLICATION", false);
         notif(notifications, youssef.getId(), "Dossier shortlisté",
                 "Votre profil Data Analyst est en shortlist chez Atlas Digital.", "PIPELINE", false);
+        notif(notifications, imane.getId(), "Une offre pour vous !",
+                "Atlas Digital vous propose le poste « Stage PFE — moteur de recommandation de profils ».", "STATUS", false);
+        notif(notifications, omar.getId(), "Vous êtes embauché(e) !",
+                "Bienvenue chez Atlas Digital : « Mission freelance — intégration d'une API de paiement ».", "HIRED", true);
         notif(notifications, amina.getId(), "Décision sur une candidature",
                 "Votre candidature Développeur Full-Stack n'a pas été retenue (motif catalogue).", "DECISION", true);
 
@@ -534,8 +614,10 @@ public class DataSeeder {
                 users.save(owner);
                 owners.put(row[0], owner);
             }
-            offer(offers, owner, row[3], row[8], row[6], row[2] + " · " + row[5], row[4],
+            String contract = "Premier emploi".equals(row[4]) ? "CDI" : row[4];
+            JobOffer posted = offer(offers, owner, row[3], row[8], row[6], row[2] + " · " + row[5], contract,
                     Integer.parseInt(row[7]), true, now.minus(i + 2L, ChronoUnit.HOURS));
+            marketplaceTerms(offers, posted, row[5], i);
             i++;
         }
         log.info("Catalogue entreprises chargé — {} offres au total", offers.count());
@@ -608,6 +690,58 @@ public class DataSeeder {
             u.setPasswordHash(encoder.encode(rawPassword));
         }
         return repo.save(u);
+    }
+
+    private static void paid(JobOfferRepository repo, JobOffer o, int min, int max, PayPeriod period, PayBasis basis) {
+        o.setCompensationType(CompensationType.PAID);
+        o.setSalaryMin(min);
+        o.setSalaryMax(max);
+        o.setSalaryPeriod(period);
+        o.setSalaryBasis(basis);
+        o.setCurrency("MAD");
+        repo.save(o);
+    }
+
+    private static void negotiable(JobOfferRepository repo, JobOffer o) {
+        o.setCompensationType(CompensationType.NEGOTIABLE);
+        repo.save(o);
+    }
+
+    private static void terms(JobOfferRepository repo, JobOffer o, WorkMode mode, ExperienceLevel experience,
+                              EducationLevel education, int positions, String benefits) {
+        o.setWorkMode(mode);
+        o.setExperienceLevel(experience);
+        o.setEducationLevel(education);
+        o.setPositions(positions);
+        o.setBenefits(benefits);
+        o.setStartAsap(true);
+        o.setDeadline(java.time.LocalDate.now().plusDays(45));
+        if (o.getContractType().equals("CDI")) o.setProbationMonths(3);
+        repo.save(o);
+    }
+
+    /** Conditions plausibles pour les offres du catalogue : stage gratifié avec convention, CDI avec fourchette. */
+    private static void marketplaceTerms(JobOfferRepository repo, JobOffer o, String modeLabel, int i) {
+        WorkMode mode = modeLabel.startsWith("Hybride") ? WorkMode.HYBRID : modeLabel.startsWith("Remote") ? WorkMode.REMOTE : WorkMode.ONSITE;
+        if (o.getContractType().equals("Stage")) {
+            paid(repo, o, 2000 + (i % 4) * 500, 2000 + (i % 4) * 500, PayPeriod.MONTH, PayBasis.NET);
+            o.setSalaryMax(null);
+            o.setDurationMonths(3 + i % 4);
+            o.setAgreementRequired(true);
+            o.setHiringPossible(i % 2 == 0);
+            terms(repo, o, mode, ExperienceLevel.NONE, EducationLevel.BAC_4, 1, "Transport, Repas");
+            o.setStartAsap(false);
+            o.setStartDate(java.time.LocalDate.now().plusDays(60));
+            repo.save(o);
+            return;
+        }
+        if (i % 3 == 2) {
+            negotiable(repo, o);
+        } else {
+            paid(repo, o, 6000 + (i % 5) * 1000, 9000 + (i % 5) * 1000, PayPeriod.MONTH, PayBasis.GROSS);
+        }
+        terms(repo, o, mode, i % 2 == 0 ? ExperienceLevel.JUNIOR : ExperienceLevel.INTERMEDIATE, EducationLevel.BAC_5, 1 + i % 3,
+                "Assurance santé, Tickets restaurant");
     }
 
     private static JobOffer offer(

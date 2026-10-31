@@ -1,0 +1,66 @@
+/* Entretiens (js/interview.js) : formulaire de planification et carte d'affichage */
+
+.iv-form { display: grid; gap: 0.9rem; }
+.iv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0.8rem 1rem; }
+.iv-field { display: grid; gap: 0.3rem; align-content: start; min-width: 0; }
+.iv-field.is-wide { grid-column: 1 / -1; }
+.iv-field > label, .iv-label { font-size: 0.82rem; font-weight: 700; }
+.iv-field input[type="text"], .iv-field input[type="url"], .iv-field input[type="tel"], .iv-field input[type="date"], .iv-field input[type="time"], .iv-field select, .iv-field textarea {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--line-strong, rgba(26, 18, 20, 0.16));
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  font: inherit;
+}
+.iv-field input:focus, .iv-field select:focus, .iv-field textarea:focus { outline: 2px solid rgba(122, 32, 50, 0.3); border-color: var(--burgundy, #7a2032); }
+.iv-hint { color: var(--ink-faint, #8a8285); font-size: 0.78rem; }
+.iv-error { margin: 0; font-size: 0.8rem; font-weight: 600; color: var(--danger, #9b2c2c); }
+.iv-error:empty { display: none; }
+.iv-field.has-error input, .iv-field.has-error select { border-color: var(--danger, #9b2c2c); }
+
+.iv-types { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 0.5rem; }
+.iv-types input { position: absolute; opacity: 0; pointer-events: none; }
+.iv-types label {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--line-strong, rgba(26, 18, 20, 0.16));
+  border-radius: 12px;
+  cursor: pointer;
+  background: var(--surface, #fff);
+  transition: border-color 0.15s, background 0.15s;
+}
+.iv-types label small { color: var(--ink-faint, #8a8285); font-size: 0.74rem; }
+.iv-types label:hover { border-color: var(--burgundy, #7a2032); }
+.iv-types input:checked + label { border-color: var(--burgundy, #7a2032); background: var(--burgundy-soft, rgba(122, 32, 50, 0.1)); box-shadow: 0 0 0 1px var(--burgundy, #7a2032) inset; }
+.iv-types input:focus-visible + label { outline: 3px solid var(--champagne, #c9a66b); outline-offset: 2px; }
+
+.iv-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(122, 32, 50, 0.22);
+  border-left: 4px solid var(--burgundy, #7a2032);
+  box-shadow: var(--shadow-sm);
+}
+.iv-card.is-cancelled { border-left-color: var(--danger, #9b2c2c); opacity: 0.85; }
+.iv-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; flex-wrap: wrap; }
+.iv-kind { display: block; font-weight: 700; font-size: 1.02rem; }
+.iv-mode { font-size: 0.8rem; color: var(--ink-soft, #5e5558); }
+.iv-when { margin: 0; font-size: 1rem; }
+.iv-when small { color: var(--ink-soft, #5e5558); }
+.iv-card.is-cancelled .iv-when { text-decoration: line-through; }
+.iv-facts { display: grid; gap: 0.45rem; margin: 0; }
+.iv-facts div { display: grid; grid-template-columns: 8.5rem 1fr; gap: 0.6rem; font-size: 0.88rem; }
+.iv-facts dt { color: var(--ink-faint, #8a8285); font-weight: 600; }
+.iv-facts dd { margin: 0; overflow-wrap: anywhere; }
+.iv-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.iv-danger { color: var(--danger, #9b2c2c); }
+
+.iv-list-wrap, #iv-list { display: grid; gap: 1rem; }
+.iv-item { display: grid; gap: 0.5rem; }
+.iv-item > header { display: flex; justify-content: space-between; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.iv-item > header span { display: block; font-size: 0.84rem; color: var(--ink-soft, #5e5558); }

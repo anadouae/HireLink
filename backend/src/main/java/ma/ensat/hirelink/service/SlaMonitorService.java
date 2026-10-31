@@ -22,7 +22,8 @@ public class SlaMonitorService {
 
     private static final Logger log = LoggerFactory.getLogger(SlaMonitorService.class);
     private static final Set<ApplicationStatus> TERMINAL = EnumSet.of(
-            ApplicationStatus.INTERVIEW, ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN
+            ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER, ApplicationStatus.HIRED,
+            ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN
     );
 
     private final ApplicationRepository applicationRepository;

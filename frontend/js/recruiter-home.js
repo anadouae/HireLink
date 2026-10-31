@@ -28,21 +28,20 @@
   function renderInbox() {
     const root = $("inbox-list");
     if (!ready.apps) return;
-    const q = (($("rc-search") || {}).value || "").trim().toLowerCase();
+    const q = (($("rc-search") || {}).value || "").trim();
     const open = apps.filter((a) => !CLOSED.includes(a.status));
-    const matched = q
-      ? open.filter((a) => ((a.candidateName || "") + " " + (a.jobTitle || "") + " " + (RC.STATUS_FR[a.status] || "")).toLowerCase().includes(q))
-      : open;
-    const sorted = matched.slice().sort((a, b) => {
+    const matched = HireLinkSearch.rank(open, q, [
+      { get: (a) => a.candidateName, weight: 3 }, { get: (a) => a.jobTitle, weight: 2 }, { get: (a) => RC.STATUS_FR[a.status], weight: 1 },
+    ]);
+    const sorted = q ? matched : matched.slice().sort((a, b) => {
       const sa = a.slaRemainingDays == null ? 99 : a.slaRemainingDays;
       const sb = b.slaRemainingDays == null ? 99 : b.slaRemainingDays;
       return sa !== sb ? sa - sb : (b.matchScore || 0) - (a.matchScore || 0);
     });
     const top = sorted.slice(0, q ? 20 : 7);
     if (!top.length) {
-      RC.empty(root, q
-        ? { icon: "search", title: "Aucun résultat", text: "Aucun dossier ne correspond à « " + q + " »." }
-        : { icon: "inbox", title: "Inbox vide", text: "Publiez une offre pour recevoir des candidatures.", action: RC.canManage() ? { href: "recruiter-offers.html#new", label: "Nouvelle offre" } : null });
+      if (q) { HireLinkSearch.emptyState(root, q, { onClear: () => { $("rc-search").value = ""; renderInbox(); } }); return; }
+      RC.empty(root, { title: "Inbox vide", text: "Publiez une offre pour recevoir des candidatures.", action: RC.canManage() ? { href: "recruiter-offers.html#new", label: "Nouvelle offre" } : null });
       return;
     }
     root.innerHTML = top.map((c) => {
@@ -89,15 +88,15 @@
       $("sla-nudge-sub").textContent = "Le dépassement du délai de 1ʳᵉ réponse est visible côté candidat. Traitez d’abord : " + (urgent[0].candidateName || "ce candidat") + ".";
     } else nudge.hidden = true;
 
-    const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
-    const labels = ["Reçues", "Présélection", "Shortlist", "Entretien"];
+    const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"];
+    const labels = ["Reçues", "Présélection", "Shortlist", "Entretien", "Offre", "Embauché(e)"];
     const counts = keys.map((k) => apps.filter((a) => a.status === k).length);
     const max = Math.max(1, ...counts);
     $("chart-bars").innerHTML = keys.map((k, i) =>
       '<div class="rc-barrow"><span>' + labels[i] + '</span><div class="rc-track"><i data-w="' + Math.round((counts[i] / max) * 100) + '"></i></div><b>' + counts[i] + "</b></div>").join("");
     requestAnimationFrame(() => requestAnimationFrame(() => document.querySelectorAll("#chart-bars i").forEach((i) => (i.style.width = i.dataset.w + "%"))));
     const received = counts.reduce((a, b) => a + b, 0);
-    const moved = counts[1] + counts[2] + counts[3];
+    const moved = counts.slice(1).reduce((a, b) => a + b, 0);
     $("conversion").textContent = !received
       ? "Aucune candidature ouverte pour l’instant."
       : RC.plural(moved, "dossier") + " " + (moved > 1 ? "ont" : "a") + " quitté la réception, sur " + received + " ouverts.";
@@ -109,10 +108,10 @@
   function renderInterviews() {
     const root = $("upcoming");
     const now = Date.now();
-    const list = apps.filter((a) => a.status === "INTERVIEW" && a.interviewAt && new Date(a.interviewAt).getTime() >= now - 3600e3)
+    const list = apps.filter((a) => a.status === "INTERVIEW" && a.interviewAt && a.interviewStatus !== "CANCELLED" && new Date(a.interviewAt).getTime() >= now - 3600e3)
       .sort((a, b) => new Date(a.interviewAt) - new Date(b.interviewAt)).slice(0, 4);
     if (!list.length) {
-      RC.empty(root, { icon: "calendar", title: "Aucun entretien planifié", text: "Les entretiens apparaissent ici dès qu’un dossier passe à l’étape Entretien.", action: { href: "recruiter-pipeline.html", label: "Ouvrir le pipeline" } });
+      RC.empty(root, { title: "Aucun entretien planifié", text: "Les entretiens apparaissent ici dès qu’un dossier passe à l’étape Entretien.", action: { href: "recruiter-pipeline.html", label: "Ouvrir le pipeline" } });
       return;
     }
     root.innerHTML = list.map((a) => {
@@ -127,7 +126,7 @@
   function renderActivity(rows) {
     const root = $("activity");
     const list = (rows || []).slice(0, 5);
-    if (!list.length) { RC.empty(root, { icon: "bell", title: "Rien de nouveau", text: "Les nouvelles candidatures et rappels s’afficheront ici." }); return; }
+    if (!list.length) { RC.empty(root, { title: "Rien de nouveau", text: "Les nouvelles candidatures et rappels s’afficheront ici." }); return; }
     root.innerHTML = list.map((n) =>
       '<div class="rc-item"><div class="rc-avatar" style="' + (n.read ? "" : "background:var(--burgundy);color:#fff") + '">' + RC.svg("bell").replace("<svg", '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"') +
       '</div><div class="rc-item-main"><strong>' + esc(n.title) + "</strong><span>" + esc(n.body) + '</span></div><small class="rc-muted">' + esc(RC.ago(n.at)) + "</small></div>").join("");
@@ -154,4 +153,5 @@
   document.addEventListener("rc:notifications", (e) => renderActivity(e.detail));
   renderActivity(RC.notifications.all());
   load();
+  document.addEventListener("hirelink:push", () => { RC.data.invalidate(); load(); });
 })();

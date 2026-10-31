@@ -42,11 +42,15 @@
 
   async function run(btn, outId, path, body) {
     RC.busy(btn, true);
+    const out = $(outId);
+    out.hidden = false;
+    out.innerHTML = Mascotte.waiting("Réflexion en cours…");
     try {
       const data = await HireLinkAPI.api(path, { method: "POST", body, timeoutMs: 60000 });
       show(outId, data);
       loadCredits();
     } catch (err) {
+      out.hidden = true;
       RC.toast(err.status === 402 ? "Crédits IA épuisés" : "Assistant IA", err.message, err.status === 402 ? "warn" : "danger");
     } finally { RC.busy(btn, false); }
   }

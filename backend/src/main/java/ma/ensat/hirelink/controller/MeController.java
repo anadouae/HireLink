@@ -3,12 +3,14 @@ package ma.ensat.hirelink.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import ma.ensat.hirelink.dto.ApiDtos;
+import ma.ensat.hirelink.model.ContractType;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.UserRepository;
 import ma.ensat.hirelink.service.CompanyVerificationService;
 import ma.ensat.hirelink.service.CvStorage;
 import ma.ensat.hirelink.service.OrganizationService;
+import ma.ensat.hirelink.service.SkillCatalogService;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -27,18 +29,21 @@ public class MeController {
     private final CompanyVerificationService companyVerificationService;
     private final OrganizationService organizationService;
     private final CvStorage cvStorage;
+    private final SkillCatalogService skillCatalog;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MeController(
             UserRepository userRepository,
             CompanyVerificationService companyVerificationService,
             OrganizationService organizationService,
-            CvStorage cvStorage
+            CvStorage cvStorage,
+            SkillCatalogService skillCatalog
     ) {
         this.userRepository = userRepository;
         this.companyVerificationService = companyVerificationService;
         this.organizationService = organizationService;
         this.cvStorage = cvStorage;
+        this.skillCatalog = skillCatalog;
     }
 
     /** Le candidat confirme les sections. Elles entrent dans le profil seulement ici. */
@@ -114,7 +119,7 @@ public class MeController {
             user.setFullName(body.fullName().trim());
         }
         if (body.skills() != null) {
-            user.setSkills(body.skills().trim());
+            user.setSkills(skillCatalog.normaliseList(body.skills(), 500));
         }
         if (body.company() != null) {
             user.setCompany(body.company().trim());
@@ -126,7 +131,7 @@ public class MeController {
             user.setPreferredLocations(body.preferredLocations().trim());
         }
         if (body.preferredContracts() != null) {
-            user.setPreferredContracts(body.preferredContracts().trim());
+            user.setPreferredContracts(ContractType.cleanPreferences(body.preferredContracts()));
         }
         if (body.experienceLevel() != null) {
             user.setExperienceLevel(body.experienceLevel().trim());
@@ -145,7 +150,6 @@ public class MeController {
         if (body.phoneCountry() != null) user.setPhoneCountry(body.phoneCountry().trim());
         if (body.city() != null && !body.city().isBlank()) {
             user.setCity(body.city().trim());
-            user.setPreferredLocations(body.city().trim());
         }
         if (body.nationality() != null) user.setNationality(body.nationality().trim());
         if (body.birthDate() != null && !body.birthDate().isBlank()) {
@@ -159,6 +163,7 @@ public class MeController {
         if (body.workMode() != null) user.setWorkMode(body.workMode().trim());
         if (body.gender() != null) user.setGender(body.gender().trim());
         if (body.availability() != null) user.setAvailability(body.availability().trim());
+        if (body.emailNotifications() != null) user.setEmailNotifications(body.emailNotifications());
         if (user.getRole() == Role.RECRUTEUR && body.companyIce() != null && !body.companyIce().isBlank()) {
             var v = companyVerificationService.verify(
                     body.companyIce(),
@@ -225,7 +230,8 @@ public class MeController {
                 u.getGender(),
                 u.getAvailability(),
                 u.getSchool(),
-                u.getWorkMode()
+                u.getWorkMode(),
+                u.isEmailNotifications()
         );
     }
 

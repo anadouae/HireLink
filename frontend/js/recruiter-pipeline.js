@@ -7,27 +7,33 @@
   });
   if (!session) return;
 
-  // Périmètre : fin positive à INTERVIEW (pas d'étape Offre / Accepté).
+  // Parcours positif : Reçues → Présélection → Shortlist → Entretien → Offre → Embauché(e).
   const COLUMNS = [
     { key: "SUBMITTED", label: "Reçues", tone: "neutral" },
     { key: "SCREENING", label: "Présélection", tone: "warn" },
     { key: "SHORTLISTED", label: "Shortlist", tone: "info" },
-    { key: "INTERVIEW", label: "Entretien", tone: "ok", end: true },
+    { key: "INTERVIEW", label: "Entretien", tone: "ok" },
+    { key: "OFFER", label: "Offre", tone: "ok" },
+    { key: "HIRED", label: "Embauché(e)", tone: "ok", end: true },
   ];
   const NEXT = {
     SUBMITTED: "SCREENING",
     SCREENING: "SHORTLISTED",
     SHORTLISTED: "INTERVIEW",
+    INTERVIEW: "OFFER",
+    OFFER: "HIRED",
   };
   const STEP_HINT = {
     SCREENING: "Présélection : CV et compétences vs fiche de poste.",
     SHORTLISTED: "Shortlist : candidat retenu pour un échange humain.",
-    INTERVIEW: "Planifiez l’entretien : type, date et lieu ou lien.",
+    INTERVIEW: "Planifiez l’entretien : mode, date, lieu ou lien. Le candidat reçoit une invitation.",
+    OFFER: "Offre : l’entreprise propose le poste au candidat, qui en est informé par e-mail.",
+    HIRED: "Embauche : le candidat a accepté. Un message de félicitations lui est envoyé.",
   };
 
   let allApps = [];
   let refusalCatalog = [];
-  const ACTIVE = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"]);
+  const ACTIVE = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER"]);
 
   function selectedOfferId() {
     const v = (document.getElementById("pipe-offer") || {}).value || "all";
@@ -91,7 +97,7 @@
     const el = document.getElementById("funnel-strip");
     if (!el) return;
     const by = {};
-    ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "REJECTED", "WITHDRAWN"].forEach(
+    ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED", "REJECTED", "WITHDRAWN"].forEach(
       (k) => (by[k] = 0)
     );
     let active = 0;
@@ -120,6 +126,7 @@
       stat("Retards de réponse", slaBreached, slaBreached ? "is-danger" : "") +
       stat("Match ≥ 75 %", hotMatches) +
       stat("En entretien", interviews) +
+      stat("Embauchés", by.HIRED || 0) +
       stat("Conversion → entretien", conv + " %") +
       stat("Refus", refused) +
       "</div>";
@@ -166,21 +173,6 @@
     if (!parts.length) return "?";
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-  }
-
-  function skillTags(skills) {
-    if (!skills) return "";
-    const parts = String(skills)
-      .split(/[,;|/]+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .slice(0, 12);
-    if (!parts.length) return "";
-    return (
-      '<div class="hl-skill-tags">' +
-      parts.map((s) => "<span>" + esc(s) + "</span>").join("") +
-      "</div>"
-    );
   }
 
   function starsHtml(id, label) {
@@ -482,7 +474,7 @@
         fact("E-mail", c.candidateEmail || "—") +
         "</div>" +
         (c.candidateSkills
-          ? "<div style='margin-top:.65rem'>" + skillTags(c.candidateSkills) + "</div>"
+          ? "<div style='margin-top:.65rem' data-sk-slot></div>"
           : "<p class='muted'>Aucune compétence renseignée.</p>") +
         "</div>" +
         '<div class="hl-dossier-section"><h5>3. CV</h5><article class="doc-card"><strong>' +
@@ -502,15 +494,8 @@
             : "<p class='muted'>Aucune lettre jointe.</p>") +
           "</div>";
       }
-      if (c.interviewType || c.interviewAt || c.interviewNotes) {
-        html +=
-          '<div class="hl-dossier-section"><h5>5. Entretien</h5><div class="hl-fact-grid">' +
-          fact("Type", c.interviewType || "—") +
-          fact("Date", c.interviewAt ? new Date(c.interviewAt).toLocaleString("fr-FR") : "—") +
-          fact("Lieu", c.interviewLocation || "—") +
-          "</div>" +
-          (c.interviewNotes ? '<p class="hl-letter-box">' + esc(c.interviewNotes) + "</p>" : "") +
-          "</div>";
+      if (opts.interviewSlot && c.interviewAt) {
+        html += '<div class="hl-dossier-section"><h5>5. Entretien</h5><div data-iv-slot></div></div>';
       }
       if ((c.advanceNote && opts.showNote !== false) || c.rejectionReason) {
         html += '<div class="hl-dossier-section"><h5>6. Suivi</h5>';
@@ -608,28 +593,24 @@
     return n;
   }
 
-  function advanceValid(needInterview) {
+  function advanceValid(needInterview, interviewForm) {
     const note = ((document.getElementById("adv-note") || {}).value || "").trim();
     const st = (document.getElementById("score-tech") || {}).value;
     const ss = (document.getElementById("score-soft") || {}).value;
     const scul = (document.getElementById("score-culture") || {}).value;
     const scoresOk = !!(st && ss && scul);
     if (!note && !scoresOk) return false;
-    if (needInterview) {
-      const type = (document.getElementById("int-type") || {}).value || "";
-      const atLocal = (document.getElementById("int-at") || {}).value || "";
-      if (!type || !atLocal) return false;
-    }
-    return true;
+    return !needInterview || interviewForm.isValid();
   }
 
   async function advance(c) {
     const next = NEXT[c.status];
     if (!next) {
-      HireLink.toast("Fin", "Étape terminale — planifiez l’entretien hors pipeline", "info");
+      HireLink.toast("Dossier clôturé", "Cette candidature n’a plus d’étape suivante.", "info");
       return;
     }
     const needInterview = next === "INTERVIEW";
+    const interviewForm = needInterview ? HireLinkInterview.form() : null;
     const body =
       '<div class="hl-step-banner"><div><strong>' +
       esc(RC.STATUS_FR[c.status] || c.status) +
@@ -653,32 +634,19 @@
       starsHtml("score-culture", "Culture fit") +
       "</div>" +
       '<p class="muted" style="margin:0.55rem 0 0;font-size:0.75rem">Renseignez la note <em>ou</em> les 3 scores pour débloquer la confirmation.</p></div>' +
-      (needInterview
-        ? '<div class="hl-interview-block">' +
-          '<strong style="font-size:0.78rem;text-transform:uppercase;letter-spacing:.05em">Organisation de l’entretien</strong>' +
-          '<div class="field"><label>Type *</label><select id="int-type">' +
-          '<option value="">— Choisir —</option>' +
-          '<option value="PHONE">Téléphone</option>' +
-          '<option value="VISIO">Visio</option>' +
-          '<option value="ONSITE">Présentiel</option>' +
-          '<option value="ASYNC">Asynchrone (vidéo / test)</option>' +
-          "</select></div>" +
-          '<div class="field"><label>Date &amp; heure *</label><input type="datetime-local" id="int-at" /></div>' +
-          '<div class="field"><label>Lieu / lien</label><input id="int-loc" placeholder="Bureau Casablanca · Meet · Zoom…" /></div>' +
-          '<div class="field"><label>Brief candidat</label><textarea id="int-notes" rows="2" placeholder="Interlocuteurs, durée, livrables…"></textarea></div>' +
-          "</div>"
-        : "");
+      (needInterview ? '<div class="hl-interview-block"><h5>Organisation de l’entretien</h5><div id="adv-interview"></div></div>' : "");
 
     const ok = await HireLink.openDrawer({
       title: "Avancer · " + c.candidateName,
       description: "Note ou scores, puis confirmation",
       bodyHtml: body,
-      confirmLabel: "Confirmer l’étape",
+      confirmLabel: next === "HIRED" ? "Confirmer l’embauche" : "Confirmer l’étape",
       confirmDisabled: true,
       wide: true,
       onReady: (api) => {
         bindStars(api.root);
-        const refresh = () => api.setConfirmEnabled(advanceValid(needInterview));
+        if (needInterview) api.root.querySelector("#adv-interview").appendChild(interviewForm.el);
+        const refresh = () => api.setConfirmEnabled(advanceValid(needInterview, interviewForm));
         api.root.addEventListener("change", refresh);
         api.root.addEventListener("input", refresh);
         api.root.addEventListener("hl-score-change", refresh);
@@ -687,7 +655,7 @@
     });
     if (!ok) return;
 
-    if (!advanceValid(needInterview)) {
+    if (!advanceValid(needInterview, interviewForm)) {
       HireLink.toast("Incomplet", "Note ou scores + entretien si requis", "warn");
       return;
     }
@@ -718,12 +686,7 @@
     }
     if (noteParts.length) payload.advanceNote = noteParts.join("\n");
 
-    if (needInterview) {
-      payload.interviewType = (document.getElementById("int-type") || {}).value || "";
-      payload.interviewAt = new Date((document.getElementById("int-at") || {}).value).toISOString();
-      payload.interviewLocation = (document.getElementById("int-loc") || {}).value || null;
-      payload.interviewNotes = (document.getElementById("int-notes") || {}).value || null;
-    }
+    if (needInterview) payload.interview = interviewForm.values();
 
     try {
       await HireLinkAPI.api("/applications/" + c.id + "/status", {
@@ -731,7 +694,8 @@
         body: payload,
       });
       if (st || ss || scul) saveQuickScores(c, { tech: st, soft: ss, culture: scul });
-      HireLink.toast("Étape validée", c.candidateName + " → " + (RC.STATUS_FR[next] || next), "ok");
+      if (next === "HIRED") Mascotte.celebrate({ title: "Embauche confirmée !", description: c.candidateName + " rejoint l’entreprise. Un e-mail de félicitations lui est envoyé." });
+      else HireLink.toast("Étape validée", c.candidateName + " → " + (RC.STATUS_FR[next] || next), "ok");
       load(true);
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
@@ -832,7 +796,7 @@
       title: "Dossier · " + c.candidateName,
       description: (c.jobTitle || "") + " · " + (RC.STATUS_FR[c.status] || c.status),
       bodyHtml:
-        dossierHtml(c) +
+        dossierHtml(c, { interviewSlot: true }) +
         '<div class="hl-drawer-actions-inline">' +
         '<button type="button" class="btn btn-soft btn-sm" id="btn-dl">Télécharger le dossier</button>' +
         '<button type="button" class="btn btn-soft btn-sm" id="btn-sum">Synthèse du CV</button>' +
@@ -849,6 +813,12 @@
       wide: true,
       onReady: () => {
         mountHmAssign(c);
+        const skSlot = document.querySelector("[data-sk-slot]");
+        if (skSlot) HireLinkSkills.renderBoxes(skSlot, c.candidateSkills);
+        const ivSlot = document.querySelector("[data-iv-slot]");
+        if (ivSlot) {
+          ivSlot.appendChild(HireLinkInterview.card(c, { role: "recruiter", onChange: () => { HireLink.closeModal(false); load(true); } }));
+        }
         const sum = document.getElementById("btn-sum");
         if (sum) {
           sum.onclick = async () => {
@@ -891,10 +861,8 @@
               "CV : " + (c.cvFileName || c.cvSource || "Non fourni"),
               "Lettre : " + (c.coverLetter || "Non jointe"),
               "Compétences : " + (c.candidateSkills || ""),
-              c.interviewType ? "Entretien : " + c.interviewType : "",
-              c.interviewAt ? "Date : " + new Date(c.interviewAt).toLocaleString("fr-FR") : "",
-              c.interviewLocation ? "Lieu : " + c.interviewLocation : "",
-              c.interviewNotes ? "Notes : " + c.interviewNotes : "",
+              c.interviewAt ? "Entretien : " + HireLinkInterview.summary(c) : "",
+              c.interviewNotes ? "Consignes : " + c.interviewNotes : "",
               c.rejectionReason ? "Motif : " + c.rejectionReason : "",
               c.advanceNote ? "Note RH : " + c.advanceNote : "",
             ]
@@ -962,7 +930,7 @@
         badge.textContent = String(chipCounts[key] || 0);
       });
     }
-    const q = ((document.getElementById("rc-search") || {}).value || "").trim().toLowerCase();
+    const q = ((document.getElementById("rc-search") || {}).value || "").trim();
     let filtered = appsForScope();
     if (filter === "urgent") {
       filtered = filtered.filter((a) => a.slaRemainingDays != null && a.slaRemainingDays <= 2 && !a.slaBreached);
@@ -973,13 +941,10 @@
     } else if (filter === "interview") {
       filtered = filtered.filter((a) => a.status === "INTERVIEW");
     }
-    if (q) {
-      filtered = filtered.filter((a) =>
-        ((a.candidateName || "") + " " + (a.jobTitle || "") + " " + (a.status || "") + " " + (a.candidateEmail || ""))
-          .toLowerCase()
-          .includes(q)
-      );
-    }
+    filtered = HireLinkSearch.rank(filtered, q, [
+      { get: (a) => a.candidateName, weight: 3 }, { get: (a) => a.jobTitle, weight: 2 },
+      { get: (a) => RC.STATUS_FR[a.status], weight: 1 }, { get: (a) => a.candidateEmail, weight: 1 },
+    ]);
     const offerSel = document.getElementById("pipe-offer");
     if (offerSel) offerSel.classList.toggle("is-filtered", offerSel.value !== "all");
     refreshFunnel();
@@ -1025,9 +990,10 @@
         card.querySelector("h3").textContent = c.candidateName || "Candidat";
         const scoped = selectedOfferId() != null;
         let sub = scoped ? "" : c.jobTitle || "";
-        if (c.interviewType) {
-          sub += (sub ? " · " : "") + (RC.INTERVIEW_TYPE_FR[c.interviewType] || c.interviewType) +
-            (c.interviewAt ? " " + new Date(c.interviewAt).toLocaleDateString("fr-FR") : "");
+        if (c.interviewType && c.status === "INTERVIEW") {
+          sub += (sub ? " · " : "") + (HireLinkInterview.TYPE_FR[c.interviewType] || c.interviewType) +
+            (c.interviewAt ? " " + new Date(c.interviewAt).toLocaleDateString("fr-FR") : "") +
+            (c.interviewStatus === "CANCELLED" ? " (annulé)" : "");
         }
         card.querySelector("p").textContent = sub || (scoped ? "Dossier sur ce poste" : "");
         card.querySelector(".rc-bar > i").style.width = Math.min(100, c.matchScore || 0) + "%";
@@ -1051,11 +1017,15 @@
       });
       root.appendChild(el);
     });
+    HireLinkSearch.mark(root, q);
     const totalEl = document.getElementById("kanban-total");
     if (totalEl) {
       totalEl.textContent = filtered.filter((a) => COLUMNS.some((c) => c.key === a.status)).length + " dossiers";
     }
   }
+
+  // Nouvelle candidature, réponse à un entretien… : le tableau se met à jour dès la notification.
+  document.addEventListener("hirelink:push", () => load(true));
 
   let pendingApp = new URLSearchParams(location.search).get("app");
   let loaded = false;

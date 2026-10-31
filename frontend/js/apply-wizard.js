@@ -58,17 +58,11 @@
 
   async function start(offer, onDone) {
     ensureCss();
-    if (global.HireLinkSkills) HireLinkSkills.ensureCss();
 
     let profile = {};
     try {
       profile = await HireLinkAPI.api("/me");
     } catch (_) {}
-
-    const profileSkills = (profile.skills || "")
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
 
     const state = {
       step: 0,
@@ -81,9 +75,6 @@
       cvFile: null,
       coverLetter: "",
       skillsCsv: profile.skills || "",
-      languagesCsv: "",
-      skillsApi: null,
-      selectedSkills: profileSkills.slice(),
       submitting: false,
     };
 
@@ -151,7 +142,7 @@
         return (
           '<div class="' +
           anim +
-          '"><p class="muted" style="margin-top:0">Affinez vos compétences et langues pour ce poste — catalogue par domaine.</p>' +
+          '"><p class="muted" style="margin-top:0">Vérifiez vos compétences et langues pour ce poste : tapez pour ajouter, même avec une faute.</p>' +
           '<div id="hl-apply-skills"></div></div>'
         );
       }
@@ -205,11 +196,8 @@
         "<div><strong>Poste</strong><span>" +
         esc(o.title) +
         "</span></div>" +
-        "<div><strong>Compétences</strong><span>" +
+        "<div><strong>Compétences et langues</strong><span>" +
         esc(state.skillsCsv || "—") +
-        "</span></div>" +
-        "<div><strong>Langues</strong><span>" +
-        esc(state.languagesCsv || "—") +
         "</span></div>" +
         "<div><strong>CV</strong><span>" +
         (state.cvSource === "UPLOAD" ? "Nouveau · " + esc(state.cvFileName || "—") : "Profil HireLink") +
@@ -221,10 +209,6 @@
     }
 
     function capture() {
-      if (state.step === 1 && state.skillsApi) {
-        state.skillsCsv = state.skillsApi.getSkillsCsv();
-        state.languagesCsv = state.skillsApi.getLanguagesCsv();
-      }
       if (state.step === 3) {
         const ta = overlay.querySelector("#hl-letter-text");
         if (ta) state.coverLetter = ta.value.trim();
@@ -252,26 +236,10 @@
     }
 
     function bindBody() {
-      if (state.step === 1 && global.HireLinkSkills) {
-        const root = overlay.querySelector("#hl-apply-skills");
-        const offerSkills = (state.offer.requiredSkills || "")
-          .split(",")
-          .map((x) => x.trim())
-          .filter(Boolean);
-        const selected = Array.from(new Set(state.selectedSkills.concat(offerSkills.slice(0, 6))));
-        state.skillsApi = HireLinkSkills.mount(root, {
-          selected,
-          languages: state.languagesCsv
-            ? state.languagesCsv.split(",").map((x) => {
-                const m = x.trim().match(/^(.+?)\s*\(([^)]+)\)\s*$/);
-                return m ? { name: m[1].trim(), level: m[2].trim() } : { name: x.trim(), level: "B2" };
-              })
-            : [{ name: "Français", level: "Natif" }],
-          onChange: (v) => {
-            state.skillsCsv = v.skillsCsv;
-            state.languagesCsv = v.languagesCsv;
-            state.selectedSkills = v.skills;
-          },
+      if (state.step === 1) {
+        HireLinkSkills.mount(overlay.querySelector("#hl-apply-skills"), {
+          value: state.skillsCsv,
+          onChange: (csv) => { state.skillsCsv = csv; },
         });
       }
       if (state.step === 2) {
@@ -301,10 +269,7 @@
               const data = await res.json().catch(() => ({}));
               if (res.ok && data.suggestedSkills && data.suggestedSkills.length) {
                 HireLink.toast("CV analysé", data.suggestedSkills.slice(0, 5).join(", "), "ok");
-                state.selectedSkills = Array.from(
-                  new Set(state.selectedSkills.concat(data.suggestedSkills))
-                );
-                state.skillsCsv = state.selectedSkills.join(", ");
+                state.skillsCsv = HireLinkSkills.split(state.skillsCsv).concat(data.suggestedSkills).filter((v, i, all) => all.findIndex((x) => HireLinkSearch.compact(x) === HireLinkSearch.compact(v)) === i).join(", ");
               }
             } catch (_) {}
           };
@@ -348,10 +313,9 @@
       state.submitting = true;
       paint();
       try {
-        const combined = [state.skillsCsv, state.languagesCsv].filter(Boolean).join(", ");
-        if (combined) {
+        if (state.skillsCsv) {
           try {
-            await HireLinkAPI.api("/me", { method: "PATCH", body: { skills: combined } });
+            await HireLinkAPI.api("/me", { method: "PATCH", body: { skills: state.skillsCsv } });
           } catch (_) {}
         }
         const created = await HireLinkAPI.api("/applications", {

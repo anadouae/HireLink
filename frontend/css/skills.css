@@ -1,0 +1,113 @@
+/* Compétences (js/skills.js) : sélecteur à saisie libre et cartes de synthèse par catégorie.
+   Chaque catégorie a sa couleur (--sk), déclinée en fond clair, bordure et texte. */
+
+.sk-cat-LANGUAGE { --sk: #7a2032; }
+.sk-cat-FRAMEWORK { --sk: #b4532a; }
+.sk-cat-DATABASE { --sk: #1f6b6b; }
+.sk-cat-DEVOPS { --sk: #2f4f7f; }
+.sk-cat-DATA { --sk: #5b3a7a; }
+.sk-cat-SECURITY { --sk: #2e6b46; }
+.sk-cat-TOOL { --sk: #6b5b4a; }
+.sk-cat-DESIGN { --sk: #a8386a; }
+.sk-cat-METHOD { --sk: #4a559a; }
+.sk-cat-BUSINESS { --sk: #7a6a1f; }
+.sk-cat-SPOKEN { --sk: #9a6b1f; }
+.sk-cat-SOFT { --sk: #c2573a; }
+.sk-cat-OTHER { --sk: #6f6a6c; }
+
+.sk-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--sk);
+  background: color-mix(in srgb, var(--sk) 11%, #fff);
+  border: 1px solid color-mix(in srgb, var(--sk) 28%, transparent);
+}
+.sk-chip small { font-size: 0.7rem; font-weight: 700; opacity: 0.75; }
+.sk-chip.is-editable { padding-right: 0.3rem; }
+.sk-chip select {
+  padding: 0.05rem 0.2rem;
+  border: 1px solid color-mix(in srgb, var(--sk) 35%, transparent);
+  border-radius: 6px;
+  background: #fff;
+  font: inherit;
+  font-size: 0.72rem;
+  color: var(--sk);
+}
+.sk-chip-remove {
+  all: unset;
+  display: grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.sk-chip-remove:hover { background: color-mix(in srgb, var(--sk) 18%, transparent); }
+.sk-chip-remove:focus-visible { outline: 2px solid var(--sk); }
+
+.sk-picker { display: grid; gap: 0.5rem; }
+.sk-picker .field-hint { margin: 0; }
+.sk-selected {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-height: 2.6rem;
+  align-items: center;
+  padding: 0.6rem;
+  border-radius: var(--radius-sm, 10px);
+  background: var(--surface-2, #faf7f4);
+  border: 1px dashed rgba(122, 32, 50, 0.25);
+}
+
+.sk-boxes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 0.75rem; }
+.sk-boxes .sk-empty { grid-column: 1 / -1; margin: 0; }
+.sk-box {
+  padding: 0.8rem 0.9rem 0.9rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--sk) 7%, var(--surface, #fff));
+  border: 1px solid color-mix(in srgb, var(--sk) 22%, transparent);
+  border-top: 4px solid var(--sk);
+  box-shadow: 0 4px 12px rgba(26, 18, 20, 0.04);
+}
+.sk-box header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.55rem; }
+.sk-box h4 { margin: 0; font-size: 0.82rem; letter-spacing: 0.01em; color: var(--sk); }
+.sk-box-count {
+  min-width: 1.5rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-pill, 999px);
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background: var(--sk);
+}
+.sk-box-list { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.sk-box .sk-chip { background: #fff; }
+.sk-chip.is-missing { opacity: 0.55; border-style: dashed; }
+.sk-chip.is-match::before { content: "✓"; font-weight: 800; }
+
+/* Sélecteurs multiples du profil (métiers, lieux, contrats) */
+.mp { display: grid; gap: 0.5rem; }
+.mp .choice-chip.is-on { font-weight: 600; }
+
+.sk-input, .mp-input {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line-strong, rgba(26, 18, 20, 0.16));
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  font: inherit;
+  color: inherit;
+}
+.sk-input:focus, .mp-input:focus {
+  outline: 2px solid rgba(122, 32, 50, 0.3);
+  border-color: var(--burgundy, #7a2032);
+}

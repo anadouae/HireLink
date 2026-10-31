@@ -1,71 +1,60 @@
+/**
+ * Champs à suggestions ([data-suggest] : job, place, nationality, school, level, contract, mode) :
+ * liste de HireLinkSearch avec drapeaux pour les lieux et les nationalités.
+ */
 (function () {
-  const base = function () {
-    return (window.HIRELINK_API_BASE || (window.HireLinkAPI && HireLinkAPI.API_BASE) || "http://127.0.0.1:8081/api/v1");
-  };
-
-  function labelOf(row) {
-    if (row && typeof row === "object") return row.label || "";
-    return String(row || "");
+  function base() {
+    return ((window.HireLinkAPI && HireLinkAPI.API_BASE) || window.HIRELINK_API_BASE || "http://127.0.0.1:8081/api/v1").replace(/\/$/, "");
   }
 
   function mount(input) {
-    if (!input || input.dataset.suggestReady === "1") return;
     const kind = input.getAttribute("data-suggest");
-    if (!kind) return;
+    if (!kind || input.dataset.suggestReady === "1") return;
     input.dataset.suggestReady = "1";
-    input.setAttribute("autocomplete", "off");
-    const wrap = document.createElement("div");
-    wrap.className = "suggest-wrap";
-    input.parentNode.insertBefore(wrap, input);
-    wrap.appendChild(input);
-    const menu = document.createElement("div");
-    menu.className = "suggest-menu";
-    menu.hidden = true;
-    wrap.appendChild(menu);
-    let timer = 0;
-    let rows = [];
+    const withFlag = kind === "place" || kind === "nationality";
+    let flagEl = null;
 
-    function close() { menu.hidden = true; }
-
-    function paint(list) {
-      rows = list || [];
-      if (!rows.length || document.activeElement !== input) { close(); return; }
-      menu.innerHTML = rows.map(function (row, i) {
-        const label = labelOf(row);
-        const flag = row && row.flag ? row.flag + " " : "";
-        const country = row && row.country ? "<small>" + row.country + "</small>" : "";
-        return "<button type='button' data-i='" + i + "'>" + flag + label + country + "</button>";
-      }).join("");
-      menu.hidden = false;
-      menu.querySelectorAll("button").forEach(function (btn) {
-        btn.addEventListener("mousedown", function (e) {
-          e.preventDefault();
-          const row = rows[Number(btn.getAttribute("data-i"))];
-          input.value = labelOf(row);
-          input.dispatchEvent(new Event("change", { bubbles: true }));
-          close();
-        });
-      });
-    }
-
-    function load(q) {
-      const url = base().replace(/\/$/, "") + "/catalog/suggest?kind=" + encodeURIComponent(kind) + "&q=" + encodeURIComponent(q || "");
-      fetch(url).then(function (r) { return r.ok ? r.json() : []; }).then(paint).catch(function () { close(); });
-    }
-
-    input.addEventListener("focus", function () { load(input.value.trim()); });
-    input.addEventListener("input", function () {
-      clearTimeout(timer);
-      timer = setTimeout(function () { load(input.value.trim()); }, 180);
+    const combo = HireLinkSearch.combobox(input, {
+      minChars: kind === "job" ? 1 : 0,
+      emptyText: "Aucune proposition : vous pouvez saisir librement.",
+      fetch: function (q) {
+        return fetch(base() + "/catalog/suggest?kind=" + encodeURIComponent(kind) + "&q=" + encodeURIComponent(q))
+          .then(function (r) { return r.ok ? r.json() : []; })
+          .then(function (rows) {
+            return rows.map(function (row) { return { key: row.label, label: row.label, flag: row.flag, sub: row.country }; });
+          });
+      },
+      onPick: function (item) {
+        input.value = item.label;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+        paintFlag();
+      },
     });
-    input.addEventListener("blur", function () { setTimeout(close, 160); });
+
+    function paintFlag() {
+      if (!flagEl) return;
+      const flag = window.HireLinkPlaces ? HireLinkPlaces.flagOf(input.value) : "";
+      flagEl.textContent = flag;
+      input.classList.toggle("has-flag", !!flag);
+    }
+
+    if (withFlag && window.HireLinkPlaces) {
+      flagEl = document.createElement("span");
+      flagEl.className = "hl-input-flag";
+      flagEl.setAttribute("aria-hidden", "true");
+      combo.wrap.appendChild(flagEl);
+      input.addEventListener("input", paintFlag);
+      input.addEventListener("change", paintFlag);
+      HireLinkPlaces.ready().then(paintFlag);
+    }
   }
 
   function boot() {
     document.querySelectorAll("[data-suggest]").forEach(mount);
   }
 
-  window.HireLinkSuggest = { labelOf: labelOf, mount: mount, boot: boot };
+  window.HireLinkSuggest = { mount: mount, boot: boot };
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();
