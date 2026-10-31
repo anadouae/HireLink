@@ -1,8 +1,12 @@
 (function () {
-  function cleanLogo(u) { return /google\.com\/s2\/favicons|gstatic\.com\/faviconV2/i.test(u || "") ? "" : (u || ""); }
   const root = document.getElementById("public-offers");
   if (!root) return;
   const base = window.HIRELINK_API_BASE || "http://127.0.0.1:8081/api/v1";
+  const PAGE_SIZE = 9;
+  const moreBox = document.getElementById("offers-more");
+  const moreBtn = document.getElementById("offers-more-btn");
+  let matches = [];
+  let shown = 0;
   const METIERS = [
     ["Développement", "developpeur"],
     ["Data", "data"],
@@ -26,13 +30,6 @@
       .replace(/\'/g, "&#39;");
   }
 
-  function fold(value) {
-    return String(value || "")
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase();
-  }
-
   function companyOf(o) {
     return o.companyName || o.recruiterName || "Entreprise";
   }
@@ -53,16 +50,35 @@
   }
 
   function filtered() {
-    const q = fold(document.getElementById("q-text").value);
-    const city = document.getElementById("q-city").value;
+    const city = document.getElementById("q-city").value.trim();
     const contract = document.getElementById("q-contract").value;
-    return offers.filter(function (o) {
-      const blob = fold(o.title + " " + companyOf(o) + " " + (o.requiredSkills || "") + " " + cityOf(o));
-      if (q && blob.indexOf(q) < 0) return false;
-      if (city && fold(cityOf(o)).indexOf(fold(city)) < 0) return false;
-      if (contract && String(o.contractType || "") !== contract) return false;
-      return true;
+    const pool = offers.filter(function (o) {
+      if (city && HireLinkSearch.score(city, cityOf(o)) <= 0) return false;
+      return !contract || String(o.contractType || "") === contract;
     });
+    return HireLinkSearch.rank(pool, document.getElementById("q-text").value.trim(), [
+      { get: function (o) { return o.title; }, weight: 3 },
+      { get: companyOf, weight: 2 },
+      { get: function (o) { return o.requiredSkills; }, weight: 2 },
+      { get: cityOf, weight: 1 },
+    ]);
+  }
+
+  /* Les offres s’affichent par lots : les plus récentes d’abord, la suite à la demande. */
+  function showMoreOffers() {
+    const next = matches.slice(shown, shown + PAGE_SIZE);
+    next.forEach(function (o) {
+      root.appendChild(HireLinkOffer.card(o, {
+        variant: "showcase",
+        footText: ago(o.createdAt),
+        href: function () { return "auth.html?mode=login"; },
+      }));
+    });
+    shown += next.length;
+    HireLinkSearch.mark(root, document.getElementById("q-text").value.trim());
+    const left = matches.length - shown;
+    moreBox.hidden = left <= 0;
+    moreBtn.textContent = "Afficher " + Math.min(left, PAGE_SIZE) + " offre" + (Math.min(left, PAGE_SIZE) > 1 ? "s" : "") + " de plus";
   }
 
   function paintOffers(list) {
@@ -72,30 +88,22 @@
         ? list.length + " offre" + (list.length > 1 ? "s" : "") + " correspondent à la recherche. Le délai affiché est celui promis par l’entreprise."
         : "Aucune offre pour cette recherche.";
     }
+    root.replaceChildren();
+    root.classList.remove("card-grid");
+    matches = list;
+    shown = 0;
+    moreBox.hidden = true;
     if (!list.length) {
-      root.innerHTML = "<p class='muted'>Aucune offre publiée pour ce filtre.</p>";
+      HireLinkSearch.emptyState(root, document.getElementById("q-text").value.trim(), {
+        emptyTitle: "Aucune offre pour cette recherche",
+        onClear: function () {
+          ["q-text", "q-city", "q-contract"].forEach(function (id) { document.getElementById(id).value = ""; });
+          paintOffers(filtered());
+        },
+      });
       return;
     }
-    root.innerHTML = list.map(function (o) {
-      const company = companyOf(o);
-      const href = "company.html?name=" + encodeURIComponent(company);
-      const modePart = String(o.location || "").split("·")[1];
-      return (
-        "<article class='job-card'>" +
-        "<h3>" + esc(o.title) + "</h3>" +
-        "<p class='job-co'><a href='" + href + "'>" + esc(company) + "</a></p>" +
-        "<p class='job-meta'>" +
-        "<span>" + esc(cityOf(o)) + "</span>" +
-        (o.contractType ? "<span>" + esc(o.contractType) + "</span>" : "") +
-        (modePart && modePart.trim() ? "<span>" + esc(modePart.trim()) + "</span>" : "") +
-        (o.responseSlaDays != null ? "<span>Réponse " + o.responseSlaDays + " j</span>" : "") +
-        (o.companyVerified ? "<span>Entreprise vérifiée</span>" : "") +
-        "</p>" +
-        "<footer><span>" + esc(ago(o.createdAt)) + "</span>" +
-        "<a class='btn btn-primary btn-sm' href='auth.html?mode=login'>Voir</a></footer>" +
-        "</article>"
-      );
-    }).join("");
+    showMoreOffers();
   }
 
   function paintCompanies() {
@@ -105,10 +113,10 @@
     const map = new Map();
     offers.forEach(function (o) {
       const name = companyOf(o);
-      const row = map.get(name) || { name: name, city: cityOf(o), n: 0, verified: false, logo: cleanLogo(o.companyLogo) || "", sector: o.companySector || "" };
+      const row = map.get(name) || { name: name, city: cityOf(o), n: 0, verified: false, logo: HireLinkOffer.mediaUrl(o.companyLogo) || "", sector: o.companySector || "" };
       row.n += 1;
       row.verified = row.verified || !!o.companyVerified;
-      if (!row.logo && cleanLogo(o.companyLogo)) row.logo = cleanLogo(o.companyLogo);
+      if (!row.logo && HireLinkOffer.mediaUrl(o.companyLogo)) row.logo = HireLinkOffer.mediaUrl(o.companyLogo);
       if (row.city === "Lieu à préciser") row.city = cityOf(o);
       map.set(name, row);
     });
@@ -128,20 +136,14 @@
     const rows = Array.from(map.values()).filter(function (c) {
       return !companyCity || c.city === companyCity;
     });
-    box.innerHTML = rows.map(function (c) {
-      const href = "company.html?name=" + encodeURIComponent(c.name);
-      return (
-        "<article class='job-card'>" +
-        (c.logo ? "<img class='co-landing-logo' alt='' src='" + esc((window.HireLinkAPI && HireLinkAPI.mediaUrl) ? HireLinkAPI.mediaUrl(c.logo) : c.logo) + "' />" : "") +
-        "<h3>" + esc(c.name) + "</h3>" +
-        "<p class='job-meta'><span>" + esc(c.city) + "</span>" +
-        (c.verified ? "<span>Identité vérifiée</span>" : "<span>Fiche entreprise</span>") +
-        "</p>" +
-        "<footer><span>" + c.n + " offre" + (c.n > 1 ? "s" : "") + "</span>" +
-        "<a class='btn btn-primary btn-sm' href='" + href + "'>Consulter</a></footer>" +
-        "</article>"
-      );
-    }).join("") || "<p class='muted'>Aucune entreprise pour cette ville.</p>";
+    box.replaceChildren();
+    if (!rows.length) {
+      box.innerHTML = "<p class='muted'>Aucune entreprise pour cette ville.</p>";
+      return;
+    }
+    rows.forEach(function (c) {
+      box.appendChild(HireLinkOffer.companyCard(c, { href: function () { return "company.html?name=" + encodeURIComponent(c.name); } }));
+    });
   }
 
   function fillSelect(id, values, placeholder) {
@@ -195,6 +197,22 @@
     }
   }
 
+  /* Chiffres de la bande d’accueil, calculés sur les offres publiées. */
+  function paintStats() {
+    const companies = new Set(offers.map(companyOf));
+    const cities = new Set(offers.map(cityOf));
+    const slas = offers.map(function (o) { return o.responseSlaDays; }).filter(function (d) { return d != null; });
+    const values = {
+      offers: offers.length,
+      companies: companies.size,
+      cities: cities.size,
+      sla: slas.length ? Math.round(slas.reduce(function (a, b) { return a + b; }, 0) / slas.length) : 0
+    };
+    document.querySelectorAll("[data-stat]").forEach(function (el) {
+      el.textContent = String(values[el.getAttribute("data-stat")]);
+    });
+  }
+
   function paintMetiers() {
     const box = document.getElementById("metier-grid");
     if (!box) return;
@@ -219,7 +237,7 @@
     });
     const chips = titles.slice(0, 8);
     box.innerHTML = chips.map(function (title) {
-      return "<button type='button' data-q='" + esc(title) + "'>" + esc(title) + "</button>";
+      return "<button type='button' data-q='" + esc(title) + "' title='" + esc(title) + "'>" + esc(title) + "</button>";
     }).join("");
     box.querySelectorAll("button").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -235,13 +253,15 @@
   function applyOffers() {
     paintOffers(filtered());
     const target = document.getElementById("liste-offres");
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (target) target.dispatchEvent(new CustomEvent("landing:scroll-to", { bubbles: true }));
   }
 
   function setMode(next) {
     mode = next;
     document.querySelectorAll(".search-tabs button").forEach(function (btn) {
-      btn.classList.toggle("is-on", btn.getAttribute("data-find") === next);
+      const on = btn.getAttribute("data-find") === next;
+      btn.classList.toggle("is-on", on);
+      btn.setAttribute("aria-selected", on ? "true" : "false");
     });
     const hint = document.getElementById("search-hint");
     const contract = document.getElementById("q-contract");
@@ -281,14 +301,25 @@
     });
   });
 
+  moreBtn.addEventListener("click", showMoreOffers);
   paintMetiers();
+  let timer = 0;
+  ["q-text", "q-city"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { paintOffers(filtered()); }, 200);
+    });
+  });
+  HireLinkPlaces.ready().then(function () { if (offers.length) paintOffers(filtered()); });
   fetch(base + "/offers/public")
     .then(function (r) {
       if (!r.ok) throw new Error("offres");
       return r.json();
     })
     .then(function (data) {
-      offers = Array.isArray(data) ? data : [];
+      offers = (Array.isArray(data) ? data : []).sort(function (a, b) {
+        return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+      });
       const count = document.getElementById("offer-count");
       if (count) count.textContent = offers.length ? String(offers.length) : "nos";
       const cities = [];
@@ -299,6 +330,8 @@
       paintCompanies();
       paintCities();
       paintOffers(offers);
+      paintStats();
+      document.dispatchEvent(new CustomEvent("landing:offers-loaded"));
     })
     .catch(function () {
       root.innerHTML = "<p class='muted'>Les offres s’afficheront dès que l’API est disponible.</p>";

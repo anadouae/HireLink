@@ -8,6 +8,7 @@ import ma.ensat.hirelink.security.ClientInfo;
 import ma.ensat.hirelink.security.PasswordPolicy;
 import org.springframework.security.core.context.SecurityContextHolder;
 import java.util.List;
+import ma.ensat.hirelink.model.ContractType;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.UserRepository;
@@ -47,6 +48,7 @@ public class AuthService {
     private final NotificationService notifications;
     private final MailService mail;
     private final WebAuthnService webAuthn;
+    private final EventNotifier notifier;
     private final String dummyHash;
 
     public AuthService(
@@ -63,7 +65,8 @@ public class AuthService {
             TotpService totp,
             NotificationService notifications,
             MailService mail,
-            WebAuthnService webAuthn
+            WebAuthnService webAuthn,
+            EventNotifier notifier
     ) {
         this.userRepository = userRepository;
         this.otpService = otpService;
@@ -79,6 +82,7 @@ public class AuthService {
         this.notifications = notifications;
         this.mail = mail;
         this.webAuthn = webAuthn;
+        this.notifier = notifier;
         this.dummyHash = passwordEncoder.encode("hirelink-dummy-password-for-constant-time");
     }
 
@@ -136,6 +140,7 @@ public class AuthService {
             applyCompanyIfRecruiter(user, role, req.company(), req.companyIce());
             userRepository.save(user);
             audit.ok("REGISTER", user, "USER", user.getId(), "Rôle " + role);
+            notifier.welcome(user);
         } else {
             user.setEmailVerified(true);
             userRepository.save(user);
@@ -361,10 +366,6 @@ public class AuthService {
         return auth != null && auth.getDetails() instanceof String sid ? sid : null;
     }
 
-    private static final Set<String> MISSIONS = Set.of(
-            "Stage", "Job étudiant", "Bénévolat", "Premier emploi", "CDI", "CDD"
-    );
-
     @Transactional
     public AuthResponse completeProfile(User user, AuthDtos.CompleteProfile req) {
         if (req.role() != null && req.role() != Role.ADMINISTRATEUR && req.role() != user.getRole()) {
@@ -405,11 +406,11 @@ public class AuthService {
             if (req.educationLevel() != null && !req.educationLevel().isBlank()) user.setExperienceLevel(req.educationLevel().trim());
             if (req.workMode() != null && !req.workMode().isBlank()) user.setWorkMode(req.workMode().trim());
             if (req.metier() != null && !req.metier().isBlank()) user.setSoughtRoles(req.metier().trim());
-            if (req.contracts() != null && !req.contracts().isBlank()) user.setPreferredContracts(cleanMissions(req.contracts()));
+            if (req.contracts() != null && !req.contracts().isBlank()) user.setPreferredContracts(ContractType.cleanPreferences(req.contracts()));
         } else if (role == Role.RECRUTEUR) {
             String company = requiredText(req.company(), "Entreprise", 2, 120);
             String job = requiredText(req.jobTitle(), "Fonction", 2, 120);
-            String missions = cleanMissions(req.contracts());
+            String missions = ContractType.cleanPreferences(req.contracts());
             if (missions.isBlank()) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisissez au moins un type de mission");
             }
@@ -489,16 +490,6 @@ public class AuthService {
         return date;
     }
 
-    private static String cleanMissions(String raw) {
-        if (raw == null || raw.isBlank()) return "";
-        LinkedHashSet<String> kept = new LinkedHashSet<>();
-        for (String part : raw.split(",")) {
-            String item = part.trim();
-            if (MISSIONS.contains(item)) kept.add(item);
-        }
-        return String.join(", ", kept);
-    }
-
     private static String blankToNull(String value) {
         if (value == null) return null;
         String trimmed = value.trim();
@@ -543,6 +534,7 @@ public class AuthService {
             user.setProfileComplete(false);
             applyCompanyIfRecruiter(user, role, req.company(), req.companyIce());
             userRepository.save(user);
+            notifier.welcome(user);
         } else {
             if (user.getGoogleSub() == null) {
                 user.setGoogleSub(identity.sub());

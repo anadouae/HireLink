@@ -74,13 +74,37 @@
       document.getElementById("set-mode").value = p.workMode || "";
       document.getElementById("set-avail").value = p.availability || "";
       document.getElementById("set-role").value = p.soughtRoles || "";
-      const chosen = String(p.preferredContracts || "").split(",").map((s) => s.trim());
-      document.querySelectorAll("#set-contracts input").forEach((box) => {
-        box.checked = chosen.indexOf(box.value) >= 0;
-      });
+      document.getElementById("set-mail").checked = p.emailNotifications !== false;
+      paintContracts(String(p.preferredContracts || "").split(",").map((s) => s.trim().toLowerCase()));
       if (window.HireLinkSuggest) HireLinkSuggest.boot();
     })
     .catch((err) => HireLink.toast("Compte", err.message, "danger"));
+
+  /** Les types de contrat viennent du même référentiel que les offres et l'inscription. */
+  function paintContracts(chosen) {
+    HireLinkAPI.api("/catalog/suggest?kind=contract&q=").then((rows) => {
+      const set = document.getElementById("set-contracts");
+      set.querySelectorAll("label").forEach((n) => n.remove());
+      (rows || []).forEach((r) => {
+        const label = document.createElement("label");
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.value = r.label;
+        box.checked = chosen.indexOf(r.label.toLowerCase()) >= 0;
+        label.append(box, " " + r.label);
+        set.appendChild(label);
+      });
+    }).catch(() => {});
+  }
+
+  document.getElementById("btn-save-mail").addEventListener("click", async () => {
+    try {
+      await HireLinkAPI.api("/me", { method: "PATCH", body: { emailNotifications: document.getElementById("set-mail").checked } });
+      HireLink.toast("E-mails", "Préférence enregistrée", "ok");
+    } catch (err) {
+      HireLink.toast("E-mails", err.message, "danger");
+    }
+  });
 
   function profileBody() {
     const country = document.getElementById("set-phone-country").value.split("|");

@@ -9,11 +9,13 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/tokens.css?v=20261029a" />
-  <link rel="stylesheet" href="css/design-system.css?v=20261029a" />
-  <link rel="stylesheet" href="css/components.css?v=20261029a" />
-  <link rel="stylesheet" href="css/auth.css?v=20261029a" />
-  <link rel="stylesheet" href="css/motion.css?v=20261029a" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261101a" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261101a" />
+  <link rel="stylesheet" href="css/components.css?v=20261101a" />
+  <link rel="stylesheet" href="css/auth.css?v=20261101a" />
+  <link rel="stylesheet" href="css/motion.css?v=20261101a" />
+  <link rel="stylesheet" href="css/mascotte.css?v=20261101a" />
+  <link rel="stylesheet" href="css/search.css?v=20261101a" />
 </head>
 <body class="auth-body">
   <div class="auth-layout">
@@ -219,7 +221,7 @@
           </form>
 
           <form id="form-enroll" class="auth-step auth-form" data-panel="enroll" novalidate>
-            <p class="field-hint"><strong>Étape obligatoire pour l’administrateur.</strong> 1) Scannez le QR code avec une application d’authentification, ou saisissez la clé manuellement (ou donnez-la à <code>docs/outils/totp.py</code>). 2) Saisissez le code à 6 chiffres affiché.</p>
+            <p class="field-hint"><strong>Étape obligatoire pour ce compte.</strong> 1) Scannez le QR code avec une application d’authentification, ou saisissez la clé manuellement. 2) Saisissez le code à 6 chiffres affiché.</p>
             <div class="mfa-qr"><img id="enroll-qr" alt="QR code à scanner avec votre application d’authentification" width="190" height="190" /></div>
             <div class="field">
               <label for="enroll-secret">Clé manuelle</label>
@@ -282,13 +284,16 @@
     </section>
   </div>
 
-  <script src="js/config.js?v=20261029a"></script>
-  <script src="js/ui.js?v=20261029a"></script>
-  <script src="js/api.js?v=20261029a"></script>
-  <script src="js/password-toggle.js?v=20261029a"></script>
-  <script src="js/auth-timeline.js?v=20261029a"></script>
-  <script src="js/suggest.js?v=20261029a"></script>
-  <script src="js/webauthn.js?v=20261029a"></script>
-  <script src="js/auth.js?v=20261029a"></script>
+  <script src="js/config.js?v=20261101a"></script>
+  <script src="js/mascotte.js?v=20261101a"></script>
+  <script src="js/ui.js?v=20261101a"></script>
+  <script src="js/api.js?v=20261101a"></script>
+  <script src="js/password-toggle.js?v=20261101a"></script>
+  <script src="js/auth-timeline.js?v=20261101a"></script>
+  <script src="js/search.js?v=20261101a"></script>
+  <script src="js/places.js?v=20261101a"></script>
+  <script src="js/suggest.js?v=20261101a"></script>
+  <script src="js/webauthn.js?v=20261101a"></script>
+  <script src="js/auth.js?v=20261101a"></script>
 </body>
 </html>

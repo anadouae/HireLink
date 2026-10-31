@@ -1,14 +1,8 @@
 /**
- * HireLink UI — toasts, modals, onboarding (pas de second système d'auth)
+ * HireLink UI — modales et panneaux ; toasts et confirmations : voir mascotte.js
  */
 (function (global) {
   function ensureHosts() {
-    if (!document.querySelector(".toast-host")) {
-      const host = document.createElement("div");
-      host.className = "toast-host";
-      host.setAttribute("aria-live", "polite");
-      document.body.appendChild(host);
-    }
     if (!document.getElementById("hl-overlay")) {
       const overlay = document.createElement("div");
       overlay.id = "hl-overlay";
@@ -20,22 +14,6 @@
       });
       document.body.appendChild(overlay);
     }
-  }
-
-  function toast(title, message, tone) {
-    ensureHosts();
-    const el = document.createElement("div");
-    el.className = "toast" + (tone ? " toast-" + tone : "");
-    el.innerHTML = "<div><strong></strong><span></span></div>";
-    el.querySelector("strong").textContent = title;
-    el.querySelector("span").textContent = message || "";
-    document.querySelector(".toast-host").appendChild(el);
-    setTimeout(() => {
-      el.style.opacity = "0";
-      el.style.transform = "translateY(8px)";
-      el.style.transition = "0.25s ease";
-      setTimeout(() => el.remove(), 260);
-    }, 3800);
   }
 
   let modalResolver = null;
@@ -231,7 +209,7 @@
   }
 
   global.HireLink = {
-    toast,
+    toast: Mascotte.toast,
     openModal,
     openDrawer,
     closeModal,

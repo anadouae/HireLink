@@ -9,11 +9,11 @@
   let view = "all";
   let loaded = false;
 
-  const KIND_FR = { STATUS: "Candidature", INTERVIEW: "Entretien", SLA: "Délai", ASSIGN: "Assignation", APPLICATION: "Nouvelle candidature", MODERATION: "Modération", SYSTEM: "Équipe" };
+  const KIND_FR = { STATUS: "Candidature", INTERVIEW: "Entretien", SLA: "Délai", ASSIGN: "Assignation", APPLICATION: "Nouvelle candidature", MODERATION: "Modération", SYSTEM: "Équipe", HIRED: "Embauche" };
 
   function paint() {
     if (!loaded) return;
-    const q = (($("rc-search") || {}).value || "").trim().toLowerCase();
+    const q = (($("rc-search") || {}).value || "").trim();
     $("n-chips").querySelectorAll("button").forEach((b) => {
       b.classList.toggle("is-on", b.dataset.v === view);
       let em = b.querySelector("em");
@@ -21,10 +21,11 @@
       em.textContent = b.dataset.v === "unread" ? rows.filter((n) => !n.read).length : rows.length;
     });
     let list = rows.filter((n) => view === "all" || !n.read);
-    if (q) list = list.filter((n) => ((n.title || "") + " " + (n.body || "")).toLowerCase().includes(q));
+    list = HireLinkSearch.rank(list, q, [{ get: (n) => n.title, weight: 3 }, { get: (n) => n.body, weight: 1 }]);
     const root = $("n-list");
     if (!list.length) {
-      RC.empty(root, { icon: "bell", title: view === "unread" ? "Tout est lu" : "Aucune notification", text: "Les nouvelles candidatures, changements de statut et rappels de délai apparaîtront ici." });
+      if (q) { HireLinkSearch.emptyState(root, q, { onClear: () => { $("rc-search").value = ""; paint(); } }); return; }
+      RC.empty(root, { title: view === "unread" ? "Tout est lu" : "Aucune notification", text: "Les nouvelles candidatures, changements de statut et rappels de délai apparaîtront ici." });
       return;
     }
     root.innerHTML = list.map((n) =>
@@ -33,6 +34,7 @@
       '</strong><span style="white-space:normal">' + esc(n.body) + '</span></div><span class="rc-pill">' + esc(KIND_FR[n.kind] || n.kind || "Info") + '</span><small class="rc-muted" style="min-width:86px;text-align:right">' + esc(RC.ago(n.at)) +
       '</small><div class="rc-row-actions">' + (n.read ? "" : '<button type="button" class="btn btn-ghost btn-sm" data-read>Marquer lu</button>') +
       '<button type="button" class="btn btn-ghost btn-sm" data-del aria-label="Supprimer">✕</button></div></div>').join("");
+    HireLinkSearch.mark(root, q);
   }
 
   function sync(list) { rows = list || []; loaded = true; paint(); }

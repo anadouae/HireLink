@@ -58,7 +58,7 @@
           return '<div class="rc-item"><div class="rc-item-main"><strong>' + esc(o.title) + "</strong><span>" + esc(o.companyName || "Entreprise") + (place ? " · " + esc(place) : "") +
             (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div>" + score + '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler</a></div>';
         }).join("");
-    else RC.empty($("reco-list"), { title: "Aucune nouvelle offre", text: "Revenez bientôt : de nouvelles offres sont publiées chaque semaine.", icon: "briefcase" });
+    else RC.empty($("reco-list"), { title: "Aucune nouvelle offre", text: "Revenez bientôt : de nouvelles offres sont publiées chaque semaine." });
 
     if (apps.length) $("recent-list").innerHTML = apps.slice(0, 5).map((a) =>
           '<a class="rc-item" href="candidate-applications.html?id=' + a.id + '"><div class="rc-item-main"><strong>' + esc(a.jobTitle || "Candidature") + "</strong><span>" +

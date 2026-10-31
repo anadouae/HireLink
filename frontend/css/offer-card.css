@@ -1,0 +1,322 @@
+/* =============================================================================
+   Carte d'offre partagée (js/offer-card.js)
+   Structure : .offer-card > a.offer-card__link > (__head, __chips, __reveal, __arrow)
+   Au survol et au focus clavier, l'extrait se déplie et la flèche invite au clic ;
+   sur écran tactile, l'extrait reste visible en version compacte ; mouvement réduit : aucune animation.
+   ============================================================================= */
+
+.offer-card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr));
+}
+
+.offer-card {
+  --oc-accent: var(--burgundy, #7a2032);
+  position: relative;
+  border-radius: 18px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line, rgba(26, 18, 20, 0.1));
+  box-shadow: 0 6px 18px rgba(26, 18, 20, 0.05);
+  transition: transform 0.28s var(--ease, ease), box-shadow 0.28s var(--ease, ease), border-color 0.28s var(--ease, ease);
+}
+.offer-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  border-radius: 18px 0 0 18px;
+  background: linear-gradient(180deg, var(--oc-accent), var(--champagne, #c9a66b));
+  opacity: 0;
+  transition: opacity 0.28s var(--ease, ease);
+}
+.offer-card:hover,
+.offer-card:focus-within,
+.offer-card.is-selected {
+  transform: translateY(-3px);
+  border-color: rgba(122, 32, 50, 0.32);
+  box-shadow: 0 18px 38px rgba(26, 18, 20, 0.12);
+}
+.offer-card:hover::before,
+.offer-card:focus-within::before,
+.offer-card.is-selected::before { opacity: 1; }
+
+.offer-card__link {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  height: 100%;
+  padding: 1.15rem 1.2rem 1.1rem;
+  border-radius: inherit;
+  color: inherit;
+  text-decoration: none;
+}
+.offer-card__link:focus-visible {
+  outline: 3px solid var(--champagne, #c9a66b);
+  outline-offset: 2px;
+}
+
+.offer-card__head { display: flex; align-items: center; gap: 0.85rem; }
+.offer-card__logo {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(145deg, var(--burgundy, #7a2032), #c45a3a);
+  box-shadow: 0 6px 14px rgba(122, 32, 50, 0.22);
+}
+.offer-card__logo:has(img) { background: #fff; border: 1px solid var(--line, rgba(26, 18, 20, 0.1)); box-shadow: 0 4px 12px rgba(42, 16, 22, 0.08); }
+.offer-card__logo img { width: 100%; height: 100%; object-fit: contain; background: #fff; padding: 3px; box-sizing: border-box; }
+.offer-card__titles { min-width: 0; flex: 1; }
+.offer-card__company {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0 0.15rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--ink-soft, #5e5558);
+}
+.offer-card__company .oc-verified { color: var(--ok, #1f6b4a); flex: none; }
+.offer-card__title {
+  margin: 0;
+  font-family: var(--font-display, inherit);
+  font-size: 1.12rem;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  color: var(--ink, #1a1214);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.offer-card__badge {
+  flex: none;
+  align-self: flex-start;
+  padding: 0.22rem 0.6rem;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--burgundy, #7a2032);
+  background: var(--burgundy-soft, rgba(122, 32, 50, 0.14));
+  white-space: nowrap;
+}
+
+.offer-card__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.oc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--ink-soft, #5e5558);
+  background: var(--surface-2, #faf7f4);
+  border: 1px solid var(--line, rgba(26, 18, 20, 0.1));
+}
+.oc-chip .oc-icon { flex: none; opacity: 0.85; }
+.oc-chip--type { color: var(--burgundy, #7a2032); background: var(--burgundy-soft, rgba(122, 32, 50, 0.1)); border-color: transparent; }
+.oc-chip--money { color: #6b4e12; background: var(--champagne-soft, rgba(201, 166, 107, 0.2)); border-color: rgba(201, 166, 107, 0.45); }
+.oc-chip--status { color: var(--ok, #1f6b4a); background: var(--ok-bg, #e6f4ec); border-color: transparent; }
+.oc-flag { font-size: 1rem; line-height: 1; }
+
+/* Extrait : déplié au survol / au focus. grid-template-rows 0fr → 1fr anime la hauteur sans la connaître. */
+.offer-card__reveal {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 0.35s var(--ease, ease), opacity 0.3s var(--ease, ease);
+}
+.offer-card__excerpt {
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--ink-soft, #5e5558);
+}
+.offer-card:hover .offer-card__reveal,
+.offer-card:focus-within .offer-card__reveal,
+.offer-card.is-selected .offer-card__reveal {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.offer-card__arrow {
+  align-self: flex-end;
+  margin-top: auto;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--burgundy, #7a2032);
+  background: var(--burgundy-soft, rgba(122, 32, 50, 0.1));
+  transition: transform 0.28s var(--ease, ease), background 0.28s var(--ease, ease), color 0.28s var(--ease, ease);
+}
+.offer-card:hover .offer-card__arrow,
+.offer-card:focus-within .offer-card__arrow {
+  color: #fff;
+  background: var(--burgundy, #7a2032);
+  animation: offer-card-nudge 1.1s var(--ease, ease) infinite;
+}
+@keyframes offer-card-nudge {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(6px); }
+}
+
+/* Variante vitrine (accueil) : carte plus aérée ; au survol l'extrait prend la place des pastilles ;
+   pied de carte avec la flèche. Le gabarit et le contenu restent ceux de la carte commune. */
+.offer-card--showcase {
+  min-height: 15.5rem;
+  border-radius: 24px;
+  box-shadow: 0 1px 2px rgba(26, 18, 20, 0.04);
+  transition: transform 0.5s var(--ease-out, ease), box-shadow 0.5s var(--ease-out, ease), border-color 0.3s;
+}
+.offer-card--showcase::before { content: none; }
+.offer-card--showcase:hover,
+.offer-card--showcase:focus-within {
+  transform: translateY(-5px);
+  border-color: rgba(201, 166, 107, 0.7);
+  box-shadow: 0 32px 60px -30px rgba(82, 20, 32, 0.4);
+}
+.offer-card--showcase .offer-card__link { gap: 1.1rem; padding: 1.4rem; }
+.offer-card--showcase .offer-card__logo {
+  width: 3.5rem;
+  height: 3.5rem;
+  border: 1px solid var(--line, rgba(26, 18, 20, 0.1));
+  background: linear-gradient(140deg, var(--burgundy, #7a2032), var(--champagne, #c9a66b));
+  box-shadow: none;
+  font-family: var(--font-serif, inherit);
+  font-size: 1.25rem;
+  font-weight: 600;
+  transition: transform 0.5s var(--ease-out, ease);
+}
+.offer-card--showcase .offer-card__logo:has(img) { background: #fff; border-color: rgba(26, 18, 20, 0.12); }
+.offer-card--showcase:hover .offer-card__logo,
+.offer-card--showcase:focus-within .offer-card__logo { transform: scale(1.08) rotate(-3deg); }
+.offer-card--showcase .offer-card__title { font-size: 1.25rem; }
+.offer-card--company .offer-card__title { -webkit-line-clamp: 1; }
+
+.offer-card--showcase .offer-card__swap { display: grid; margin-top: auto; }
+.offer-card--showcase .offer-card__swap > * { grid-area: 1 / 1; }
+.offer-card--showcase .offer-card__chips { align-content: flex-start; transition: opacity 0.4s, transform 0.5s var(--ease-out, ease); }
+.offer-card--showcase .offer-card__reveal {
+  grid-template-rows: 1fr;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.4s, transform 0.5s var(--ease-out, ease);
+}
+.offer-card--showcase .offer-card__excerpt {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  font-size: 0.9rem;
+}
+.offer-card--showcase:hover .offer-card__chips,
+.offer-card--showcase:focus-within .offer-card__chips { opacity: 0; transform: translateY(-10px); }
+.offer-card--showcase:hover .offer-card__reveal,
+.offer-card--showcase:focus-within .offer-card__reveal { opacity: 1; transform: none; }
+
+.offer-card__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: auto;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line, rgba(26, 18, 20, 0.1));
+  font-size: 0.85rem;
+  color: var(--ink-soft, #5e5558);
+}
+.offer-card__foot .offer-card__arrow { margin-top: 0; align-self: center; width: 2.4rem; height: 2.4rem; }
+
+/* Conditions détaillées (page / panneau de détail) */
+.offer-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.7rem;
+  margin: 0;
+}
+.offer-fact {
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius-sm, 10px);
+  background: var(--surface-2, #faf7f4);
+  border: 1px solid var(--line, rgba(26, 18, 20, 0.1));
+}
+.offer-fact dt {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-faint, #8a8285);
+}
+.offer-fact dd { margin: 0; font-weight: 600; color: var(--ink, #1a1214); }
+.offer-fact--money { background: var(--champagne-soft, rgba(201, 166, 107, 0.16)); border-color: rgba(201, 166, 107, 0.45); }
+.offer-fact--money dt { color: #6b4e12; }
+.offer-fact--wide { grid-column: 1 / -1; }
+.offer-benefits { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.oc-benefit {
+  padding: 0.22rem 0.6rem;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--burgundy, #7a2032);
+  background: var(--burgundy-soft, rgba(122, 32, 50, 0.1));
+}
+
+html[data-theme="dark"] .offer-card__title { color: var(--ink); }
+html[data-theme="dark"] .oc-chip--money,
+html[data-theme="dark"] .offer-fact--money dt { color: var(--champagne-light, #e2c98a); }
+
+/* Liste de gestion des offres (espace recruteur) : carte + barre d'actions sous la carte */
+.offer-card-grid--managed { align-items: start; }
+.offer-managed { display: grid; gap: 0.4rem; }
+.offer-managed.is-draft .offer-card { border-style: dashed; }
+.offer-managed-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: center; padding: 0 0.2rem; }
+
+/* Écran tactile : pas de survol, version compacte avec deux lignes d'extrait toujours visibles */
+@media (hover: none) {
+  .offer-card__reveal { grid-template-rows: 1fr; opacity: 1; }
+  .offer-card__excerpt {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .offer-card__arrow { width: 28px; height: 28px; }
+  .offer-card--showcase .offer-card__swap { display: flex; flex-direction: column; gap: 0.75rem; }
+  .offer-card--showcase .offer-card__reveal { opacity: 1; transform: none; }
+  .offer-card--showcase .offer-card__excerpt { -webkit-line-clamp: 2; }
+  .offer-card--showcase:hover .offer-card__chips { opacity: 1; transform: none; }
+  .offer-card__foot .offer-card__arrow { width: 2.4rem; height: 2.4rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .offer-card,
+  .offer-card::before,
+  .offer-card__reveal,
+  .offer-card__arrow { transition: none; }
+  .offer-card:hover,
+  .offer-card:focus-within,
+  .offer-card.is-selected,
+  .offer-card--showcase:hover,
+  .offer-card--showcase:focus-within { transform: none; }
+  .offer-card--showcase .offer-card__reveal,
+  .offer-card--showcase .offer-card__chips,
+  .offer-card--showcase .offer-card__logo { transition: none; }
+  .offer-card:hover .offer-card__arrow,
+  .offer-card:focus-within .offer-card__arrow { animation: none; }
+}

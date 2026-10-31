@@ -63,6 +63,45 @@ public class ApplicationController {
         return applicationService.advance(user, id, body);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
+    @PutMapping("/{id}/interview")
+    public ApiDtos.ApplicationResponse rescheduleInterview(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Valid @RequestBody ApiDtos.InterviewRequest body
+    ) {
+        return applicationService.rescheduleInterview(user, id, body);
+    }
+
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
+    @PostMapping("/{id}/interview/cancel")
+    public ApiDtos.ApplicationResponse cancelInterview(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Valid @RequestBody ApiDtos.CancelInterviewRequest body
+    ) {
+        return applicationService.cancelInterview(user, id, body.reason());
+    }
+
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('CANDIDAT')")
+    @PostMapping("/{id}/interview/answer")
+    public ApiDtos.ApplicationResponse answerInterview(
+            @AuthenticationPrincipal User user,
+            @PathVariable Long id,
+            @Valid @RequestBody ApiDtos.InterviewAnswerRequest body
+    ) {
+        return applicationService.answerInterview(user, id, body);
+    }
+
+    @GetMapping("/{id}/interview.ics")
+    public ResponseEntity<byte[]> interviewCalendar(@AuthenticationPrincipal User user, @PathVariable Long id) {
+        ApplicationService.CalendarFile file = applicationService.interviewCalendar(user, id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.filename() + "\"")
+                .contentType(MediaType.parseMediaType("text/calendar; charset=UTF-8"))
+                .body(file.content());
+    }
+
     public record AssignHmRequest(Long hmUserId) {}
 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")

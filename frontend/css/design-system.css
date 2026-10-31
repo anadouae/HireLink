@@ -563,61 +563,6 @@ h2 {
   background: var(--surface);
 }
 
-/* ---------- Toasts ---------- */
-.toast-host {
-  position: fixed;
-  right: 1rem;
-  bottom: 1rem;
-  z-index: 3500;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  width: min(360px, calc(100vw - 2rem));
-}
-
-.toast {
-  background: var(--navy);
-  color: #f5f0e8;
-  border-radius: var(--radius);
-  padding: 0.85rem 1rem;
-  box-shadow: var(--shadow-lg);
-  border: 1px solid rgba(217, 186, 106, 0.25);
-  display: flex;
-  gap: 0.75rem;
-  align-items: flex-start;
-  animation: toast-in 0.35s var(--ease);
-}
-
-.toast-ok {
-  border-color: rgba(31, 107, 74, 0.45);
-}
-.toast-warn {
-  border-color: rgba(201, 166, 107, 0.55);
-}
-.toast-danger {
-  border-color: rgba(155, 44, 44, 0.5);
-}
-
-.toast strong {
-  display: block;
-  font-size: 0.9rem;
-}
-.toast span {
-  font-size: 0.82rem;
-  opacity: 0.85;
-}
-
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* ---------- Empty state ---------- */
 .empty {
   text-align: center;

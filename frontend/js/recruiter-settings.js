@@ -26,6 +26,7 @@
     $("set-name").value = (p.fullName || "").replace(/\s*\(alias\)\s*/i, "");
     $("set-email").value = p.email || session.email || "";
     $("set-role").textContent = (RC.getOrg() && RC.ROLE_FR[RC.getOrg().myRole]) || "Recruteur";
+    $("n-mail").checked = p.emailNotifications !== false;
     paintPhoto();
   }).catch((err) => RC.toast("Profil", err.message, "danger"));
   document.addEventListener("rc:org", (e) => { $("set-role").textContent = RC.ROLE_FR[e.detail.myRole] || "Recruteur"; });
@@ -82,9 +83,12 @@
     const n = JSON.parse(localStorage.getItem(NOTIF_KEY) || "{}");
     $("n-sla").checked = n.sla !== false; $("n-new").checked = n.neu !== false; $("n-interview").checked = n.interview !== false;
   } catch (_) {}
-  $("btn-save-notif").addEventListener("click", () => {
+  $("btn-save-notif").addEventListener("click", async () => {
     localStorage.setItem(NOTIF_KEY, JSON.stringify({ sla: $("n-sla").checked, neu: $("n-new").checked, interview: $("n-interview").checked }));
-    RC.toast("Alertes", "Préférences enregistrées sur cet appareil", "ok");
+    try {
+      await HireLinkAPI.api("/me", { method: "PATCH", body: { emailNotifications: $("n-mail").checked } });
+      RC.toast("Alertes", "Préférences enregistrées", "ok");
+    } catch (err) { RC.toast("Alertes", err.message, "danger"); }
   });
 
   /* Apparence */

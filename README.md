@@ -42,7 +42,7 @@ Sans outil structuré, le suivi dépend de la rigueur manuelle du recruteur : pa
 ### Organisation (recruteur)
 - Fiche entreprise et vérification ICE
 - Création, publication et clôture d’offres (SLA par offre)
-- Pipeline Kanban : soumise → présélection → shortlist → entretien (ou refus motivé / retrait)
+- Pipeline Kanban : soumise → présélection → shortlist → entretien → proposition → embauché (ou refus motivé / retrait)
 - Transitions sécurisées côté serveur (checklist + règles d’état)
 - Motif de rejet obligatoire choisi dans un **catalogue fermé**
 - Planification d’entretiens (téléphone, visio, présentiel, asynchrone)
@@ -50,6 +50,25 @@ Sans outil structuré, le suivi dépend de la rigueur manuelle du recruteur : pa
 - Historique immuable des changements d’étape
 - Organisation multi-membres : Owner / Recruteur / Hiring Manager (invite / rôles)
 - Assistant IA recruteur (grille d’entretien, brouillon de refus) + crédits partagés
+
+### Nouveautés de la version intégrée
+
+- **Recherche intelligente** partout (module `frontend/js/search.js` + `TextMatcher` côté serveur) : tolérante aux fautes, aux accents et aux synonymes, classée, avec surlignage et messages « aucun résultat ».
+- **Compétences** : sélecteur avec saisie libre et référentiel catégorisé (offre et profil) ; le profil candidat range les compétences dans des boîtes colorées par catégorie (« Autres » pour les inconnues), visibles aussi des recruteurs.
+- **Correspondance** : l'interrupteur « Offres qui correspondent à mon profil » filtre la liste et affiche un score.
+- **Offres détaillées par type de contrat** (CDI, CDD, stage, PFE, PFA, stage d'été, alternance, freelance, temps partiel) : rémunération, durée, dates, convention de stage, avantages, mode de travail, niveau… avec validation en ligne. Lieux avec drapeau et autocomplétion (Maroc en premier).
+- **Carte d'offre unique** (`css/offer-card.css`, `js/offer-card.js`) réutilisée sur l'accueil, les pages entreprise et les espaces candidat et recruteur.
+- **Entretiens** : mode (sur site, visio, téléphone), nature (RH, technique, manager, final), fuseau horaire (Africa/Casablanca par défaut), participants, consignes, report et annulation motivés, confirmation du candidat, fichier `.ics`, rappel la veille.
+- **E-mails transactionnels** (HTML + texte, français) par SMTP configurable (`HIRELINK_MAIL_*` ou `application-local.properties`), envoi asynchrone sans bloquer l'application, boîte d'envoi pour l'administrateur, préférence de désinscription pour les messages de suivi.
+- **Notifications en temps réel** (SSE, ticket à usage unique de 30 s, reconnexion, secours par interrogation).
+- **Étapes Proposition et Embauché** dans le pipeline, avec e-mails, notifications et célébration.
+- **Page d'accueil animée** (`index.html`, `css/home.css`, `js/home-motion.js`, `js/landing-offers.js`, bibliothèques d'animation locales dans `js/vendor/`) : elle réutilise la carte d'offre commune (variante « vitrine »), la recherche tolérante, la rémunération et les drapeaux ; elle respecte « réduire les animations » et reste lisible sans JavaScript.
+- **Mascotte** (`js/mascotte.js`, `css/mascotte.css`) : notifications, fenêtres de confirmation (avec motif obligatoire pour une annulation), états vides et célébrations (embauche, première offre publiée, entreprise vérifiée, profil complet). La célébration d'embauche montre l'équipe de recruteurs côté recruteur et la tenue du candidat côté candidat.
+- **Logos d'entreprise** : tuile blanche uniforme (image entière, petite marge) sur les cartes, listes, page entreprise, menu recruteur et administration ; initiale de repli si le logo manque ou ne se charge pas. Fichiers PNG/JPEG/WEBP/GIF ou adresse `https://`.
+
+Détails : [`docs/API.md`](docs/API.md) pour les routes et les champs, [`docs/GUIDE_INSTALLATION_ET_TEST.md`](docs/GUIDE_INSTALLATION_ET_TEST.md) §5.1 (SMTP) et §18 (scénarios).
+
+**Base existante** : au démarrage, Hibernate (`ddl-auto=update`) ajoute les nouvelles colonnes et les étapes `OFFER` / `HIRED` de `applications.status` ; aucune commande SQL n'est nécessaire (voir le guide, §3, pour le cas particulier).
 
 ### Transversal
 - **Matching local (F14)** : score Jaccard compétences / offre, gratuit, déterministe, sans API externe
@@ -183,6 +202,7 @@ HireLink/
 |----------|---------|
 | Guide d’installation et de test (Windows) | `docs/GUIDE_INSTALLATION_ET_TEST.md` / `.docx` |
 | Sécurité (OWASP Top 10 / ASVS niveau 2) | `docs/SECURITE.md` |
+| API : offres, entretiens, notifications, e-mails | `docs/API.md` |
 | Cas d’utilisation UML | `docs/Diagramme_Cas_Utilisation_HireLink.docx` |
 | Accès BDD | `docs/ACCES_BDD.md` |
 | Cahier des charges | `docs/cahier-des-charges/` |

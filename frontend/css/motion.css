@@ -32,7 +32,6 @@ input, select, textarea { transition: border-color 0.15s ease, box-shadow 0.15s 
 /* Overlays */
 .overlay.is-open { animation: hl-fade 0.18s ease both; }
 .overlay.is-open .modal { animation: hl-pop 0.22s var(--hl-ease) both; }
-.toast { animation: hl-fade-up 0.25s var(--hl-ease) both; }
 
 /* Skeleton (thème clair/sombre) */
 .skeleton { position: relative; overflow: hidden; color: transparent; }

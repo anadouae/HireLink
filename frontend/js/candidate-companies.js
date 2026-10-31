@@ -1,6 +1,6 @@
 (function () {
   let query = "";
-  const session = HireLinkApp.mount({ search: { placeholder: "Rechercher une entreprise…", onQuery: (q) => { query = String(q || "").trim().toLowerCase(); paintList(); } } });
+  const session = HireLinkApp.mount({ search: { placeholder: "Rechercher une entreprise…", onQuery: (q) => { query = String(q || "").trim(); paintList(); } } });
   if (!session) return;
 
   function esc(s) {
@@ -41,8 +41,7 @@
     const q = query;
     const city = ((document.getElementById("co-city") || {}).value || "").trim().toLowerCase();
     const sector = ((document.getElementById("co-sector") || {}).value || "").trim().toLowerCase();
-    return companies.filter(function (c) {
-      if (q && String(c.name || "").toLowerCase().indexOf(q) < 0 && String(c.city || "").toLowerCase().indexOf(q) < 0) return false;
+    return HireLinkSearch.rank(companies, q, [{ get: function (c) { return c.name; }, weight: 3 }, { get: function (c) { return c.city; }, weight: 2 }, { get: function (c) { return c.sector; }, weight: 1 }]).filter(function (c) {
       if (city && String(c.city || "").toLowerCase().indexOf(city) < 0) return false;
       if (sector && String(c.sector || "").toLowerCase().indexOf(sector) < 0) return false;
       return true;
@@ -80,7 +79,9 @@
             "</p></div></article>"
           );
         }).join("")
-      : '<p class="muted" style="padding:1rem">Aucune entreprise ne correspond.</p>';
+      : "";
+    if (!rows.length) HireLinkSearch.emptyState(root, query, { emptyTitle: "Aucune entreprise ne correspond", onClear: function () { document.getElementById("rc-search").value = ""; query = ""; paintList(); } });
+    else HireLinkSearch.mark(root, query);
     root.querySelectorAll(".offer").forEach(function (el) {
       el.addEventListener("click", function () {
         selected = companies.filter(function (c) { return c.name === el.dataset.name; })[0] || null;

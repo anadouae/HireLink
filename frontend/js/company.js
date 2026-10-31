@@ -42,12 +42,11 @@
         : /^https?:\/\//i.test(url)
           ? url
           : (base.replace(/\/api\/v1\/?$/, "") + (url.startsWith("/") ? url : "/" + url));
-    logo.textContent = "";
     const img = document.createElement("img");
     img.alt = "";
     img.src = src;
-    img.addEventListener("error", () => img.remove());
-    logo.appendChild(img);
+    img.addEventListener("load", () => logo.replaceChildren(img));
+    // logo absent ou illisible : l'initiale reste affichée
   }
 
   fetch(base + "/offers/public")
@@ -98,29 +97,15 @@
       }
       if (!root) return;
       if (!list.length) {
-        root.innerHTML = "<p class='muted'>Aucune offre publiée.</p>";
+        root.textContent = "Aucune offre publiée.";
         return;
       }
-      root.innerHTML = list
-        .map((o) => {
-          const href = candidate
-            ? "app/candidate.html?apply=" + encodeURIComponent(o.id)
-            : "auth.html?mode=login";
-          return (
-            "<article class='public-offer'><h3>" +
-            esc(o.title) +
-            "</h3><p>" +
-            esc(o.location || "Lieu à préciser") +
-            (o.contractType ? " · " + esc(o.contractType) : "") +
-            (o.responseSlaDays != null ? " · Réponse " + o.responseSlaDays + " j" : "") +
-            "</p><p style='margin-top:.45rem'>" +
-            esc((o.description || "").slice(0, 220)) +
-            "</p><div class='row'><a class='btn btn-primary btn-sm' href='" +
-            href +
-            "'>Postuler</a></div></article>"
-          );
-        })
-        .join("");
+      root.replaceChildren();
+      list.forEach((o) => {
+        root.appendChild(HireLinkOffer.card(o, {
+          href: (x) => (candidate ? "app/candidate.html?apply=" + encodeURIComponent(x.id) : "auth.html?mode=login"),
+        }));
+      });
     })
     .catch(() => {
       if (meta) meta.textContent = "Impossible de charger cette entreprise.";

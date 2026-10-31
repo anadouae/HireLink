@@ -10,13 +10,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
-  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261029a"></script>
-  <script src="../js/theme.js?v=20261029a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/offer-card.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/offer-form.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101a"></script>
+  <script src="../js/theme.js?v=20261101a"></script>
 </head>
 <body class="rc" data-role="RECRUTEUR">
   <div class="rc-app">
@@ -36,22 +41,22 @@
 <div class="rc-chips" id="offer-filter" role="tablist"><button type="button" class="rc-chip is-on" data-ov="all">Toutes</button><button type="button" class="rc-chip" data-ov="published">Publiées</button><button type="button" class="rc-chip" data-ov="draft">Brouillons</button><button type="button" class="rc-chip" data-ov="with">Avec candidatures</button></div>
           <span class="rc-spacer"></span><span class="rc-pill" id="offers-summary">—</span>
         </div>
-        <section class="rc-card is-flush">
-          <div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Offre</th><th>Délai réponse</th><th>Candidatures</th><th>Statut</th><th></th></tr></thead>
-            <tbody id="offers-body"></tbody>
-          </table></div>
-        </section>
+        <div class="offer-card-grid offer-card-grid--managed" id="offers-grid" aria-live="polite"></div>
       </main>
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/ui.js?v=20261029a"></script>
-  <script defer src="../js/api.js?v=20261029a"></script>
-  <script defer src="../js/in-app-help.js?v=20261029a"></script>
-  <script defer src="../js/app-shell.js?v=20261029a"></script>
-  <script defer src="../js/skills-catalog.js?v=20261029a"></script>
-  <script defer src="../js/offer-wizard.js?v=20261029a"></script>
-  <script defer src="../js/recruiter-offers.js?v=20261029a"></script>
+  <script defer src="../js/mascotte.js?v=20261101a"></script>
+  <script defer src="../js/ui.js?v=20261101a"></script>
+  <script defer src="../js/api.js?v=20261101a"></script>
+  <script defer src="../js/search.js?v=20261101a"></script>
+  <script defer src="../js/places.js?v=20261101a"></script>
+  <script defer src="../js/in-app-help.js?v=20261101a"></script>
+  <script defer src="../js/app-shell.js?v=20261101a"></script>
+  <script defer src="../js/skills.js?v=20261101a"></script>
+  <script defer src="../js/offer-card.js?v=20261101a"></script>
+  <script defer src="../js/suggest.js?v=20261101a"></script>
+  <script defer src="../js/offer-wizard.js?v=20261101a"></script>
+  <script defer src="../js/recruiter-offers.js?v=20261101a"></script>
 </body>
 </html>

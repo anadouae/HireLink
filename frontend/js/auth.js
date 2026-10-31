@@ -154,7 +154,6 @@
 
   function enterApp(auth) {
     HireLinkAPI.setAuth(auth);
-    HireLink.toast("Bienvenue", auth.fullName || auth.email, "ok");
     setTimeout(() => {
       location.href = nextTarget(auth.role) || HireLinkAPI.redirectForRole(auth.role);
     }, 280);
@@ -178,7 +177,7 @@
     paintProfile();
   }
 
-  /** Réponse d'authentification : défi TOTP, enrôlement obligatoire (administrateur) ou session ouverte. */
+  /** Réponse d'authentification : défi TOTP, enrôlement obligatoire ou session ouverte. */
   function afterAuth(auth, viaProfile) {
     if (auth.mfaRequired && auth.mfaToken) {
       mfaToken = auth.mfaToken;
@@ -204,7 +203,7 @@
       document.getElementById("enroll-qr").src = r.qr;
       document.getElementById("enroll-secret").value = r.secret;
       title.textContent = "Activez la double authentification";
-      sub.textContent = "Obligatoire pour le compte administrateur.";
+      sub.textContent = "Obligatoire pour ce compte.";
       showPanel("enroll");
       setTimeout(() => document.getElementById("enroll-code").focus(), 50);
     } catch (err) {

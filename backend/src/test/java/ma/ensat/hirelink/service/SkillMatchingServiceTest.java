@@ -1,16 +1,18 @@
 package ma.ensat.hirelink.service;
 
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.*;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SkillMatchingServiceTest {
 
-    private final SkillMatchingService service = new SkillMatchingService();
+    private final SkillMatchingService service =
+            new SkillMatchingService(new SkillCatalogService(new TextMatcher()));
 
     @Test
     void perfectOverlapYieldsHighScore() {
-        double score = service.computeMatchScore("Java,Spring,MySQL", "Java,Spring,MySQL");
-        assertEquals(100.0, score, 0.01);
+        assertEquals(100.0, service.computeMatchScore("Java,Spring,MySQL", "Java,Spring,MySQL"), 0.01);
     }
 
     @Test
@@ -22,5 +24,18 @@ class SkillMatchingServiceTest {
     @Test
     void emptyRequiredYieldsZero() {
         assertEquals(0.0, service.computeMatchScore("Java", ""), 0.01);
+    }
+
+    @Test
+    void synonymsAndTyposAreMatched() {
+        var detail = service.explain("js, spring, pyhton, Anglais (C1)", "JavaScript, Spring Boot, Python, Anglais (B2), Docker");
+        assertEquals(4, detail.covered().size());
+        assertEquals(java.util.List.of("Docker"), detail.missing());
+        assertEquals(80.0, detail.score(), 0.01);
+    }
+
+    @Test
+    void richProfileIsNotPenalised() {
+        assertEquals(100.0, service.computeMatchScore("Java,Spring Boot,MySQL,Docker,Git,React,Linux,AWS", "Java,MySQL"), 0.01);
     }
 }

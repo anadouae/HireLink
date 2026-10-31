@@ -13,22 +13,20 @@
   <meta property="og:locale" content="fr_FR" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/tokens.css?v=20261029a" />
-  <link rel="stylesheet" href="css/design-system.css?v=20261029a" />
-  <link rel="stylesheet" href="css/landing.css?v=20261029a" />
-  <link rel="stylesheet" href="css/components.css?v=20261029a" />
-  <link rel="stylesheet" href="css/motion.css?v=20261029a" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261101a" />
+  <link rel="stylesheet" href="css/search.css?v=20261101a" />
+  <link rel="stylesheet" href="css/offer-card.css?v=20261101a" />
+  <link rel="stylesheet" href="css/home.css?v=20261101a" />
 </head>
-<body class="landing-body board-landing">
-  <canvas id="synapse-bg" aria-hidden="true"></canvas>
+<body class="home">
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
   <div class="scroll-progress" aria-hidden="true"></div>
 
   <header class="site-header">
     <a class="brand" href="index.html" aria-label="HireLink">
-      <span class="brand-mark brand-mark--pulse" aria-hidden="true"></span>
-      <span class="brand-name">Hi<span class="r-pulse">r</span>e<span>Link</span></span>
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">Hi<span class="r-accent">r</span>eLink</span>
     </a>
     <nav class="nav" aria-label="Sur cette page">
       <a href="#offres">Offres</a>
@@ -38,203 +36,309 @@
       <a href="#parcours">Parcours</a>
       <a href="#tarifs">Formules</a>
     </nav>
-    <div class="row">
-      <a class="btn btn-primary btn-sm" href="auth.html?mode=login">Se connecter</a>
-    </div>
+    <a class="btn btn-primary btn-sm" href="auth.html?mode=login">Se connecter</a>
   </header>
 
-  <main>
-    <section class="hero-band" id="offres">
-      <h1>Plus de <em id="offer-count">—</em> offres ouvertes au Maroc</h1>
-      <p>Stages, premiers emplois et CDI. Chaque offre affiche son délai de réponse.</p>
+  <main id="contenu">
+    <section class="hero" id="offres" aria-labelledby="hero-title">
+      <div class="hero-bg" aria-hidden="true">
+        <span class="orb orb-a"></span>
+        <span class="orb orb-b"></span>
+        <span class="orb orb-c"></span>
+        <span class="hero-spot"></span>
+      </div>
+      <div class="hero-inner">
+        <p class="eyebrow" data-reveal>Recrutement à performance équitable</p>
+        <h1 class="hero-title" id="hero-title" data-split>Plus de <em id="offer-count">—</em> offres ouvertes au Maroc</h1>
+        <p class="hero-lead" data-reveal>Stages, premiers emplois et CDI. Chaque offre affiche son délai de réponse.</p>
+
+        <form class="search-card" id="finder" data-reveal>
+          <div class="search-tabs" role="tablist" aria-label="Type de recherche">
+            <button type="button" class="is-on" data-find="offers" role="tab" aria-selected="true">Trouver des offres</button>
+            <button type="button" data-find="people" role="tab" aria-selected="false">Trouver des candidats</button>
+          </div>
+          <p class="search-hint" id="search-hint">Trouvez un poste parmi les offres publiées. La connexion sert à postuler avec votre CV.</p>
+          <div class="search-row">
+            <input id="q-text" data-suggest="job" type="search" placeholder="Rechercher un poste, une entreprise…" aria-label="Poste ou entreprise" autocomplete="off" />
+            <input id="q-city" data-suggest="place" type="search" placeholder="Lieu" autocomplete="off" aria-label="Lieu" />
+            <select id="q-contract" aria-label="Type de contrat"><option value="">Type de contrat</option></select>
+            <button type="submit" id="q-submit">Rechercher</button>
+          </div>
+          <div class="quick-row">
+            <span>Recherche rapide</span>
+            <div id="quick-chips"></div>
+          </div>
+        </form>
+      </div>
+      <a class="scroll-cue" href="#chiffres" aria-label="Découvrir HireLink"><span></span></a>
     </section>
 
-    <form class="search-card" id="finder">
-      <div class="search-tabs" role="tablist">
-        <button type="button" class="is-on" data-find="offers" role="tab">Trouver des offres</button>
-        <button type="button" data-find="people" role="tab">Trouver des candidats</button>
-      </div>
-      <p class="search-hint" id="search-hint">Trouvez un poste parmi les offres publiées. La connexion sert à postuler avec votre CV.</p>
-      <div class="search-row">
-        <input id="q-text" data-suggest="job" type="search" placeholder="Rechercher un poste, une entreprise…" autocomplete="off" />
-        <input id="q-city" data-suggest="place" type="search" placeholder="Lieu" autocomplete="off" aria-label="Lieu" />
-        <select id="q-contract" aria-label="Type de contrat"><option value="">Type de contrat</option></select>
-        <button type="submit" id="q-submit">Rechercher</button>
-      </div>
-      <div class="quick-row">
-        <span>Recherche rapide</span>
-        <div id="quick-chips"></div>
-      </div>
-    </form>
-
-    <section class="board-block" id="entreprises">
-      <div class="container">
-        <header class="board-head">
-          <h2>Les entreprises qui recrutent</h2>
-          <p>Les organisations qui publient sur HireLink. L’identité est contrôlée avant qu’une offre soit visible.</p>
-        </header>
-        <div class="line-tabs" id="company-tabs" role="tablist"></div>
-        <div class="card-grid" id="company-grid"></div>
-        <p class="board-more"><a class="btn btn-primary" href="auth.html?mode=register&role=RECRUTEUR">Publier une offre</a></p>
-      </div>
+    <section class="stats" id="chiffres" aria-label="HireLink en chiffres">
+      <dl class="stats-row" data-reveal-group>
+        <div class="stat"><dt>Offres ouvertes</dt><dd data-stat="offers">—</dd></div>
+        <div class="stat"><dt>Entreprises qui recrutent</dt><dd data-stat="companies">—</dd></div>
+        <div class="stat"><dt>Villes</dt><dd data-stat="cities">—</dd></div>
+        <div class="stat"><dt>Jours de réponse annoncés, en moyenne</dt><dd data-stat="sla">—</dd></div>
+      </dl>
     </section>
 
-    <section class="board-block" id="liste-offres">
-      <div class="container">
-        <header class="board-head">
-          <h2>Les offres ouvertes</h2>
-          <p id="offers-lead">Classées par ville, type de contrat et délai de réponse annoncé.</p>
-        </header>
-        <div class="card-grid" id="public-offers"><p class="muted">Chargement des offres…</p></div>
-        <p class="board-more"><a class="btn btn-primary" href="auth.html?mode=register&role=CANDIDAT">Voir les offres dans mon espace</a></p>
-      </div>
+    <section class="manifesto" aria-label="Notre engagement">
+      <p class="manifesto-text" data-scrub-words>Chaque talent mérite une réponse. Chaque offre exige un engagement. Transparence bilatérale, ROI mesurable.</p>
     </section>
 
-    <section class="board-block" id="candidats">
-      <div class="container">
-        <header class="board-head">
-          <h2>Les dossiers que le recruteur lit</h2>
-          <p>Pas d’annuaire public de visages. Le recruteur ouvre un dossier : le CV, la lecture extraite, une synthèse, puis les étapes.</p>
-        </header>
-        <div class="card-grid dossier-grid">
-          <article class="plain-card">
-            <h3>CV déposé</h3>
-            <p>Le candidat envoie son PDF. HireLink en extrait le texte et les sections. Il peut corriger avant d’enregistrer.</p>
-          </article>
-          <article class="plain-card">
-            <h3>Synthèse</h3>
-            <p>Une lecture courte du CV pour le recruteur : métier, expériences, compétences, un point d’attention. Elle ne retient personne.</p>
-          </article>
-          <article class="plain-card">
-            <h3>Étapes du dossier</h3>
-            <p>Reçu, lecture, shortlist, entretien. Un refus s’accompagne d’un motif. Le délai promis sur l’offre reste visible.</p>
-          </article>
+    <section class="scene scene--dark" id="espaces" data-scene aria-labelledby="espaces-title">
+      <div class="scene-track">
+        <div class="scene-stage">
+          <header class="scene-intro">
+            <p class="eyebrow">Deux espaces</p>
+            <h2 id="espaces-title" data-split>Une plateforme, un espace pour chaque rôle</h2>
+          </header>
+          <ol class="scene-steps">
+            <li class="scene-step" data-scene-step>
+              <div class="step-text">
+                <p class="step-index" aria-hidden="true">01</p>
+                <h3>Espace candidat</h3>
+                <p>Un profil, un CV déposé une fois, des candidatures guidées et un suivi limpide jusqu’à la réponse.</p>
+                <ul class="step-list">
+                  <li>CV lu automatiquement, corrigeable avant d’enregistrer</li>
+                  <li>Candidature guidée : compétences, CV, lettre</li>
+                  <li>Statut et délai de réponse restant, à chaque étape</li>
+                </ul>
+                <a class="link-arrow" href="auth.html?mode=register&role=CANDIDAT">Créer mon espace candidat</a>
+              </div>
+              <figure class="frame step-media">
+                <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+                <img src="assets/landing/espace-candidat.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Tableau de bord de l’espace candidat : candidatures en cours et offres recommandées" />
+              </figure>
+            </li>
+            <li class="scene-step" data-scene-step>
+              <div class="step-text">
+                <p class="step-index" aria-hidden="true">02</p>
+                <h3>Espace recruteur</h3>
+                <p>Publiez vos offres, faites avancer chaque dossier dans un pipeline clair et décidez avec des règles partagées.</p>
+                <ul class="step-list">
+                  <li>Pipeline : reçu, présélection, shortlist, entretien</li>
+                  <li>Refus toujours accompagné d’un motif du catalogue</li>
+                  <li>Entretiens, scorecards et équipe multi-membres</li>
+                </ul>
+                <a class="link-arrow" href="auth.html?mode=register&role=RECRUTEUR">Ouvrir l’espace recruteur</a>
+              </div>
+              <figure class="frame step-media">
+                <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+                <img src="assets/landing/espace-recruteur.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Pipeline Kanban de l’espace recruteur avec les dossiers par étape" />
+              </figure>
+            </li>
+          </ol>
+          <div class="scene-foot">
+            <div class="scene-dots" role="group" aria-label="Choisir un espace">
+              <button type="button" class="is-active" aria-current="true">Candidat</button>
+              <button type="button">Recruteur</button>
+            </div>
+          </div>
         </div>
-        <p class="board-more"><a class="btn btn-primary" href="auth.html?mode=register&role=RECRUTEUR">Ouvrir l’espace recruteur</a></p>
       </div>
     </section>
 
-    <section class="board-block" id="metiers">
-      <div class="container">
-        <header class="board-head">
-          <h2>Métiers recherchés</h2>
-          <p>Les familles que le classement et la recherche utilisent. Choisissez-en une pour filtrer les offres.</p>
-        </header>
-        <div class="metier-grid" id="metier-grid"></div>
+    <section class="block" id="entreprises" aria-labelledby="entreprises-title">
+      <header class="block-head">
+        <p class="eyebrow">Entreprises</p>
+        <h2 id="entreprises-title" data-split>Les entreprises qui recrutent</h2>
+        <p>Les organisations qui publient sur HireLink. L’identité est contrôlée avant qu’une offre soit visible.</p>
+      </header>
+      <div class="line-tabs" id="company-tabs" role="group" aria-label="Filtrer par ville" data-reveal></div>
+      <div class="rail" data-reveal>
+        <div class="rail-track" id="company-grid" data-reveal-group tabindex="0" role="region" aria-label="Entreprises, défilement horizontal"></div>
+        <div class="rail-nav">
+          <button type="button" class="rail-btn" data-rail="-1" aria-label="Entreprises précédentes" hidden>←</button>
+          <button type="button" class="rail-btn" data-rail="1" aria-label="Entreprises suivantes" hidden>→</button>
+        </div>
+      </div>
+      <p class="block-more" data-reveal><a class="btn btn-primary" href="auth.html?mode=register&role=RECRUTEUR">Publier une offre</a></p>
+    </section>
+
+    <section class="block block--tint" id="liste-offres" aria-labelledby="offres-title">
+      <header class="block-head">
+        <p class="eyebrow">Offres</p>
+        <h2 id="offres-title" data-split>Les offres ouvertes</h2>
+        <p id="offers-lead">Classées par ville, type de contrat et délai de réponse annoncé.</p>
+      </header>
+      <div class="offer-grid" id="public-offers" data-reveal-group><p class="muted">Chargement des offres…</p></div>
+      <p class="block-more" data-reveal>
+        <span id="offers-more" hidden><button type="button" class="btn btn-ghost" id="offers-more-btn"></button></span>
+        <a class="btn btn-primary" href="auth.html?mode=register&role=CANDIDAT">Voir les offres dans mon espace</a>
+      </p>
+    </section>
+
+    <section class="scene" id="candidats" data-scene aria-labelledby="candidats-title">
+      <div class="scene-track">
+        <div class="scene-stage">
+          <header class="scene-intro">
+            <p class="eyebrow">Dossiers</p>
+            <h2 id="candidats-title" data-split>Les dossiers que le recruteur lit</h2>
+            <p>Pas d’annuaire public de visages. Le recruteur ouvre un dossier : le CV, la lecture extraite, une synthèse, puis les étapes.</p>
+          </header>
+          <ol class="scene-steps">
+            <li class="scene-step" data-scene-step>
+              <div class="step-text">
+                <p class="step-index" aria-hidden="true">01</p>
+                <h3>CV déposé</h3>
+                <p>Le candidat envoie son PDF. HireLink en extrait le texte et les sections. Il peut corriger avant d’enregistrer.</p>
+              </div>
+              <figure class="frame step-media">
+                <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+                <img src="assets/landing/dossier-cv.webp" width="1366" height="840" loading="lazy" decoding="async" alt="Prévisualisation du CV déposé et analyse de sa lecture" />
+              </figure>
+            </li>
+            <li class="scene-step" data-scene-step>
+              <div class="step-text">
+                <p class="step-index" aria-hidden="true">02</p>
+                <h3>Synthèse</h3>
+                <p>Une lecture courte du CV pour le recruteur : métier, expériences, compétences, un point d’attention. Elle ne retient personne.</p>
+              </div>
+              <figure class="frame step-media">
+                <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+                <img src="assets/landing/dossier-synthese.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Liste des candidats d’une offre avec leur synthèse et leur correspondance" />
+              </figure>
+            </li>
+            <li class="scene-step" data-scene-step>
+              <div class="step-text">
+                <p class="step-index" aria-hidden="true">03</p>
+                <h3>Étapes du dossier</h3>
+                <p>Reçu, lecture, shortlist, entretien. Un refus s’accompagne d’un motif. Le délai promis sur l’offre reste visible.</p>
+              </div>
+              <figure class="frame step-media">
+                <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+                <img src="assets/landing/dossier-etapes.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Suivi d’une candidature : étapes, entretien daté et délai de réponse" />
+              </figure>
+            </li>
+          </ol>
+          <div class="scene-foot">
+            <div class="scene-dots" role="group" aria-label="Choisir une étape">
+              <button type="button" class="is-active" aria-current="true">CV déposé</button>
+              <button type="button">Synthèse</button>
+              <button type="button">Étapes du dossier</button>
+            </div>
+            <a class="btn btn-primary" href="auth.html?mode=register&role=RECRUTEUR">Ouvrir l’espace recruteur</a>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="board-block" id="villes">
-      <div class="container">
-        <header class="board-head">
-          <h2>Offres par ville</h2>
-          <p>Les villes présentes dans les offres publiées.</p>
-        </header>
-        <div class="city-row" id="city-row"></div>
-      </div>
+    <section class="block" id="metiers" aria-labelledby="metiers-title">
+      <header class="block-head">
+        <p class="eyebrow">Métiers</p>
+        <h2 id="metiers-title" data-split>Métiers recherchés</h2>
+        <p>Les familles que le classement et la recherche utilisent. Choisissez-en une pour filtrer les offres.</p>
+      </header>
+      <div class="metier-grid" id="metier-grid" data-reveal-group></div>
     </section>
 
-    <section class="board-block" id="parcours">
-      <div class="container">
-        <header class="board-head">
-          <h2>Le parcours d’une candidature</h2>
-          <p>Quatre temps, les mêmes des deux côtés.</p>
-        </header>
+    <section class="block block--tint" id="villes" aria-labelledby="villes-title">
+      <header class="block-head">
+        <p class="eyebrow">Villes</p>
+        <h2 id="villes-title" data-split>Offres par ville</h2>
+        <p>Les villes présentes dans les offres publiées.</p>
+      </header>
+      <div class="city-row" id="city-row" data-reveal-group></div>
+    </section>
+
+    <section class="block" id="parcours" aria-labelledby="parcours-title">
+      <header class="block-head">
+        <p class="eyebrow">Parcours</p>
+        <h2 id="parcours-title" data-split>Le parcours d’une candidature</h2>
+        <p>Quatre temps, les mêmes des deux côtés.</p>
+      </header>
+      <div class="path" data-path>
+        <span class="path-line" aria-hidden="true"><span class="path-fill"></span></span>
         <ol class="path-row">
-          <li><b>1</b><strong>Postuler</strong><span>CV déjà déposé</span></li>
-          <li><b>2</b><strong>Suivre</strong><span>Chaque étape visible</span></li>
-          <li><b>3</b><strong>Échanger</strong><span>Entretien daté</span></li>
-          <li><b>4</b><strong>Décider</strong><span>Suite ou refus motivé</span></li>
+          <li class="path-step"><b>1</b><strong>Postuler</strong><span>CV déjà déposé</span></li>
+          <li class="path-step"><b>2</b><strong>Suivre</strong><span>Chaque étape visible</span></li>
+          <li class="path-step"><b>3</b><strong>Échanger</strong><span>Entretien daté</span></li>
+          <li class="path-step"><b>4</b><strong>Décider</strong><span>Suite ou refus motivé</span></li>
         </ol>
       </div>
     </section>
 
-    <section id="tarifs" class="section section-alt reveal">
-      <div class="container">
-        <div class="section-head">
-          <p class="eyebrow">Formules</p>
-          <h2 id="pricing-title">Accélérez votre carrière</h2>
-          <p class="lead" id="pricing-lead">
-            ROI personnel clair : activez votre recherche gratuitement, passez en Performance pour diviser votre temps de recherche.
-          </p>
-        </div>
+    <section class="block block--tint" id="tarifs" aria-labelledby="pricing-title">
+      <header class="block-head">
+        <p class="eyebrow">Formules</p>
+        <h2 id="pricing-title">Accélérez votre carrière</h2>
+        <p id="pricing-lead">ROI personnel clair : activez votre recherche gratuitement, passez en Performance pour diviser votre temps de recherche.</p>
+      </header>
 
-        <div class="pricing-switch" role="tablist" aria-label="Voir les tarifs">
-          <button type="button" class="is-active" role="tab" aria-selected="true" data-pricing="candidat" id="price-tab-candidat">Candidats</button>
-          <button type="button" role="tab" aria-selected="false" data-pricing="recruteur" id="price-tab-recruteur">Recruteurs</button>
-        </div>
-
-        <div class="pricing pricing--2" id="pricing-candidat" role="tabpanel">
-          <article class="price-card">
-            <p class="eyebrow">Essentiel</p>
-            <div class="price">0 <small>MAD</small></div>
-            <p class="price-note">Activez votre recherche sans friction.</p>
-            <ul>
-              <li><strong>Transparence totale :</strong> Postuler et suivre son parcours en temps réel.</li>
-              <li><strong>Matching intelligent :</strong> Offres classées selon votre profil réel.</li>
-              <li><strong>Zéro saisie :</strong> Import de CV automatisé en un geste.</li>
-            </ul>
-            <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=CANDIDAT">Activer ma recherche</a>
-          </article>
-          <article class="price-card is-featured">
-            <span class="tag badge badge-rose">ROI perso</span>
-            <p class="eyebrow">Performance</p>
-            <div class="price">39 <small>MAD / mois</small></div>
-            <p class="price-note">Divisez votre temps de recherche par deux.</p>
-            <ul>
-              <li><strong>Visibilité maximale :</strong> Profil certifié mis en avant auprès des recruteurs.</li>
-              <li><strong>Zéro opportunité manquée :</strong> Alertes ultra-ciblées en temps réel.</li>
-              <li><strong>Avantage premier arrivé :</strong> Accès prioritaire exclusif aux nouvelles offres.</li>
-            </ul>
-            <a class="btn btn-primary btn-block" href="checkout.html?plan=candidate">Passer en Performance</a>
-          </article>
-        </div>
-
-        <div class="pricing pricing--2" id="pricing-recruteur" role="tabpanel" hidden>
-          <article class="price-card">
-            <p class="eyebrow">Accès</p>
-            <div class="price">0 <small>MAD</small></div>
-            <p class="price-note">Automatisez votre sourcing de confiance.</p>
-            <ul>
-              <li><strong>Pipeline fluide :</strong> Outils de suivi des candidatures (ATS) inclus.</li>
-              <li><strong>Badge de confiance :</strong> Vérification légale instantanée par API.</li>
-              <li><strong>Engagement visible :</strong> Affichage de vos délais de réponse garantis.</li>
-            </ul>
-            <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=RECRUTEUR">Activer mon sourcing</a>
-          </article>
-          <article class="price-card is-featured">
-            <span class="tag badge badge-rose">ROI entreprise</span>
-            <p class="eyebrow">Premium</p>
-            <div class="price">299 <small>MAD / mois</small></div>
-            <p class="price-note">Sécurisez les meilleurs talents avant vos concurrents.</p>
-            <ul>
-              <li><strong>Collaboration totale :</strong> Multi-sièges pour aligner vos équipes.</li>
-              <li><strong>Attraction augmentée :</strong> Offres prioritaires à forte visibilité.</li>
-              <li><strong>Pilotage par la donnée :</strong> Alertes intelligentes et reporting ROI automatisé.</li>
-            </ul>
-            <a class="btn btn-primary btn-block" href="checkout.html?plan=recruiter">Sécuriser les talents</a>
-          </article>
-        </div>
-        <p class="pricing-footnote faint">Vous ne payez pas le bruit — vous investissez la valeur. Gratuit pour activer. Premium pour accélérer.</p>
+      <div class="pricing-switch" role="tablist" aria-label="Voir les tarifs" data-reveal>
+        <button type="button" class="is-active" role="tab" aria-selected="true" data-pricing="candidat" id="price-tab-candidat">Candidats</button>
+        <button type="button" role="tab" aria-selected="false" data-pricing="recruteur" id="price-tab-recruteur">Recruteurs</button>
       </div>
+
+      <div class="pricing" id="pricing-candidat" role="tabpanel" aria-labelledby="price-tab-candidat">
+        <article class="price-card">
+          <p class="eyebrow">Essentiel</p>
+          <div class="price">0 <small>MAD</small></div>
+          <p class="price-note">Activez votre recherche sans friction.</p>
+          <ul>
+            <li><strong>Transparence totale :</strong> Postuler et suivre son parcours en temps réel.</li>
+            <li><strong>Matching intelligent :</strong> Offres classées selon votre profil réel.</li>
+            <li><strong>Zéro saisie :</strong> Import de CV automatisé en un geste.</li>
+          </ul>
+          <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=CANDIDAT">Activer ma recherche</a>
+        </article>
+        <article class="price-card is-featured">
+          <span class="tag">ROI perso</span>
+          <p class="eyebrow">Performance</p>
+          <div class="price">39 <small>MAD / mois</small></div>
+          <p class="price-note">Divisez votre temps de recherche par deux.</p>
+          <ul>
+            <li><strong>Visibilité maximale :</strong> Profil certifié mis en avant auprès des recruteurs.</li>
+            <li><strong>Zéro opportunité manquée :</strong> Alertes ultra-ciblées en temps réel.</li>
+            <li><strong>Avantage premier arrivé :</strong> Accès prioritaire exclusif aux nouvelles offres.</li>
+          </ul>
+          <a class="btn btn-primary btn-block" href="checkout.html?plan=candidate">Passer en Performance</a>
+        </article>
+      </div>
+
+      <div class="pricing" id="pricing-recruteur" role="tabpanel" aria-labelledby="price-tab-recruteur" hidden>
+        <article class="price-card">
+          <p class="eyebrow">Accès</p>
+          <div class="price">0 <small>MAD</small></div>
+          <p class="price-note">Automatisez votre sourcing de confiance.</p>
+          <ul>
+            <li><strong>Pipeline fluide :</strong> Outils de suivi des candidatures (ATS) inclus.</li>
+            <li><strong>Badge de confiance :</strong> Vérification légale instantanée par API.</li>
+            <li><strong>Engagement visible :</strong> Affichage de vos délais de réponse garantis.</li>
+          </ul>
+          <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=RECRUTEUR">Activer mon sourcing</a>
+        </article>
+        <article class="price-card is-featured">
+          <span class="tag">ROI entreprise</span>
+          <p class="eyebrow">Premium</p>
+          <div class="price">299 <small>MAD / mois</small></div>
+          <p class="price-note">Sécurisez les meilleurs talents avant vos concurrents.</p>
+          <ul>
+            <li><strong>Collaboration totale :</strong> Multi-sièges pour aligner vos équipes.</li>
+            <li><strong>Attraction augmentée :</strong> Offres prioritaires à forte visibilité.</li>
+            <li><strong>Pilotage par la donnée :</strong> Alertes intelligentes et reporting ROI automatisé.</li>
+          </ul>
+          <a class="btn btn-primary btn-block" href="checkout.html?plan=recruiter">Sécuriser les talents</a>
+        </article>
+      </div>
+      <p class="pricing-footnote">Vous ne payez pas le bruit — vous investissez la valeur. Gratuit pour activer. Premium pour accélérer.</p>
     </section>
 
-    <div class="cta-band reveal">
-      <div>
-        <h2>Prêt à recruter (ou postuler) avec engagement ?</h2>
-        <p>Compte en quelques secondes. Le profil se construit après — quand vous êtes prêt.</p>
-      </div>
-      <a class="btn btn-primary" href="auth.html?mode=register">Créer mon compte</a>
-    </div>
+    <section class="finale" aria-labelledby="finale-title">
+      <div class="finale-glow" aria-hidden="true"></div>
+      <h2 id="finale-title" data-split>Prêt à recruter (ou postuler) avec engagement ?</h2>
+      <p data-reveal>Compte en quelques secondes. Le profil se construit après — quand vous êtes prêt.</p>
+      <a class="btn btn-champagne btn-lg" href="auth.html?mode=register" data-reveal>Créer mon compte</a>
+    </section>
   </main>
 
   <footer class="site-footer">
-    <div class="footer-glow" aria-hidden="true"></div>
-    <div class="footer-inner footer-board">
+    <div class="footer-inner">
       <div class="footer-brand">
         <a class="brand" href="index.html">
-          <span class="brand-mark brand-mark--pulse" aria-hidden="true"></span>
-          <span class="brand-name">Hi<span class="r-pulse">r</span>e<span style="color:#e2c98a">Link</span></span>
+          <span class="brand-mark" aria-hidden="true"></span>
+          <span class="brand-name">Hi<span class="r-accent">r</span>e<span class="brand-name-link">Link</span></span>
         </a>
         <p>Plateforme de recrutement : offres, dossiers, délais tenus.</p>
         <a href="security.html">Sécurité</a>
@@ -277,26 +381,24 @@
         </div>
       </nav>
     </div>
+    <p class="footer-wordmark" aria-hidden="true">HireLink</p>
     <div class="footer-bottom">
       <span>© <span id="footer-year">2026</span> HireLink</span>
-      <div class="footer-live" aria-hidden="true">
-        <span class="footer-live-mark brand-mark brand-mark--pulse"></span>
-        <span class="footer-live-word">Hi<span class="r-pulse">r</span>e<span class="footer-live-gold">Link</span></span>
-        <span class="footer-pulse"></span>
-      </div>
     </div>
   </footer>
 
-  <script src="js/config.js?v=20261029a"></script>
-  <script src="js/ui.js?v=20261029a"></script>
-  <script src="js/synapse.js?v=20261029a"></script>
-  <script src="js/landing-hero.js?v=20261029a"></script>
-  <script src="js/pricing-switch.js?v=20261029a"></script>
-  <script src="js/reveal.js?v=20261029a"></script>
-  <script src="js/nav.js?v=20261029a"></script>
-  <script src="js/public-nav.js?v=20261029a"></script>
-  <script src="js/suggest.js?v=20261029a"></script>
-  <script src="js/landing-offers.js?v=20261029a"></script>
-  <script src="js/footer-year.js?v=20261029a"></script>
+  <script src="js/config.js?v=20261101a"></script>
+  <script src="js/vendor/gsap.min.js?v=20261101a"></script>
+  <script src="js/vendor/ScrollTrigger.min.js?v=20261101a"></script>
+  <script src="js/vendor/lenis.min.js?v=20261101a"></script>
+  <script src="js/pricing-switch.js?v=20261101a"></script>
+  <script src="js/nav.js?v=20261101a"></script>
+  <script src="js/search.js?v=20261101a"></script>
+  <script src="js/places.js?v=20261101a"></script>
+  <script src="js/offer-card.js?v=20261101a"></script>
+  <script src="js/suggest.js?v=20261101a"></script>
+  <script src="js/landing-offers.js?v=20261101a"></script>
+  <script src="js/footer-year.js?v=20261101a"></script>
+  <script src="js/home-motion.js?v=20261101a"></script>
 </body>
 </html>

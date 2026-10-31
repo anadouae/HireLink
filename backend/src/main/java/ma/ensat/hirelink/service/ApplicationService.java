@@ -18,14 +18,15 @@ import java.util.stream.Collectors;
 /**
  * Pipeline ATS — machine d'états R01, isolation org R02, checklist R05,
  * catalogue refus R04, retrait candidat R11, HM R14.
- * Périmètre produit : le parcours positif s'arrête à INTERVIEW (refus / retrait restent possibles).
+ * Parcours positif : … → INTERVIEW → OFFER → HIRED ; refus possible jusqu'à l'offre, retrait candidat tant que non terminal.
  */
 @Service
 public class ApplicationService {
 
 
     private static final Set<ApplicationStatus> TERMINAL = EnumSet.of(
-            ApplicationStatus.INTERVIEW, ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN
+            ApplicationStatus.INTERVIEW, ApplicationStatus.OFFER, ApplicationStatus.HIRED,
+            ApplicationStatus.REJECTED, ApplicationStatus.WITHDRAWN
     );
 
     private static final Map<ApplicationStatus, String> STATUS_FR = Map.of(
@@ -33,12 +34,10 @@ public class ApplicationService {
             ApplicationStatus.SCREENING, "Présélection",
             ApplicationStatus.SHORTLISTED, "Shortlist",
             ApplicationStatus.INTERVIEW, "Entretien",
+            ApplicationStatus.OFFER, "Offre",
+            ApplicationStatus.HIRED, "Embauché(e)",
             ApplicationStatus.REJECTED, "Refusée",
             ApplicationStatus.WITHDRAWN, "Retirée"
-    );
-
-    private static final Map<String, String> INTERVIEW_TYPE_FR = Map.of(
-            "PHONE", "Téléphone", "VISIO", "Visio", "ONSITE", "Présentiel", "ASYNC", "Asynchrone"
     );
 
     private static final int MAX_APPLY_PER_DAY = 25;
@@ -47,8 +46,8 @@ public class ApplicationService {
             ApplicationStatus.SUBMITTED, EnumSet.of(ApplicationStatus.SCREENING, ApplicationStatus.REJECTED),
             ApplicationStatus.SCREENING, EnumSet.of(ApplicationStatus.SHORTLISTED, ApplicationStatus.REJECTED),
             ApplicationStatus.SHORTLISTED, EnumSet.of(ApplicationStatus.INTERVIEW, ApplicationStatus.REJECTED),
-            // Fin de parcours positif : INTERVIEW. Ensuite seulement rejet (ou retrait candidat).
-            ApplicationStatus.INTERVIEW, EnumSet.of(ApplicationStatus.REJECTED)
+            ApplicationStatus.INTERVIEW, EnumSet.of(ApplicationStatus.OFFER, ApplicationStatus.REJECTED),
+            ApplicationStatus.OFFER, EnumSet.of(ApplicationStatus.HIRED, ApplicationStatus.REJECTED)
     );
 
     private final ApplicationRepository applicationRepository;
@@ -62,6 +61,8 @@ public class ApplicationService {
     private final MembershipRepository membershipRepository;
     private final CvStorage cvStorage;
     private final AuditService audit;
+    private final InterviewService interviews;
+    private final EventNotifier notifier;
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
@@ -74,9 +75,13 @@ public class ApplicationService {
             OrganizationService organizationService,
             MembershipRepository membershipRepository,
             CvStorage cvStorage,
-            AuditService audit
+            AuditService audit,
+            InterviewService interviews,
+            EventNotifier notifier
     ) {
         this.audit = audit;
+        this.interviews = interviews;
+        this.notifier = notifier;
         this.applicationRepository = applicationRepository;
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
@@ -104,6 +109,9 @@ public class ApplicationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
         if (!offer.isPublished()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offre non publiée");
+        }
+        if (offer.getDeadline() != null && offer.getDeadline().isBefore(java.time.LocalDate.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date limite de candidature est dépassée");
         }
         var existing = applicationRepository.findByCandidateIdAndJobOfferId(candidate.getId(), jobOfferId);
         boolean reopen = existing.isPresent() && existing.get().getStatus() == ApplicationStatus.WITHDRAWN;
@@ -170,17 +178,7 @@ public class ApplicationService {
         timelineService.append(app.getId(), reopen ? ApplicationStatus.WITHDRAWN.name() : null,
                 ApplicationStatus.SUBMITTED.name(),
                 candidate.getId(), "{\"event\":\"" + (reopen ? "REAPPLY" : "APPLY") + "\",\"match\":" + Math.round(score) + "}");
-        for (Long target : organizationService.offerNotificationTargets(offer)) {
-            notificationService.push(target,
-                    "Nouvelle candidature",
-                    candidate.getFullName() + " a postulé à « " + offer.getTitle() + " »",
-                    "APPLICATION");
-        }
-        notificationService.push(candidate.getId(),
-                "Candidature envoyée",
-                "Votre dossier pour « " + offer.getTitle() + " » est soumis. SLA : "
-                        + offer.getResponseSlaDays() + " j.",
-                "APPLICATION");
+        notifier.applicationSubmitted(app);
         return toDto(app);
     }
 
@@ -263,8 +261,8 @@ public class ApplicationService {
             if (!app.getCandidate().getId().equals(actor.getId())) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le candidat peut retirer (R11)");
             }
-            // Retrait possible tant que non rejeté / déjà retiré (INTERVIEW reste retirable).
-            if (from == ApplicationStatus.REJECTED || from == ApplicationStatus.WITHDRAWN) {
+            // Retrait possible jusqu'à l'embauche (retirer une candidature en « Offre » revient à décliner l'offre).
+            if (from == ApplicationStatus.REJECTED || from == ApplicationStatus.WITHDRAWN || from == ApplicationStatus.HIRED) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Retrait impossible à cette étape (R11)");
             }
@@ -302,7 +300,10 @@ public class ApplicationService {
         }
 
         if (req.status() == ApplicationStatus.INTERVIEW) {
-            applyInterviewGate(app, req);
+            if (req.interview() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Planifiez l'entretien : type, date et heure sont requis.");
+            }
+            interviews.schedule(app, req.interview());
         }
 
         if (req.status() == ApplicationStatus.REJECTED || req.status() == ApplicationStatus.INTERVIEW) {
@@ -323,16 +324,10 @@ public class ApplicationService {
         audit.ok("STAGE_CHANGE", actor, "APPLICATION", app.getId(), from + " → " + req.status());
         String payload = buildTimelinePayload(app, req);
         timelineService.append(app.getId(), from.name(), req.status().name(), actor.getId(), payload);
-        String jobTitle = app.getJobOffer().getTitle();
         if (req.status() == ApplicationStatus.INTERVIEW) {
-            notificationService.push(app.getCandidate().getId(), "Entretien planifié",
-                    "« " + jobTitle + " » — " + interviewSummary(app), "INTERVIEW");
-        } else if (req.status() == ApplicationStatus.REJECTED) {
-            notificationService.push(app.getCandidate().getId(), "Candidature refusée",
-                    "« " + jobTitle + " »" + (app.getRejectionReason() != null ? " — " + app.getRejectionReason() : ""), "STATUS");
+            notifier.interviewScheduled(app, false);
         } else {
-            notificationService.push(app.getCandidate().getId(), "Votre candidature avance",
-                    "« " + jobTitle + " » est maintenant en étape « " + STATUS_FR.get(req.status()) + " ».", "STATUS");
+            notifier.statusChanged(app);
         }
         if (app.getAssignedHmUserId() != null && !app.getAssignedHmUserId().equals(actor.getId())) {
             notificationService.push(app.getAssignedHmUserId(),
@@ -341,15 +336,6 @@ public class ApplicationService {
                     "STATUS");
         }
         return toDto(app);
-    }
-
-    /** « 05/11/2026 à 10:30 · Visio · lien ou lieu » — heure de Casablanca. */
-    private String interviewSummary(Application app) {
-        String when = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm")
-                .withZone(java.time.ZoneId.of("Africa/Casablanca")).format(app.getInterviewAt());
-        String type = INTERVIEW_TYPE_FR.getOrDefault(app.getInterviewType(), app.getInterviewType());
-        String where = app.getInterviewLocation() == null || app.getInterviewLocation().isBlank() ? "" : " · " + app.getInterviewLocation();
-        return when + " · " + type + where;
     }
 
     private void assertCanActOnPipeline(User actor, Application app) {
@@ -408,32 +394,6 @@ public class ApplicationService {
         app.setRejectionReason(catalog.getLabel());
     }
 
-    private void applyInterviewGate(Application app, ApiDtos.AdvanceRequest req) {
-        if (req.interviewType() == null || req.interviewType().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Type d’entretien requis");
-        }
-        String type = req.interviewType().trim().toUpperCase();
-        if (!Set.of("PHONE", "VISIO", "ONSITE", "ASYNC").contains(type)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Type d’entretien invalide");
-        }
-        if (req.interviewAt() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date/heure d’entretien requise");
-        }
-        if (req.interviewAt().isBefore(Instant.now().minus(1, ChronoUnit.HOURS))) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Créneau d’entretien dans le passé");
-        }
-        app.setInterviewType(type);
-        app.setInterviewAt(req.interviewAt());
-        if (req.interviewLocation() != null && !req.interviewLocation().isBlank()) {
-            app.setInterviewLocation(req.interviewLocation().trim());
-        }
-        if (req.interviewNotes() != null && !req.interviewNotes().isBlank()) {
-            String n = req.interviewNotes().trim();
-            if (n.length() > 1000) n = n.substring(0, 1000);
-            app.setInterviewNotes(n);
-        }
-    }
-
     /** Seul le refus porte une information utile en plus du changement d'étape : son motif. */
     private static String buildTimelinePayload(Application app, ApiDtos.AdvanceRequest req) {
         if (req.status() != ApplicationStatus.REJECTED || app.getRejectionReason() == null) return null;
@@ -476,6 +436,17 @@ public class ApplicationService {
                 app.getInterviewAt(),
                 app.getInterviewLocation(),
                 app.getInterviewNotes(),
+                app.getInterviewKind(),
+                app.getInterviewDurationMinutes(),
+                app.getInterviewTimeZone(),
+                app.getInterviewVideoUrl(),
+                app.getInterviewPhone(),
+                app.getInterviewMapUrl(),
+                app.getInterviewParticipants(),
+                app.getInterviewAt() == null ? null : app.getInterviewStatus() == null ? InterviewService.SCHEDULED : app.getInterviewStatus(),
+                app.getInterviewCancelReason(),
+                app.getInterviewAt() == null ? null : app.getInterviewConfirmation() == null ? InterviewService.PENDING : app.getInterviewConfirmation(),
+                app.getInterviewCandidateNote(),
                 app.getAdvanceNote(),
                 app.getAssignedHmUserId(),
                 app.getSubmittedAt(),
@@ -487,6 +458,67 @@ public class ApplicationService {
                 app.getCvSections(),
                 app.getCvStorageName() != null && !app.getCvStorageName().isBlank()
         );
+    }
+
+    /** Reporter un entretien (ou en replanifier un annulé) : équipe de l'organisation uniquement. */
+    @Transactional
+    public ApiDtos.ApplicationResponse rescheduleInterview(User actor, Long appId, ApiDtos.InterviewRequest req) {
+        Application app = interviewApplication(actor, appId);
+        interviews.schedule(app, req);
+        applicationRepository.save(app);
+        audit.ok("INTERVIEW_RESCHEDULED", actor, "APPLICATION", app.getId(), interviews.summary(app));
+        notifier.interviewScheduled(app, true);
+        return toDto(app);
+    }
+
+    @Transactional
+    public ApiDtos.ApplicationResponse cancelInterview(User actor, Long appId, String reason) {
+        Application app = interviewApplication(actor, appId);
+        interviews.cancel(app, reason);
+        applicationRepository.save(app);
+        audit.ok("INTERVIEW_CANCELLED", actor, "APPLICATION", app.getId(), reason);
+        notifier.interviewCancelled(app);
+        return toDto(app);
+    }
+
+    /** Le candidat confirme sa présence ou signale qu'il n'est pas disponible. */
+    @Transactional
+    public ApiDtos.ApplicationResponse answerInterview(User candidate, Long appId, ApiDtos.InterviewAnswerRequest req) {
+        Application app = applicationRepository.findById(appId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
+        if (!candidate.getId().equals(app.getCandidate().getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Ce dossier ne vous appartient pas");
+        }
+        interviews.answer(app, req.available(), req.note());
+        applicationRepository.save(app);
+        notifier.interviewAnswered(app);
+        return toDto(app);
+    }
+
+    public record CalendarFile(byte[] content, String filename) {}
+
+    /** Fichier .ics de l'entretien : le candidat concerné ou l'équipe de l'organisation. */
+    @Transactional(readOnly = true)
+    public CalendarFile interviewCalendar(User actor, Long appId) {
+        Application app = applicationRepository.findById(appId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
+        if (!actor.getId().equals(app.getCandidate().getId())) {
+            organizationService.assertCanAccessApplication(actor, app);
+        }
+        if (app.getInterviewAt() == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucun entretien planifié");
+        }
+        return new CalendarFile(interviews.ics(app), "entretien-hirelink-" + app.getId() + ".ics");
+    }
+
+    private Application interviewApplication(User actor, Long appId) {
+        Application app = applicationRepository.findById(appId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
+        assertCanActOnPipeline(actor, app);
+        if (app.getStatus() != ApplicationStatus.INTERVIEW) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce dossier n'est pas à l'étape entretien.");
+        }
+        return app;
     }
 
     public record CvFile(Resource resource, String filename, String mediaType) {}

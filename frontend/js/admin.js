@@ -5,7 +5,7 @@
   if (!session) return;
 
   const esc = App.esc;
-  const VIEWS = ["dash", "orgs", "users", "plans", "refusals", "audit"];
+  const VIEWS = ["dash", "orgs", "users", "plans", "refusals", "audit", "emails"];
   const STATUS_FR = App.STATUS_FR;
   const PAY_FR = { EMISE: "Émise", REGLEE: "Réglée", OFFERTE: "Incluse" };
   const ROLE_FR = { CANDIDAT: "Candidat", RECRUTEUR: "Recruteur", ADMINISTRATEUR: "Administrateur" };
@@ -25,6 +25,7 @@
     App.setActive(view);
     if (view === "refusals") loadRefusals();
     if (view === "audit") loadAudit();
+    if (view === "emails") loadEmails();
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", () => show((location.hash || "").slice(1)));
@@ -60,7 +61,7 @@
 
     const box = $("dash-pending");
     if (!pending.length) {
-      App.empty(box, { icon: "check", title: "Aucune entreprise en attente", text: "Les entreprises dont l’ICE et l’e-mail professionnel concordent sont vérifiées automatiquement." });
+      App.empty(box, { title: "Aucune entreprise en attente", text: "Les entreprises dont l’ICE et l’e-mail professionnel concordent sont vérifiées automatiquement." });
       return;
     }
     box.innerHTML = '<div class="rc-list">' + pending.map((o) =>
@@ -74,26 +75,30 @@
 
   /* ------------------------------------------------------------ entreprises */
   function paintOrgs() {
-    const q = ($("org-search").value || "").trim().toLowerCase();
+    const q = ($("org-search").value || "").trim();
     const f = state.orgFilter;
-    const rows = state.orgs.filter((o) => {
+    const rows = HireLinkSearch.rank(state.orgs.filter((o) => {
       if (f === "pending" && o.verified) return false;
       if (f === "verified" && !o.verified) return false;
-      if (f === "premium" && o.planTier !== "PREMIUM") return false;
-      return !q || (o.name + " " + o.ice + " " + o.ownerEmail + " " + o.city).toLowerCase().indexOf(q) >= 0;
-    });
+      return !(f === "premium" && o.planTier !== "PREMIUM");
+    }), q, [{ get: (o) => o.name, weight: 3 }, { get: (o) => o.city, weight: 2 }, { get: (o) => o.ownerEmail, weight: 1 }, { get: (o) => o.ice, weight: 2 }]);
     const body = $("orgs-body");
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="7" class="rc-muted" style="text-align:center;padding:1.6rem">Aucune entreprise ne correspond.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7"></td></tr>';
+      HireLinkSearch.emptyState(body.firstChild.firstChild, q, { emptyTitle: "Aucune entreprise ne correspond", onClear: () => { $("org-search").value = ""; paintOrgs(); } });
       return;
     }
     body.innerHTML = rows.map((o) => {
       const logo = o.logoUrl && HireLinkAPI.mediaUrl ? HireLinkAPI.mediaUrl(o.logoUrl) : "";
-      return '<tr><td><div class="rc-logo-row">' + (logo ? '<img class="rc-logo" alt="" src="' + esc(logo) + '" />' : '<span class="rc-orgmark">' + esc(App.initials(o.name)) + "</span>") +
+      return '<tr><td><div class="rc-logo-row"><span class="rc-orgmark rc-orgmark--md">' + (logo ? '<img alt="" loading="lazy" data-initials="' + esc(App.initials(o.name)) + '" src="' + esc(logo) + '" />' : esc(App.initials(o.name))) + "</span>" +
         '<div class="rc-cell-main"><strong>' + esc(o.name) + '</strong><span class="rc-cell-sub">' + esc([o.sector, o.city].filter(Boolean).join(" · ") || "—") + "</span></div></div></td>" +
         "<td>" + esc(o.ice || "—") + "</td><td>" + esc(planLabel(o.planTier)) + "</td><td>" + statusPill(o) + "</td><td>" + o.memberCount + "</td><td>" + o.offerCount + "</td>" +
         '<td><div class="rc-row-actions"><button type="button" class="btn btn-soft btn-sm" data-open="' + o.id + '">Détails</button></div></td></tr>';
     }).join("");
+    body.querySelectorAll("img[data-initials]").forEach((img) => {
+      img.addEventListener("error", () => { img.parentNode.textContent = img.dataset.initials; });
+    });
+    HireLinkSearch.mark(body, q);
   }
   $("orgs-body").addEventListener("click", (e) => {
     const b = e.target.closest("[data-open]");
@@ -143,11 +148,13 @@
 
   /* ----------------------------------------------------------------- comptes */
   function paintUsers() {
-    const q = ($("user-search").value || "").trim().toLowerCase();
-    const rows = state.users.filter((u) => (state.userFilter === "all" || u.role === state.userFilter) && (!q || (u.fullName + " " + u.email).toLowerCase().indexOf(q) >= 0));
+    const q = ($("user-search").value || "").trim();
+    const rows = HireLinkSearch.rank(state.users.filter((u) => state.userFilter === "all" || u.role === state.userFilter), q,
+      [{ get: (u) => u.fullName, weight: 3 }, { get: (u) => u.email, weight: 2 }]);
     const body = $("users-body");
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="4" class="rc-muted" style="text-align:center;padding:1.6rem">Aucun compte ne correspond.</td></tr>';
+      body.innerHTML = '<tr><td colspan="4"></td></tr>';
+      HireLinkSearch.emptyState(body.firstChild.firstChild, q, { emptyTitle: "Aucun compte ne correspond", onClear: () => { $("user-search").value = ""; paintUsers(); } });
       return;
     }
     body.innerHTML = rows.map((u) => {
@@ -157,12 +164,13 @@
         '<td><span class="rc-pill ' + (u.active ? "rc-pill--ok" : "rc-pill--danger") + '">' + (u.active ? "Actif" : "Désactivé") + "</span></td>" +
         '<td><div class="rc-row-actions">' + (self ? "" : '<button type="button" class="btn btn-ghost btn-sm" data-user="' + u.id + '">' + (u.active ? "Désactiver" : "Réactiver") + "</button>") + "</div></td></tr>";
     }).join("");
+    HireLinkSearch.mark(body, q);
   }
   $("users-body").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-user]");
     const u = b && state.users.find((x) => String(x.id) === b.dataset.user);
     if (!u) return;
-    const ok = await HireLink.openModal({
+    const ok = await Mascotte.confirm({
       title: u.active ? "Désactiver ce compte ?" : "Réactiver ce compte ?",
       description: u.fullName + " · " + u.email, confirmLabel: u.active ? "Désactiver" : "Réactiver", danger: !!u.active,
     });
@@ -260,11 +268,54 @@
             esc(r.actor || "—") + "</td><td>" + esc(r.target || "—") + "</td><td>" + esc(r.ip || "—") + '</td><td class="rc-muted">' + esc(r.detail || "") + "</td></tr>").join("")
         : '<tr><td colspan="6" class="rc-muted" style="text-align:center;padding:1.6rem">Aucun évènement.</td></tr>';
     } catch (err) {
-      body.innerHTML = '<tr><td colspan="6" class="rc-muted">' + esc(err.message) + "</td></tr>";
+      body.innerHTML = '<tr><td colspan="6"></td></tr>';
+      App.errorState(body.firstChild.firstChild, err.message, loadEmails);
     }
   }
   $("audit-filter").addEventListener("change", loadAudit);
   $("audit-refresh").addEventListener("click", loadAudit);
+
+  /* ------------------------------------------------------------ e-mails envoyés */
+  const MAIL_STATE = { SENT: ["Envoyé", "ok"], LOGGED: ["Journalisé (sans SMTP)", ""], FAILED: ["Échec d’envoi", "danger"] };
+  const MAIL_KIND = { SECURITY: "Sécurité", ACCOUNT: "Compte", APPLICATION: "Candidature", INTERVIEW: "Entretien" };
+
+  async function loadEmails() {
+    const body = $("mail-body");
+    body.innerHTML = '<tr><td colspan="6" class="rc-muted" style="text-align:center;padding:1.4rem">Chargement…</td></tr>';
+    try {
+      const rows = await HireLinkAPI.api("/admin/emails", { noDedupe: true });
+      if (!rows.length) {
+        body.innerHTML = '<tr><td colspan="6"></td></tr>';
+        App.empty(body.firstChild.firstChild, { title: "Aucun e-mail pour le moment", text: "Les messages envoyés par HireLink (candidatures, entretiens, sécurité) apparaîtront ici." });
+        return;
+      }
+      body.innerHTML = rows.map((r) => {
+        const st = MAIL_STATE[r.status] || [r.status, ""];
+        return "<tr><td>" + esc(App.fmtDateTime(r.at)) + "</td><td>" + esc(r.recipient) + "</td><td>" + esc(r.subject) + "</td><td>" + esc(MAIL_KIND[r.kind] || r.kind) +
+          '</td><td><span class="rc-pill' + (st[1] ? " rc-pill--" + st[1] : "") + '">' + esc(st[0]) + "</span></td><td>" +
+          (r.hasBody ? '<button type="button" class="btn btn-ghost btn-sm" data-mail="' + r.id + '">Voir</button>' : "") + "</td></tr>";
+      }).join("");
+    } catch (err) {
+      body.innerHTML = '<tr><td colspan="6"></td></tr>';
+      App.errorState(body.firstChild.firstChild, err.message, loadEmails);
+    }
+  }
+  $("mail-refresh").addEventListener("click", loadEmails);
+  $("mail-body").addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-mail]");
+    if (!b) return;
+    try {
+      const mail = await HireLinkAPI.api("/admin/emails/" + b.dataset.mail);
+      // Aperçu isolé : aucun script ni lien actif ne peut s'exécuter dans le message.
+      const frame = document.createElement("iframe");
+      frame.setAttribute("sandbox", "");
+      frame.title = mail.subject;
+      frame.className = "mail-preview";
+      frame.srcdoc = mail.html;
+      HireLink.openModal({ title: mail.subject, bodyHtml: '<div id="mail-slot"></div>', confirmLabel: "Fermer", hideCancel: true, large: true,
+        onReady: (api) => api.root.querySelector("#mail-slot").appendChild(frame) });
+    } catch (err) { fail("E-mail", err); }
+  });
 
   /* ---------------------------------------------------------- motifs de refus */
   async function loadRefusals(force) {
@@ -297,7 +348,7 @@
       } else if (act === "toggle") {
         await HireLinkAPI.api("/refusal-reasons/" + r.id, { method: "PUT", body: { label: r.label, active: !r.active } });
       } else {
-        const ok = await HireLink.openModal({ title: "Supprimer « " + r.code + " » ?", description: "Les refus déjà enregistrés conservent leur libellé.", confirmLabel: "Supprimer", danger: true });
+        const ok = await Mascotte.confirm({ title: "Supprimer « " + r.code + " » ?", description: "Les refus déjà enregistrés conservent leur libellé.", confirmLabel: "Supprimer", danger: true });
         if (!ok) return;
         await HireLinkAPI.api("/refusal-reasons/" + r.id, { method: "DELETE" });
       }

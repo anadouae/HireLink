@@ -51,6 +51,8 @@ Ce guide s’adresse à quelqu’un qui n’a jamais lancé le projet. Il expliq
 3. Tapez `exit;` pour quitter. (Les tables sont créées automatiquement au premier démarrage du backend.)
 4. **Si votre mot de passe root n’est pas vide** : ouvrez `backend\src\main\resources\application.properties` et renseignez la ligne `spring.datasource.password=` (ex. `spring.datasource.password=MonMotDePasse`). Ne committez jamais cette valeur ; mieux : mettez-la dans `application-local.properties` (voir §5).
 
+> **Vous aviez déjà une base `hirelink` (version précédente) ?** Ne la supprimez pas : au démarrage, le backend (`spring.jpa.hibernate.ddl-auto=update`) ajoute tout seul les nouvelles colonnes (conditions des offres, entretiens, préférences e-mail, journal d’e-mails) et ajoute les étapes `OFFER` et `HIRED` à la colonne `applications.status` (type ENUM de MySQL/MariaDB). Les offres, candidatures et comptes existants sont conservés ; les anciennes offres s’affichent simplement avec les conditions « non précisées ». Cette mise à jour a été vérifiée sur une copie d’une base de l’ancienne version. Aucune commande SQL n’est à saisir. **Seul cas particulier** : si le démarrage s’arrête avec une erreur du type `Data truncated for column 'status'` (colonne non modifiée, par exemple faute de droits), exécutez une fois : `ALTER TABLE applications MODIFY status ENUM('SUBMITTED','SCREENING','SHORTLISTED','INTERVIEW','OFFER','HIRED','REJECTED','WITHDRAWN') NOT NULL;` puis redémarrez. Sauvegardez toujours la base avant une mise à jour (`mysqldump -u root hirelink > sauvegarde.sql`).
+
 ## 4. Démarrer le backend
 
 Choisissez **une** des deux méthodes.
@@ -85,6 +87,31 @@ mvn spring-boot:run
 
 Variables reconnues : HIRELINK_JWT_SECRET, HIRELINK_CORS_ORIGINS, HIRELINK_LLM_API_KEY, HIRELINK_GEMINI_API_KEY, HIRELINK_GROQ_API_KEY, HIRELINK_MISTRAL_API_KEY, HIRELINK_GOOGLE_CLIENT_ID, HIRELINK_WEBAUTHN_RP_ID, HIRELINK_WEBAUTHN_ORIGINS, HIRELINK_FRONTEND_URL, HIRELINK_ADMIN_EMAIL, HIRELINK_ADMIN_PASSWORD, HIRELINK_SWAGGER_ENABLED. Détails et audit des secrets : `docs/SECURITE.md`.
 
+### 5.1 E-mails : brancher un serveur SMTP (exemple Gmail)
+
+HireLink envoie de vrais e-mails (HTML + texte, en français) : candidature reçue, étape suivante, entretien planifié / confirmé / reporté / annulé, rappel la veille d’un entretien, proposition, embauche, ainsi que les codes et liens de sécurité. L’envoi est asynchrone : une panne SMTP ne bloque jamais l’application (l’échec est journalisé et visible dans Administration → E-mails envoyés). **Sans serveur SMTP**, l’application fonctionne quand même : les messages sont seulement journalisés et consultables par l’administrateur.
+
+1. Dans votre compte Google : *Sécurité* → activez la **validation en 2 étapes**, puis *Mots de passe des applications* → créez un mot de passe d’application (16 caractères). N’utilisez **jamais** le mot de passe habituel du compte.
+2. Copiez `backend\src\main\resources\application-local.properties.example` vers **`backend\application-local.properties`** (ou `backend\src\main\resources\application-local.properties`) : ce fichier est ignoré par Git, ne le committez jamais.
+3. Ajoutez (ou gardez) ces lignes en remplaçant les valeurs entre guillemets par les vôtres. Le mot de passe ci-dessous est un **modèle** à remplacer :
+
+```
+spring.mail.host=smtp.gmail.com
+spring.mail.port=587
+spring.mail.username=votre.adresse@gmail.com
+spring.mail.password=COLLER_ICI_LE_MOT_DE_PASSE_D_APPLICATION_A_16_CARACTERES
+hirelink.mail.from=HireLink <votre.adresse@gmail.com>
+```
+
+1. Redémarrez le backend. Dans la console, vous devez lire `E-mails : envoi SMTP via smtp.gmail.com:587 (expéditeur HireLink <votre.adresse@gmail.com>)`. Si vous lisez « aucun serveur SMTP configuré », le fichier n’a pas été trouvé.
+2. Testez : connectez-vous en candidat, ouvrez *Paramètres* et vérifiez que « E-mails de suivi » est activé ; puis demandez un lien « Mot de passe oublié » : le message arrive dans la boîte Gmail.
+
+Le fichier est lu à ces trois emplacements (le premier trouvé gagne) : `application-local.properties` dans le dossier de lancement, `backend/application-local.properties` si vous lancez depuis la racine du dépôt, ou `src/main/resources/application-local.properties` (placé dans le classpath). Chaque emplacement a été vérifié : la ligne de démarrage ci-dessus s’affiche. **Autre méthode, sans fichier** : variables d’environnement `HIRELINK_MAIL_HOST`, `HIRELINK_MAIL_PORT` (587 par défaut), `HIRELINK_MAIL_USERNAME`, `HIRELINK_MAIL_PASSWORD`, `HIRELINK_MAIL_FROM` (modèle : `.env.example`). Pour un serveur sans chiffrement ni authentification (outil de test local) : `HIRELINK_MAIL_AUTH=false` et `HIRELINK_MAIL_STARTTLS=false`.
+
+> Tester sans compte Gmail : lancez un récepteur local comme **Mailpit** (`mailpit` écoute en SMTP sur 1025 et affiche les messages sur http://localhost:8025), puis démarrez le backend avec `HIRELINK_MAIL_HOST=127.0.0.1 HIRELINK_MAIL_PORT=1025 HIRELINK_MAIL_AUTH=false HIRELINK_MAIL_STARTTLS=false`. C’est ainsi que les e-mails de ce guide ont été vérifiés (la connexion réelle à Gmail n’a pas été exécutée : elle exige vos identifiants).
+
+**Désinscription.** Les e-mails de suivi (candidatures, entretiens) respectent la préférence « E-mails de suivi » de *Paramètres* (candidat : *Confidentialité* ; recruteur : *Alertes*) ; chaque message contient le lien pour la modifier. Les e-mails de sécurité (codes, réinitialisation, alerte de connexion) sont toujours envoyés.
+
 ## 6. Démarrer le frontend
 
 1. Ouvrez une **deuxième** invite de commandes (laissez le backend tourner dans la première).
@@ -106,6 +133,8 @@ Variables reconnues : HIRELINK_JWT_SECRET, HIRELINK_CORS_ORIGINS, HIRELINK_LLM_A
 | recrutement.ocpgroup@hirelink.ma | Recruteur123! | Recruteur d’une **autre** organisation (OCP Group) |
 
 > Ces mots de passe « faciles » ne servent qu’aux comptes de démonstration créés par l’amorçage. Tout mot de passe que **vous** créez doit respecter la politique : 12 à 64 caractères, pas de mot de passe courant, pas votre e-mail ni votre nom (ex. « Atlas-Vert-Soleil-2026 »). Le code TOTP ou OTP n’est jamais envoyé par e-mail en développement : il s’affiche dans la **console du backend**.
+
+> Les données de démonstration comprennent aussi des offres de **PFE** (gratification 3 000 MAD / mois, convention exigée) et de **Freelance** (2 500 – 3 200 MAD / jour, télétravail), des candidatures aux étapes **Proposition** (OFFER) et **Embauché** (HIRED), des entretiens avec type (sur site, visio, téléphone) et nature, et des notifications associées : de quoi voir toutes les nouveautés (§18) dès le premier démarrage.
 
 ## 8. Scénarios — Candidat
 
@@ -691,11 +720,119 @@ try { Invoke-WebRequest -Uri http://localhost:8081/api/v1/applications/by-offer/
 | Le code TOTP est « invalide » | Horloge décalée ou code déjà utilisé | Synchronisez l’heure Windows ; attendez les 30 secondes suivantes ; sinon un code de secours |
 | Passkey : « non supportée » | Adresse autre que localhost, ou navigateur trop ancien | Utilisez http://localhost:5500 avec Chrome/Edge récent |
 | `mvn` n’est pas reconnu | Maven absent du PATH | Utilisez IntelliJ, ou ajoutez Maven au PATH (§1.3) |
-| Aucun code OTP reçu par e-mail | Normal en développement | Le code est dans la console du backend (`OTP [...] → ...`) |
+| Aucun code OTP reçu par e-mail | Aucun SMTP configuré (normal en développement) | Le code est dans la console du backend (`OTP [...] → ...`) ; pour recevoir de vrais e-mails, voir §5.1 |
+| Gmail : `Username and Password not accepted` / `Authentication failed` dans la console | Mot de passe habituel utilisé au lieu d’un mot de passe d’application, ou validation en 2 étapes inactive | Créez un mot de passe d’application (§5.1) et collez-le sans espaces dans `spring.mail.password` |
+| Les e-mails n’arrivent pas, la console affiche `Envoi d'e-mail impossible` | Serveur SMTP injoignable ou identifiants refusés ; l’application continue de fonctionner | Consultez Administration → E-mails envoyés (colonne État) et la console ; vérifiez host, port 587 et identifiants |
+| Notifications qui n’apparaissent qu’après quelques secondes | Le flux temps réel (SSE) est bloqué par un proxy ou un antivirus ; l’application bascule seule sur l’interrogation toutes les 45 s | Aucune action requise ; en cas d’usage derrière un proxy, autorisez les connexions longues vers `/api/v1/notifications/stream` |
+| Un logo d’entreprise n’apparaît pas (initiale à la place) | Adresse `http://` (bloquée par la politique de sécurité), image supprimée ou illisible | Renvoyez le logo depuis *Entreprise & équipe*, ou utilisez une adresse `https://` ; formats PNG/JPEG/WEBP/GIF, 2 Mo maximum |
+| Au démarrage : `Data truncated for column 'status'` | L’ancienne colonne `applications.status` n’a pas pu être étendue | Exécutez la commande `ALTER TABLE applications MODIFY status ENUM(…)` donnée au §3, puis redémarrez |
 
 ## 17. Récapitulatif de ce qui a été exécuté pour écrire ce guide
 
 - Base vide recréée avant chaque campagne, backend démarré depuis le jar compilé, frontend servi par `python -m http.server 5500`.
 - Parcours navigateur automatisés (Chrome) : candidat (§8), recruteur (§9), hiring manager (§10), parcours croisés (§11), nouveau recruteur + vérification admin (§12), administrateur avec activation TOTP (§13–14), sécurité (§15, avec une passkey virtuelle). Chaque capture est issue de ces exécutions.
 - Tests d’API automatisés (plus de 250 vérifications) : authentification, sessions, MFA, passkeys, contrôles d’accès, téléversements, audit, profil `prod`, expiration des sessions et des liens — voir `docs/SECURITE.md`.
-- Non exécuté : installation sur un vrai Windows, MySQL 8 (testé avec MariaDB 10.11), envoi d’e-mails réels (SMTP), connexion Google avec un identifiant client autorisé, passkey avec un vrai authentificateur matériel.
+- Version intégrée (§18) : 23 tests unitaires Maven (`mvn package`), balayage de 43 pages (publiques et de chaque rôle), page d’accueil vérifiée sur ordinateur, mobile, avec animations réduites et sans JavaScript, parcours navigateur et API pour les trois rôles (recruteur, candidat, administrateur), deux navigateurs simultanés pour les notifications en temps réel, balayage de toutes les pages sans erreur JavaScript ni violation de la politique de sécurité (CSP), envoi d’e-mails vers un récepteur SMTP local, mise à jour automatique d’une base de l’ancienne version.
+- Non exécuté : installation sur un vrai Windows, MySQL 8 (testé avec MariaDB 10.11), envoi d’e-mails vers un vrai compte Gmail (testé avec un récepteur SMTP local), connexion Google avec un identifiant client autorisé, passkey avec un vrai authentificateur matériel.
+
+## 18. Nouveautés : scénarios de test
+
+Cette version regroupe trois chantiers en un seul projet : la recherche et les offres détaillées, la **nouvelle page d’accueil animée** et la **mascotte HireLink** (notifications, confirmations, états vides et célébrations). Cette partie couvre la recherche intelligente, les compétences classées, la correspondance avec le profil, les offres détaillées par type de contrat, les entretiens, les e-mails, l’embauche et les notifications en temps réel. Les comptes sont ceux du §7.
+
+### 18.1 Recherche tolérante et compétences classées
+
+1. Connectez-vous en **candidat** (`candidat@hirelink.ma`) → *Profil / CV* → champ « Compétences ». Tapez `pyhton` (faute volontaire) : **Python** est proposé en tête. Les accents et les majuscules sont ignorés (`resau` trouve « Réseaux ») et les synonymes aussi (`js` → JavaScript).
+
+   ![n-competences-faute](guide-captures/223-n-competences-faute.png)
+
+2. Utilisez ↑ ↓ pour naviguer, Entrée pour choisir, Échap pour fermer. Tapez une compétence inconnue (ex. `Zorglub`) puis Entrée : elle est ajoutée telle quelle.
+3. Sous le champ, la rubrique « Votre profil en un coup d’œil » range automatiquement chaque compétence dans une boîte colorée (langages, frameworks, bases de données, DevOps, outils, méthodes, langues…). Les compétences inconnues vont dans **Autres**. Les recruteurs voient les mêmes boîtes dans le dossier d’un candidat.
+
+   ![n-profil-boites](guide-captures/224-n-profil-boites.png)
+
+4. Toutes les barres de recherche (offres, entreprises, candidats, pipeline, notifications, administration) classent par pertinence, tolèrent les fautes, surlignent le texte trouvé et affichent un message clair quand il n’y a aucun résultat.
+
+   ![n-recherche-faute](guide-captures/227-n-recherche-faute.png)
+
+
+### 18.2 Offres qui correspondent à mon profil
+
+1. Candidat → *Offres*. Activez l’interrupteur **« Offres qui correspondent à mon profil »** : la liste ne garde que les offres dont les compétences recoupent les vôtres, avec un pourcentage de correspondance. Le choix est mémorisé d’une visite à l’autre.
+
+   ![n-offres-filtre-profil](guide-captures/225-n-offres-filtre-profil.png)
+
+2. Survolez (ou touchez) une carte d’offre : un extrait apparaît et la flèche se détache. La même carte est utilisée sur la page d’accueil, les pages entreprise, l’espace candidat et l’espace recruteur.
+
+   ![n-carte-survol](guide-captures/226-n-carte-survol.png)
+
+
+### 18.3 Créer une offre adaptée au type de contrat
+
+1. Recruteur (`n.bennani@atlasdigital.ma`) → *Offres* → **Nouvelle offre**. Étape 1 : titre (suggestions de métiers), type de contrat, lieu (ville ou pays avec drapeau ; le Maroc est proposé en premier), mode de travail.
+2. Choisissez **Stage** ou **PFE** : l’étape « Conditions » propose la *gratification mensuelle* (et non un « salaire »), la durée en mois (obligatoire), la convention de stage, l’embauche possible à l’issue ; pas de période d’essai.
+
+   ![n-offre-stage](guide-captures/221-n-offre-stage.png)
+
+3. Choisissez **CDI** : fourchette de salaire (brut/net, par mois/an), devise, période d’essai, début dès que possible ou date précise, avantages. Un champ obligatoire vide ou une fourchette incohérente affiche une erreur en ligne, sous le champ, et bloque le bouton « Continuer ».
+
+   ![n-offre-cdi](guide-captures/222-n-offre-cdi.png)
+
+4. Les types **CDD, Alternance, Freelance (tarif par jour ou par heure), Temps partiel, PFA, Stage d’été** ont leurs propres champs. Les champs qui ne concernent pas le type choisi ne sont jamais enregistrés. Les compétences demandées utilisent le même sélecteur tolérant que le profil (500 caractères au total).
+5. Étape 4 : l’aperçu montre la carte telle que les candidats la verront (rémunération avec icône monnaie, lieu avec drapeau). Publiez : *Offres* affiche la grille ; cliquez une carte pour le détail, ou « Modifier » / « ⋯ » pour la fiche d’évaluation, la dépublication ou la suppression.
+
+   ![n-recruteur-offres](guide-captures/233-n-recruteur-offres.png)
+
+
+### 18.4 Entretiens : planifier, confirmer, reporter
+
+1. Recruteur → *Pipeline* → carte d’un candidat à l’étape *Shortlist* → **Avancer** vers *Entretien*. Le formulaire d’entretien est obligatoire : mode (**sur site / visioconférence / téléphone**), nature (RH, technique, manager, final), date, heure, **fuseau horaire (Africa/Casablanca par défaut)**, durée, adresse ou lien de visio ou numéro, participants, consignes. Les erreurs s’affichent en ligne.
+
+   ![n-entretien-formulaire](guide-captures/228-n-entretien-formulaire.png)
+
+2. Validez : le candidat reçoit une notification, un e-mail avec le fichier **.ics** (ajout à l’agenda) et un bouton « Confirmer ma présence ». Dans *Mes candidatures*, il voit les détails de l’entretien et peut **confirmer** ou **indiquer qu’il n’est pas disponible** avec une note ; le recruteur est prévenu.
+3. Recruteur → *Entretiens* : **Reporter** (nouvelle date) ou **Annuler** (motif obligatoire) : le candidat est prévenu par notification et e-mail, le fichier .ics est mis à jour. La veille de l’entretien, un rappel est envoyé aux deux parties.
+
+### 18.5 Proposition, embauche et notifications en temps réel
+
+1. Le pipeline compte désormais deux étapes de plus : **Proposition** (OFFER) puis **Embauché** (HIRED), en plus de Reçues, Présélection, Shortlist et Entretien. Faites avancer une candidature jusqu’à *Embauché* : le candidat reçoit une notification, un e-mail de félicitations, et voit une animation de célébration ; le recruteur aussi : la mascotte fête l’événement avec **toute l’équipe de recruteurs** côté recruteur, et dans la **tenue du candidat** côté candidat (une seule fois par embauche).
+
+   ![n-embauche](guide-captures/232-n-embauche.png)
+
+2. **Temps réel** : ouvrez deux navigateurs (ou une fenêtre privée) : recruteur dans l’un, candidat dans l’autre. Faites avancer une candidature : la cloche, la pastille et la liste du candidat se mettent à jour en moins d’une seconde, sans recharger. Plusieurs onglets du même compte reçoivent le même message ; un autre compte ne reçoit rien.
+
+   ![n-notifications-temps-reel](guide-captures/230-n-notifications-temps-reel.png)
+
+3. Se déconnecter dans un onglet ferme le flux ; les jetons du flux sont à usage unique et valables 30 secondes. Si le flux est coupé (proxy, réseau), l’application se reconnecte seule puis, en dernier recours, interroge le serveur toutes les 45 secondes.
+
+### 18.6 Administration : e-mails envoyés et vérification d’une entreprise
+
+1. Connectez-vous en administrateur (§14) → **E-mails envoyés** : liste des messages (destinataire, type, état *Envoyé / Échec / Journalisé*, date) avec recherche tolérante, et aperçu du message dans une fenêtre isolée. Les messages contenant un code ou un lien secret ne conservent pas leur contenu. Le journal est purgé après 30 jours.
+
+   ![n-admin-emails](guide-captures/231-n-admin-emails.png)
+
+2. Règle de vérification : modifier l’**ICE** ou la **raison sociale** d’une entreprise relance la vérification (et peut retirer le badge « vérifiée »). Modifier le reste de la fiche (site, présentation, secteur…) ne change **jamais** le statut de vérification.
+
+### 18.7 Page d’accueil animée, mascotte et logos
+
+1. Ouvrez http://localhost:5500/ : la **page d’accueil animée** (défilement fluide, animations légères) affiche les chiffres clés, les offres ouvertes et les entreprises qui recrutent. Les cartes d’offres sont exactement les mêmes que dans l’espace candidat, avec la **rémunération**, le **drapeau** du lieu et le délai de réponse ; survolez-en une : les pastilles laissent place à un extrait. Sur téléphone, tout reste visible sans survol.
+
+   ![n-accueil](guide-captures/234-n-accueil.png)
+
+2. La présentation par rôle de la page d’accueil ne montre que les espaces **candidat** et **recruteur** : aucun lien, texte ni bouton n’y mentionne l’administration. Le compte administrateur se connecte comme les autres, par le bouton **Se connecter** (§14), et accède à son espace une fois authentifié.
+3. La page respecte le réglage « réduire les animations » du système (les effets sont supprimés) et reste lisible si JavaScript est désactivé.
+4. Les notifications, confirmations et messages « aucun résultat » sont portés par la **mascotte** : une petite notification en bas à droite pour chaque événement (jamais deux fois la même, même quand la cloche se met à jour), une fenêtre de confirmation pour les actions sensibles. Exemple : *Entretiens* → **Annuler** : la mascotte demande le motif (obligatoire) avant d’envoyer l’annulation au candidat.
+
+   ![n-mascotte-annulation](guide-captures/235-n-mascotte-annulation.png)
+
+5. **Logos d’entreprise** : un logo envoyé depuis *Entreprise & équipe* (PNG, JPEG, WEBP ou GIF, 2 Mo maximum) ou donné par une adresse `https://…` s’affiche partout de la même façon : tuile blanche arrondie, image entière avec une petite marge, sur les cartes d’offres, la liste des entreprises, la page entreprise, le menu du recruteur et l’administration. Sans logo, ou si l’image ne se charge pas, l’initiale de l’entreprise est affichée. Les adresses `http://` (non chiffrées) sont refusées par la politique de sécurité du navigateur : utilisez `https://` ou l’envoi d’un fichier.
+
+   ![n-logos](guide-captures/236-n-logos.png)
+
+
+### 18.8 Corrections de comportement
+
+- Une entreprise déjà vérifiée le reste quand on enregistre sa fiche sans toucher à l’ICE ni à la raison sociale.
+- La ville du candidat est indépendante de ses *lieux souhaités* : modifier l’une n’écrase plus l’autre.
+- « Premier emploi » est enregistré, relu et affiché de la même façon dans le profil, les paramètres et les données de démonstration.
+- Nouvelle étape *Embauché* avec e-mails, notifications et célébration.
+- Une série de notifications rapprochées ne fige plus la page (limite de trois notifications visibles).

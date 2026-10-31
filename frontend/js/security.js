@@ -199,15 +199,16 @@
       await done("Appareil déconnecté.");
     },
     async "revoke-others"() {
-      const ok = await HireLink.openModal({ title: "Déconnecter les autres appareils ?", description: "Seule cette session restera ouverte.", confirmLabel: "Déconnecter" });
+      const ok = await Mascotte.confirm({ title: "Déconnecter les autres appareils ?", description: "Seule cette session restera ouverte.", confirmLabel: "Déconnecter" });
       if (!ok) return;
       await api("/account/sessions/revoke-others", { method: "POST", body: {} });
       await done("Les autres appareils ont été déconnectés.");
     },
     async "revoke-all"() {
-      const ok = await HireLink.openModal({ title: "Se déconnecter partout ?", description: "Toutes les sessions, y compris celle-ci, seront fermées.", confirmLabel: "Tout fermer", danger: true });
+      const ok = await Mascotte.confirm({ title: "Se déconnecter partout ?", description: "Toutes les sessions, y compris celle-ci, seront fermées.", confirmLabel: "Tout fermer", danger: true });
       if (!ok) return;
       await api("/account/sessions/revoke-all", { method: "POST", body: {} });
+      Mascotte.goodbye(HireLinkAPI.getSession());
       HireLinkAPI.clearAuth();
       location.href = "../auth.html?mode=login";
     },

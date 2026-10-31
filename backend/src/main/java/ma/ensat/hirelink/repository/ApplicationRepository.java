@@ -41,4 +41,17 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             @Param("now") Instant now,
             @Param("terminals") Collection<ApplicationStatus> terminals
     );
+
+    @Query("""
+            SELECT a FROM Application a JOIN FETCH a.jobOffer o JOIN FETCH a.candidate
+            WHERE a.status = ma.ensat.hirelink.model.ApplicationStatus.INTERVIEW
+              AND a.interviewAt > :now AND a.interviewAt <= :limit
+              AND (a.interviewStatus IS NULL OR a.interviewStatus <> :cancelled)
+              AND (a.interviewReminderSent IS NULL OR a.interviewReminderSent = false)
+            """)
+    List<Application> findInterviewsToRemind(
+            @Param("now") Instant now,
+            @Param("limit") Instant limit,
+            @Param("cancelled") String cancelled
+    );
 }

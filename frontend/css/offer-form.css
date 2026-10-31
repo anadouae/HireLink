@@ -1,0 +1,160 @@
+/* Assistant de création d'offre (js/offer-wizard.js) */
+
+.ow-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(42, 16, 22, 0.55);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+.ow-overlay.is-open { opacity: 1; }
+
+.ow-card {
+  display: flex;
+  flex-direction: column;
+  width: min(880px, 100%);
+  max-height: min(94vh, 960px);
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--surface, #fff);
+  border: 1px solid rgba(122, 32, 50, 0.2);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.3);
+}
+.ow-top { padding: 1.1rem 1.4rem 0.9rem; border-bottom: 1px solid var(--line, rgba(26, 18, 20, 0.1)); }
+.ow-top h2 { margin: 0 0 0.8rem; font-family: var(--font-display, inherit); font-size: 1.35rem; }
+
+.ow-steps { display: flex; gap: 0.4rem; margin: 0; padding: 0; list-style: none; }
+.ow-steps li {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-pill, 999px);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-faint, #8a8285);
+  background: var(--paper-2, #ebe4db);
+}
+.ow-step-n {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.45rem;
+  height: 1.45rem;
+  border-radius: 50%;
+  font-size: 0.72rem;
+  background: rgba(255, 255, 255, 0.7);
+}
+.ow-steps li.is-done { color: var(--burgundy, #7a2032); background: var(--burgundy-soft, rgba(122, 32, 50, 0.12)); }
+.ow-steps li.is-current { color: #fff; background: linear-gradient(135deg, var(--burgundy, #7a2032), #a63a3a); }
+.ow-steps li.is-current .ow-step-n { color: var(--burgundy, #7a2032); }
+
+.ow-alert {
+  margin: 0.8rem 1.4rem 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius-sm, 10px);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--danger, #9b2c2c);
+  background: var(--danger-bg, #fde8e8);
+}
+
+.ow-body { flex: 1; min-height: 0; overflow-y: auto; padding: 1.1rem 1.4rem 1.3rem; }
+.ow-panel { display: grid; gap: 1.35rem; animation: ow-in 0.28s var(--ease, ease); }
+@keyframes ow-in { from { opacity: 0; transform: translateX(14px); } }
+
+.ow-section { display: grid; gap: 0.7rem; align-content: start; }
+.ow-section > h3 { margin: 0; font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--burgundy, #7a2032); }
+.ow-intro { margin: -0.3rem 0 0; font-size: 0.86rem; color: var(--ink-soft, #5e5558); }
+.ow-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.85rem 1rem; }
+.ow-money { padding: 1rem; border-radius: 14px; background: var(--champagne-soft, rgba(201, 166, 107, 0.14)); border: 1px solid rgba(201, 166, 107, 0.4); }
+
+.ow-field { display: grid; gap: 0.3rem; align-content: start; min-width: 0; }
+.ow-field.is-wide { grid-column: 1 / -1; }
+.ow-field > label, .ow-label { font-size: 0.82rem; font-weight: 700; color: var(--ink, #1a1214); }
+.ow-field input[type="text"], .ow-field input[type="number"], .ow-field input[type="date"], .ow-field select, .ow-field textarea, .ow-extra {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line-strong, rgba(26, 18, 20, 0.16));
+  border-radius: 10px;
+  background: var(--surface, #fff);
+  font: inherit;
+}
+.ow-field input:focus, .ow-field select:focus, .ow-field textarea:focus, .ow-extra:focus {
+  outline: 2px solid rgba(122, 32, 50, 0.3);
+  border-color: var(--burgundy, #7a2032);
+}
+.ow-req { color: var(--burgundy, #7a2032); }
+.ow-hint { margin: 0; font-size: 0.78rem; color: var(--ink-faint, #8a8285); }
+.ow-error { margin: 0; min-height: 0; font-size: 0.8rem; font-weight: 600; color: var(--danger, #9b2c2c); }
+.ow-error:empty { display: none; }
+.ow-field.has-error input, .ow-field.has-error select, .ow-field.has-error textarea { border-color: var(--danger, #9b2c2c); background: #fffafa; }
+
+/* Boutons radio en pastilles */
+.ow-choice { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ow-choice input { position: absolute; opacity: 0; pointer-events: none; }
+.ow-choice label {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--line-strong, rgba(26, 18, 20, 0.16));
+  border-radius: 12px;
+  background: var(--surface, #fff);
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.ow-choice label small { font-size: 0.7rem; font-weight: 500; color: var(--ink-faint, #8a8285); }
+.ow-choice label:hover { border-color: var(--burgundy, #7a2032); }
+.ow-choice input:checked + label {
+  color: var(--burgundy, #7a2032);
+  border-color: var(--burgundy, #7a2032);
+  background: var(--burgundy-soft, rgba(122, 32, 50, 0.1));
+  box-shadow: 0 0 0 1px var(--burgundy, #7a2032) inset;
+}
+.ow-choice input:focus-visible + label { outline: 3px solid var(--champagne, #c9a66b); outline-offset: 2px; }
+
+.ow-switch { display: inline-flex; align-items: center; gap: 0.55rem; font-weight: 600; cursor: pointer; }
+.ow-switch input { width: 1.1rem; height: 1.1rem; accent-color: var(--burgundy, #7a2032); }
+
+.ow-presets, .ow-benefits { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.ow-benefits { margin-bottom: 0.4rem; }
+.ow-preset, .ow-tag {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--line-strong, rgba(26, 18, 20, 0.16));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--surface, #fff);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ow-preset:hover, .ow-tag:hover { border-color: var(--burgundy, #7a2032); }
+.ow-tag.is-on { color: var(--burgundy, #7a2032); border-color: var(--burgundy, #7a2032); background: var(--burgundy-soft, rgba(122, 32, 50, 0.1)); }
+.ow-tag.is-on::before { content: "✓ "; }
+
+.ow-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.9rem 1.4rem;
+  border-top: 1px solid var(--line, rgba(26, 18, 20, 0.1));
+  background: var(--surface-2, #faf7f4);
+}
+.ow-foot-actions { display: flex; gap: 0.5rem; }
+
+@media (max-width: 640px) {
+  .ow-steps li span:last-child { display: none; }
+  .ow-steps li.is-current span:last-child { display: inline; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ow-overlay, .ow-panel { transition: none; animation: none; }
+}

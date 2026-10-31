@@ -1,0 +1,266 @@
+/* HireLink — mascotte (module autonome, voir js/mascotte.js)
+   Palette : bordeaux #7a2032, crème #f5f1ec, champagne #e2c687, quasi-noir #2a2229.
+   Chaque pose ne fait que définir des variables ; les parties du SVG les lisent. */
+
+.mascotte-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+/* ---------------------------------------------------------------- SVG */
+.mascotte {
+  --g-ep: 8deg; --g-co: 6deg; --d-ep: 8deg; --d-co: 6deg;
+  --j-g: 0deg; --j-d: 0deg;
+  --tete-rot: 0deg; --tete-y: 0px;
+  --regard-x: 0px; --regard-y: 0px;
+  --paup-haut: -34px; --paup-bas: 0px; --paup-incl: 0deg;
+  --doigts-g: 0; --doigts-d: 0; --pouce-g: 0; --pouce-d: 0; --index-g: 0; --index-d: 0;
+  --enveloppe: 0; --gouttes: 0; --points: 0; --etincelles: 0; --exclamation: 0;
+  --b-sourire: 1; --b-ouvert: 0; --b-o: 0; --b-plat: 0; --b-triste: 0;
+
+  --peau: #ecd3a5; --peau-bord: #b99a63;
+  --manche: #7a2032; --manche-bord: #4f1421;
+  --torse: #7a2032; --pantalon: #2a2229; --chaussure: #1b151a;
+  --blazer: #4f1421; --blazer-revers: #3a0f19;
+  --champagne: #e2c687; --creme: #f5f1ec;
+
+  display: block; width: 100%; height: auto; overflow: visible;
+}
+.mascotte * { transform-box: view-box; }
+
+/* Tenues : couleurs du corps et des manches */
+.mascotte--tenue-candidat { --manche: #f5f1ec; --manche-bord: #cfc4b6; --torse: #f5f1ec; }
+.mascotte--tenue-recruteur { --manche: var(--blazer); --manche-bord: var(--blazer-revers); --torse: var(--blazer); }
+.mascotte--tenue-admin { --manche: #2a2229; --manche-bord: #14101a; --torse: #2a2229; }
+.mascotte--variante-b { --blazer: #2a2229; --blazer-revers: #14101a; }
+.mascotte--variante-c { --blazer: #5d6877; --blazer-revers: #444d5a; }
+.mascotte--second-plan { transform: scale(0.9); transform-origin: 50% 100%; }
+
+/* Poses */
+.mascotte--pose-bienvenue { --d-ep: 130deg; --d-co: 50deg; --doigts-d: 1; --tete-rot: 4deg; --paup-bas: -9px; --b-sourire: 0; --b-ouvert: 1; }
+.mascotte--pose-aurevoir { --d-ep: 126deg; --d-co: 54deg; --doigts-d: 1; --tete-rot: -4deg; --paup-bas: -9px; --b-sourire: 1; }
+.mascotte--pose-succes { --d-ep: 38deg; --d-co: 142deg; --pouce-d: 1; --g-ep: 24deg; --g-co: 22deg; --paup-bas: -9px; --b-sourire: 0; --b-ouvert: 1; --etincelles: 1; --tete-rot: -3deg; }
+.mascotte--pose-celebration { --g-ep: 152deg; --g-co: 20deg; --d-ep: 152deg; --d-co: 20deg; --doigts-g: 1; --doigts-d: 1; --j-g: 14deg; --j-d: 14deg; --paup-bas: -9px; --b-sourire: 0; --b-ouvert: 1; --etincelles: 1; }
+.mascotte--pose-reflexion { --d-ep: 52deg; --d-co: 148deg; --tete-rot: -6deg; --paup-haut: -22px; --b-sourire: 0; --b-plat: 1; --points: 1; --regard-y: -2px; }
+.mascotte--pose-erreur { --g-ep: 118deg; --g-co: 78deg; --d-ep: 118deg; --d-co: 78deg; --doigts-g: 1; --doigts-d: 1; --paup-haut: -22px; --paup-incl: 14deg; --b-sourire: 0; --b-triste: 1; --gouttes: 1; --tete-rot: 2deg; }
+.mascotte--pose-avertissement { --d-ep: 96deg; --d-co: 84deg; --doigts-d: 1; --paup-haut: -23px; --b-sourire: 0; --b-plat: 1; --exclamation: 1; }
+.mascotte--pose-vide { --g-ep: 58deg; --g-co: 52deg; --doigts-g: 1; --d-ep: 28deg; --d-co: -6deg; --index-d: 1; --tete-rot: 6deg; --regard-y: 4px; --paup-haut: -24px; --b-sourire: 0; --b-plat: 1; }
+.mascotte--pose-notification { --d-ep: 52deg; --d-co: 128deg; --enveloppe: 1; --regard-x: 3px; --paup-bas: -3px; }
+
+/* Couleurs des parties */
+.m-ombre { fill: rgba(42, 34, 41, 0.16); }
+.m-jambe-trait { stroke: var(--pantalon); stroke-width: 8; stroke-linecap: round; }
+.m-pied { fill: var(--chaussure); }
+.m-torse { fill: var(--torse); stroke: var(--manche-bord); stroke-width: 1.4; }
+.m-manche { stroke: var(--manche); stroke-width: 7; stroke-linecap: round; fill: none; }
+.m-manche-bord { stroke: var(--manche-bord); stroke-width: 8.6; stroke-linecap: round; fill: none; }
+.m-paume, .m-pouce, .m-index, .m-doigts rect { fill: var(--peau); stroke: var(--peau-bord); stroke-width: 1; }
+.m-paume { stroke: var(--peau-bord); }
+.m-ecran { fill: #120e16; }
+.m-reflet { fill: none; stroke: rgba(255, 255, 255, 0.07); stroke-width: 2; }
+.m-oeil { fill: #f5f1ec; }
+.m-iris { fill: #7a2032; }
+.m-trou { fill: #1d0f14; }
+.m-eclat { fill: #fff; }
+.m-paupieres { clip-path: url(#mascotte-ecran-forme); }
+.m-paupiere-haut rect, .m-paupiere-bas circle { fill: #120e16; }
+.m-bouche path, .m-bouche ellipse { fill: none; stroke: var(--champagne); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.m-b-ouvert, .m-b-o { fill: #e2c687 !important; }
+
+/* Tenues : détails */
+.m-tenue { stroke-linejoin: round; }
+.m-col { fill: none; stroke: var(--champagne); stroke-width: 2.4; stroke-linecap: round; }
+.m-col-chemise { fill: #fffdfb; stroke: #cfc4b6; stroke-width: 1.2; }
+.m-cravate, .m-cravate-noeud { fill: #7a2032; stroke: #4f1421; stroke-width: 1; }
+.m-chemise { fill: #fffdfb; }
+.m-revers { fill: var(--blazer-revers); }
+.m-bouton { fill: var(--champagne); }
+.m-cordon { fill: none; stroke: var(--champagne); stroke-width: 2.2; stroke-linecap: round; }
+.m-badge-carte { fill: #fffdfb; stroke: var(--champagne); stroke-width: 1.4; }
+.m-badge-bandeau { fill: #7a2032; }
+.m-badge-photo { fill: var(--champagne); }
+.m-badge-ligne { fill: #cfc4b6; }
+.m-badge-bouclier { fill: #fffdfb; stroke: var(--champagne); stroke-width: 1.6; }
+.m-badge-serrure { fill: #7a2032; }
+.m-serre-tete { fill: none; stroke: #2a2229; stroke-width: 5; stroke-linecap: round; }
+.m-ecouteur { fill: #2a2229; stroke: var(--champagne); stroke-width: 2; }
+.m-micro { fill: none; stroke: #2a2229; stroke-width: 3; stroke-linecap: round; }
+.m-micro-bout { fill: #2a2229; stroke: var(--champagne); stroke-width: 1.6; }
+.m-valise-corps { fill: #2a2229; }
+.m-valise-anse { fill: none; stroke: #2a2229; stroke-width: 3; }
+.m-valise-bande { fill: #7a2032; }
+.m-valise-fermoir { fill: var(--champagne); }
+
+/* Accessoires : visibles selon la pose */
+.m-enveloppe { opacity: var(--enveloppe); }
+.m-enveloppe rect { fill: #fffdfb; stroke: var(--champagne); stroke-width: 1.6; }
+.m-enveloppe path { fill: none; stroke: #7a2032; stroke-width: 1.6; stroke-linejoin: round; }
+.m-gouttes { opacity: var(--gouttes); fill: #b9c6d4; }
+.m-points { opacity: var(--points); fill: #8c9298; }
+.m-etincelles { opacity: var(--etincelles); fill: #e9b95f; }
+.m-exclamation { opacity: var(--exclamation); }
+.m-exclamation circle { fill: #e76f30; }
+.m-exclamation path { stroke: #fff; stroke-width: 2.6; stroke-linecap: round; fill: none; }
+
+/* Mains : doigts, pouce, index selon la pose */
+.m-main-g .m-doigts { opacity: var(--doigts-g); } .m-main-d .m-doigts { opacity: var(--doigts-d); }
+.m-main-g .m-pouce { opacity: var(--pouce-g); } .m-main-d .m-pouce { opacity: var(--pouce-d); }
+.m-main-g .m-index { opacity: var(--index-g); } .m-main-d .m-index { opacity: var(--index-d); }
+.m-b-sourire { opacity: var(--b-sourire); } .m-b-ouvert { opacity: var(--b-ouvert); } .m-b-o { opacity: var(--b-o); }
+.m-b-plat { opacity: var(--b-plat); } .m-b-triste { opacity: var(--b-triste); }
+
+/* Mouvement : transformations pilotées par les variables */
+.m-saut, .m-respire, .m-tete, .m-bras, .m-avant-bras, .m-jambe, .m-pupille, .m-paupiere-haut, .m-paupiere-bas, .m-ombre {
+  transition: transform 0.45s cubic-bezier(0.3, 1.35, 0.5, 1), opacity 0.3s ease;
+}
+.m-respire { transform-origin: 100px 236px; animation: m-respire 4.2s ease-in-out infinite; }
+.m-tete { transform-origin: 100px 136px; transform: translateY(var(--tete-y)) rotate(var(--tete-rot)); }
+.m-bras-g { transform-origin: 72px 148px; transform: rotate(var(--g-ep)); }
+.m-bras-d { transform-origin: 128px 148px; transform: rotate(calc(var(--d-ep) * -1)); }
+.m-avant-bras-g { transform-origin: 72px 176px; transform: rotate(var(--g-co)); }
+.m-avant-bras-d { transform-origin: 128px 176px; transform: rotate(calc(var(--d-co) * -1)); }
+.m-jambe-g { transform-origin: 88px 190px; transform: rotate(var(--j-g)); }
+.m-jambe-d { transform-origin: 112px 190px; transform: rotate(calc(var(--j-d) * -1)); }
+.m-pupille { transform: translate(var(--regard-x), var(--regard-y)); }
+.m-paupiere-haut-g { transform-origin: 82px 70px; transform: translateY(var(--paup-haut)) rotate(calc(var(--paup-incl) * -1)); animation: m-cligne 5.2s infinite; }
+.m-paupiere-haut-d { transform-origin: 118px 70px; transform: translateY(var(--paup-haut)) rotate(var(--paup-incl)); animation: m-cligne 5.2s infinite; }
+.m-paupiere-bas { transform: translateY(var(--paup-bas)); }
+.mascotte--variante-b .m-paupiere-haut { animation-delay: -1.7s; }
+.mascotte--variante-c .m-paupiere-haut { animation-delay: -3.1s; }
+
+@keyframes m-respire { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1, 1.014); } }
+@keyframes m-cligne { 0%, 93%, 100% { transform: translateY(var(--paup-haut)); } 96% { transform: translateY(0); } }
+@keyframes m-bond { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-16px); } }
+@keyframes m-ombre-bond { 0%, 100% { transform: scale(1); } 40% { transform: scale(0.78); } }
+@keyframes m-salue-d { 0%, 100% { transform: rotate(calc(var(--d-co) * -1)); } 25% { transform: rotate(calc((var(--d-co) + 24deg) * -1)); } 75% { transform: rotate(calc((var(--d-co) - 24deg) * -1)); } }
+@keyframes m-secoue { 0%, 100% { transform: rotate(var(--tete-rot)); } 25% { transform: rotate(calc(var(--tete-rot) - 4deg)); } 75% { transform: rotate(calc(var(--tete-rot) + 4deg)); } }
+@keyframes m-cherche { 0%, 100% { transform: translate(-3px, -2px); } 50% { transform: translate(3px, -2px); } }
+@keyframes m-pense { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes m-brille { 0%, 100% { transform: scale(0.85); opacity: 0.6; } 50% { transform: scale(1.1); opacity: 1; } }
+@keyframes m-hausse { 0%, 100% { transform: rotate(var(--g-ep)); } 40% { transform: rotate(calc(var(--g-ep) + 10deg)); } }
+@keyframes m-leve { 0% { transform: rotate(calc(var(--d-ep) * -1 + 40deg)); } 100% { transform: rotate(calc(var(--d-ep) * -1)); } }
+@keyframes m-flotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+.mascotte--pose-bienvenue .m-avant-bras-d { animation: m-salue-d 0.8s ease-in-out 4; }
+.mascotte--pose-aurevoir .m-avant-bras-d { animation: m-salue-d 1.1s ease-in-out 3; }
+.mascotte--pose-succes .m-saut { animation: m-bond 0.7s ease-in-out 1; }
+.mascotte--pose-succes .m-ombre, .mascotte--pose-celebration .m-ombre { transform-origin: 100px 236px; }
+.mascotte--pose-succes .m-ombre { animation: m-ombre-bond 0.7s ease-in-out 1; }
+.mascotte--pose-celebration .m-saut { animation: m-bond 0.62s ease-in-out 4; }
+.mascotte--pose-celebration .m-ombre { animation: m-ombre-bond 0.62s ease-in-out 4; }
+.mascotte--pose-erreur .m-tete { animation: m-secoue 0.5s ease-in-out 2; }
+.mascotte--pose-reflexion .m-pupille { animation: m-cherche 2.4s ease-in-out infinite; }
+.mascotte--pose-reflexion .m-points circle { animation: m-pense 1.4s ease-in-out infinite; }
+.mascotte--pose-reflexion .m-points circle:nth-child(2) { animation-delay: 0.25s; }
+.mascotte--pose-reflexion .m-points circle:nth-child(3) { animation-delay: 0.5s; }
+.mascotte--pose-vide .m-bras-g { animation: m-hausse 1.4s ease-in-out 2; }
+.mascotte--pose-avertissement .m-bras-d { animation: m-leve 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) 1; }
+.mascotte--pose-notification .m-avant-bras-d { animation: m-flotte 2.2s ease-in-out infinite; }
+.m-etincelles path { transform-box: fill-box; transform-origin: center; animation: m-brille 1.6s ease-in-out infinite; }
+.m-etincelles path:nth-child(2) { animation-delay: 0.5s; }
+.m-etincelles path:nth-child(3) { animation-delay: 1s; }
+
+/* ------------------------------------------------------ notifications */
+.mascotte-toasts {
+  position: fixed; right: 1rem; bottom: 1rem; z-index: 3500;
+  display: flex; flex-direction: column; gap: 0.6rem;
+  width: min(380px, calc(100vw - 2rem)); pointer-events: none;
+}
+/* Quand un panneau latéral est ouvert, les notifications ne recouvrent pas ses boutons. */
+body:has(.overlay--drawer.is-open) .mascotte-toasts { right: calc(min(560px, 100%) + 1rem); }
+@media (max-width: 1000px) {
+  body:has(.overlay--drawer.is-open) .mascotte-toasts { right: 1rem; bottom: auto; top: 0.75rem; }
+}
+.mascotte-toast {
+  --m-accent: #7a2032;
+  position: relative; pointer-events: auto;
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.7rem 2.2rem 0.7rem 0.6rem;
+  background: var(--surface, #fffdfb); color: var(--ink, #1a1214);
+  border: 1px solid rgba(122, 32, 50, 0.16); border-left: 4px solid var(--m-accent);
+  border-radius: 16px; box-shadow: 0 14px 36px rgba(42, 16, 22, 0.2);
+  animation: mascotte-entree 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.mascotte-toast--ok { --m-accent: #1f6b4a; }
+.mascotte-toast--info { --m-accent: #7a2032; }
+.mascotte-toast--warn { --m-accent: #c2761f; }
+.mascotte-toast--danger { --m-accent: #9b2c2c; }
+.mascotte-toast-visuel { flex: 0 0 68px; width: 68px; }
+.mascotte-toast--equipe .mascotte-toast-visuel { flex-basis: 150px; width: 150px; }
+.mascotte-toast-texte { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
+.mascotte-toast-texte strong { font-size: 0.93rem; line-height: 1.25; }
+.mascotte-toast-texte span { font-size: 0.82rem; line-height: 1.35; color: var(--ink-soft, #5e5558); overflow-wrap: anywhere; }
+.mascotte-fermer {
+  position: absolute; top: 0.4rem; right: 0.4rem; width: 1.6rem; height: 1.6rem;
+  border: 0; border-radius: 50%; background: transparent; color: var(--ink-soft, #5e5558); font-size: 0.8rem; cursor: pointer;
+}
+.mascotte-fermer:hover { background: rgba(122, 32, 50, 0.1); color: #7a2032; }
+.mascotte-sortant { animation: mascotte-sortie 0.26s ease forwards !important; }
+
+/* Équipe recruteur : trois mascottes côte à côte */
+.mascotte-equipe { display: flex; align-items: flex-end; justify-content: center; width: 100%; }
+.mascotte-equipe .mascotte { flex: 1 1 0; min-width: 0; }
+.mascotte-equipe .mascotte + .mascotte { margin-left: -9%; }
+.mascotte-equipe .mascotte:nth-child(2) { position: relative; z-index: 1; flex-grow: 1.25; }
+
+/* ---------------------------------------------------------- confirmation */
+.mascotte-voile {
+  position: fixed; inset: 0; z-index: 4000; display: flex; align-items: center; justify-content: center; padding: 1.25rem;
+  background: rgba(42, 16, 22, 0.5); backdrop-filter: blur(4px);
+  animation: mascotte-fondu 0.18s ease both;
+}
+.mascotte-dialogue {
+  position: relative; display: flex; gap: 1rem; align-items: center; width: min(480px, 100%);
+  padding: 1.25rem 1.4rem 1.25rem 1rem; background: var(--surface, #fffdfb); color: var(--ink, #1a1214);
+  border: 1px solid rgba(122, 32, 50, 0.2); border-top: 4px solid #7a2032; border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(42, 16, 22, 0.3); animation: mascotte-entree 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.mascotte-dialogue.is-danger { border-top-color: #9b2c2c; }
+.mascotte-dialogue-visuel { flex: 0 0 104px; width: 104px; }
+.mascotte-dialogue-corps { flex: 1; min-width: 0; }
+.mascotte-dialogue h3 { margin: 0 0 0.3rem; font-size: 1.15rem; color: #7a2032; }
+.mascotte-dialogue p { margin: 0; font-size: 0.92rem; color: var(--ink-soft, #5e5558); }
+.mascotte-dialogue-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
+.mascotte-voile.mascotte-sortant { animation: mascotte-sortie 0.2s ease forwards !important; }
+
+/* ---------------------------------------------------------- célébration */
+.mascotte-confettis { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 3900; pointer-events: none; }
+.mascotte-celebration {
+  position: fixed; left: 50%; bottom: 1.5rem; z-index: 3950; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 1rem; width: min(600px, calc(100vw - 2rem)); padding: 0.9rem 2.6rem 0.9rem 1rem;
+  background: var(--surface, #fffdfb); color: var(--ink, #1a1214);
+  border: 1px solid rgba(226, 198, 135, 0.7); border-radius: 20px;
+  box-shadow: 0 18px 50px rgba(42, 16, 22, 0.28), 0 0 0 4px rgba(226, 198, 135, 0.18);
+  animation: mascotte-celebration-entree 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) both;
+}
+.mascotte-celebration-visuel { flex: 0 0 200px; width: 200px; }
+.mascotte-celebration-texte { display: flex; flex-direction: column; gap: 0.2rem; }
+.mascotte-celebration-texte strong { font-size: 1.15rem; color: #7a2032; }
+.mascotte-celebration-texte span { font-size: 0.92rem; color: var(--ink-soft, #5e5558); }
+.mascotte-celebration.mascotte-sortant { animation: mascotte-sortie 0.26s ease forwards !important; transform: translateX(-50%); }
+
+@keyframes mascotte-entree { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes mascotte-celebration-entree { from { opacity: 0; transform: translate(-50%, 24px) scale(0.96); } to { opacity: 1; transform: translateX(-50%); } }
+@keyframes mascotte-sortie { to { opacity: 0; transform: translateY(8px); } }
+@keyframes mascotte-fondu { from { opacity: 0; } to { opacity: 1; } }
+
+/* Attente (IA, chargements longs) */
+.mascotte-attente { display: flex; align-items: center; gap: 0.8rem; color: var(--ink-soft, #5e5558); font-size: 0.9rem; }
+.mascotte-attente-visuel { flex: 0 0 64px; width: 64px; }
+
+/* États vides et erreurs de chargement (app-shell) */
+.rc-state-mascotte { width: 132px; margin: 0 auto 0.7rem; }
+
+@media (max-width: 520px) {
+  .mascotte-dialogue-visuel { flex-basis: 64px; width: 64px; }
+  .mascotte-celebration-visuel { flex-basis: 130px; width: 130px; }
+}
+
+/* Mouvement réduit : pose statique, aucune animation ni confettis */
+@media (prefers-reduced-motion: reduce) {
+  .mascotte *, .mascotte-toast, .mascotte-dialogue, .mascotte-voile, .mascotte-celebration {
+    animation: none !important; transition: none !important;
+  }
+  .mascotte-celebration { transform: translateX(-50%); }
+}
+
+.mascotte-champ { display: grid; gap: 0.35rem; margin: 0.6rem 0 0; font-size: 0.82rem; font-weight: 600; color: var(--ink-soft, #5e5558); }
+.mascotte-champ textarea { width: 100%; resize: vertical; font: inherit; font-weight: 400; color: var(--ink, #1a1214); padding: 0.55rem 0.7rem; border: 1px solid rgba(26, 18, 20, 0.18); border-radius: 10px; background: var(--surface, #fff); }
+.mascotte-champ textarea:focus-visible { outline: 2px solid var(--bordeaux, #7a2032); outline-offset: 1px; }

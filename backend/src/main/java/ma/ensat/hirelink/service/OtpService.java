@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Locale;
 import java.time.temporal.ChronoUnit;
 
 @Service
@@ -22,6 +23,7 @@ public class OtpService {
 
     private static final Logger log = LoggerFactory.getLogger(OtpService.class);
     private final EmailOtpRepository otpRepository;
+    private final MailService mail;
     private final SecureRandom random = new SecureRandom();
     private final byte[] hmacKey;
     public static final int MAX_ATTEMPTS = 5;
@@ -35,8 +37,9 @@ public class OtpService {
     @Value("${hirelink.otp.log-to-console:true}")
     private boolean logToConsole;
 
-    public OtpService(EmailOtpRepository otpRepository, JwtService jwt) {
+    public OtpService(EmailOtpRepository otpRepository, JwtService jwt, MailService mail) {
         this.otpRepository = otpRepository;
+        this.mail = mail;
         this.hmacKey = jwt.deriveKey("otp-hmac");
     }
 
@@ -66,7 +69,24 @@ public class OtpService {
             log.info(" HireLink OTP [{}] pour {} → {}", purpose, normalized, code);
             log.info("════════════════════════════════════════");
         }
+        sendCode(normalized, purpose, code);
         return code;
+    }
+
+    private void sendCode(String email, String purpose, String code) {
+        String heading = switch (purpose) {
+            case PURPOSE_REGISTER -> "Votre code de vérification";
+            case PURPOSE_LOGIN -> "Votre code de connexion";
+            default -> "Votre code de confirmation";
+        };
+        String intro = PURPOSE_REGISTER.equals(purpose)
+                ? "Bienvenue sur HireLink ! Saisissez ce code pour vérifier votre adresse e-mail et créer votre compte."
+                : "Saisissez ce code pour confirmer votre identité.";
+        EmailTemplates.Email message = EmailTemplates.Email.of(heading, intro,
+                        "Ce code est valable " + ttlMinutes + " minutes et ne doit être communiqué à personne. "
+                                + "Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.")
+                .withHighlight(code);
+        mail.send(email, "HireLink — " + heading.toLowerCase(Locale.FRENCH), message, MailService.Kind.SECURITY, true, null);
     }
 
     /** Transaction indépendante : le compteur d'essais doit survivre à l'échec de l'appelant (A07). */

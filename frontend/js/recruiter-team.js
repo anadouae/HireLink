@@ -80,7 +80,7 @@
   $("members-list").addEventListener("click", async (e) => {
     const b = e.target.closest("[data-remove]");
     if (!b) return;
-    const ok = await HireLink.openModal({ title: "Retirer ce membre ?", description: b.dataset.name + " perdra l’accès aux offres et dossiers de l’organisation.", confirmLabel: "Retirer", danger: true });
+    const ok = await Mascotte.confirm({ title: "Retirer ce membre ?", description: b.dataset.name + " perdra l’accès aux offres et dossiers de l’organisation.", confirmLabel: "Retirer", danger: true });
     if (!ok) return;
     try {
       await HireLinkAPI.api("/organizations/mine/members/" + b.dataset.remove, { method: "DELETE" });
@@ -149,7 +149,10 @@
       const o = await HireLinkAPI.api("/organizations/mine/verify", { method: "POST" });
       RC.cacheSet("org", o);
       paintOrg(o);
-      RC.toast("Vérification", o.verified ? "Badge attribué automatiquement." : o.message || "Dossier transmis à l’administration.", o.verified ? "ok" : "warn");
+      if (!o.verified) RC.toast("Vérification", o.message || "Dossier transmis à l’administration.", "warn");
+      else if (!Mascotte.celebrate({ cle: "organisation-validee", title: "Organisation validée !", description: "Votre badge « Entreprise vérifiée » est visible côté candidats." })) {
+        RC.toast("Vérification", "Badge attribué automatiquement.", "ok");
+      }
     } catch (err) { RC.toast("Vérification", err.message, "danger"); } finally { RC.busy(e.currentTarget, false); }
   });
 

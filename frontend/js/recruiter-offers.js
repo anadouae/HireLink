@@ -21,13 +21,14 @@
   }
 
   function paint() {
-    if (!document.getElementById("offers-body")) return; // page remplacée (Hiring Manager)
+    if (!$("offers-grid")) return; // page remplacée (Hiring Manager)
     if (!loaded) return;
     const c = counts();
-    const q = (($("rc-search") || {}).value || "").trim().toLowerCase();
-    const searched = q
-      ? offers.filter((o) => ((o.title || "") + " " + (o.location || "") + " " + (o.requiredSkills || "") + " " + (o.contractType || "")).toLowerCase().includes(q))
-      : offers.slice();
+    const q = (($("rc-search") || {}).value || "").trim();
+    const searched = HireLinkSearch.rank(offers, q, [
+      { get: (o) => o.title, weight: 3 }, { get: (o) => o.requiredSkills, weight: 2 },
+      { get: (o) => o.location + " " + o.contractType, weight: 2 }, { get: (o) => o.description, weight: 1 },
+    ]);
     const vc = {
       all: searched.length,
       published: searched.filter((o) => o.published).length,
@@ -44,27 +45,76 @@
     const list = searched.filter((o) =>
       view === "published" ? o.published : view === "draft" ? !o.published : view === "with" ? (c[o.id] || 0) > 0 : true);
     $("offers-summary").textContent = RC.plural(list.length, "offre");
-    const body = $("offers-body");
+    const grid = $("offers-grid");
+    grid.replaceChildren();
     if (!list.length) {
-      body.innerHTML = '<tr><td colspan="5"></td></tr>';
-      RC.empty(body.firstChild.firstChild, offers.length
-        ? { icon: "search", title: "Aucune offre pour ce filtre", text: "Modifiez la recherche ou le filtre pour retrouver vos offres." }
-        : { icon: "briefcase", title: "Aucune offre pour l’instant", text: "Créez votre première offre : titre, compétences, lieu et délai de première réponse.", action: null });
+      if (q) { HireLinkSearch.emptyState(grid, q, { onClear: () => { $("rc-search").value = ""; paint(); } }); return; }
+      RC.empty(grid, offers.length
+        ? { title: "Aucune offre pour ce filtre", text: "Modifiez le filtre pour retrouver vos offres." }
+        : { title: "Aucune offre pour l’instant", text: "Créez votre première offre : poste, conditions, compétences et délai de première réponse.", action: null });
       return;
     }
-    body.innerHTML = list.map((o) =>
-      '<tr class="rc-fade" data-id="' + o.id + '"><td><span class="rc-cell-main">' + esc(o.title) + '</span><span class="rc-cell-sub">' +
-      esc([o.location, o.contractType].filter(Boolean).join(" · ") || "—") + (o.recruiterName ? " · " + esc(o.recruiterName) : "") + "</span></td>" +
-      "<td>" + esc(o.responseSlaDays) + " j</td><td>" + (c[o.id] || 0) + "</td><td>" +
-      (o.suspended ? '<span class="badge badge-danger">Suspendue</span>' : o.published ? '<span class="badge badge-ok">Publiée</span>' : '<span class="badge badge-warn">Brouillon</span>') +
-      '</td><td><div class="rc-row-actions">' +
-      '<a class="btn btn-soft btn-sm" href="recruiter-pipeline.html?offer=' + encodeURIComponent(o.id) + '">Candidatures</a>' +
-      '<button type="button" class="btn btn-ghost btn-sm" data-act="edit">Modifier</button>' +
-      '<details class="rc-more"><summary class="btn btn-ghost btn-sm" aria-label="Plus d’actions">⋯</summary><div class="rc-more-menu">' +
+    list.forEach((o) => grid.appendChild(managed(o, c[o.id] || 0)));
+    HireLinkSearch.mark(grid, q);
+  }
+
+  function stateLabel(o, n) {
+    const state = o.suspended ? "Suspendue" : o.published ? "Publiée" : "Brouillon";
+    return state + " · " + RC.plural(n, "candidature");
+  }
+
+  /** Carte cliquable (détail dans un panneau) et, dessous, les actions de gestion. */
+  function managed(o, n) {
+    const wrap = document.createElement("div");
+    wrap.className = "offer-managed" + (o.published ? "" : " is-draft");
+    wrap.dataset.id = o.id;
+    wrap.appendChild(HireLinkOffer.card(o, {
+      href: (x) => "recruiter-offers.html?offer=" + encodeURIComponent(x.id),
+      onOpen: (x) => openDetail(x, n),
+      statusChip: stateLabel(o, n),
+    }));
+    const bar = document.createElement("div");
+    bar.className = "offer-managed-actions";
+    const apps = document.createElement("a");
+    apps.className = "btn btn-soft btn-sm";
+    apps.href = "recruiter-pipeline.html?offer=" + encodeURIComponent(o.id);
+    apps.textContent = "Candidatures";
+    const edit = document.createElement("button");
+    edit.type = "button";
+    edit.className = "btn btn-ghost btn-sm";
+    edit.dataset.act = "edit";
+    edit.textContent = "Modifier";
+    const more = document.createElement("details");
+    more.className = "rc-more";
+    more.innerHTML = '<summary class="btn btn-ghost btn-sm" aria-label="Plus d’actions">⋯</summary><div class="rc-more-menu">' +
       '<button type="button" data-act="score">Critères de scorecard</button>' +
-      '<button type="button" data-act="toggle">' + (o.published ? "Dépublier" : "Publier") + "</button>" +
-      '<button type="button" data-act="del" class="is-danger">Supprimer</button></div></details>' +
-      "</div></td></tr>").join("");
+      '<button type="button" data-act="toggle"></button>' +
+      '<button type="button" data-act="del" class="is-danger">Supprimer</button></div>';
+    more.querySelector('[data-act="toggle"]').textContent = o.published ? "Dépublier" : "Publier";
+    bar.append(apps, edit, more);
+    wrap.appendChild(bar);
+    return wrap;
+  }
+
+  function openDetail(o, n) {
+    const body = document.createElement("div");
+    body.className = "offer-detail-panel";
+    const where = document.createElement("p");
+    where.className = "muted";
+    const place = HireLinkOffer.placeOf(o);
+    where.textContent = [(HireLinkPlaces.flagOf(place) + " " + place).trim(), o.contractType, stateLabel(o, n)].filter(Boolean).join(" · ");
+    const text = document.createElement("div");
+    text.className = "split-copy";
+    text.textContent = o.description;
+    const skillsTitle = document.createElement("h3");
+    skillsTitle.className = "detail-sub";
+    skillsTitle.textContent = "Compétences demandées";
+    const boxes = document.createElement("div");
+    HireLinkSkills.renderBoxes(boxes, o.requiredSkills, { empty: "Aucune compétence précisée." });
+    body.append(where, HireLinkOffer.facts(o), text, skillsTitle, boxes);
+    HireLink.openDrawer({ title: o.title, description: o.companyName || "", wide: true, hideCancel: true, confirmLabel: "Fermer",
+      bodyHtml: '<div id="offer-detail-slot"></div>',
+      onReady: (api) => api.root.querySelector("#offer-detail-slot").appendChild(body) });
   }
 
   function offerById(id) { return offers.find((o) => String(o.id) === String(id)); }
@@ -74,9 +124,10 @@
     try {
       await HireLinkAPI.api("/offers/" + o.id, {
         method: "PUT",
-        body: { title: o.title, description: o.description, requiredSkills: o.requiredSkills, location: o.location, contractType: o.contractType, responseSlaDays: o.responseSlaDays, published: !o.published },
+        body: HireLinkOffer.toRequest(o, { published: !o.published }),
       });
-      RC.toast("Offre", o.published ? "Offre dépubliée" : "Offre publiée", "ok");
+      const celebrated = !o.published && Mascotte.celebrate({ cle: "premiere-offre", title: "Votre première offre est en ligne !", description: "Les candidats peuvent désormais postuler." });
+      if (!celebrated) RC.toast("Offre", o.published ? "Offre dépubliée" : "Offre publiée", "ok");
       load(true);
     } catch (err) {
       RC.toast("Publication impossible", err.message, "danger");
@@ -85,7 +136,7 @@
   }
 
   async function remove(o) {
-    const ok = await HireLink.openModal({
+    const ok = await Mascotte.confirm({
       title: "Supprimer cette offre ?",
       description: "« " + o.title + " » et ses candidatures seront définitivement supprimées.",
       confirmLabel: "Supprimer",
@@ -136,10 +187,10 @@
     } catch (err) { RC.toast("Scorecard", err.message, "danger"); }
   }
 
-  function onTableClick(e) {
+  function onGridClick(e) {
     const btn = e.target.closest("button[data-act]");
     if (!btn) return;
-    const o = offerById(btn.closest("tr").dataset.id);
+    const o = offerById(btn.closest(".offer-managed").dataset.id);
     if (!o) return;
     const act = btn.dataset.act;
     if (act === "edit") HireLinkOfferWizard.edit(o, () => load(true));
@@ -147,7 +198,7 @@
     else if (act === "del") remove(o);
     else if (act === "score") editScorecard(o);
   }
-  $("offers-body").addEventListener("click", onTableClick);
+  $("offers-grid").addEventListener("click", onGridClick);
   $("offer-filter").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-ov]");
     if (!b) return;
@@ -157,16 +208,15 @@
   $("btn-new-offer").addEventListener("click", () => HireLinkOfferWizard.start(() => load(true)));
 
   function skeletonRows() {
-    $("offers-body").innerHTML = '<tr><td colspan="5" style="padding:0"><div class="rc-skel-list"><span class="rc-skel" style="height:44px"></span><span class="rc-skel" style="height:44px"></span><span class="rc-skel" style="height:44px"></span></div></td></tr>';
+    $("offers-grid").innerHTML = '<div class="rc-skel-list"><span class="rc-skel" style="height:140px"></span><span class="rc-skel" style="height:140px"></span><span class="rc-skel" style="height:140px"></span></div>';
   }
 
   function load(force) {
     if (force) RC.data.invalidate();
     if (RC.isHM()) return;
     if (!loaded) skeletonRows();
-    RC.data.offers((o) => { offers = o || []; loaded = true; paint(); }, (err) => {
-      $("offers-body").innerHTML = '<tr><td colspan="5"></td></tr>';
-      RC.errorState($("offers-body").firstChild.firstChild, err.message, () => load(true));
+    RC.data.offers((o) => { offers = o || []; const first = !loaded; loaded = true; paint(); if (first) document.dispatchEvent(new Event("rc:offers-ready")); }, (err) => {
+      RC.errorState($("offers-grid"), err.message, () => load(true));
     });
     RC.data.pipeline((a) => { apps = a || []; paint(); }, () => {});
   }
@@ -174,11 +224,14 @@
   function restrictIfHM() {
     if (!RC.isHM()) return;
     const c = document.getElementById("rc-content");
-    RC.empty(c, { icon: "briefcase", title: "Accès réservé", text: "La gestion des offres est réservée aux Owners et Recruteurs de l’organisation.", action: { href: "recruiter-pipeline.html", label: "Ouvrir le pipeline" } });
+    RC.empty(c, { title: "Accès réservé", text: "La gestion des offres est réservée aux Owners et Recruteurs de l’organisation.", action: { href: "recruiter-pipeline.html", label: "Ouvrir le pipeline" } });
   }
   document.addEventListener("rc:org", restrictIfHM);
   if (RC.isHM()) { restrictIfHM(); return; }
   load();
+  HireLinkPlaces.ready().then(() => paint());
+  const wanted = new URLSearchParams(location.search).get("offer");
+  if (wanted) document.addEventListener("rc:offers-ready", () => { const o = offerById(wanted); if (o) openDetail(o, counts()[o.id] || 0); }, { once: true });
   if (location.hash === "#new") {
     history.replaceState(null, "", location.pathname);
     setTimeout(() => HireLinkOfferWizard.start(() => load(true)), 60);

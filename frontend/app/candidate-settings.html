@@ -10,13 +10,16 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261029a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261029a" />
-  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261029a"></script>
-  <script src="../js/theme.js?v=20261029a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
+  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101a"></script>
+  <script src="../js/theme.js?v=20261101a"></script>
 </head>
 <body class="rc" data-role="CANDIDAT" data-active="settings">
   <div class="rc-app">
@@ -104,12 +107,6 @@
                     <label class="input-group">Métier recherché<input id="set-role" class="form-control" data-suggest="job" placeholder="Rechercher un métier" /></label>
                     <fieldset class="check-set" id="set-contracts">
                       <legend>Types de contrat</legend>
-                      <label><input type="checkbox" value="Stage" /> Stage</label>
-                      <label><input type="checkbox" value="Premier emploi" /> Premier emploi</label>
-                      <label><input type="checkbox" value="CDI" /> CDI</label>
-                      <label><input type="checkbox" value="CDD" /> CDD</label>
-                      <label><input type="checkbox" value="Job étudiant" /> Job étudiant</label>
-                      <label><input type="checkbox" value="Bénévolat" /> Bénévolat</label>
                     </fieldset>
                   </div>
                   <footer class="card-footer"><button type="submit" class="btn btn-primary">Enregistrer</button></footer>
@@ -170,6 +167,13 @@
             </section>
             <section class="settings-panel" id="set-privacy" hidden>
               <article class="settings-card">
+                <header class="card-header"><h2>E-mails</h2><p>Les e-mails de sécurité et de compte sont toujours envoyés.</p></header>
+                <div class="card-body">
+                  <label class="check-line"><input type="checkbox" id="set-mail" /> Recevoir aussi mes alertes par e-mail (rappels d’entretien, résumés, nouveautés)</label>
+                </div>
+                <footer class="card-footer"><button type="button" class="btn btn-primary" id="btn-save-mail">Enregistrer</button></footer>
+              </article>
+              <article class="settings-card">
                 <header class="card-header"><h2>Mes données</h2><p>Téléchargez une copie de tout ce que HireLink conserve sur vous.</p></header>
                 <div class="card-body" style="display:flex;justify-content:flex-end">
                   <button type="button" class="btn btn-secondary" id="btn-export-data">Exporter mes données</button>
@@ -189,12 +193,15 @@
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/ui.js?v=20261029a"></script>
-  <script defer src="../js/api.js?v=20261029a"></script>
-  <script defer src="../js/in-app-help.js?v=20261029a"></script>
-  <script defer src="../js/app-shell.js?v=20261029a"></script>
-  <script defer src="../js/growth.js?v=20261029a"></script>
-  <script defer src="../js/suggest.js?v=20261029a"></script>
-  <script defer src="../js/candidate-settings.js?v=20261029a"></script>
+  <script defer src="../js/mascotte.js?v=20261101a"></script>
+  <script defer src="../js/ui.js?v=20261101a"></script>
+  <script defer src="../js/api.js?v=20261101a"></script>
+  <script defer src="../js/search.js?v=20261101a"></script>
+  <script defer src="../js/places.js?v=20261101a"></script>
+  <script defer src="../js/in-app-help.js?v=20261101a"></script>
+  <script defer src="../js/app-shell.js?v=20261101a"></script>
+  <script defer src="../js/growth.js?v=20261101a"></script>
+  <script defer src="../js/suggest.js?v=20261101a"></script>
+  <script defer src="../js/candidate-settings.js?v=20261101a"></script>
 </body>
 </html>

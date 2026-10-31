@@ -57,6 +57,12 @@ Chaque mesure a été testée sur l'application en fonctionnement (voir « Tests
 * **Passkeys** : `Sécurité → Passkeys → Ajouter` ; sur la page de connexion, bouton « Se connecter avec une passkey » (sans saisir d'e-mail). Fonctionne sur `http://localhost:5500` (identifiant de partie de confiance `localhost`).
 * **Ré-authentification** : changement de mot de passe, activation/désactivation MFA, suppression de passkey, export et suppression du compte exigent une confirmation récente.
 
+### 4.1 Notifications en temps réel et e-mails
+
+* **Flux SSE** : le jeton d'accès ne transite jamais dans l'URL. Le client demande un *ticket* (`POST /notifications/stream-ticket`, authentifié) à usage unique, valable 30 secondes et lié à l'utilisateur ; le flux (`GET /notifications/stream?ticket=…`) n'envoie que les notifications de ce compte. Huit flux simultanés au maximum par utilisateur ; la déconnexion ferme le flux ; CSP inchangée (`connect-src` vers l'API uniquement).
+* **E-mails** : le mot de passe SMTP ne figure que dans les variables `HIRELINK_MAIL_*` ou dans `application-local.properties` (ignoré par Git) ; le dépôt ne contient que des valeurs modèles. Le contenu dynamique des messages HTML est échappé. Les codes et liens secrets ne sont pas conservés dans la boîte d'envoi, qui est réservée à l'administrateur (aperçu dans une fenêtre isolée `sandbox`) et purgée après 30 jours. Les e-mails de sécurité sont toujours envoyés ; les messages de suivi respectent la préférence de l'utilisateur.
+* **Vérification d'entreprise** : modifier l'ICE ou la raison sociale relance la vérification ; les autres champs de la fiche ne modifient jamais le statut.
+
 ## 5. Secrets – ce qui était dans le dépôt
 
 Audit de l'historique Git :
@@ -68,7 +74,7 @@ Audit de l'historique Git :
 | Identifiant client Google (`…apps.googleusercontent.com`) | Public par conception (n'est pas un secret) | Surchargeable avec `HIRELINK_GOOGLE_CLIENT_ID` |
 | Mot de passe MySQL | Aucun mot de passe réel dans le dépôt (`spring.datasource.password=` est vide pour le développement local) | En prod : `HIRELINK_DB_PASSWORD` |
 
-Noms de variables utilisés : `HIRELINK_JWT_SECRET`, `HIRELINK_CORS_ORIGINS`, `HIRELINK_LLM_API_KEY`, `HIRELINK_GEMINI_API_KEY`, `HIRELINK_GROQ_API_KEY`, `HIRELINK_MISTRAL_API_KEY`, `HIRELINK_GOOGLE_CLIENT_ID`, `HIRELINK_WEBAUTHN_RP_ID`, `HIRELINK_WEBAUTHN_ORIGINS`, `HIRELINK_FRONTEND_URL`, `HIRELINK_ADMIN_EMAIL`, `HIRELINK_ADMIN_PASSWORD`, `HIRELINK_SWAGGER_ENABLED`, et en prod `HIRELINK_DB_URL`, `HIRELINK_DB_USER`, `HIRELINK_DB_PASSWORD`, `HIRELINK_SMTP_*`.
+Noms de variables utilisés : `HIRELINK_JWT_SECRET`, `HIRELINK_CORS_ORIGINS`, `HIRELINK_LLM_API_KEY`, `HIRELINK_GEMINI_API_KEY`, `HIRELINK_GROQ_API_KEY`, `HIRELINK_MISTRAL_API_KEY`, `HIRELINK_GOOGLE_CLIENT_ID`, `HIRELINK_WEBAUTHN_RP_ID`, `HIRELINK_WEBAUTHN_ORIGINS`, `HIRELINK_FRONTEND_URL`, `HIRELINK_ADMIN_EMAIL`, `HIRELINK_ADMIN_PASSWORD`, `HIRELINK_SWAGGER_ENABLED`, et en prod `HIRELINK_DB_URL`, `HIRELINK_DB_USER`, `HIRELINK_DB_PASSWORD`, `HIRELINK_MAIL_*` (HOST, PORT, USERNAME, PASSWORD, FROM).
 Modèles : `.env.example` et `backend/src/main/resources/application-local.properties.example`. **L'application démarre sans aucune clé IA** (le scoring retombe sur l'analyse locale).
 Les secrets restent visibles dans l'historique Git ancien : si le dépôt a été publié, changer les valeurs et, au besoin, réécrire l'historique (hors périmètre de cette branche).
 
