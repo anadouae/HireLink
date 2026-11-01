@@ -8,7 +8,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.text.Normalizer;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -34,13 +37,28 @@ public class CompanyVerificationService {
             String status,
             boolean corporateEmail,
             String method,
-            String message
+            String message,
+            boolean formatValid,
+            Boolean checkDigitAdvisoryOk,
+            String legalName,
+            String address,
+            String city,
+            String source,
+            java.time.Instant checkedAt
     ) {}
 
     private final UserRepository userRepository;
+    private final IceFormatValidator iceFormatValidator;
+    private final IceIdentityLookup iceIdentityLookup;
 
-    public CompanyVerificationService(UserRepository userRepository) {
+    public CompanyVerificationService(
+            UserRepository userRepository,
+            IceFormatValidator iceFormatValidator,
+            IceIdentityLookup iceIdentityLookup
+    ) {
         this.userRepository = userRepository;
+        this.iceFormatValidator = iceFormatValidator;
+        this.iceIdentityLookup = iceIdentityLookup;
     }
 
     public Result verify(String rawIce, String companyName) {
@@ -59,11 +77,13 @@ public class CompanyVerificationService {
         if (companyName == null || companyName.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Raison sociale obligatoire");
         }
-        String ice = rawIce.replaceAll("\\s+", "");
-        if (!ice.matches("\\d{9,15}")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ICE invalide (9 à 15 chiffres)");
+        IceFormatValidator.Result format = iceFormatValidator.validate(rawIce);
+        if (!format.formatValid()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, format.message());
         }
+        String ice = format.normalized();
         String name = companyName.trim();
+        java.time.Instant now = java.time.Instant.now();
 
         // Les membres d'une même entreprise partagent son ICE : conflit seulement si aucun autre compte portant cet ICE n'a la même raison sociale.
         var others = userRepository.findAllByCompanyIce(ice).stream()
@@ -72,23 +92,89 @@ public class CompanyVerificationService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cet ICE est déjà lié à un autre compte HireLink");
         }
         boolean corporateEmail = isCorporateEmail(email);
-        var known = CompanyDirectory.byIce(ice);
+        var hit = iceIdentityLookup.lookup(ice);
 
         if (!corporateEmail) {
             return new Result(ice, name, false, "NEED_CORPORATE_EMAIL", false, "PENDING",
-                    "Compte créé. Pour le badge automatique, utilisez un e-mail professionnel (@entreprise.ma). L’admin peut quand même valider le dossier.");
+                    "Format ICE valide. Pour le badge automatique, utilisez un e-mail professionnel (@entreprise.ma). "
+                            + IceIdentityLookup.manualPortalHint(),
+                    true, format.checkDigitAdvisoryOk(),
+                    hit.map(IceIdentityLookup.Hit::legalName).orElse(null),
+                    hit.map(IceIdentityLookup.Hit::address).orElse(null),
+                    hit.map(IceIdentityLookup.Hit::city).orElse(null),
+                    hit.map(IceIdentityLookup.Hit::source).orElse(null),
+                    now);
         }
-        if (known.isEmpty()) {
+        if (hit.isEmpty()) {
             return new Result(ice, name, false, "WAITING_REGISTRY", true, "PENDING",
-                    "E-mail professionnel accepté. ICE inconnu du registre automatique — un admin confirme l’identité.");
+                    "Format ICE valide. Entreprise non trouvée dans le registre HireLink — "
+                            + IceIdentityLookup.manualPortalHint(),
+                    true, format.checkDigitAdvisoryOk(),
+                    null, null, null, null, now);
         }
-        String registryName = known.get().name();
-        if (similar(name, registryName) < 0.72) {
+        IceIdentityLookup.Hit known = hit.get();
+        if (similar(name, known.legalName()) < 0.72) {
             return new Result(ice, name, false, "NAME_MISMATCH", true, "PENDING",
-                    "La raison sociale ne correspond pas au registre pour cet ICE. Corrigez le nom ou attendez la revue admin.");
+                    "Format ICE valide, mais la raison sociale ne correspond pas à « " + known.legalName()
+                            + " ». Corrigez le nom ou attendez la revue admin.",
+                    true, format.checkDigitAdvisoryOk(),
+                    known.legalName(), known.address(), known.city(), known.source(), known.checkedAt());
         }
-        return new Result(ice, registryName, true, "REGISTRY_MATCH", true, "AUTO_REGISTRY",
-                "Entreprise vérifiée automatiquement (ICE + registre + e-mail professionnel). Publication autorisée.");
+        return new Result(ice, known.legalName(), true, "REGISTRY_MATCH", true, "AUTO_REGISTRY",
+                "ICE vérifié : entreprise identifiée (« " + known.legalName() + " »).",
+                true, format.checkDigitAdvisoryOk(),
+                known.legalName(), known.address(), known.city(), known.source(), known.checkedAt());
+    }
+
+    /** Contrôle format + tentative d’identité, sans exiger le badge publication. */
+    public Map<String, Object> inspectIce(String rawIce, String companyName) {
+        IceFormatValidator.Result format = iceFormatValidator.validate(rawIce);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("formatValid", format.formatValid());
+        out.put("normalized", format.normalized());
+        out.put("enterpriseCode", format.enterpriseCode());
+        out.put("establishmentCode", format.establishmentCode());
+        out.put("checkDigits", format.checkDigits());
+        out.put("checkDigitAdvisoryOk", format.checkDigitAdvisoryOk());
+        out.put("formatMessage", format.message());
+        out.put("manualPortals", List.of(
+                Map.of("label", "ice.gov.ma", "url", "https://www.ice.gov.ma/"),
+                Map.of("label", "DirectInfo OMPIC", "url", "https://www.directinfo.ma/"),
+                Map.of("label", "OMPIC — ICE", "url", "http://www.ompic.ma/fr/content/identifiant-commun-de-lentreprise")
+        ));
+        out.put("officialApiAvailable", false);
+        out.put("officialApiNote",
+                "Aucune API REST gratuite et officielle (OMPIC / DirectInfo / ice.gov.ma) n’est documentée pour un usage applicatif. "
+                        + "HireLink ne prétend pas interroger ces plateformes en direct.");
+        if (!format.formatValid()) {
+            out.put("identityFound", false);
+            out.put("identityMessage", "Corrigez d’abord le format ICE.");
+            out.put("checkedAt", java.time.Instant.now().toString());
+            return out;
+        }
+        var hit = iceIdentityLookup.lookup(format.normalized());
+        out.put("identityFound", hit.isPresent());
+        out.put("checkedAt", java.time.Instant.now().toString());
+        if (hit.isPresent()) {
+            IceIdentityLookup.Hit h = hit.get();
+            out.put("legalName", h.legalName());
+            out.put("address", h.address());
+            out.put("city", h.city());
+            out.put("sector", h.sector());
+            out.put("website", h.website());
+            out.put("source", h.source());
+            out.put("identityMessage", "ICE vérifié : entreprise identifiée");
+            if (companyName != null && !companyName.isBlank() && similar(companyName, h.legalName()) < 0.72) {
+                out.put("nameMatch", false);
+                out.put("identityMessage", "Entreprise trouvée, mais la raison sociale saisie diffère de « " + h.legalName() + " »");
+            } else {
+                out.put("nameMatch", true);
+            }
+        } else {
+            out.put("identityMessage",
+                    "Format valide, entreprise non confirmée automatiquement. " + IceIdentityLookup.manualPortalHint());
+        }
+        return out;
     }
 
     public void apply(User user, Result result) {
@@ -106,6 +192,14 @@ public class CompanyVerificationService {
         org.setVerified(result.verified());
         org.setVerificationStatus(result.status());
         org.setVerificationMethod(result.method());
+        org.setIceFormatValid(result.formatValid());
+        org.setIceLegalName(result.legalName());
+        org.setIceAddress(result.address());
+        if (result.city() != null && !result.city().isBlank() && blank(org.getCity())) {
+            org.setCity(result.city());
+        }
+        org.setIceSource(result.source());
+        org.setIceCheckedAt(result.checkedAt() != null ? result.checkedAt() : java.time.Instant.now());
         enrichProfile(org);
     }
 

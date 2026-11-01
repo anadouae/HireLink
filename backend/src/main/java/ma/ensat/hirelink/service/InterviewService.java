@@ -114,7 +114,13 @@ public class InterviewService {
 
     /** Résumé court : « jeudi 5 novembre 2026 à 10h30 · Visioconférence · Entretien technique ». */
     public String summary(Application app) {
-        return when(app) + " · " + TYPE_FR.getOrDefault(app.getInterviewType(), "") + " · " + KIND_FR.getOrDefault(app.getInterviewKind(), "Entretien");
+        return when(app) + " · " + label(TYPE_FR, app.getInterviewType(), "") + " · " + label(KIND_FR, app.getInterviewKind(), "Entretien");
+    }
+
+    /** {@link Map#getOrDefault} refuse une clé null sur les maps immuables (JDK). */
+    private static String label(Map<String, String> labels, String key, String fallback) {
+        if (key == null || key.isBlank()) return fallback;
+        return labels.getOrDefault(key, fallback);
     }
 
     /** Événement iCalendar (RFC 5545), importable dans Google Agenda, Outlook ou Apple Calendrier. */
@@ -127,12 +133,12 @@ public class InterviewService {
                 "DTSTAMP:" + ICS_STAMP.format(Instant.now()),
                 "DTSTART:" + ICS_STAMP.format(app.getInterviewAt()),
                 "DTEND:" + ICS_STAMP.format(app.getInterviewAt().plusSeconds(minutes * 60L)),
-                "SUMMARY:" + escape(KIND_FR.getOrDefault(app.getInterviewKind(), "Entretien") + " — " + app.getJobOffer().getTitle()),
+                "SUMMARY:" + escape(label(KIND_FR, app.getInterviewKind(), "Entretien") + " — " + app.getJobOffer().getTitle()),
                 "STATUS:" + (isActive(app) ? "CONFIRMED" : "CANCELLED")));
         String where = whereOrHow(app);
         if (where != null && !where.isBlank()) lines.add("LOCATION:" + escape(where));
         List<String> description = new ArrayList<>();
-        description.add("Mode : " + TYPE_FR.getOrDefault(app.getInterviewType(), ""));
+        description.add("Mode : " + label(TYPE_FR, app.getInterviewType(), ""));
         if (app.getInterviewParticipants() != null) description.add("Avec : " + app.getInterviewParticipants());
         if (app.getInterviewMapUrl() != null) description.add("Plan : " + app.getInterviewMapUrl());
         if (app.getInterviewNotes() != null) description.add("Consignes : " + app.getInterviewNotes());

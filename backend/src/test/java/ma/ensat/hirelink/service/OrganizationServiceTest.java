@@ -76,7 +76,9 @@ class OrganizationServiceTest {
     @Test
     void changerLIceRelanceLaVerification() {
         when(verification.verify(anyString(), anyString(), any(), anyString())).thenReturn(
-                new CompanyVerificationService.Result("002100000000099", "Atlas Digital", false, "WAITING_REGISTRY", true, "PENDING", "à revoir"));
+                new CompanyVerificationService.Result(
+                        "002100000000099", "Atlas Digital", false, "WAITING_REGISTRY", true, "PENDING", "a revoir",
+                        true, null, null, null, null, null, null));
 
         service.updateMine(owner, "Atlas Digital", "002100000000099", null, null, null, null, null);
 

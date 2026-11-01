@@ -208,9 +208,10 @@
   function confirmation(app, role) {
     if (app.interviewStatus === "CANCELLED") return null;
     const c = app.interviewConfirmation;
-    if (c === "CONFIRMED") return h("span", { class: "badge badge-ok", text: role === "candidate" ? "Vous avez confirmé votre présence" : "Présence confirmée par le candidat" });
-    if (c === "UNAVAILABLE") return h("span", { class: "badge badge-danger", text: role === "candidate" ? "Vous avez signalé une indisponibilité" : "Le candidat n’est pas disponible" });
-    return h("span", { class: "badge badge-warn", text: role === "candidate" ? "À confirmer" : "En attente de confirmation du candidat" });
+    // Pas de badge « en attente » : notif in-app + e-mail suffisent pour informer.
+    if (c === "CONFIRMED") return h("span", { class: "badge badge-ok", text: role === "candidate" ? "Présence confirmée" : "Présence confirmée" });
+    if (c === "UNAVAILABLE") return h("span", { class: "badge badge-danger", text: role === "candidate" ? "Indisponibilité signalée" : "Candidat indisponible" });
+    return null;
   }
 
   function failure(err) {
@@ -262,16 +263,13 @@
   }
 
   function candidateActions(app, opts) {
-    const yes = h("button", { type: "button", class: "btn btn-primary btn-sm", text: "Je confirme ma présence" });
-    yes.addEventListener("click", () => {
-      HireLinkAPI.api("/applications/" + app.id + "/interview/answer", { method: "POST", body: { available: true } })
-        .then(() => done(opts, "Merci !", "Le recruteur est prévenu de votre présence.")).catch(failure);
-    });
+    // Pas de « je confirme » obligatoire : invitation = notif + e-mail. Seule l’indisponibilité est actionnable.
+    if (app.interviewConfirmation === "UNAVAILABLE") return [];
     const no = h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Je ne suis pas disponible" });
     no.addEventListener("click", async () => {
       const note = await Mascotte.confirm({
         title: "Vous n’êtes pas disponible ?",
-        description: "Le recruteur recevra votre message et pourra proposer un autre créneau.",
+        description: "Le recruteur recevra votre message (notif + e-mail) et pourra proposer un autre créneau.",
         confirmLabel: "Envoyer",
         field: { label: "Votre message (facultatif)", placeholder: "Proposez d’autres créneaux si vous le pouvez." },
       });
@@ -279,7 +277,7 @@
       HireLinkAPI.api("/applications/" + app.id + "/interview/answer", { method: "POST", body: { available: false, note } })
         .then(() => done(opts, "Message envoyé", "Le recruteur va vous proposer un autre créneau.")).catch(failure);
     });
-    return [yes, no];
+    return [no];
   }
 
   function recruiterActions(app, opts) {

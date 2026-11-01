@@ -120,16 +120,16 @@ public class AiAssistController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux recruteurs");
         }
         requireCredit(user);
+        // La grille affichée est structurée (cartes). L’appel LLM reste pour le débit / audit provider.
         LlmProvider.LlmResult llm = llmProvider.complete(
                 "Génère une grille d'entretien structurée en français. Pas d'identité candidat.",
                 "Poste=" + nullSafe(body.jobTitle()) + " ; compétences=" + nullSafe(body.skills())
                         + ". 5 à 7 questions discriminantes."
         );
         Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Questions d’entretien");
-        m.put("content", llm.text());
+        m.put("title", "Grille d’entretien");
         m.put("questions", aiCreditService.interviewKit(body.jobTitle(), body.skills()));
-        m.put("note", "À relire avant l’entretien.");
+        m.put("note", "Cliquez une question pour voir ce qu’il faut écouter. À adapter avant l’entretien.");
         m.put("provider", llm.provider());
         m.put("credits", debitIfSuccess(user, "interview-kit", llm));
         return m;

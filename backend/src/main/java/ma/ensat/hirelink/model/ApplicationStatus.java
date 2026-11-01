@@ -2,15 +2,18 @@ package ma.ensat.hirelink.model;
 
 /**
  * Étapes du pipeline de candidature (ATS bilatéral).
- * Parcours : SUBMITTED → SCREENING → SHORTLISTED → INTERVIEW → OFFER → HIRED (issue positive).
- * Le refus reste possible jusqu'à l'offre ; REJECTED, WITHDRAWN et HIRED sont terminaux.
+ * Parcours HireLink : SUBMITTED → SCREENING → SHORTLISTED → INTERVIEW (fin positive sur la plateforme).
+ * OFFER / HIRED restent dans l'enum pour compatibilité données historiques, sans transition nouvelle.
+ * Refus possible jusqu'à l'entretien ; REJECTED et WITHDRAWN sont terminaux.
  */
 public enum ApplicationStatus {
     SUBMITTED,
     SCREENING,
     SHORTLISTED,
     INTERVIEW,
+    /** @deprecated hors parcours HireLink — conservé pour données existantes */
     OFFER,
+    /** @deprecated hors parcours HireLink — conservé pour données existantes */
     HIRED,
     REJECTED,
     WITHDRAWN

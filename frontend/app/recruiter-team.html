@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="../css/components.css?v=20261101a" />
   <link rel="stylesheet" href="../css/search.css?v=20261101a" />
   <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261101n" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
   <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101a"></script>
   <script src="../js/theme.js?v=20261101a"></script>
@@ -53,7 +53,8 @@
             </div>
             <div class="rc-form">
               <div class="rc-field"><label for="co-name">Nom</label><input id="co-name" required /></div>
-              <div class="rc-field"><label for="co-ice">ICE</label><input id="co-ice" placeholder="15 chiffres" inputmode="numeric" /></div>
+              <div class="rc-field"><label for="co-ice">ICE</label><input id="co-ice" placeholder="15 chiffres (ex. 001234567000014)" inputmode="numeric" autocomplete="off" /></div>
+              <div class="is-full" id="ice-status" aria-live="polite"></div>
               <div class="rc-field"><label for="co-website">Site web</label><input id="co-website" placeholder="https://" /></div>
               <div class="rc-field"><label for="co-sector">Secteur</label><input id="co-sector" placeholder="Technologie, Banque…" /></div>
               <div class="rc-field"><label for="co-city">Ville</label><input id="co-city" /></div>
@@ -77,6 +78,6 @@
   <script defer src="../js/places.js?v=20261101a"></script>
   <script defer src="../js/in-app-help.js?v=20261101a"></script>
   <script defer src="../js/app-shell.js?v=20261101a"></script>
-  <script defer src="../js/recruiter-team.js?v=20261101a"></script>
+  <script defer src="../js/recruiter-team.js?v=20261101n"></script>
 </body>
 </html>

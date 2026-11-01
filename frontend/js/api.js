@@ -113,8 +113,7 @@
   function mediaUrl(path) {
     if (!path) return "";
     const s = String(path);
-    // Services de favicon tiers : requêtes inutiles (404 pour les domaines inconnus) → on affiche l'initiale
-    if (/google\.com\/s2\/favicons|gstatic\.com\/faviconV2/i.test(s)) return "";
+    // Favicons Google / DuckDuckGo : utilisés comme logos d'entreprise / école (repli initiale si 404).
     if (/^https?:\/\//i.test(s) || s.startsWith("data:")) return s;
     if (s.startsWith("/api/")) {
       const base = apiBase().replace(/\/api\/v1\/?$/, "");

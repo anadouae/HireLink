@@ -72,7 +72,8 @@ public final class CompanyDirectory {
 
     public static Optional<Entry> byIce(String ice) {
         if (ice == null) return Optional.empty();
-        return Optional.ofNullable(BY_ICE.get(ice.replaceAll("\\s+", "")));
+        String key = IceFormatValidator.normalize(ice);
+        return Optional.ofNullable(BY_ICE.get(key));
     }
 
     public static Optional<Entry> byName(String name) {

@@ -160,6 +160,8 @@ public class MeController {
             }
         }
         if (body.school() != null) user.setSchool(body.school().trim());
+        if (body.educationDomain() != null) user.setEducationDomain(body.educationDomain().trim());
+        if (body.graduationYear() != null) user.setGraduationYear(body.graduationYear());
         if (body.workMode() != null) user.setWorkMode(body.workMode().trim());
         if (body.gender() != null) user.setGender(body.gender().trim());
         if (body.availability() != null) user.setAvailability(body.availability().trim());
@@ -230,6 +232,8 @@ public class MeController {
                 u.getGender(),
                 u.getAvailability(),
                 u.getSchool(),
+                u.getEducationDomain(),
+                u.getGraduationYear(),
                 u.getWorkMode(),
                 u.isEmailNotifications()
         );

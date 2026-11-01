@@ -88,8 +88,8 @@
       $("sla-nudge-sub").textContent = "Le dépassement du délai de 1ʳᵉ réponse est visible côté candidat. Traitez d’abord : " + (urgent[0].candidateName || "ce candidat") + ".";
     } else nudge.hidden = true;
 
-    const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"];
-    const labels = ["Reçues", "Présélection", "Shortlist", "Entretien", "Offre", "Embauché(e)"];
+    const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
+    const labels = ["Reçues", "Présélection", "Shortlist", "Entretien"];
     const counts = keys.map((k) => apps.filter((a) => a.status === k).length);
     const max = Math.max(1, ...counts);
     $("chart-bars").innerHTML = keys.map((k, i) =>

@@ -26,7 +26,7 @@
     var n = err && err.name;
     if (n === "NotAllowedError") return new Error("Opération annulée ou expirée. Réessayez.");
     if (n === "InvalidStateError") return new Error("Cette passkey est déjà enregistrée sur cet appareil.");
-    if (n === "SecurityError") return new Error("Les passkeys exigent l’adresse http://localhost:5500 (ou HTTPS).");
+    if (n === "SecurityError") return new Error("Les passkeys exigent http://localhost:5500 (pas 127.0.0.1) ou HTTPS. Rouvrez le site via localhost.");
     return err instanceof Error ? err : new Error("Passkey indisponible");
   }
   /** Crée une passkey ; res = réponse de POST /account/passkeys/options. Retourne le JSON à renvoyer au serveur. */

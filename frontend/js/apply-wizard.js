@@ -43,6 +43,8 @@
       ".hl-cv-opt{display:flex;gap:.85rem;align-items:flex-start;padding:1rem;border-radius:14px;border:1.5px solid rgba(26,18,20,.1);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}" +
       ".hl-cv-opt:hover{border-color:rgba(122,32,50,.35);transform:translateY(-1px)}" +
       ".hl-cv-opt.is-on{border-color:#7a2032;background:rgba(122,32,50,.06)}" +
+      ".hl-cv-opt.is-disabled{opacity:.55;cursor:not-allowed}" +
+      ".hl-cv-opt.is-disabled:hover{transform:none;border-color:rgba(26,18,20,.1)}" +
       ".hl-cv-opt input{margin-top:.2rem}" +
       ".hl-cv-opt strong{display:block;margin-bottom:.2rem}" +
       ".hl-cv-opt span{font-size:.88rem;color:#5e5558}" +
@@ -64,16 +66,20 @@
       profile = await HireLinkAPI.api("/me");
     } catch (_) {}
 
+    const hasProfileCv = !!(profile.cvFileName && String(profile.cvFileName).trim());
     const state = {
       step: 0,
       dir: "fwd",
       offer,
       profile,
       onDone,
-      cvSource: "PROFILE",
-      cvFileName: "",
+      hasProfileCv,
+      cvSource: hasProfileCv ? "PROFILE" : "UPLOAD",
+      cvFileName: hasProfileCv ? profile.cvFileName : "",
       cvFile: null,
       coverLetter: "",
+      letterFile: null,
+      letterFileName: "",
       skillsCsv: profile.skills || "",
       submitting: false,
     };
@@ -148,6 +154,9 @@
       }
       if (state.step === 2) {
         const skills = state.skillsCsv || "Aucune compétence sélectionnée";
+        const profileHint = state.hasProfileCv
+          ? ("CV enregistré : " + (state.profile.cvFileName || "fichier") + " — compétences : " + skills)
+          : "Aucun CV dans votre profil. Déposez-en un dans Mon profil, ou choisissez « Nouveau CV ».";
         return (
           '<div class="' +
           anim +
@@ -155,35 +164,51 @@
           '<div class="hl-cv-choice">' +
           '<label class="hl-cv-opt' +
           (state.cvSource === "PROFILE" ? " is-on" : "") +
+          (state.hasProfileCv ? "" : " is-disabled") +
           '" data-src="PROFILE"><input type="radio" name="cvsrc" value="PROFILE"' +
           (state.cvSource === "PROFILE" ? " checked" : "") +
+          (state.hasProfileCv ? "" : " disabled") +
           " /><div><strong>Profil HireLink</strong><span>" +
-          esc(skills) +
+          esc(profileHint) +
           "</span></div></label>" +
           '<label class="hl-cv-opt' +
           (state.cvSource === "UPLOAD" ? " is-on" : "") +
           '" data-src="UPLOAD"><input type="radio" name="cvsrc" value="UPLOAD"' +
           (state.cvSource === "UPLOAD" ? " checked" : "") +
-          " /><div><strong>Nouveau CV</strong><span>PDF / DOC — analyse compétences optionnelle</span></div></label>" +
+          " /><div><strong>Nouveau CV</strong><span>PDF ou TXT — analyse des compétences optionnelle</span></div></label>" +
           "</div>" +
           '<div class="hl-file-row" id="hl-cv-upload"' +
           (state.cvSource === "UPLOAD" ? "" : " hidden") +
           ">" +
           '<label class="btn btn-soft btn-sm" style="cursor:pointer">Choisir un fichier' +
-          '<input type="file" id="hl-cv-file" accept=".pdf,.txt,.md,.doc,.docx,application/pdf" hidden /></label>' +
+          '<input type="file" id="hl-cv-file" accept=".pdf,.txt,.md,application/pdf,text/plain" hidden /></label>' +
           '<p class="muted" id="hl-cv-name" style="margin:.55rem 0 0">' +
           (state.cvFileName ? "Fichier : " + esc(state.cvFileName) : "Aucun fichier") +
           "</p></div>" +
-          '<button type="button" class="btn btn-soft btn-sm" id="hl-cv-preview" style="margin-top:.75rem">Aperçu du CV</button></div>'
+          '<button type="button" class="btn btn-soft btn-sm" id="hl-cv-preview" style="margin-top:.75rem"' +
+          (state.cvSource === "PROFILE" && !state.hasProfileCv ? " disabled" : "") +
+          ">Aperçu du CV</button></div>"
         );
       }
       if (state.step === 3) {
         return (
           '<div class="' +
           anim +
-          '"><p class="muted" style="margin-top:0"><span class="hl-optional">Optionnel</span> — Un mot pour le recruteur (lettre de motivation)</p>' +
-          '<textarea id="hl-letter-text" class="input" rows="7" maxlength="4000" placeholder="Pourquoi ce poste, pourquoi vous ?" style="width:100%">' + esc(state.coverLetter) + "</textarea>" +
-          "</div>"
+          '"><p class="muted" style="margin-top:0"><span class="hl-optional">Optionnel</span> — Lettre de motivation : rédigez-la ou importez un fichier (PDF, TXT, MD)</p>' +
+          '<textarea id="hl-letter-text" class="input" rows="7" maxlength="8000" placeholder="Pourquoi ce poste, pourquoi vous ?" style="width:100%">' +
+          esc(state.coverLetter) +
+          "</textarea>" +
+          '<div class="hl-file-row" style="margin-top:.75rem">' +
+          '<label class="btn btn-soft btn-sm" style="cursor:pointer">Importer une lettre' +
+          '<input type="file" id="hl-letter-file" accept=".pdf,.txt,.md,.text,application/pdf,text/plain,text/markdown" hidden /></label>' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="hl-letter-preview" style="margin-left:.5rem"' +
+          (state.letterFile || state.coverLetter ? "" : " disabled") +
+          ">Aperçu</button>" +
+          '<p class="muted" id="hl-letter-name" style="margin:.55rem 0 0">' +
+          (state.letterFileName
+            ? "Fichier : " + esc(state.letterFileName) + " (texte importé dans la zone ci-dessus)"
+            : "Formats : PDF, TXT, MD — ou rédigez directement") +
+          "</p></div></div>"
         );
       }
       return (
@@ -203,7 +228,9 @@
         (state.cvSource === "UPLOAD" ? "Nouveau · " + esc(state.cvFileName || "—") : "Profil HireLink") +
         "</span></div>" +
         "<div><strong>Lettre</strong><span>" +
-        (state.coverLetter ? "Rédigée (" + state.coverLetter.length + " caractères)" : "Non jointe") +
+        (state.coverLetter
+          ? "Oui (" + state.coverLetter.length + " car." + (state.letterFileName ? " · " + state.letterFileName : "") + ")"
+          : "Non jointe") +
         "</span></div></div></div>"
       );
     }
@@ -215,37 +242,155 @@
       }
     }
 
-    function previewFile(file, title, fallbackHtml) {
-      let body = fallbackHtml || "<p class='muted'>Aucun aperçu.</p>";
-      let url = null;
-      if (file && /pdf$/i.test(file.name || "")) {
-        url = URL.createObjectURL(file);
-        body = '<iframe src="' + url + '" title="Aperçu" style="width:100%;height:420px;border:0;border-radius:12px;background:#fff"></iframe>';
-      } else if (file) {
-        body = "<p><strong>" + esc(file.name) + "</strong></p><p class='muted'>Aperçu intégré pour les PDF. Le fichier DOCX est joint tel quel.</p>";
-      }
+    function showPreviewModal(title, bodyHtml, revokeUrl) {
       HireLink.openModal({
         title: title,
-        bodyHtml: body,
+        bodyHtml: bodyHtml,
         confirmLabel: "Fermer",
         hideCancel: true,
         large: true,
+        // Au-dessus du wizard de postulation (z-index 9200) — sinon l'aperçu est invisible.
+        zIndex: 9800,
       }).then(() => {
-        if (url) URL.revokeObjectURL(url);
+        if (revokeUrl) URL.revokeObjectURL(revokeUrl);
       });
+    }
+
+    function previewLocalFile(file, title) {
+      if (!file) {
+        showPreviewModal(title, "<p class='muted'>Aucun fichier.</p>");
+        return;
+      }
+      let url = null;
+      let body;
+      if (/pdf$/i.test(file.name || "") || (file.type || "").indexOf("pdf") >= 0) {
+        url = URL.createObjectURL(file);
+        body =
+          '<iframe src="' +
+          url +
+          '" title="Aperçu" style="width:100%;height:420px;border:0;border-radius:12px;background:#fff"></iframe>';
+      } else if (/\.(txt|md)$/i.test(file.name || "") || (file.type || "").indexOf("text") >= 0) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          showPreviewModal(
+            title,
+            "<pre style='white-space:pre-wrap;max-height:420px;overflow:auto;margin:0;font:inherit'>" +
+              esc(String(reader.result || "").slice(0, 12000)) +
+              "</pre>"
+          );
+        };
+        reader.readAsText(file);
+        return;
+      } else {
+        body =
+          "<p><strong>" +
+          esc(file.name) +
+          "</strong></p><p class='muted'>Aperçu intégré pour PDF et texte. Le fichier sera joint / lu si le format est supporté.</p>";
+      }
+      showPreviewModal(title, body, url);
+    }
+
+    async function previewProfileCv() {
+      if (!state.hasProfileCv) {
+        HireLink.toast("CV manquant", "Déposez d'abord un CV dans Mon profil.", "warn");
+        return;
+      }
+      try {
+        const res = await HireLinkAPI.authFetch("/me/cv");
+        if (!res.ok) throw new Error("CV introuvable");
+        const blob = await res.blob();
+        const type = (blob.type || "").toLowerCase();
+        const name = state.profile.cvFileName || "cv.pdf";
+        if (type.indexOf("pdf") >= 0 || /\.pdf$/i.test(name)) {
+          const url = URL.createObjectURL(blob);
+          showPreviewModal(
+            "Aperçu — " + name,
+            '<iframe src="' +
+              url +
+              '" title="Aperçu CV" style="width:100%;height:420px;border:0;border-radius:12px;background:#fff"></iframe>',
+            url
+          );
+          return;
+        }
+        if (type.indexOf("text") >= 0 || /\.(txt|md)$/i.test(name)) {
+          const text = await blob.text();
+          showPreviewModal(
+            "Aperçu — " + name,
+            "<pre style='white-space:pre-wrap;max-height:420px;overflow:auto;margin:0;font:inherit'>" +
+              esc(text.slice(0, 12000)) +
+              "</pre>"
+          );
+          return;
+        }
+        showPreviewModal(
+          "Aperçu — " + name,
+          "<p>Fichier enregistré : <strong>" +
+            esc(name) +
+            "</strong> (" +
+            Math.round(blob.size / 1024) +
+            " Ko).</p><p class='muted'>Aperçu intégré pour PDF et texte. Le recruteur pourra télécharger le fichier.</p>"
+        );
+      } catch (err) {
+        HireLink.toast("Aperçu", (err && err.message) || "Impossible d'ouvrir le CV", "danger");
+      }
+    }
+
+    async function importLetterFile(f) {
+      state.letterFile = f;
+      state.letterFileName = f.name;
+      const isText = /\.(txt|md)$/i.test(f.name) || (f.type || "").indexOf("text") >= 0;
+      if (isText) {
+        const text = await f.text();
+        state.coverLetter = String(text || "").trim().slice(0, 8000);
+        HireLink.toast("Lettre", "Texte importé depuis " + f.name, "ok");
+        paint();
+        return;
+      }
+      try {
+        const fd = new FormData();
+        fd.append("file", f);
+        const res = await HireLinkAPI.authFetch("/ocr/cv?applySkills=false", { method: "POST", body: fd });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.message || "Lecture impossible");
+        const text = String(data.text || data.textPreview || "").replace(/…$/, "").trim();
+        if (!text) throw new Error("Aucun texte extrait");
+        state.coverLetter = text.slice(0, 8000);
+        HireLink.toast("Lettre", "Texte extrait de " + f.name, "ok");
+      } catch (err) {
+        HireLink.toast(
+          "Lettre",
+          (err && err.message) || "Formats lus : PDF et TXT. Collez le texte ou convertissez en PDF.",
+          "warn"
+        );
+      }
+      paint();
     }
 
     function bindBody() {
       if (state.step === 1) {
         HireLinkSkills.mount(overlay.querySelector("#hl-apply-skills"), {
           value: state.skillsCsv,
-          onChange: (csv) => { state.skillsCsv = csv; },
+          onChange: (csv) => {
+            state.skillsCsv = csv;
+          },
         });
       }
       if (state.step === 2) {
         overlay.querySelectorAll(".hl-cv-opt").forEach((el) => {
           el.onclick = () => {
-            state.cvSource = el.getAttribute("data-src");
+            const src = el.getAttribute("data-src");
+            if (src === "PROFILE" && !state.hasProfileCv) {
+              HireLink.toast(
+                "CV requis",
+                "Le profil HireLink doit contenir un CV. Allez dans Mon profil ou choisissez « Nouveau CV ».",
+                "warn"
+              );
+              return;
+            }
+            state.cvSource = src;
+            if (src === "PROFILE" && state.hasProfileCv) {
+              state.cvFileName = state.profile.cvFileName || state.cvFileName;
+            }
             paint();
           };
         });
@@ -261,7 +406,6 @@
             try {
               const fd = new FormData();
               fd.append("file", f);
-              const token = HireLinkAPI.getToken();
               const res = await HireLinkAPI.authFetch("/ocr/cv", {
                 method: "POST",
                 body: fd,
@@ -269,7 +413,13 @@
               const data = await res.json().catch(() => ({}));
               if (res.ok && data.suggestedSkills && data.suggestedSkills.length) {
                 HireLink.toast("CV analysé", data.suggestedSkills.slice(0, 5).join(", "), "ok");
-                state.skillsCsv = HireLinkSkills.split(state.skillsCsv).concat(data.suggestedSkills).filter((v, i, all) => all.findIndex((x) => HireLinkSearch.compact(x) === HireLinkSearch.compact(v)) === i).join(", ");
+                state.skillsCsv = HireLinkSkills.split(state.skillsCsv)
+                  .concat(data.suggestedSkills)
+                  .filter(
+                    (v, i, all) =>
+                      all.findIndex((x) => HireLinkSearch.compact(x) === HireLinkSearch.compact(v)) === i
+                  )
+                  .join(", ");
               }
             } catch (_) {}
           };
@@ -278,16 +428,43 @@
         if (prev) {
           prev.onclick = () => {
             if (state.cvSource === "UPLOAD" && state.cvFile) {
-              previewFile(state.cvFile, "Aperçu du CV");
+              previewLocalFile(state.cvFile, "Aperçu du CV");
               return;
             }
-            previewFile(
-              null,
-              "Profil HireLink",
-              "<p>Le recruteur verra les compétences de votre profil.</p><p><strong>" +
-                esc(state.skillsCsv || "Profil à compléter") +
-                "</strong></p>"
-            );
+            if (state.cvSource === "PROFILE") {
+              previewProfileCv();
+              return;
+            }
+            HireLink.toast("Aperçu", "Choisissez un CV à prévisualiser", "info");
+          };
+        }
+      }
+      if (state.step === 3) {
+        const letterFile = overlay.querySelector("#hl-letter-file");
+        if (letterFile) {
+          letterFile.onchange = () => {
+            const f = letterFile.files && letterFile.files[0];
+            if (f) importLetterFile(f);
+          };
+        }
+        const letterPrev = overlay.querySelector("#hl-letter-preview");
+        if (letterPrev) {
+          letterPrev.onclick = () => {
+            capture();
+            if (state.letterFile) {
+              previewLocalFile(state.letterFile, "Aperçu de la lettre");
+              return;
+            }
+            if (state.coverLetter) {
+              showPreviewModal(
+                "Aperçu de la lettre",
+                "<pre style='white-space:pre-wrap;max-height:420px;overflow:auto;margin:0;font:inherit'>" +
+                  esc(state.coverLetter) +
+                  "</pre>"
+              );
+              return;
+            }
+            HireLink.toast("Lettre", "Rien à prévisualiser", "info");
           };
         }
       }
@@ -301,9 +478,19 @@
           return false;
         }
       }
-      if (state.step === 2 && state.cvSource === "UPLOAD" && !state.cvFileName) {
-        HireLink.toast("CV requis", "Choisissez un fichier ou le profil", "warn");
-        return false;
+      if (state.step === 2) {
+        if (state.cvSource === "PROFILE" && !state.hasProfileCv) {
+          HireLink.toast(
+            "CV requis",
+            "Le profil HireLink n'a pas de CV. Déposez-en un ou choisissez « Nouveau CV ».",
+            "warn"
+          );
+          return false;
+        }
+        if (state.cvSource === "UPLOAD" && !state.cvFileName) {
+          HireLink.toast("CV requis", "Choisissez un fichier PDF ou TXT", "warn");
+          return false;
+        }
       }
       return true;
     }
@@ -400,6 +587,8 @@
       if (skip) {
         skip.onclick = () => {
           state.coverLetter = "";
+          state.letterFile = null;
+          state.letterFileName = "";
           state.dir = "fwd";
           state.step++;
           paint();

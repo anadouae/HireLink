@@ -71,8 +71,18 @@
       document.getElementById("set-phone").value = dial ? (p.phone || "").replace(/^\+\d+/, "") : (p.phone || "");
       document.getElementById("set-school").value = p.school || "";
       document.getElementById("set-level").value = p.experienceLevel || "";
+      document.getElementById("set-domain").value = p.educationDomain || "";
+      document.getElementById("set-grad-year").value = p.graduationYear != null ? p.graduationYear : "";
       document.getElementById("set-mode").value = p.workMode || "";
-      document.getElementById("set-avail").value = p.availability || "";
+      const availSel = document.getElementById("set-avail");
+      const avail = p.availability || "";
+      if (avail && ![].some.call(availSel.options, (o) => o.value === avail)) {
+        const opt = document.createElement("option");
+        opt.value = avail;
+        opt.textContent = /^\d{4}-\d{2}-\d{2}$/.test(avail) ? ("À partir du " + avail) : avail;
+        availSel.appendChild(opt);
+      }
+      availSel.value = avail;
       document.getElementById("set-role").value = p.soughtRoles || "";
       document.getElementById("set-mail").checked = p.emailNotifications !== false;
       paintContracts(String(p.preferredContracts || "").split(",").map((s) => s.trim().toLowerCase()));
@@ -122,6 +132,13 @@
       city: document.getElementById("set-city").value.trim(),
       school: document.getElementById("set-school").value.trim(),
       experienceLevel: document.getElementById("set-level").value.trim(),
+      educationDomain: document.getElementById("set-domain").value.trim(),
+      graduationYear: (function () {
+        const raw = document.getElementById("set-grad-year").value;
+        if (!raw) return null;
+        const n = parseInt(raw, 10);
+        return Number.isNaN(n) ? null : n;
+      })(),
       workMode: document.getElementById("set-mode").value,
       availability: document.getElementById("set-avail").value,
       soughtRoles: document.getElementById("set-role").value.trim(),

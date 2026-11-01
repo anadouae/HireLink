@@ -11,7 +11,9 @@ import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Ledger crédits IA F16 — paliers CDC §9.
@@ -65,22 +67,64 @@ public class AiCreditService {
         return sum == null ? 0 : sum;
     }
 
-    public List<String> interviewKit(String jobTitle, String skills) {
-        String title = jobTitle == null || jobTitle.isBlank() ? "le poste" : jobTitle.trim();
+    /**
+     * Grille structurée : catégorie + question claire + guide « ce qu'il faut écouter »
+     * (affiché au clic côté front).
+     */
+    public List<Map<String, String>> interviewKit(String jobTitle, String skills) {
+        String title = jobTitle == null || jobTitle.isBlank() ? "ce poste" : jobTitle.trim();
         List<String> skillList = new ArrayList<>();
         if (skills != null) {
             for (String s : skills.split("[,;/|]+")) {
                 if (!s.isBlank()) skillList.add(s.trim());
             }
         }
-        String sk = skillList.isEmpty() ? "vos compétences clés" : skillList.get(0);
-        List<String> q = new ArrayList<>();
-        q.add("Ouverture (2 min) — Présentez un résultat concret lié à " + title + ".");
-        q.add("Technique — Donnez un exemple où vous avez utilisé " + sk + " sous contrainte de délai.");
-        q.add("STAR — Situation / Tâche / Action / Résultat sur un projet similaire.");
-        q.add("Collaboration — Comment gérez-vous un désaccord avec un métier ou un manager ?");
-        q.add("SLA / engagement — Comment priorisez-vous quand plusieurs demandes arrivent le même jour ?");
-        q.add("Clôture — Quelles questions posez-vous pour clarifier le succès à 90 jours ?");
+        String sk = skillList.isEmpty() ? "les compétences clés du poste" : skillList.get(0);
+        String sk2 = skillList.size() > 1 ? skillList.get(1) : sk;
+        List<Map<String, String>> q = new ArrayList<>();
+        q.add(kitItem(
+                "Ouverture",
+                "Parlez-moi d’un résultat concret dont vous êtes fier·e, en lien avec « " + title + " ».",
+                "Un fait mesurable (délai, volume, qualité). Pas seulement le contexte : le résultat et le rôle personnel."
+        ));
+        q.add(kitItem(
+                "Technique",
+                "Donnez un exemple où vous avez utilisé " + sk + " sous contrainte de délai.",
+                "Maîtrise réelle de " + sk + " : choix techniques, compromis, ce qui a été livré à temps."
+        ));
+        q.add(kitItem(
+                "Méthode STAR",
+                "Décrivez un projet proche de ce poste : situation, tâche, actions, résultat.",
+                "Structure claire STAR. Actions personnelles (pas « on a… »). Résultat vérifiable."
+        ));
+        q.add(kitItem(
+                "Collaboration",
+                "Comment gérez-vous un désaccord avec un métier, un collègue ou un manager ?",
+                "Écoute, reformulation, proposition, escalade propre. Pas de blâme ni d’évitement."
+        ));
+        q.add(kitItem(
+                "Priorités",
+                "Plusieurs demandes urgentes arrivent le même jour : comment priorisez-vous ?",
+                "Critères explicites (impact, échéance, risque). Communication aux parties prenantes."
+        ));
+        q.add(kitItem(
+                "Compétence clé",
+                "Où vous situez-vous sur " + sk2 + " — et que feriez-vous pour progresser en 90 jours ?",
+                "Honnêteté sur le niveau actuel + plan concret d’apprentissage (pas de jargon creux)."
+        ));
+        q.add(kitItem(
+                "Clôture",
+                "Quelles questions posez-vous pour clarifier le succès à 90 jours sur ce poste ?",
+                "Curiosité utile : objectifs, rituels d’équipe, critères de réussite. Pas seulement le salaire."
+        ));
         return q;
+    }
+
+    private static Map<String, String> kitItem(String category, String question, String lookFor) {
+        Map<String, String> m = new LinkedHashMap<>();
+        m.put("category", category);
+        m.put("question", question);
+        m.put("lookFor", lookFor);
+        return m;
     }
 }

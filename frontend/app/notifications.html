@@ -35,8 +35,27 @@
           </div>
           <div class="rc-head-actions"><button type="button" class="btn btn-secondary" id="btn-readall">Tout marquer comme lu</button></div>
         </div>
-        <div class="rc-toolbar">
-<div class="rc-chips" id="n-chips" role="tablist"><button type="button" class="rc-chip is-on" data-v="all">Toutes</button><button type="button" class="rc-chip" data-v="unread">Non lues</button></div>
+        <div class="rc-toolbar" style="flex-wrap:wrap;gap:.55rem;align-items:center">
+          <div class="rc-chips" id="n-chips" role="tablist">
+            <button type="button" class="rc-chip is-on" data-v="all">Toutes</button>
+            <button type="button" class="rc-chip" data-v="unread">Non lues</button>
+          </div>
+          <select id="n-f-kind" class="rc-select" aria-label="Type de notification">
+            <option value="all">Tous les types</option>
+            <option value="APPLICATION">Nouvelle candidature</option>
+            <option value="STATUS">Candidature / statut</option>
+            <option value="INTERVIEW">Entretien</option>
+            <option value="SLA">Délai</option>
+            <option value="ASSIGN">Assignation</option>
+            <option value="SYSTEM">Équipe</option>
+            <option value="MODERATION">Modération</option>
+          </select>
+          <select id="n-f-when" class="rc-select" aria-label="Période">
+            <option value="all">Toutes les dates</option>
+            <option value="today">Aujourd’hui</option>
+            <option value="7d">7 derniers jours</option>
+            <option value="30d">30 derniers jours</option>
+          </select>
         </div>
         <section class="rc-card is-flush"><div class="rc-list" id="n-list"></div></section>
       </main>
@@ -50,6 +69,6 @@
   <script defer src="../js/places.js?v=20261101a"></script>
   <script defer src="../js/in-app-help.js?v=20261101a"></script>
   <script defer src="../js/app-shell.js?v=20261101a"></script>
-  <script defer src="../js/notifications.js?v=20261101a"></script>
+  <script defer src="../js/notifications.js?v=20261101j"></script>
 </body>
 </html>

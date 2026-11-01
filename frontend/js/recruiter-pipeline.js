@@ -7,33 +7,27 @@
   });
   if (!session) return;
 
-  // Parcours positif : Reçues → Présélection → Shortlist → Entretien → Offre → Embauché(e).
+  // Parcours positif : Reçues → Présélection → Shortlist → Entretien (fin sur HireLink).
   const COLUMNS = [
     { key: "SUBMITTED", label: "Reçues", tone: "neutral" },
     { key: "SCREENING", label: "Présélection", tone: "warn" },
     { key: "SHORTLISTED", label: "Shortlist", tone: "info" },
-    { key: "INTERVIEW", label: "Entretien", tone: "ok" },
-    { key: "OFFER", label: "Offre", tone: "ok" },
-    { key: "HIRED", label: "Embauché(e)", tone: "ok", end: true },
+    { key: "INTERVIEW", label: "Entretien", tone: "ok", end: true },
   ];
   const NEXT = {
     SUBMITTED: "SCREENING",
     SCREENING: "SHORTLISTED",
     SHORTLISTED: "INTERVIEW",
-    INTERVIEW: "OFFER",
-    OFFER: "HIRED",
   };
   const STEP_HINT = {
     SCREENING: "Présélection : CV et compétences vs fiche de poste.",
     SHORTLISTED: "Shortlist : candidat retenu pour un échange humain.",
     INTERVIEW: "Planifiez l’entretien : mode, date, lieu ou lien. Le candidat reçoit une invitation.",
-    OFFER: "Offre : l’entreprise propose le poste au candidat, qui en est informé par e-mail.",
-    HIRED: "Embauche : le candidat a accepté. Un message de félicitations lui est envoyé.",
   };
 
   let allApps = [];
   let refusalCatalog = [];
-  const ACTIVE = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER"]);
+  const ACTIVE = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"]);
 
   function selectedOfferId() {
     const v = (document.getElementById("pipe-offer") || {}).value || "all";
@@ -97,7 +91,7 @@
     const el = document.getElementById("funnel-strip");
     if (!el) return;
     const by = {};
-    ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED", "REJECTED", "WITHDRAWN"].forEach(
+    ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "REJECTED", "WITHDRAWN"].forEach(
       (k) => (by[k] = 0)
     );
     let active = 0;
@@ -126,7 +120,6 @@
       stat("Retards de réponse", slaBreached, slaBreached ? "is-danger" : "") +
       stat("Match ≥ 75 %", hotMatches) +
       stat("En entretien", interviews) +
-      stat("Embauchés", by.HIRED || 0) +
       stat("Conversion → entretien", conv + " %") +
       stat("Refus", refused) +
       "</div>";
@@ -240,7 +233,15 @@
       FIXED_REASONS.map((r) => '<option value="' + r[0] + '">' + esc(r[1]) + "</option>").join("") +
       "</select></div>" +
       '<div class="field" id="reject-other-wrap" hidden><label>Précision</label>' +
-      '<textarea id="reject-other" rows="3" placeholder="Ce que le candidat doit lire"></textarea></div></div>'
+      '<textarea id="reject-other" rows="3" placeholder="Ce que le candidat doit lire"></textarea></div></div>' +
+      '<div class="hl-dossier-section"><h5>Message au candidat</h5>' +
+      '<p class="muted" style="margin:0 0 .55rem">Rédigez-le vous-même, ou demandez une aide IA puis modifiez librement. Ce texte part en e-mail.</p>' +
+      '<div class="rc-row" style="gap:.4rem;flex-wrap:wrap;margin-bottom:.55rem">' +
+      '<button type="button" class="btn btn-soft btn-sm" id="reject-ai">Aide IA — proposer un brouillon</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" id="reject-clear">Vider</button></div>' +
+      '<div class="field"><label for="reject-message">Message</label>' +
+      '<textarea id="reject-message" rows="7" maxlength="4000" placeholder="Bonjour,…&#10;&#10;Nous vous remercions pour votre candidature…"></textarea></div>' +
+      '<p class="muted" id="reject-ai-hint" style="margin:.35rem 0 0;font-size:.78rem">Choisissez d’abord un motif pour activer l’aide IA.</p></div>'
     );
   }
 
@@ -403,10 +404,114 @@
     );
   }
 
+  async function fetchAppCv(appId) {
+    const res = await HireLinkAPI.authFetch("/applications/" + appId + "/cv");
+    if (!res.ok) {
+      let msg = "CV introuvable";
+      try {
+        msg = (await res.json()).message || msg;
+      } catch (_) {}
+      throw new Error(msg);
+    }
+    return res.blob();
+  }
+
+  function showBlobPreview(title, blob, fileName) {
+    const type = (blob.type || "").toLowerCase();
+    const name = fileName || "fichier";
+    let url = null;
+    let body;
+    if (type.indexOf("pdf") >= 0 || /\.pdf$/i.test(name)) {
+      url = URL.createObjectURL(blob);
+      body =
+        '<iframe src="' +
+        url +
+        '" title="Aperçu" style="width:100%;height:420px;border:0;border-radius:12px;background:#fff"></iframe>';
+    } else if (type.indexOf("text") >= 0 || /\.(txt|md)$/i.test(name)) {
+      return blob.text().then((text) => {
+        HireLink.openModal({
+          title: title,
+          bodyHtml:
+            "<pre style='white-space:pre-wrap;max-height:420px;overflow:auto;margin:0;font:inherit'>" +
+            esc(String(text || "").slice(0, 12000)) +
+            "</pre>",
+          confirmLabel: "Fermer",
+          hideCancel: true,
+          large: true,
+          zIndex: 9800,
+        });
+      });
+    } else {
+      body =
+        "<p><strong>" +
+        esc(name) +
+        "</strong> (" +
+        Math.round(blob.size / 1024) +
+        " Ko)</p><p class='muted'>Aperçu intégré pour PDF et texte. Utilisez Télécharger pour ouvrir le fichier.</p>";
+    }
+    return HireLink.openModal({
+      title: title,
+      bodyHtml: body,
+      confirmLabel: "Fermer",
+      hideCancel: true,
+      large: true,
+      zIndex: 9800,
+    }).then(() => {
+      if (url) URL.revokeObjectURL(url);
+    });
+  }
+
+  function downloadBlob(blob, fileName) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = fileName || "fichier";
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
+
   document.addEventListener("click", (e) => {
-    const b = e.target.closest("[data-open-cv]");
-    if (!b) return;
-    HireLinkAPI.openFile("/applications/" + b.getAttribute("data-open-cv") + "/cv").catch((err) => HireLink.toast("CV", err.message, "danger"));
+    const preview = e.target.closest("[data-preview-cv]");
+    if (preview) {
+      const id = preview.getAttribute("data-preview-cv");
+      const name = preview.getAttribute("data-cv-name") || "cv.pdf";
+      fetchAppCv(id)
+        .then((blob) => showBlobPreview("Aperçu — " + name, blob, name))
+        .catch((err) => HireLink.toast("CV", err.message, "danger"));
+      return;
+    }
+    const dl = e.target.closest("[data-download-cv]");
+    if (dl) {
+      const id = dl.getAttribute("data-download-cv");
+      const name = dl.getAttribute("data-cv-name") || "cv.pdf";
+      fetchAppCv(id)
+        .then((blob) => downloadBlob(blob, name))
+        .catch((err) => HireLink.toast("CV", err.message, "danger"));
+      return;
+    }
+    const letterPrev = e.target.closest("[data-preview-letter]");
+    if (letterPrev) {
+      const src = document.getElementById(letterPrev.getAttribute("data-preview-letter") || "");
+      const text = (src && src.textContent) || "";
+      HireLink.openModal({
+        title: "Aperçu — Lettre de motivation",
+        bodyHtml:
+          "<pre style='white-space:pre-wrap;max-height:420px;overflow:auto;margin:0;font:inherit'>" +
+          esc(text) +
+          "</pre>",
+        confirmLabel: "Fermer",
+        hideCancel: true,
+        large: true,
+        zIndex: 9800,
+      });
+      return;
+    }
+    const letterDl = e.target.closest("[data-download-letter]");
+    if (letterDl) {
+      const src = document.getElementById(letterDl.getAttribute("data-download-letter") || "");
+      const text = (src && src.textContent) || "";
+      const name = letterDl.getAttribute("data-letter-name") || "lettre-motivation.txt";
+      downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), name);
+    }
   });
 
   function dossierHtml(c, opts) {
@@ -482,15 +587,45 @@
         "</strong><p class='muted'>" +
         esc(cvOrigin) +
         "</p>" +
-        (c.hasCvFile ? '<button type="button" class="btn btn-soft btn-sm" style="margin-top:.5rem" data-open-cv="' + c.id + '">Ouvrir le CV</button>' : "") +
+        (c.hasCvFile
+          ? '<div class="rc-row" style="margin-top:.55rem;gap:.4rem;flex-wrap:wrap">' +
+            '<button type="button" class="btn btn-soft btn-sm" data-preview-cv="' +
+            c.id +
+            '" data-cv-name="' +
+            esc(c.cvFileName || "cv.pdf") +
+            '">Aperçu</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-download-cv="' +
+            c.id +
+            '" data-cv-name="' +
+            esc(c.cvFileName || "cv.pdf") +
+            '">Télécharger</button></div>'
+          : "") +
         "</article></div>";
       if (!opts.hideLetter) {
+        const letterId = "hl-letter-" + c.id;
+        const letterName =
+          "lettre-" + String(c.candidateName || "candidat").replace(/\s+/g, "-").toLowerCase() + ".txt";
         html +=
           '<div class="hl-dossier-section"><h5>4. Lettre de motivation</h5>' +
           (c.coverLetter
             ? letterFile
-              ? '<article class="doc-card"><strong>' + esc(c.coverLetter) + "</strong><p class='muted'>Fichier joint</p></article>"
-              : '<p class="hl-letter-box">' + esc(c.coverLetter) + "</p>"
+              ? '<article class="doc-card"><strong>' +
+                esc(c.coverLetter) +
+                "</strong><p class='muted'>Fichier joint (nom enregistré)</p></article>"
+              : '<p class="hl-letter-box" id="' +
+                letterId +
+                '">' +
+                esc(c.coverLetter) +
+                "</p>" +
+                '<div class="rc-row" style="margin-top:.55rem;gap:.4rem;flex-wrap:wrap">' +
+                '<button type="button" class="btn btn-soft btn-sm" data-preview-letter="' +
+                letterId +
+                '">Aperçu</button>' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-download-letter="' +
+                letterId +
+                '" data-letter-name="' +
+                esc(letterName) +
+                '">Télécharger</button></div>'
             : "<p class='muted'>Aucune lettre jointe.</p>") +
           "</div>";
       }
@@ -640,7 +775,7 @@
       title: "Avancer · " + c.candidateName,
       description: "Note ou scores, puis confirmation",
       bodyHtml: body,
-      confirmLabel: next === "HIRED" ? "Confirmer l’embauche" : "Confirmer l’étape",
+      confirmLabel: "Confirmer l’étape",
       confirmDisabled: true,
       wide: true,
       onReady: (api) => {
@@ -694,8 +829,7 @@
         body: payload,
       });
       if (st || ss || scul) saveQuickScores(c, { tech: st, soft: ss, culture: scul });
-      if (next === "HIRED") Mascotte.celebrate({ title: "Embauche confirmée !", description: c.candidateName + " rejoint l’entreprise. Un e-mail de félicitations lui est envoyé." });
-      else HireLink.toast("Étape validée", c.candidateName + " → " + (RC.STATUS_FR[next] || next), "ok");
+      HireLink.toast("Étape validée", c.candidateName + " → " + (RC.STATUS_FR[next] || next), "ok");
       load(true);
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
@@ -709,22 +843,79 @@
 
     const ok = await HireLink.openDrawer({
       title: "Refuser · " + c.candidateName,
-      description: "Le candidat verra le motif choisi.",
+      description: "Motif catalogue + message e-mail (modifiable).",
       bodyHtml: body,
       confirmLabel: "Confirmer le refus",
       danger: true,
       confirmDisabled: true,
       wide: true,
       onReady: (api) => {
+        const reasonEl = () => document.getElementById("reject-reason");
+        const msgEl = () => document.getElementById("reject-message");
+        const hint = document.getElementById("reject-ai-hint");
         const refresh = () => {
-          const reason = ((document.getElementById("reject-reason") || {}).value || "").trim();
+          const reason = ((reasonEl() || {}).value || "").trim();
           const otherWrap = document.getElementById("reject-other-wrap");
           if (otherWrap) otherWrap.hidden = reason !== "OTHER_CATALOG";
           const other = ((document.getElementById("reject-other") || {}).value || "").trim();
           api.setConfirmEnabled(!!reason && (reason !== "OTHER_CATALOG" || other.length > 2));
+          if (hint) {
+            hint.textContent = reason
+              ? "Vous pouvez rédiger le message ou cliquer « Aide IA », puis modifier le texte."
+              : "Choisissez d’abord un motif pour activer l’aide IA.";
+          }
         };
         api.root.addEventListener("change", refresh);
         api.root.addEventListener("input", refresh);
+        const clearBtn = document.getElementById("reject-clear");
+        if (clearBtn) {
+          clearBtn.onclick = () => {
+            const ta = msgEl();
+            if (ta) ta.value = "";
+            refresh();
+          };
+        }
+        const aiBtn = document.getElementById("reject-ai");
+        if (aiBtn) {
+          aiBtn.onclick = async () => {
+            const code = ((reasonEl() || {}).value || "").trim();
+            if (!code) {
+              HireLink.toast("Motif requis", "Choisissez un motif avant l’aide IA.", "warn");
+              return;
+            }
+            const label =
+              code === "OTHER_CATALOG"
+                ? ((document.getElementById("reject-other") || {}).value || "").trim() || "Autre"
+                : (FIXED_REASONS.find((r) => r[0] === code) || [, code])[1];
+            RC.busy(aiBtn, true);
+            try {
+              const data = await HireLinkAPI.api("/ai/refusal-draft", {
+                method: "POST",
+                body: {
+                  reasonCode: code === "OTHER_CATALOG" ? "OTHER_CATALOG" : code,
+                  reasonLabel: label,
+                  jobTitle: c.jobTitle || "",
+                },
+                timeoutMs: 60000,
+              });
+              const ta = msgEl();
+              if (ta) {
+                ta.value = String(data.content || "").trim();
+                ta.focus();
+              }
+              HireLink.toast("Brouillon prêt", "Modifiez le texte avant de confirmer.", "ok");
+            } catch (err) {
+              HireLink.toast(
+                err.status === 402 ? "Crédits IA épuisés" : "Aide IA",
+                err.message,
+                err.status === 402 ? "warn" : "danger"
+              );
+            } finally {
+              RC.busy(aiBtn, false);
+              refresh();
+            }
+          };
+        }
         refresh();
       },
     });
@@ -742,18 +933,24 @@
       }
       reason = "OTHER:" + other;
     }
+    const message = ((document.getElementById("reject-message") || {}).value || "").trim();
     try {
       await HireLinkAPI.api("/applications/" + c.id + "/status", {
         method: "PATCH",
         body: {
           status: "REJECTED",
           rejectionReason: reason,
+          advanceNote: message || null,
           confirmIdentity: true,
           confirmCvReviewed: true,
           confirmSlaAware: true,
         },
       });
-      HireLink.toast("Candidature refusée", "Motif catalogue enregistré", "ok");
+      HireLink.toast(
+        "Candidature refusée",
+        message ? "Motif enregistré · message envoyé au candidat" : "Motif enregistré · e-mail type envoyé",
+        "ok"
+      );
       load(true);
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
@@ -772,7 +969,7 @@
         eligible.map((m) => '<option value="' + m.userId + '"' + (Number(c.assignedHmUserId) === Number(m.userId) ? " selected" : "") + ">" +
           esc(m.fullName || m.email) + " · " + esc(RC.ROLE_FR[m.orgRole] || m.orgRole) + "</option>").join("") +
         '</select><button type="button" class="btn btn-soft btn-sm" id="hm-save">Assigner</button></div>' +
-        '<p class="muted" style="margin:.4rem 0 0;font-size:.78rem">Le Hiring Manager ne voit que les dossiers qui lui sont assignés et reçoit une notification.</p>';
+        '<p class="muted" style="margin:.4rem 0 0;font-size:.78rem">Le Hiring Manager se connecte au même espace recruteur (dossiers filtrés), avec notification in-app et e-mail — pas besoin d’un espace séparé.</p>';
       document.getElementById("hm-save").onclick = async (e) => {
         const v = document.getElementById("hm-select").value;
         RC.busy(e.currentTarget, true);
@@ -798,10 +995,7 @@
       bodyHtml:
         dossierHtml(c, { interviewSlot: true }) +
         '<div class="hl-drawer-actions-inline">' +
-        '<button type="button" class="btn btn-soft btn-sm" id="btn-dl">Télécharger le dossier</button>' +
-        '<button type="button" class="btn btn-soft btn-sm" id="btn-sum">Synthèse du CV</button>' +
         '<button type="button" class="btn btn-soft btn-sm" id="btn-tl">Historique</button>' +
-        '<button type="button" class="btn btn-soft btn-sm" id="btn-sc">Scorecard</button>' +
         (canAdvance
           ? '<button type="button" class="btn btn-primary btn-sm" id="btn-adv-from">Avancer</button>'
           : "") +
@@ -819,75 +1013,11 @@
         if (ivSlot) {
           ivSlot.appendChild(HireLinkInterview.card(c, { role: "recruiter", onChange: () => { HireLink.closeModal(false); load(true); } }));
         }
-        const sum = document.getElementById("btn-sum");
-        if (sum) {
-          sum.onclick = async () => {
-            const cvText = [
-              c.candidateName || "",
-              c.candidateSkills || "",
-              c.coverLetter || "",
-              c.cvFileName || "",
-            ].filter(Boolean).join("\n");
-            sum.disabled = true;
-            try {
-              const data = await HireLinkAPI.api("/ai/cv-summary", {
-                method: "POST",
-                body: { cvText },
-              });
-              HireLink.openModal({
-                title: "Synthèse du CV",
-                description: c.candidateName || "",
-                bodyHtml: "<p style='white-space:pre-wrap;margin:0'></p>",
-                confirmLabel: "Fermer",
-                hideCancel: true,
-              });
-              const p = document.querySelector("#hl-overlay .modal-body p");
-              if (p) p.textContent = data.content || "";
-            } catch (err) {
-              HireLink.toast("Synthèse", err.message, "danger");
-            } finally {
-              sum.disabled = false;
-            }
-          };
-        }
-        const dl = document.getElementById("btn-dl");
-        if (dl) {
-          dl.onclick = () => {
-            const lines = [
-              c.candidateName || "",
-              c.candidateEmail || "",
-              "Poste : " + (c.jobTitle || ""),
-              "Statut : " + (RC.STATUS_FR[c.status] || c.status || ""),
-              "CV : " + (c.cvFileName || c.cvSource || "Non fourni"),
-              "Lettre : " + (c.coverLetter || "Non jointe"),
-              "Compétences : " + (c.candidateSkills || ""),
-              c.interviewAt ? "Entretien : " + HireLinkInterview.summary(c) : "",
-              c.interviewNotes ? "Consignes : " + c.interviewNotes : "",
-              c.rejectionReason ? "Motif : " + c.rejectionReason : "",
-              c.advanceNote ? "Note RH : " + c.advanceNote : "",
-            ]
-              .filter(Boolean)
-              .join("\n");
-            const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download =
-              "dossier-" + String(c.candidateName || "candidat").replace(/\s+/g, "-") + ".txt";
-            a.click();
-            URL.revokeObjectURL(a.href);
-          };
-        }
         const tl = document.getElementById("btn-tl");
         if (tl)
           tl.onclick = () => {
             HireLink.closeModal(false);
             setTimeout(() => showTimeline(c.id), 120);
-          };
-        const sc = document.getElementById("btn-sc");
-        if (sc)
-          sc.onclick = () => {
-            HireLink.closeModal(false);
-            setTimeout(() => rateScorecard(c), 120);
           };
         const adv = document.getElementById("btn-adv-from");
         if (adv)
@@ -951,7 +1081,11 @@
     root.innerHTML = "";
     COLUMNS.forEach((col) => {
       const cards = filtered
-        .filter((a) => a.status === col.key)
+        .filter((a) =>
+          col.key === "INTERVIEW"
+            ? a.status === "INTERVIEW" || a.status === "OFFER" || a.status === "HIRED"
+            : a.status === col.key
+        )
         .sort((a, b) => {
           if (a.slaBreached !== b.slaBreached) return a.slaBreached ? -1 : 1;
           const sa = a.slaRemainingDays == null ? 99 : a.slaRemainingDays;
