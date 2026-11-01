@@ -87,6 +87,26 @@
             (skills.length ? "Compétences recherchées : " + skills.join(", ") + "." : "")
           : "Cette entreprise n’a pas d’offre publique en ce moment.";
       }
+      fetch(base + "/organizations/public")
+        .then((r) => (r.ok ? r.json() : []))
+        .then((orgs) => {
+          const org = (orgs || []).find((o) => o.name === name);
+          if (!org) return;
+          if (about && org.presentation) about.textContent = org.presentation;
+          if (cleanLogo(org.logoUrl)) setLogo(cleanLogo(org.logoUrl));
+          if (facts) {
+            const extra = [org.sector, org.employees ? org.employees + " salariés" : ""].filter(Boolean);
+            facts.insertAdjacentHTML("afterbegin", extra.map((c) => "<span>" + esc(c) + "</span>").join(""));
+            if (org.website && /^https?:\/\//i.test(org.website)) {
+              const a = document.createElement("a");
+              a.href = org.website; a.target = "_blank"; a.rel = "noopener noreferrer";
+              a.textContent = org.website.replace(/^https?:\/\//i, "").replace(/\/$/, "");
+              a.className = "co-site";
+              facts.appendChild(a);
+            }
+          }
+        })
+        .catch(() => {});
       if (facts) {
         const chips = []
           .concat(verified ? ["Vérifiée"] : [])

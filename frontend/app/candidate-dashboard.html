@@ -10,17 +10,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/interview.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
-  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101a"></script>
-  <script src="../js/theme.js?v=20261101a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/interview.css?v=20261102p" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101r"></script>
+  <script src="../js/theme.js?v=20261101r"></script>
 </head>
 <body class="rc" data-role="CANDIDAT" data-active="dashboard">
   <div class="rc-app">
@@ -37,33 +38,43 @@
           <div class="rc-head-actions"><a class="btn btn-secondary" href="candidate-applications.html">Mes candidatures</a><a class="btn btn-primary" href="candidate.html">Parcourir les offres</a></div>
         </div>
         <div id="dash-banners"></div>
-        <div class="rc-kpis" aria-label="Indicateurs">
-          <div class="rc-kpi rc-kpi--info"><small>Candidatures en cours</small><strong id="st-active">—</strong><span>Dossiers encore ouverts</span></div>
-          <div class="rc-kpi rc-kpi--ok"><small>Entretiens</small><strong id="st-interviews">—</strong><span>Planifiés ou à planifier</span></div>
-          <div class="rc-kpi rc-kpi--warn"><small>Nouvelles offres</small><strong id="st-offers">—</strong><span>Pas encore postulées</span></div>
-        </div>
-        <div class="rc-grid rc-grid--2">
-          <section class="rc-card is-flush">
-            <div class="rc-card-head"><div><h2>Offres qui vous correspondent</h2><p>Classées par compatibilité avec votre profil</p></div><a class="btn btn-ghost btn-sm" href="candidate.html">Toutes les offres</a></div>
-            <div class="rc-card-body"><div class="rc-list" id="reco-list"></div></div>
+        <section aria-labelledby="db-today-t">
+          <h2 class="db-h" id="db-today-t">L’essentiel</h2>
+          <div class="db-actions" id="db-actions"></div>
+        </section>
+        <div class="db-grid">
+          <section class="rc-card is-flush db-card">
+            <div class="rc-card-head"><div><h2>Suivi de mes candidatures</h2><p>Où en est chaque dossier</p></div><a class="btn btn-ghost btn-sm" href="candidate-applications.html?status=active">Tout voir</a></div>
+            <div class="rc-card-body"><div class="db-track" id="recent-list"></div></div>
           </section>
-          <section class="rc-card is-flush">
-            <div class="rc-card-head"><h2>Mes candidatures récentes</h2><a class="btn btn-ghost btn-sm" href="candidate-applications.html">Tout voir</a></div>
-            <div class="rc-card-body"><div class="rc-list" id="recent-list"></div></div>
-          </section>
+          <div class="db-side">
+            <section class="rc-card is-flush db-card">
+              <div class="rc-card-head"><div><h2>Prochaines étapes</h2><p>Entretiens et réponses attendues</p></div></div>
+              <div class="rc-card-body"><div class="db-events" id="next-steps"></div></div>
+            </section>
+            <section class="rc-card db-card" id="profile-card">
+              <div class="rc-card-head"><div><h2>Profil</h2><p id="profile-pct">—</p></div></div>
+              <div class="rc-card-body"><div class="db-meter"><i id="profile-bar"></i></div><ul class="db-checks" id="profile-checks"></ul></div>
+            </section>
+          </div>
         </div>
+        <section class="rc-card is-flush db-card">
+          <div class="rc-card-head"><div><h2>Offres qui vous correspondent</h2><p>Classées par compatibilité avec votre profil</p></div><a class="btn btn-ghost btn-sm" href="candidate.html">Toutes les offres</a></div>
+          <div class="rc-card-body"><div class="rc-list" id="reco-list"></div></div>
+        </section>
       </main>
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101a"></script>
-  <script defer src="../js/ui.js?v=20261101a"></script>
-  <script defer src="../js/api.js?v=20261101a"></script>
-  <script defer src="../js/search.js?v=20261101a"></script>
-  <script defer src="../js/places.js?v=20261101a"></script>
-  <script defer src="../js/in-app-help.js?v=20261101a"></script>
-  <script defer src="../js/app-shell.js?v=20261101a"></script>
-  <script defer src="../js/growth.js?v=20261101a"></script>
-  <script defer src="../js/candidate-dashboard.js?v=20261101a"></script>
+  <script defer src="../js/mascotte.js?v=20261101r"></script>
+  <script defer src="../js/premium.js?v=20261102s"></script>
+  <script defer src="../js/ui.js?v=20261101r"></script>
+  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/search.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261101r"></script>
+  <script defer src="../js/in-app-help.js?v=20261102q"></script>
+  <script defer src="../js/app-shell.js?v=20261102q"></script>
+  <script defer src="../js/growth.js?v=20261101r"></script>
+  <script defer src="../js/candidate-dashboard.js?v=20261102q"></script>
 </body>
 </html>

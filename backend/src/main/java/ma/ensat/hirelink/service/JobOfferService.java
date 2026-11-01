@@ -202,7 +202,7 @@ public class JobOfferService {
             o.setPublished(false);
             o.setQuarantineReason("SUSPENDED_BY_REPORTS (" + count + ")");
             suspendedNow = true;
-            notificationService.push(o.getRecruiter().getId(),
+            notificationService.push("offer:" + o.getId(), o.getRecruiter().getId(),
                     "Offre suspendue",
                     "« " + o.getTitle() + " » a été suspendue après " + count + " signalements.",
                     "MODERATION");
@@ -251,6 +251,8 @@ public class JobOfferService {
         o.setTitle(req.title().trim());
         o.setDescription(req.description().trim());
         o.setRequiredSkills(skillCatalog.normaliseList(req.requiredSkills(), 500));
+        o.setNiceToHaveSkills(req.niceToHaveSkills() == null || req.niceToHaveSkills().isBlank()
+                ? null : skillCatalog.normaliseList(req.niceToHaveSkills(), 500));
         o.setTags(resolveTags(o.getRequiredSkills()));
         o.setLocation(req.location());
         o.setResponseSlaDays(req.responseSlaDays());
@@ -281,11 +283,12 @@ public class JobOfferService {
         Double match = null;
         List<String> matched = List.of();
         List<String> missing = List.of();
+        SkillMatchingService.Compatibility breakdown = null;
         if (viewer != null && viewer.getRole() == Role.CANDIDAT) {
-            var detail = matchingService.explain(viewer.getSkills(), o.getRequiredSkills());
-            match = Math.min(100.0, Math.round((detail.score() + preferenceBoost(viewer, o)) * 100.0) / 100.0);
-            matched = detail.covered();
-            missing = detail.missing();
+            breakdown = matchingService.evaluate(viewer, o);
+            match = breakdown.score();
+            matched = breakdown.covered();
+            missing = breakdown.missing();
         }
         return new ApiDtos.JobOfferResponse(
                 o.getId(),
@@ -329,7 +332,9 @@ public class JobOfferService {
                 o.getBenefits(),
                 matched,
                 missing,
-                match != null && match >= PROFILE_MATCH_THRESHOLD
+                match != null && match >= PROFILE_MATCH_THRESHOLD,
+                o.getNiceToHaveSkills(),
+                breakdown
         );
     }
 
@@ -369,24 +374,6 @@ public class JobOfferService {
         return org == null || org.getSector() == null ? "" : org.getSector();
     }
 
-    private double preferenceBoost(User viewer, JobOffer o) {
-        double boost = 0;
-        String hayTitle = safe(o.getTitle()) + " " + safe(o.getDescription());
-        if (tokenOverlap(viewer.getSoughtRoles(), hayTitle)) boost += 8;
-        if (tokenOverlap(viewer.getPreferredLocations(), safe(o.getLocation()))) boost += 6;
-        if (tokenOverlap(viewer.getPreferredContracts(), safe(o.getContractType()))) boost += 6;
-        return boost;
-    }
 
-    private boolean tokenOverlap(String csv, String haystack) {
-        if (csv == null || csv.isBlank() || haystack == null || haystack.isBlank()) return false;
-        return Arrays.stream(csv.split("[,;|/]+"))
-                .map(String::trim)
-                .filter(t -> t.length() >= 2)
-                .anyMatch(t -> textMatcher.contains(t, haystack));
-    }
 
-    private String safe(String s) {
-        return s == null ? "" : s;
-    }
 }

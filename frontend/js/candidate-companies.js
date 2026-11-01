@@ -36,6 +36,23 @@
 
   let companies = [];
   let selected = null;
+  const params = new URLSearchParams(location.search);
+  const wanted = params.get("name") || "";
+  const FOLLOW_KEY = "hirelink.follow.companies";
+  function followed() { try { return JSON.parse(localStorage.getItem(FOLLOW_KEY) || "[]"); } catch (_) { return []; } }
+  function isFollowed(n) { return followed().indexOf(n) >= 0; }
+  function toggleFollow(n) {
+    const list = followed(); const i = list.indexOf(n);
+    if (i >= 0) list.splice(i, 1); else list.push(n);
+    try { localStorage.setItem(FOLLOW_KEY, JSON.stringify(list)); } catch (_) {}
+    if (window.HireLink && HireLink.toast) HireLink.toast(i >= 0 ? "Entreprise retirée" : "Entreprise suivie", i >= 0 ? n + " ne figure plus dans vos entreprises suivies." : "Les nouvelles offres de " + n + " apparaîtront en tête de liste.", "info");
+  }
+  function syncUrl() {
+    const u = new URL(location.href);
+    if (selected) u.searchParams.set("name", selected.name); else u.searchParams.delete("name");
+    u.searchParams.delete("focus");
+    history.replaceState(null, "", u.pathname + u.search + u.hash);
+  }
 
   function filtered() {
     const q = query;
@@ -72,7 +89,7 @@
           return (
             '<article class="offer co-row' + on + '" data-name="' + esc(c.name) + '">' +
             '<span class="co-mark">' + logoHtml(c) + "</span>" +
-            "<div><strong>" + esc(c.name) + "</strong><p>" +
+            "<div><strong>" + esc(c.name) + (isFollowed(c.name) ? ' <span class="co-follow-dot" title="Entreprise suivie">Suivie</span>' : "") + "</strong><p>" +
             esc(c.city || "") +
             (c.sector ? " · " + esc(c.sector) : "") +
             " · " + (c.offerCount || 0) + " offre" + ((c.offerCount || 0) > 1 ? "s" : "") +
@@ -87,6 +104,9 @@
         selected = companies.filter(function (c) { return c.name === el.dataset.name; })[0] || null;
         paintList();
         paintDetail();
+        syncUrl();
+        const box = document.getElementById("co-detail");
+        if (box && window.innerWidth < 900) box.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     });
   }
@@ -98,21 +118,29 @@
       return;
     }
     const jobs = (selected.offers || []).map(function (o) {
-      return '<a class="rc-item" href="candidate.html?offer=' + encodeURIComponent(o.id) + '"><div class="rc-item-main"><strong>' +
+      const score = o.matchScore == null ? "" : '<span class="rc-pill">' + Math.round(o.matchScore) + " %</span>";
+      return '<div class="rc-item co-job"><div class="rc-item-main"><strong>' +
         esc(o.title) + "</strong><span>" + esc(o.location || "") +
-        (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div></a>";
+        (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div>" + score +
+        '<a class="btn btn-soft btn-sm" href="candidate.html?offer=' + encodeURIComponent(o.id) + '">Voir</a>' +
+        '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler</a></div>';
     }).join("");
+    const on = isFollowed(selected.name);
     box.innerHTML =
-      '<div class="co-detail-head"><span class="co-mark co-mark-lg">' + logoHtml(selected) + "</span><div>" +
+      '<div class="co-detail-anim" data-focus="company:' + esc(selected.name) + '"><div class="co-detail-cover" aria-hidden="true"></div><div class="co-detail-head"><span class="co-mark co-mark-lg">' + logoHtml(selected) + "</span><div>" +
       "<h2>" + esc(selected.name) + "</h2>" +
       "<p class='muted'>" + esc(selected.city || "") +
       (selected.sector ? " · " + esc(selected.sector) : "") +
       (selected.employees ? " · " + esc(selected.employees) : "") +
       (selected.verified ? " · Identité vérifiée" : "") +
-      "</p></div></div>" +
+      "</p></div>" +
+      '<button type="button" class="btn btn-sm ' + (on ? "btn-soft" : "btn-primary") + ' co-follow" aria-pressed="' + on + '">' + (on ? "✓ Suivie" : "+ Suivre") + "</button></div>" +
       "<p>" + esc(selected.presentation || "") + "</p>" +
       (selected.website ? '<p><a href="' + esc(selected.website) + '" target="_blank" rel="noopener">Site web</a></p>' : "") +
-      (jobs ? '<div class="rc-list">' + jobs + "</div>" : "<p class='muted'>Aucune offre listée pour le moment.</p>");
+      '<h3 class="co-jobs-title">' + ((selected.offers || []).length ? HireLinkApp.plural(selected.offers.length, "offre ouverte", "offres ouvertes") : "Offres") + "</h3>" +
+      (jobs ? '<div class="rc-list">' + jobs + "</div>" : "<p class='muted'>Aucune offre ouverte pour le moment. Suivez l’entreprise pour la retrouver en tête de liste.</p>") + "</div>";
+    const fb = box.querySelector(".co-follow");
+    if (fb) fb.addEventListener("click", function () { toggleFollow(selected.name); paintList(); paintDetail(); });
   }
 
   function attachOffers(list) {
@@ -129,6 +157,12 @@
       });
       paintList();
       paintDetail();
+      if (wanted && selected && selected.name === wanted) {
+        const row = document.querySelector('.co-row.is-selected');
+        if (row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+        const d = document.querySelector(".co-detail-anim");
+        if (d) { d.classList.add("hl-spot-once"); setTimeout(function () { d.classList.remove("hl-spot-once"); }, 2400); }
+      }
     }).catch(function () {
       paintList();
       paintDetail();
@@ -137,7 +171,7 @@
 
   HireLinkAPI.api("/organizations/public").then(function (rows) {
     companies = rows || [];
-    if (companies[0]) selected = companies[0];
+    selected = companies.filter(function (c) { return c.name === wanted; })[0] || companies[0] || null;
     paintFilters();
     attachOffers(companies);
   }).catch(function (err) {

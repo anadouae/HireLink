@@ -18,4 +18,7 @@ public interface MembershipRepository extends JpaRepository<Membership, Long> {
 
     @Query("SELECT m FROM Membership m JOIN FETCH m.organization JOIN FETCH m.user WHERE m.user.id = :userId AND m.active = true")
     List<Membership> findByUserIdAndActiveTrue(@Param("userId") Long userId);
+
+    @Query("SELECT m FROM Membership m JOIN FETCH m.organization JOIN FETCH m.user WHERE m.active = true")
+    List<Membership> findAllActiveWithOrganization();
 }

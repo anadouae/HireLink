@@ -54,6 +54,7 @@
     document.getElementById("pay-submit").textContent = "Payer " + money(ttc);
     document.querySelectorAll(".pay-cycle button").forEach((b) => {
       b.classList.toggle("is-on", b.getAttribute("data-cycle") === cycle);
+      b.setAttribute("aria-pressed", b.getAttribute("data-cycle") === cycle ? "true" : "false");
     });
   }
 
@@ -196,8 +197,19 @@
     document.getElementById("pay-receipt").hidden = false;
   }
 
+  /** Sans session, l'abonnement ne peut pas être rattaché à un compte : on passe par la connexion. */
+  function needLogin() {
+    if (localStorage.getItem("hirelink.token")) return false;
+    showError("Connectez-vous pour activer la formule. Redirection…");
+    setTimeout(() => {
+      location.href = "auth.html?mode=login";
+    }, 900);
+    return true;
+  }
+
   document.getElementById("pay-demo").addEventListener("click", () => {
     showError("");
+    if (needLogin()) return;
     const email = (document.getElementById("pay-email").value || (session && session.email) || "demo@hirelink.ma").trim();
     activate()
       .then((invoice) =>
@@ -248,6 +260,7 @@
       };
       localStorage.setItem(savedKey, JSON.stringify(method));
     }
+    if (needLogin()) return;
     const btn = document.getElementById("pay-submit");
     btn.disabled = true;
     const label = btn.textContent;

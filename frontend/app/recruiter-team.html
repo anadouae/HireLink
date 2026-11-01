@@ -10,16 +10,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261101n" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
-  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101a"></script>
-  <script src="../js/theme.js?v=20261101a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101r"></script>
+  <script src="../js/theme.js?v=20261101r"></script>
 </head>
 <body class="rc" data-role="RECRUTEUR">
   <div class="rc-app">
@@ -33,21 +34,47 @@
             <h1><span id="org-name">Entreprise</span></h1>
             <p><span id="org-sub">—</span></p>
           </div>
-          <div class="rc-head-actions"><a class="btn btn-secondary" href="recruiter-offers.html#new" data-manage>Nouvelle offre</a><button type="button" class="btn btn-primary" id="btn-invite" hidden>Inviter un membre</button></div>
+          <div class="rc-head-actions"><a class="btn btn-secondary" href="recruiter-offers.html#new" data-manage>Nouvelle offre</a><button type="button" class="btn btn-primary" id="btn-invite" hidden>Ajouter un membre</button></div>
         </div>
-        <div class="rc-kpis">
+        <div id="co-error"></div>
+        <section class="hq" id="hq" aria-label="Siège de l’entreprise"><div class="hq-skel rc-skel"></div></section>
+        <nav class="hq-tabs" role="tablist" aria-label="Sections de l’espace entreprise">
+          <button type="button" role="tab" class="hq-tab" data-tab="overview" aria-selected="true">Présentation</button>
+          <button type="button" role="tab" class="hq-tab" data-tab="members" aria-selected="false">Membres <b id="members-count">0</b></button>
+          <button type="button" role="tab" class="hq-tab" data-tab="offers" aria-selected="false">Offres <b id="offers-count">0</b></button>
+          <button type="button" role="tab" class="hq-tab" data-tab="settings" aria-selected="false">Paramètres</button>
+          <span class="hq-tab-ink" aria-hidden="true"></span>
+        </nav>
+        <div class="hq-panels">
+          <section class="hq-panel" data-panel="overview" role="tabpanel">
+            <div class="rc-kpis">
           <div class="rc-kpi rc-kpi--warn"><small>Vérification</small><strong id="kpi-status" style="font-size:1.25rem">—</strong><span id="kpi-ice">&nbsp;</span></div>
           <div class="rc-kpi rc-kpi--info"><small>Crédits IA</small><strong id="kpi-credits">—</strong><span id="kpi-plan">&nbsp;</span></div>
           <div class="rc-kpi"><small>Membres</small><strong id="kpi-members">—</strong><span>Owner, Recruteurs, Hiring Managers</span></div>
         </div>
-        <div id="co-error"></div>
+                    <div class="hq-overview">
+              <div class="rc-card"><div class="rc-card-head"><div><h2>Fiche publique</h2><p>Ce que voient les candidats. L’aperçu suit vos modifications dans Paramètres.</p></div></div><div class="rc-card-body"><div id="co-preview"></div></div></div>
+              <div class="rc-card"><div class="rc-card-head"><div><h2>Rôles de l’équipe</h2><p>Qui fait quoi dans HireLink.</p></div></div><div class="rc-card-body hq-roles">
+                <p><span class="hq-role r-owner">Owner</span> invite et gère l’équipe, la fiche et la formule.</p>
+                <p><span class="hq-role r-rec">Recruteur</span> pilote les offres, le pipeline et l’agenda.</p>
+                <p><span class="hq-role r-hm">Hiring Manager</span> évalue les dossiers qui lui sont assignés.</p>
+              </div></div>
+            </div>
+          </section>
+          <section class="hq-panel" data-panel="members" role="tabpanel" hidden data-focus="team">
+            <div class="hq-office" id="members-list"></div>
+          </section>
+          <section class="hq-panel" data-panel="offers" role="tabpanel" hidden>
+            <div class="rc-card is-flush"><div class="rc-card-head"><div><h2>Offres de l’entreprise</h2><p>Ouvrez une offre dans le pipeline pour voir ses candidatures.</p></div><a class="btn btn-soft btn-sm" href="recruiter-offers.html">Gérer les offres</a></div><div id="hq-offers"></div></div>
+          </section>
+          <section class="hq-panel" data-panel="settings" role="tabpanel" hidden>
         <div id="co-skel" class="rc-card"><div class="rc-skel-list"><span class="rc-skel" style="height:90px"></span><span class="rc-skel" style="height:44px"></span><span class="rc-skel" style="height:44px"></span></div></div>
         <section class="rc-card" id="co-body" hidden>
           <div class="rc-card-head"><div><h2>Fiche entreprise</h2><p id="verify-hint"></p></div></div>
           <form id="company-form" class="rc-card-body">
             <div class="rc-logo-row" style="margin-bottom:1.1rem" data-edit>
               <div class="rc-logo" id="co-logo-box">E</div>
-              <div><p class="rc-muted" style="margin:0 0 .55rem;font-size:.86rem">Le logo apparaît côté candidats (entreprises et offres). Carré, fond clair.</p>
+              <div><p class="rc-muted" style="margin:0 0 .55rem;font-size:.86rem">Le logo apparaît côté candidats (entreprises et offres). Vous pourrez le recadrer avant l’envoi.</p>
                 <div class="rc-row"><label class="btn btn-soft btn-sm">Choisir une image<input type="file" id="co-logo-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden /></label>
                 <button type="button" class="btn btn-ghost btn-sm" id="co-logo-clear">Retirer</button></div></div>
             </div>
@@ -58,26 +85,40 @@
               <div class="rc-field"><label for="co-website">Site web</label><input id="co-website" placeholder="https://" /></div>
               <div class="rc-field"><label for="co-sector">Secteur</label><input id="co-sector" placeholder="Technologie, Banque…" /></div>
               <div class="rc-field"><label for="co-city">Ville</label><input id="co-city" /></div>
+              <div class="rc-field"><label for="co-color">Couleur de l’entreprise</label><div class="hq-color"><input type="color" id="co-color" value="#7a2032" /><button type="button" class="btn btn-ghost btn-sm" id="co-color-auto">Couleur du logo</button></div></div>
               <div class="rc-field is-full"><label for="co-bio">Présentation</label><textarea id="co-bio" rows="4" maxlength="1200" placeholder="Ce que fait l’entreprise, pour qui, et comment elle recrute."></textarea></div>
               <div class="is-full rc-row"><button type="submit" class="btn btn-primary">Enregistrer la fiche</button><button type="button" class="btn btn-soft" id="btn-recheck" hidden>Relancer la vérification</button></div>
             </div>
           </form>
         </section>
-        <section class="rc-card is-flush">
-          <div class="rc-card-head"><div><h2>Équipe</h2><p><b>Owner</b> invite et gère · <b>Recruteur</b> pilote offres et pipeline · <b>Hiring Manager</b> évalue ses dossiers assignés</p></div><span class="rc-pill" id="members-count">0</span></div>
-          <div id="members-list"></div>
-        </section>
+                  </section>
+        </div>
+        <aside class="hq-drawer" id="hq-drawer" aria-hidden="true" aria-labelledby="hq-drawer-title">
+          <div class="hq-drawer-card" role="dialog" aria-modal="true">
+            <header><div><h2 id="hq-drawer-title">Ajouter un membre</h2><p>Le collègue doit déjà avoir un compte Recruteur HireLink. Il est ajouté tout de suite et prévenu par notification et par e-mail.</p></div><button type="button" class="rc-iconbtn" id="hq-drawer-close" aria-label="Fermer">×</button></header>
+            <form id="hq-invite-form">
+              <div class="rc-field"><label for="invite-email">E-mail professionnel</label><input id="invite-email" type="email" required placeholder="prenom.nom@entreprise.ma" autocomplete="off" /></div>
+              <fieldset class="hq-role-pick"><legend>Rôle</legend>
+                <label><input type="radio" name="invite-role" value="RECRUTEUR" checked /><span><b class="hq-role r-rec">Recruteur</b><small>Offres, pipeline, agenda</small></span></label>
+                <label><input type="radio" name="invite-role" value="HIRING_MANAGER" /><span><b class="hq-role r-hm">Hiring Manager</b><small>Seulement les dossiers assignés</small></span></label>
+              </fieldset>
+              <p class="rc-muted" style="font-size:.82rem">Il se connecte avec ses identifiants habituels ; ses droits sont filtrés selon le rôle.</p>
+              <div class="rc-row"><button type="button" class="btn btn-ghost" id="hq-drawer-cancel">Annuler</button><button type="submit" class="btn btn-primary">Ajouter à l’équipe</button></div>
+            </form>
+          </div>
+        </aside>
       </main>
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101a"></script>
-  <script defer src="../js/ui.js?v=20261101a"></script>
-  <script defer src="../js/api.js?v=20261101a"></script>
-  <script defer src="../js/search.js?v=20261101a"></script>
-  <script defer src="../js/places.js?v=20261101a"></script>
-  <script defer src="../js/in-app-help.js?v=20261101a"></script>
-  <script defer src="../js/app-shell.js?v=20261101a"></script>
-  <script defer src="../js/recruiter-team.js?v=20261101n"></script>
+  <script defer src="../js/mascotte.js?v=20261101r"></script>
+  <script defer src="../js/premium.js?v=20261102s"></script>
+  <script defer src="../js/ui.js?v=20261101r"></script>
+  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/search.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261101r"></script>
+  <script defer src="../js/in-app-help.js?v=20261102q"></script>
+  <script defer src="../js/app-shell.js?v=20261102q"></script>
+  <script defer src="../js/recruiter-team.js?v=20261102s"></script>
 </body>
 </html>

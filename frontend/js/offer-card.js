@@ -189,7 +189,20 @@
         'stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Entreprise vérifiée"><title>Entreprise vérifiée</title>' + ICONS.shield + "</svg>");
     }
     titles.append(company, el("h3", "offer-card__title", o.title));
-    head.append(logo(o, opts), titles);
+    const logoBox = logo(o, opts);
+    head.append(logoBox, titles);
+    if (opts.companyHref) {
+      const target = opts.companyHref(o);
+      [logoBox, company].forEach(function (node) {
+        node.classList.add("oc-co-link");
+        node.title = "Voir la page de " + companyOf(o);
+        node.addEventListener("click", function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          location.href = target;
+        });
+      });
+    }
     if (opts.badge != null) {
       const badge = el("span", "offer-card__badge");
       if (opts.badge instanceof Node) badge.appendChild(opts.badge); else badge.textContent = opts.badge;

@@ -150,7 +150,7 @@
   function updateHint() {
     const n = cached.filter((o) => o.matchesProfile).length;
     $("match-hint").textContent = n
-      ? n + " offre" + (n > 1 ? "s" : "") + " sur " + cached.length + " correspondent à vos compétences."
+      ? n + " offre" + (n > 1 ? "s" : "") + " sur " + cached.length + " correspondent à votre profil (score ≥ 50 %)."
       : "Complétez vos compétences dans votre profil pour voir les offres adaptées.";
   }
 
@@ -188,6 +188,7 @@
       selected,
       badge,
       href: (x) => "candidate.html?offer=" + encodeURIComponent(x.id),
+      companyHref: (x) => "candidate-companies.html?name=" + encodeURIComponent(companyOf(x)),
       onOpen: (x) => { selectedId = x.id; offerList.querySelectorAll(".offer-card").forEach((n) => n.classList.toggle("is-selected", n.dataset.offerId === String(x.id))); showDetail(x); },
       statusChip: st ? (st.status === "WITHDRAWN" ? "Candidature retirée" : "Candidature envoyée") : "",
     });
@@ -206,7 +207,8 @@
     h2.textContent = o.title || "Offre";
     const company = document.createElement("a");
     company.className = "detail-company";
-    company.href = "../company.html?name=" + encodeURIComponent(companyOf(o));
+    company.href = "candidate-companies.html?name=" + encodeURIComponent(companyOf(o));
+    company.title = "Voir la page de l’entreprise";
     company.textContent = companyOf(o);
     const place = O.placeOf(o);
     const where = document.createElement("p");
@@ -266,7 +268,23 @@
       b.addEventListener("click", () => openApply(o));
       actions.appendChild(b);
     }
-    detail.append(head, O.facts(o), body, skillsTitle, boxes, actions);
+    const extra = [];
+    if (o.niceToHaveSkills) {
+      const niceTitle = document.createElement("h3");
+      niceTitle.className = "detail-sub";
+      niceTitle.textContent = "Compétences appréciées";
+      const niceBoxes = document.createElement("div");
+      HireLinkSkills.renderBoxes(niceBoxes, o.niceToHaveSkills, { empty: "" });
+      extra.push(niceTitle, niceBoxes);
+    }
+    const why = window.HireLinkMatch && o.matchBreakdown ? HireLinkMatch.panel(o.matchBreakdown, { audience: "candidate" }) : null;
+    if (why) {
+      const whyTitle = document.createElement("h3");
+      whyTitle.className = "detail-sub";
+      whyTitle.textContent = "Pourquoi ce score ?";
+      extra.push(whyTitle, why);
+    }
+    detail.append(head, O.facts(o), body, skillsTitle, boxes, ...extra, actions);
     S.mark(detail, val("rc-search").trim());
   }
 

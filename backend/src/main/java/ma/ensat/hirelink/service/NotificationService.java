@@ -34,7 +34,14 @@ public class NotificationService {
     /** Notification dans l'application, poussée en temps réel aux onglets ouverts une fois la transaction validée. */
     @Transactional
     public void push(Long userId, String title, String body, String kind) {
+        push(null, userId, title, body, kind);
+    }
+
+    /** Variante avec cible : un clic sur la notification mène à l'élément concerné (voir {@link #toRow}). */
+    @Transactional
+    public void push(String link, Long userId, String title, String body, String kind) {
         InAppNotification n = new InAppNotification();
+        n.setLink(link);
         n.setUserId(userId);
         n.setTitle(title);
         n.setBody(body);
@@ -55,7 +62,13 @@ public class NotificationService {
     @Transactional
     public void pushAndMail(Long userId, String title, String body, String kind, MailService.Kind mailKind,
                             String subject, EmailTemplates.Email email, MailService.Attachment attachment) {
-        push(userId, title, body, kind);
+        pushAndMail(null, userId, title, body, kind, mailKind, subject, email, attachment);
+    }
+
+    @Transactional
+    public void pushAndMail(String link, Long userId, String title, String body, String kind, MailService.Kind mailKind,
+                            String subject, EmailTemplates.Email email, MailService.Attachment attachment) {
+        push(link, userId, title, body, kind);
         users.findById(userId).ifPresent(u -> mail.notify(u, "HireLink — " + subject, email, mailKind, attachment));
     }
 
@@ -66,6 +79,7 @@ public class NotificationService {
         row.put("body", n.getBody());
         row.put("kind", n.getKind());
         row.put("read", n.isReadFlag());
+        row.put("link", n.getLink());
         row.put("at", n.getCreatedAt().toString());
         return row;
     }

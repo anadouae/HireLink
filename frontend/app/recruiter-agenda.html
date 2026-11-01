@@ -4,22 +4,25 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Agenda � HireLink</title>
+  <title>Agenda — HireLink</title>
   <meta name="robots" content="noindex" />
   <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261101o" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
-  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101a"></script>
-  <script src="../js/theme.js?v=20261101a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/interview.css?v=20261102p" />
+  <link rel="stylesheet" href="../css/agenda.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101r"></script>
+  <script src="../js/theme.js?v=20261101r"></script>
 </head>
 <body class="rc" data-role="RECRUTEUR">
   <div class="rc-app">
@@ -31,47 +34,77 @@
           <div>
             <p class="rc-eyebrow">Recrutement</p>
             <h1>Agenda</h1>
-            <p>Vue calendrier des rendez-vous � filtrez par p�riode, mode, type ou offre.</p>
+            <p>Tous les entretiens de l’équipe dans un calendrier : mois, semaine, jour ou liste.</p>
           </div>
           <div class="rc-head-actions">
-            <a class="btn btn-ghost" href="recruiter-interviews.html">G�rer les entretiens</a>
+            <a class="btn btn-ghost" href="recruiter-interviews.html">Gérer les entretiens</a>
             <a class="btn btn-secondary" href="recruiter-pipeline.html">Planifier depuis le pipeline</a>
           </div>
         </div>
-        <div class="rc-toolbar" id="ag-filters" style="flex-wrap:wrap;gap:.55rem;align-items:center">
-          <select id="ag-f-when" class="rc-select" aria-label="P�riode">
-            <option value="today">Aujourd�hui</option>
-            <option value="week" selected>7 prochains jours</option>
-            <option value="month">30 jours</option>
-            <option value="all">Toutes les dates � venir</option>
-          </select>
-          <select id="ag-f-type" class="rc-select" aria-label="Mode">
-            <option value="all">Tous les modes</option>
-            <option value="VISIO">Visioconf�rence</option>
-            <option value="ONSITE">Sur site</option>
-            <option value="PHONE">T�l�phone</option>
-          </select>
-          <select id="ag-f-kind" class="rc-select" aria-label="Type">
-            <option value="all">Tous les types</option>
-            <option value="HR">Entretien RH</option>
-            <option value="TECHNICAL">Technique</option>
-            <option value="MANAGER">Manager</option>
-            <option value="FINAL">Final</option>
-          </select>
-          <select id="ag-f-offer" class="rc-select" aria-label="Offre"><option value="all">Toutes les offres</option></select>
-          <button type="button" class="btn btn-ghost btn-sm" id="ag-f-reset">R�initialiser</button>
-        </div>
-        <section class="rc-card is-flush"><div id="ag-list" class="ag-days"></div></section>
+        <div class="ag-stats" id="ag-stats" aria-live="polite"></div>
+        <section class="rc-card is-flush ag-shell">
+          <div class="ag-bar">
+            <div class="ag-bar-left">
+              <div class="ag-nav" id="ag-nav">
+                <button type="button" class="ag-icon" id="ag-prev" aria-label="Période précédente" title="Précédent (←)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+                <button type="button" class="btn btn-ghost btn-sm" id="ag-today" title="Aujourd’hui (T)">Aujourd’hui</button>
+                <button type="button" class="ag-icon" id="ag-next" aria-label="Période suivante" title="Suivant (→)"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+              </div>
+              <h2 class="ag-title" id="ag-title" aria-live="polite">Agenda</h2>
+            </div>
+            <div class="ag-views" id="ag-views" role="group" aria-label="Vue du calendrier">
+              <button type="button" data-view="month" title="Mois (M)">Mois</button>
+              <button type="button" data-view="week" title="Semaine (S)">Semaine</button>
+              <button type="button" data-view="day" title="Jour (D)">Jour</button>
+              <button type="button" data-view="list" title="Liste (L)">Liste</button>
+            </div>
+          </div>
+          <div class="ag-filters" id="ag-filters">
+            <select id="ag-f-type" class="rc-select" aria-label="Mode">
+              <option value="all">Tous les modes</option>
+              <option value="VISIO">Visioconférence</option>
+              <option value="ONSITE">Sur site</option>
+            </select>
+            <select id="ag-f-kind" class="rc-select" aria-label="Type d’entretien">
+              <option value="all">Tous les types</option>
+              <option value="HR">Entretien RH</option>
+              <option value="TECHNICAL">Technique</option>
+              <option value="MANAGER">Manager</option>
+              <option value="CASE">Étude de cas</option>
+              <option value="TEAM">Rencontre d’équipe</option>
+              <option value="FINAL">Final</option>
+            </select>
+            <select id="ag-f-offer" class="rc-select" aria-label="Offre"><option value="all">Toutes les offres</option></select>
+            <label class="ag-check"><input type="checkbox" id="ag-f-cancelled" /> Afficher les annulés</label>
+            <button type="button" class="btn btn-ghost btn-sm" id="ag-f-reset">Réinitialiser</button>
+            <div class="ag-legend" aria-label="Légende">
+              <span><i class="t-visio"></i>Visio</span><span><i class="t-onsite"></i>Sur site</span>
+            </div>
+          </div>
+          <div id="ag-cal" class="ag-cal"></div>
+        </section>
       </main>
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101a"></script>
-  <script defer src="../js/ui.js?v=20261101a"></script>
-  <script defer src="../js/api.js?v=20261101a"></script>
-  <script defer src="../js/search.js?v=20261101a"></script>
-  <script defer src="../js/in-app-help.js?v=20261101a"></script>
-  <script defer src="../js/app-shell.js?v=20261101o"></script>
-  <script defer src="../js/recruiter-agenda.js?v=20261101o"></script>
+  <div class="ag-sheet-scrim" id="ag-sheet-scrim" hidden></div>
+  <aside class="ag-sheet" id="ag-sheet" role="dialog" aria-modal="false" aria-labelledby="ag-sheet-title" hidden>
+    <header class="ag-sheet-head">
+      <div><h2 id="ag-sheet-title">Entretien</h2><p id="ag-sheet-sub"></p></div>
+      <button type="button" class="drawer-close" id="ag-sheet-close" aria-label="Fermer">✕</button>
+    </header>
+    <div class="ag-sheet-body" id="ag-sheet-body"></div>
+  </aside>
+  <script defer src="../js/mascotte.js?v=20261101r"></script>
+  <script defer src="../js/premium.js?v=20261102s"></script>
+  <script defer src="../js/ui.js?v=20261101r"></script>
+  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/search.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261101r"></script>
+  <script defer src="../js/skills.js?v=20261101r"></script>
+  <script defer src="../js/interview.js?v=20261101r"></script>
+  <script defer src="../js/in-app-help.js?v=20261102q"></script>
+  <script defer src="../js/app-shell.js?v=20261102q"></script>
+  <script defer src="../js/recruiter-agenda.js?v=20261101r"></script>
 </body>
 </html>

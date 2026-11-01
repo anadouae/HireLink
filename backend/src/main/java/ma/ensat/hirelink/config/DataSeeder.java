@@ -66,7 +66,8 @@ public class DataSeeder {
             AiUsageLogRepository aiLogs,
             PasswordEncoder realEncoder,
             SkillMatchingService matching,
-            CompanyVerificationService companyVerificationService
+            CompanyVerificationService companyVerificationService,
+            ma.ensat.hirelink.service.OrgLogoStorage orgLogoStorage
     ) {
         return args -> {
             PasswordEncoder encoder = memoizing(realEncoder);
@@ -104,6 +105,7 @@ public class DataSeeder {
                         users.count(), offers.count(), applications.count(), refusalReasons.count());
             }
             ensureOrgs(users, organizationService);
+            ensureAtlasProfile(users, organizationService, organizations, orgLogoStorage);
             ensureMarketplace(users, offers, organizationService, encoder);
             enrichCompanies(organizations, companyVerificationService);
             logAccounts();
@@ -138,14 +140,56 @@ public class DataSeeder {
             r.setAssignedOrgId(org.getId());
             users.save(r);
         });
-        // Compte miroir « recruteur@hirelink.ma » : même organisation qu'Atlas Digital (sinon 403 « Aucune organisation (R02) »).
+        // Compte de démo « recruteur@hirelink.ma » : Salma Berrada, Recruteur chez Atlas Digital
+        // (sinon 403 « Aucune organisation (R02) »). Les bases déjà amorcées sont remises en cohérence.
         users.findByEmailIgnoreCase("recruteur@hirelink.ma").ifPresent(alias -> {
             Organization org = users.findByEmailIgnoreCase("n.bennani@atlasdigital.ma")
                     .map(organizationService::ensureForRecruiter)
                     .orElseGet(() -> organizationService.ensureForRecruiter(alias));
-            organizationService.joinOrganization(alias, org, OrgRole.OWNER);
+            if (alias.getFullName() == null || alias.getFullName().contains("(alias)")) {
+                alias.setFullName(DEMO_RECRUITER_NAME);
+            }
+            organizationService.joinOrganization(alias, org, OrgRole.RECRUTEUR);
             alias.setAssignedOrgId(org.getId());
             users.save(alias);
+        });
+    }
+
+    /**
+     * Fiche de démonstration d'Atlas Digital (entreprise fictive) : présentation et logo local
+     * (resources/seed/atlas-digital-logo.png). Ne remplace jamais une valeur saisie par l'Owner.
+     */
+    private void ensureAtlasProfile(UserRepository users, OrganizationService organizationService,
+                                    OrganizationRepository organizations,
+                                    ma.ensat.hirelink.service.OrgLogoStorage storage) {
+        users.findByEmailIgnoreCase("n.bennani@atlasdigital.ma").ifPresent(owner -> {
+            Organization org = organizationService.ensureForRecruiter(owner);
+            boolean changed = false;
+            if (org.getPresentation() == null || org.getPresentation().isBlank()) {
+                org.setPresentation("Atlas Digital conçoit des produits web et mobiles pour les PME et les "
+                        + "administrations du Nord du Maroc, depuis Tétouan et Tanger Tech. Notre équipe d'une "
+                        + "trentaine de personnes travaille en Java / Spring, React et data. Nous recrutons des "
+                        + "profils juniors comme confirmés, avec un parcours en trois étapes : échange avec la RH, "
+                        + "entretien technique, rencontre avec l'équipe. Chaque candidature reçoit une réponse "
+                        + "dans le délai affiché sur l'offre.");
+                changed = true;
+            }
+            if (org.getEmployeeRange() == null || org.getEmployeeRange().isBlank()) {
+                org.setEmployeeRange("11-50");
+                changed = true;
+            }
+            if (org.getLogoUrl() == null || org.getLogoUrl().isBlank()) {
+                try (var in = DataSeeder.class.getResourceAsStream("/seed/atlas-digital-logo.png")) {
+                    if (in != null) {
+                        String stored = storage.save(org.getId(), "atlas-digital-logo.png", in.readAllBytes());
+                        org.setLogoUrl("/api/v1/media/org-logos/" + stored);
+                        changed = true;
+                    }
+                } catch (Exception e) {
+                    log.warn("Logo de démonstration Atlas Digital non installé : {}", e.getMessage());
+                }
+            }
+            if (changed) organizations.save(org);
         });
     }
 
@@ -215,10 +259,10 @@ public class DataSeeder {
         nadia.setAssignedOrgId(atlas.getId());
         users.save(nadia);
         try {
-            organizationService.invite(nadia, karim.getEmail(), OrgRole.RECRUTEUR);
+            organizationService.invite(nadia, karim.getEmail(), OrgRole.RECRUTEUR, false);
         } catch (Exception ignored) {}
         try {
-            organizationService.invite(nadia, hm.getEmail(), OrgRole.HIRING_MANAGER);
+            organizationService.invite(nadia, hm.getEmail(), OrgRole.HIRING_MANAGER, false);
         } catch (Exception ignored) {}
         karim.setAssignedOrgId(atlas.getId());
         hm.setAssignedOrgId(atlas.getId());
@@ -227,29 +271,32 @@ public class DataSeeder {
 
         // —— Candidats ——
         User sara = candidate(users, encoder, "s.elamrani@gmail.com", "Sara El Amrani",
-                "Java,Spring Boot,MySQL,REST,Git,React,Docker",
+                "Java,Spring Boot,MySQL,REST,Git,React,Docker,Anglais (B2),Français (C1)",
                 "Développeuse Full-Stack Java / Spring",
                 "Tétouan,Tanger,Hybride", "CDI,Stage", "Junior", PlanTier.ESSENTIEL);
         User youssef = candidate(users, encoder, "y.idrissi@outlook.com", "Youssef Idrissi",
-                "Python,SQL,ETL,Pandas,Power BI,Airflow",
+                "Python,SQL,ETL,Pandas,Power BI,Airflow,Anglais (B1)",
                 "Data Analyst / Data Engineer",
                 "Tanger,Casablanca,Hybride", "CDI", "Confirmé", PlanTier.PERFORMANCE);
         User amina = candidate(users, encoder, "a.tazi@gmail.com", "Amina Tazi",
-                "Selenium,JUnit,Postman,Cypress,API testing,Java",
+                "Selenium,JUnit,Postman,Cypress,API testing,Java,Anglais (B2),Français (Natif)",
                 "Ingénieure QA / Automatisation",
                 "Rabat,Remote Maroc", "CDI,Alternance", "Junior", PlanTier.ESSENTIEL);
         User omar = candidate(users, encoder, "o.fassi@gmail.com", "Omar Fassi",
-                "Figma,UX Research,UI,Design system,Prototypage",
+                "Figma,UX Research,UI,Design system,Prototypage,Anglais (C1)",
                 "Product Designer UX/UI",
                 "Rabat,Casablanca,Remote", "CDI", "Confirmé", PlanTier.ESSENTIEL);
         User imane = candidate(users, encoder, "i.chraibi@gmail.com", "Imane Chraibi",
-                "Docker,Kubernetes,Linux,CI/CD,GitLab,AWS",
+                "Docker,Kubernetes,Linux,CI/CD,GitLab,AWS,Anglais (B1)",
                 "Ingénieure DevOps",
                 "Casablanca,Hybride", "CDI", "Junior", PlanTier.ESSENTIEL);
 
         // rétrocompat : alias emails historiques pointent aussi (comptes miroir pour le guide)
         mirrorAlias(users, encoder, "candidat@hirelink.ma", sara);
         mirrorAlias(users, encoder, "recruteur@hirelink.ma", nadia);
+        users.findByEmailIgnoreCase("recruteur@hirelink.ma").ifPresent(r -> {
+            if (r.getFullName().contains("(alias)")) { r.setFullName(DEMO_RECRUITER_NAME); users.save(r); }
+        });
 
         for (User c : List.of(sara, youssef, amina, omar, imane)) {
             ConsentRecord gdpr = new ConsentRecord();
@@ -273,7 +320,7 @@ public class DataSeeder {
                 participerez aux revues de code. Stack : Java 21, Spring Boot 3, MySQL, Git.
                 Rémunération selon profil. SLA de réponse candidats : 5 jours ouvrés.
                 """.stripIndent().replace("\n", " ").trim(),
-                "Java,Spring Boot,MySQL,REST,Git,React",
+                "Java,Spring Boot,MySQL,REST,Git",
                 "Tétouan · Hybride", "CDI", 5, true, now.minus(18, ChronoUnit.DAYS));
         paid(offers, oJava, 12000, 16000, PayPeriod.MONTH, PayBasis.GROSS);
         terms(offers, oJava, WorkMode.HYBRID, ExperienceLevel.INTERMEDIATE, EducationLevel.BAC_5, 2,
@@ -364,6 +411,14 @@ public class DataSeeder {
         oFree.setDurationMonths(2);
         offers.save(oFree);
 
+        // Compétences appréciées (bonus) : pèsent moins que les compétences demandées dans le score.
+        nice(offers, oJava, "React,Docker,Anglais (B1)");
+        nice(offers, oData, "Airflow,Anglais (B2)");
+        nice(offers, oQa, "Java,Git");
+        nice(offers, oUx, "Prototypage,Anglais (B1)");
+        nice(offers, oDevops, "AWS,GitLab");
+        nice(offers, oPfe, "Git");
+
         // Scorecard sur l'offre Java
         ScorecardCriterion cTech = criterion(criteria, oJava.getId(), "Maîtrise Java / Spring", 3, false);
         ScorecardCriterion cCom = criterion(criteria, oJava.getId(), "Communication & teamwork", 2, false);
@@ -413,10 +468,9 @@ public class DataSeeder {
                 now.minus(7, ChronoUnit.DAYS),
                 "Alternance QA terminée chez un éditeur Rabat ; Cypress & Postman au quotidien.",
                 "CV_Amina_Tazi.pdf", "PROFILE");
-        a6.setInterviewType("PHONE");
+        a6.setInterviewType("VISIO");
         a6.setInterviewAt(now.plus(1, ChronoUnit.DAYS));
-        a6.setInterviewLocation("+212 6 XX XX XX XX");
-        a6.setInterviewPhone("+212 6 00 00 00 00");
+        a6.setInterviewVideoUrl("https://meet.google.com/hlk-qa-rh");
         a6.setInterviewKind("HR");
         a6.setInterviewTimeZone("Africa/Casablanca");
         a6.setInterviewDurationMinutes(30);
@@ -471,7 +525,7 @@ public class DataSeeder {
         hist(history, a11.getId(), null, "SUBMITTED", omar.getId(), now.minus(20, ChronoUnit.DAYS), null);
         hist(history, a11.getId(), "SUBMITTED", "SCREENING", nadia.getId(), now.minus(18, ChronoUnit.DAYS), null);
         hist(history, a11.getId(), "SCREENING", "SHORTLISTED", nadia.getId(), now.minus(16, ChronoUnit.DAYS), null);
-        hist(history, a11.getId(), "SHORTLISTED", "INTERVIEW", nadia.getId(), now.minus(14, ChronoUnit.DAYS), "{\"type\":\"PHONE\"}");
+        hist(history, a11.getId(), "SHORTLISTED", "INTERVIEW", nadia.getId(), now.minus(14, ChronoUnit.DAYS), "{\"type\":\"VISIO\"}");
         hist(history, a11.getId(), "INTERVIEW", "OFFER", nadia.getId(), now.minus(10, ChronoUnit.DAYS), null);
         hist(history, a11.getId(), "OFFER", "HIRED", nadia.getId(), now.minus(8, ChronoUnit.DAYS), null);
 
@@ -631,6 +685,9 @@ public class DataSeeder {
         return n.length() > 24 ? n.substring(0, 24) : n;
     }
 
+    /** Nom du compte de démo recruteur@hirelink.ma (distinct de l'Owner Nadia Bennani). */
+    private static final String DEMO_RECRUITER_NAME = "Salma Berrada";
+
     /** Compte miroir pour ne pas casser le guide (mêmes MDP, profil lié). */
     private void mirrorAlias(UserRepository users, PasswordEncoder encoder, String email, User source) {
         if (users.findByEmailIgnoreCase(email).isPresent()) {
@@ -699,6 +756,11 @@ public class DataSeeder {
         o.setSalaryPeriod(period);
         o.setSalaryBasis(basis);
         o.setCurrency("MAD");
+        repo.save(o);
+    }
+
+    private static void nice(JobOfferRepository repo, JobOffer o, String skills) {
+        o.setNiceToHaveSkills(skills);
         repo.save(o);
     }
 
@@ -771,7 +833,7 @@ public class DataSeeder {
         a.setCandidate(candidate);
         a.setJobOffer(offer);
         a.setStatus(status);
-        a.setMatchScore(matching.computeMatchScore(candidate.getSkills(), offer.getRequiredSkills()));
+        a.setMatchScore(matching.evaluate(candidate, offer).score());
         a.setCoverLetter(cover);
         a.setCvFileName(cvName);
         a.setCvSource(cvSource);
@@ -800,11 +862,10 @@ public class DataSeeder {
     ) {
         MatchingAnalysis m = new MatchingAnalysis();
         m.setApplicationId(app.getId());
-        double score = matching.computeMatchScore(candidate.getSkills(), offer.getRequiredSkills());
-        m.setScore(score);
-        // covered / missing approximés
-        m.setCoveredSkills(candidate.getSkills());
-        m.setMissingSkills("");
+        var compat = matching.evaluate(candidate, offer);
+        m.setScore(compat.score());
+        m.setCoveredSkills(String.join(", ", compat.covered()));
+        m.setMissingSkills(String.join(", ", compat.missing()));
         repo.save(m);
     }
 
@@ -862,7 +923,7 @@ public class DataSeeder {
         log.info("══════════════════════════════════════════════════");
         log.info(" HireLink — comptes de démonstration (mots de passe : voir docs/GUIDE_INSTALLATION_ET_TEST.md)");
         log.info("  admin@hirelink.ma · n.bennani@atlasdigital.ma (Owner) · k.benali@atlasdigital.ma");
-        log.info("  m.alaoui@atlasdigital.ma (Hiring Manager) · candidat@hirelink.ma · recruteur@hirelink.ma");
+        log.info("  m.alaoui@atlasdigital.ma (Hiring Manager) · candidat@hirelink.ma · recruteur@hirelink.ma (Salma Berrada, Recruteur)");
         log.info("══════════════════════════════════════════════════");
     }
 }

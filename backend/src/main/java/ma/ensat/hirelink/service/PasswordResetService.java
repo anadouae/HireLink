@@ -97,7 +97,7 @@ public class PasswordResetService {
         tokens.invalidateAllFor(user.getId(), Instant.now());
         int revoked = sessions.revokeAll(user.getId(), "PASSWORD_RESET", null);
         audit.ok("PASSWORD_RESET", user, "USER", user.getId(), revoked + " session(s) révoquée(s)");
-        notifications.push(user.getId(), "Mot de passe modifié",
+        notifications.push("security", user.getId(), "Mot de passe modifié",
                 "Votre mot de passe vient d'être réinitialisé et vos appareils ont été déconnectés. Si ce n'était pas vous, contactez le support.", "SYSTEM");
         mail.send(user.getEmail(), "HireLink — votre mot de passe a été modifié",
                 "Votre mot de passe HireLink vient d'être modifié. Si ce n'était pas vous, contactez immédiatement le support.", false);

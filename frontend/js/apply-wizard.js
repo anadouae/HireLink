@@ -1,5 +1,5 @@
 /**
- * Parcours candidature animé — Offre → Compétences → CV → Lettre → Envoi
+ * Parcours candidature animé — Offre → Compétences → CV → Lettre → Disponibilité → Envoi
  */
 (function (global) {
   const STEPS = [
@@ -7,6 +7,7 @@
     { id: "skills", label: "Compétences" },
     { id: "cv", label: "CV" },
     { id: "letter", label: "Lettre" },
+    { id: "avail", label: "Disponibilité" },
     { id: "review", label: "Envoi" },
   ];
 
@@ -54,8 +55,38 @@
       ".hl-review-list strong{color:#5e5558;font-weight:600}" +
       ".hl-optional{font-size:.78rem;font-weight:700;color:#e87030;text-transform:uppercase;letter-spacing:.05em}" +
       ".hl-progress{height:3px;background:rgba(122,32,50,.1);border-radius:99px;margin-top:.85rem;overflow:hidden}" +
+      ".hl-av-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}.hl-av-full{grid-column:1/-1}.hl-av-grid fieldset{border:0;margin:0;padding:0}.hl-av-grid legend,.hl-av-f>span{display:block;font-weight:600;font-size:.86rem;margin-bottom:.35rem}.hl-av-f small{font-weight:400;color:#8a8285}.hl-av-f .input,.hl-av-f select{width:100%}.hl-av-f input[type=number]{box-sizing:border-box;height:2.6rem;padding:0 .85rem;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);color:var(--ink);font:inherit;-moz-appearance:textfield}.hl-av-f input[type=number]:focus{outline:none;border-color:var(--hl-wine);box-shadow:0 0 0 3px rgba(122,32,50,.15)}" +
+      ".hl-seg{display:inline-flex;gap:.3rem;padding:.25rem;border-radius:999px;background:#f4f0ec}.hl-seg input{position:absolute;opacity:0;pointer-events:none}.hl-seg span{display:block;padding:.45rem .95rem;border-radius:999px;font-size:.86rem;cursor:pointer;transition:all .2s}.hl-seg input:checked+span{background:#7a2032;color:#fff;box-shadow:0 4px 12px rgba(122,32,50,.25)}.hl-seg input:focus-visible+span{outline:2px solid #c9a66b}" +
+      ".hl-av-check{display:flex;gap:.6rem;align-items:center;font-size:.9rem;padding:.7rem .85rem;border-radius:12px;background:#f7f4f1;cursor:pointer}" +
+      "@media(max-width:600px){.hl-av-grid{grid-template-columns:1fr}}" +
+      "html[data-theme=dark] .hl-seg,html[data-theme=dark] .hl-av-check{background:rgba(255,255,255,.06)}" +
       ".hl-progress>span{display:block;height:100%;background:linear-gradient(90deg,#7a2032,#e87030);border-radius:99px;transition:width .35s cubic-bezier(.22,1,.36,1)}";
     document.head.appendChild(s);
+  }
+
+  /* Disponibilité : brouillon par offre, sinon dernières préférences du candidat. */
+  const NOTICE = ["Aucun", "1 semaine", "2 semaines", "1 mois", "2 mois", "3 mois"];
+  const MODES = ["Indifférent", "Sur site", "Hybride", "Télétravail"];
+  const SOURCES = ["Site HireLink", "LinkedIn", "Recommandation", "Site de l’entreprise", "Salon ou école", "Autre"];
+  function loadDetails(offer) {
+    const base = { availability: "NOW", availableFrom: "", notice: "Aucun", salary: "", workMode: "Indifférent", relocation: false, source: "Site HireLink" };
+    try {
+      const draft = JSON.parse(localStorage.getItem("hirelink.apply.draft." + offer.id) || "null");
+      if (draft) return Object.assign(base, draft);
+      const prefs = JSON.parse(localStorage.getItem("hirelink.apply.prefs") || "null");
+      if (prefs) return Object.assign(base, prefs, { source: base.source });
+    } catch (_) {}
+    return base;
+  }
+  function saveDraft(state) {
+    try { localStorage.setItem("hirelink.apply.draft." + state.offer.id, JSON.stringify(state.details)); } catch (_) {}
+  }
+  function opts(list, cur) { return list.map((v) => '<option' + (v === cur ? " selected" : "") + ">" + esc(v) + "</option>").join(""); }
+  function availText(d) {
+    if (d.availability === "NOW") return "Immédiatement";
+    if (!d.availableFrom) return "À préciser";
+    const p = d.availableFrom.split("-");
+    return "À partir du " + new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   }
 
   async function start(offer, onDone) {
@@ -82,6 +113,7 @@
       letterFileName: "",
       skillsCsv: profile.skills || "",
       submitting: false,
+      details: loadDetails(offer),
     };
 
     let overlay = document.getElementById("hl-apply-overlay");
@@ -211,6 +243,24 @@
           "</p></div></div>"
         );
       }
+      if (state.step === 4) {
+        const d = state.details;
+        const today = new Date(); const iso = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0") + "-" + String(today.getDate()).padStart(2, "0");
+        return '<div class="' + anim + '"><p class="muted" style="margin-top:0">Ces informations aident le recruteur à vous proposer le bon calendrier. Elles sont mémorisées pour vos prochaines candidatures.</p>' +
+          '<div class="hl-av-grid">' +
+          '<fieldset class="hl-av-full"><legend>Disponibilité</legend><div class="hl-seg">' +
+          '<label><input type="radio" name="hl-av" value="NOW"' + (d.availability === "NOW" ? " checked" : "") + "/><span>Immédiatement</span></label>" +
+          '<label><input type="radio" name="hl-av" value="DATE"' + (d.availability === "DATE" ? " checked" : "") + "/><span>À partir d’une date</span></label></div>" +
+          '<div id="hl-av-date-wrap"' + (d.availability === "DATE" ? "" : " hidden") + ' style="margin-top:.6rem"><input type="date" id="hl-av-date" class="input" min="' + iso + '" value="' + esc(d.availableFrom) + '"/></div></fieldset>' +
+          '<label class="hl-av-f"><span>Préavis</span><select id="hl-av-notice" class="input">' + opts(NOTICE, d.notice) + "</select></label>" +
+          '<label class="hl-av-f"><span>Prétentions salariales <small>(MAD net / mois, facultatif)</small></span><input type="number" id="hl-av-salary" class="input" min="0" max="500000" step="500" inputmode="numeric" placeholder="ex. 12 000" value="' + esc(d.salary) + '"/></label>' +
+          '<label class="hl-av-f"><span>Mode de travail souhaité</span><select id="hl-av-mode" class="input">' + opts(MODES, d.workMode) + "</select></label>" +
+          '<label class="hl-av-f"><span>Comment avez-vous connu l’offre ?</span><select id="hl-av-source" class="input">' + opts(SOURCES, d.source) + "</select></label>" +
+          '<label class="hl-av-check hl-av-full"><input type="checkbox" id="hl-av-reloc"' + (d.relocation ? " checked" : "") + "/><span>Je suis prêt(e) à déménager pour ce poste" +
+          (o.location ? " (" + esc(String(o.location).split(/[·,]/)[0].trim()) + ")" : "") + "</span></label>" +
+          "</div></div>";
+      }
+      const dd = state.details;
       return (
         '<div class="' +
         anim +
@@ -231,7 +281,11 @@
         (state.coverLetter
           ? "Oui (" + state.coverLetter.length + " car." + (state.letterFileName ? " · " + state.letterFileName : "") + ")"
           : "Non jointe") +
-        "</span></div></div></div>"
+        "</span></div>" +
+        "<div><strong>Disponibilité</strong><span>" + esc(availText(dd)) + (dd.notice && dd.notice !== "Aucun" ? " · préavis " + esc(dd.notice) : "") + "</span></div>" +
+        (dd.salary ? "<div><strong>Prétentions</strong><span>" + esc(Number(dd.salary).toLocaleString("fr-FR")) + " MAD / mois</span></div>" : "") +
+        "<div><strong>Mode de travail</strong><span>" + esc(dd.workMode) + (dd.relocation ? " · mobile" : "") + "</span></div>" +
+        "</div></div>"
       );
     }
 
@@ -240,18 +294,24 @@
         const ta = overlay.querySelector("#hl-letter-text");
         if (ta) state.coverLetter = ta.value.trim();
       }
+      if (state.step === 4 && overlay.querySelector("#hl-av-notice")) {
+        const d = state.details;
+        const r = overlay.querySelector('input[name="hl-av"]:checked');
+        d.availability = r ? r.value : "NOW";
+        d.availableFrom = (overlay.querySelector("#hl-av-date") || {}).value || "";
+        d.notice = overlay.querySelector("#hl-av-notice").value;
+        const sal = String(overlay.querySelector("#hl-av-salary").value || "").replace(/\D/g, "");
+        d.salary = sal ? String(Math.min(500000, Number(sal))) : "";
+        d.workMode = overlay.querySelector("#hl-av-mode").value;
+        d.source = overlay.querySelector("#hl-av-source").value;
+        d.relocation = !!overlay.querySelector("#hl-av-reloc").checked;
+        saveDraft(state);
+      }
     }
 
     function showPreviewModal(title, bodyHtml, revokeUrl) {
-      HireLink.openModal({
-        title: title,
-        bodyHtml: bodyHtml,
-        confirmLabel: "Fermer",
-        hideCancel: true,
-        large: true,
-        // Au-dessus du wizard de postulation (z-index 9200) — sinon l'aperçu est invisible.
-        zIndex: 9800,
-      }).then(() => {
+      // Aperçu superposé : le parcours de candidature reste ouvert en dessous.
+      HireLink.openPreview({ title: title, bodyHtml: bodyHtml }).then(() => {
         if (revokeUrl) URL.revokeObjectURL(revokeUrl);
       });
     }
@@ -367,6 +427,12 @@
     }
 
     function bindBody() {
+      if (state.step === 4) {
+        const wrap = overlay.querySelector("#hl-av-date-wrap");
+        overlay.querySelectorAll('input[name="hl-av"]').forEach((r) => r.addEventListener("change", () => { wrap.hidden = r.value !== "DATE" || !r.checked; capture(); }));
+        overlay.querySelector(".hl-apply-body").addEventListener("change", capture);
+        if (global.HLUI && HLUI.enhance) HLUI.enhance(overlay);
+      }
       if (state.step === 1) {
         HireLinkSkills.mount(overlay.querySelector("#hl-apply-skills"), {
           value: state.skillsCsv,
@@ -471,6 +537,10 @@
     }
 
     function canGoNext() {
+      if (state.step === 4 && state.details.availability === "DATE" && !state.details.availableFrom) {
+        HireLink.toast("Disponibilité", "Choisissez la date à partir de laquelle vous êtes disponible.", "warn");
+        return false;
+      }
       if (state.step === 1) {
         capture();
         if (!state.skillsCsv || !state.skillsCsv.trim()) {
@@ -515,6 +585,15 @@
                 ? state.cvFileName
                 : state.cvFileName || "Profil HireLink",
             coverLetter: state.coverLetter || null,
+            details: JSON.stringify({
+              availability: state.details.availability,
+              availableFrom: state.details.availability === "DATE" ? state.details.availableFrom : null,
+              notice: state.details.notice,
+              salary: state.details.salary ? Number(state.details.salary) : null,
+              workMode: state.details.workMode,
+              relocation: state.details.relocation,
+              source: state.details.source,
+            }),
           },
         });
         if (state.cvSource === "UPLOAD" && state.cvFile && created && created.id) {
@@ -526,6 +605,11 @@
             HireLink.toast("CV", "Candidature envoyée, mais le fichier n'a pas pu être joint : " + err.message, "warn");
           }
         }
+        try {
+          localStorage.removeItem("hirelink.apply.draft." + state.offer.id);
+          const pr = Object.assign({}, state.details); delete pr.source;
+          localStorage.setItem("hirelink.apply.prefs", JSON.stringify(pr));
+        } catch (_) {}
         close();
         HireLink.toast("Candidature envoyée", "Suivez-la dans Mes candidatures", "ok");
         if (typeof state.onDone === "function") state.onDone();

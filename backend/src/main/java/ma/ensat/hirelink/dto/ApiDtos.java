@@ -112,7 +112,8 @@ public class ApiDtos {
             EducationLevel educationLevel,
             @Min(1) @Max(500) Integer positions,
             LocalDate deadline,
-            @Size(max = 400) String benefits
+            @Size(max = 400) String benefits,
+            @Size(max = 500) String niceToHaveSkills
     ) {}
 
     public record JobOfferResponse(
@@ -158,7 +159,10 @@ public class ApiDtos {
             /** Compétences demandées que le candidat possède / n'a pas ; vides pour les autres lecteurs. */
             List<String> matchedSkills,
             List<String> missingSkills,
-            boolean matchesProfile
+            boolean matchesProfile,
+            String niceToHaveSkills,
+            /** Détail du score par critère (lecteur candidat uniquement), sinon {@code null}. */
+            ma.ensat.hirelink.service.SkillMatchingService.Compatibility matchBreakdown
     ) {}
 
     public record ApplyRequest(
@@ -166,7 +170,9 @@ public class ApiDtos {
             @Size(max = 20) String cvSource,
             @Size(max = 160) String cvFileName,
             @Size(max = 5000) String coverLetter,
-            @Size(max = 20000) String cvSections
+            @Size(max = 20000) String cvSections,
+            /** Disponibilité, préavis, prétentions salariales, mobilité… (JSON, facultatif). */
+            @Size(max = 4000) String details
     ) {}
 
     public record ApplicationResponse(
@@ -208,7 +214,11 @@ public class ApiDtos {
             Long slaRemainingDays,
             boolean slaBreached,
             String cvSections,
-            boolean hasCvFile
+            boolean hasCvFile,
+            /** Détail du score par critère, recalculé sur le profil et l'offre actuels. */
+            ma.ensat.hirelink.service.SkillMatchingService.Compatibility matchBreakdown,
+            /** Réponses du candidat au moment de postuler (JSON) ; {@code null} pour les anciennes candidatures. */
+            String applicationDetails
     ) {}
 
     /** Planification ou report d'un entretien. {@code startsAt} est l'heure locale du fuseau {@code timeZone}. */

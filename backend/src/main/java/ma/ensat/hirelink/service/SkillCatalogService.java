@@ -142,6 +142,16 @@ public class SkillCatalogService {
         return joined;
     }
 
+    /** Vrai pour une langue parlée du référentiel (catégorie SPOKEN) (« Anglais (B2) », « English »). */
+    public boolean isLanguage(String raw) {
+        return find(raw).map(sk -> "SPOKEN".equals(sk.category())).orElse(false);
+    }
+
+    /** Niveau saisi entre parenthèses (« B2 », « Natif »), ou {@code null}. */
+    public String level(String raw) {
+        return parse(raw).level();
+    }
+
     /** Classe une liste de compétences par catégorie (ordre du référentiel, « Autres » en dernier). */
     public List<Group> classify(String csv) {
         Map<String, List<Item>> byCategory = new LinkedHashMap<>();

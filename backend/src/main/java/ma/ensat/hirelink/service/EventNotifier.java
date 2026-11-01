@@ -58,7 +58,7 @@ public class EventNotifier {
         String body = verified
                 ? "« " + org.getName() + " » est vérifiée : vous pouvez publier des offres."
                 : "La vérification de « " + org.getName() + " » a été retirée par l'administration.";
-        notifications.pushAndMail(userId, title, body, "SYSTEM", Kind.ACCOUNT, title + " : " + org.getName(),
+        notifications.pushAndMail("team", userId, title, body, "SYSTEM", Kind.ACCOUNT, title + " : " + org.getName(),
                 Email.of(title, body,
                         verified ? "Vos offres peuvent désormais être publiées et sont visibles des candidats avec le badge « entreprise vérifiée »."
                                 : "Vos offres ne peuvent plus être publiées tant que l'entreprise n'est pas à nouveau vérifiée. Vérifiez vos informations (ICE, site web, e-mail professionnel) ou contactez l'administration.")
@@ -72,7 +72,7 @@ public class EventNotifier {
         JobOffer offer = app.getJobOffer();
         User candidate = app.getCandidate();
         for (Long target : organizations.offerNotificationTargets(offer)) {
-            notifications.pushAndMail(target, "Nouvelle candidature",
+            notifications.pushAndMail("application:" + app.getId(), target, "Nouvelle candidature",
                     candidate.getFullName() + " a postulé à « " + offer.getTitle() + " »", "APPLICATION", Kind.APPLICATION,
                     "nouvelle candidature : " + offer.getTitle(),
                     Email.of("Nouvelle candidature reçue",
@@ -83,7 +83,7 @@ public class EventNotifier {
                             .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")),
                     null);
         }
-        notifications.pushAndMail(candidate.getId(), "Candidature envoyée",
+        notifications.pushAndMail("application:" + app.getId(), candidate.getId(), "Candidature envoyée",
                 "Votre dossier pour « " + offer.getTitle() + " » est soumis. Délai de réponse : " + offer.getResponseSlaDays() + " j.",
                 "APPLICATION", Kind.APPLICATION, "candidature envoyée : " + offer.getTitle(),
                 Email.of("Votre candidature est bien envoyée",
@@ -110,13 +110,13 @@ public class EventNotifier {
                         "Cette décision ne remet pas en cause la valeur de votre parcours. Nous vous encourageons à postuler aux autres offres qui correspondent à votre profil.");
             }
             if (reason != null) email = email.withFacts(new Fact("Motif communiqué", reason));
-            notifications.pushAndMail(candidate, "Candidature non retenue",
+            notifications.pushAndMail("application:" + app.getId(), candidate, "Candidature non retenue",
                     "« " + job + " »" + (reason != null ? " — " + reason : ""), "STATUS", Kind.APPLICATION,
                     "votre candidature : " + job, email.withButton("Voir les offres", page("candidate.html")), null);
             return;
         }
         if (app.getStatus() == ApplicationStatus.OFFER) {
-            notifications.pushAndMail(candidate, "Une offre pour vous !",
+            notifications.pushAndMail("application:" + app.getId(), candidate, "Une offre pour vous !",
                     "L'entreprise souhaite vous faire une offre pour « " + job + " ».", "STATUS", Kind.APPLICATION,
                     "une offre pour vous : " + job,
                     Email.of("Félicitations : l'entreprise vous fait une offre",
@@ -128,7 +128,7 @@ public class EventNotifier {
         }
         if (app.getStatus() == ApplicationStatus.HIRED) {
             String company = organizations.companyNameOf(app.getJobOffer());
-            notifications.pushAndMail(candidate, "Vous êtes embauché(e) !",
+            notifications.pushAndMail("application:" + app.getId(), candidate, "Vous êtes embauché(e) !",
                     "Bienvenue chez " + company + " : « " + job + " ». Toutes nos félicitations !", "HIRED", Kind.APPLICATION,
                     "félicitations, vous êtes embauché(e) : " + job,
                     Email.of("Félicitations, vous êtes embauché(e) !",
@@ -139,7 +139,7 @@ public class EventNotifier {
             return;
         }
         boolean shortlisted = app.getStatus() == ApplicationStatus.SHORTLISTED;
-        notifications.pushAndMail(candidate, "Votre candidature avance",
+        notifications.pushAndMail("application:" + app.getId(), candidate, "Votre candidature avance",
                 "« " + job + " » est maintenant en étape « " + (shortlisted ? "Shortlist" : "Présélection") + " ».",
                 "STATUS", Kind.APPLICATION, "votre candidature avance : " + job,
                 Email.of("Bonne nouvelle : votre candidature avance",
@@ -158,16 +158,16 @@ public class EventNotifier {
                 ? "Votre entretien pour « " + job + " » a été reporté. Voici le nouveau créneau."
                 : "Bonne nouvelle : le recruteur vous propose un entretien pour « " + job + " ».")
                 .withButton("Confirmer ma présence", page("candidate-applications.html?id=" + app.getId()));
-        notifications.pushAndMail(app.getCandidate().getId(), title, "« " + job + " » — " + interviews.summary(app), "INTERVIEW",
+        notifications.pushAndMail("interview:" + app.getId(), app.getCandidate().getId(), title, "« " + job + " » — " + interviews.summary(app), "INTERVIEW",
                 Kind.INTERVIEW, title.toLowerCase() + " : " + job, email, calendar(app));
         for (Long target : staff(app)) {
-            notifications.push(target, title, app.getCandidate().getFullName() + " — " + interviews.summary(app), "INTERVIEW");
+            notifications.push("interview:" + app.getId(), target, title, app.getCandidate().getFullName() + " — " + interviews.summary(app), "INTERVIEW");
         }
     }
 
     public void interviewCancelled(Application app) {
         String job = app.getJobOffer().getTitle();
-        notifications.pushAndMail(app.getCandidate().getId(), "Entretien annulé",
+        notifications.pushAndMail("interview:" + app.getId(), app.getCandidate().getId(), "Entretien annulé",
                 "« " + job + " » — " + app.getInterviewCancelReason(), "INTERVIEW", Kind.INTERVIEW, "entretien annulé : " + job,
                 Email.of("Votre entretien est annulé",
                         "L'entretien prévu le " + interviews.when(app) + " pour « " + job + " » a été annulé.")
@@ -175,7 +175,7 @@ public class EventNotifier {
                         .withButton("Voir ma candidature", page("candidate-applications.html?id=" + app.getId())),
                 null);
         for (Long target : staff(app)) {
-            notifications.push(target, "Entretien annulé", app.getCandidate().getFullName() + " — " + app.getInterviewCancelReason(), "INTERVIEW");
+            notifications.push("interview:" + app.getId(), target, "Entretien annulé", app.getCandidate().getFullName() + " — " + app.getInterviewCancelReason(), "INTERVIEW");
         }
     }
 
@@ -188,7 +188,7 @@ public class EventNotifier {
                 : name + " n'est pas disponible pour l'entretien du " + interviews.when(app)
                 + (app.getInterviewCandidateNote() == null ? "" : " : « " + app.getInterviewCandidateNote() + " »");
         for (Long target : staff(app)) {
-            notifications.pushAndMail(target, title, body, "INTERVIEW", Kind.INTERVIEW, title.toLowerCase() + " : " + name,
+            notifications.pushAndMail("interview:" + app.getId(), target, title, body, "INTERVIEW", Kind.INTERVIEW, title.toLowerCase() + " : " + name,
                     Email.of(title, body, ok ? "Rien à faire : l'entretien reste planifié."
                             : "Vous pouvez proposer un nouveau créneau depuis le pipeline.")
                             .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")), null);
@@ -197,13 +197,13 @@ public class EventNotifier {
 
     public void interviewReminder(Application app) {
         String job = app.getJobOffer().getTitle();
-        notifications.pushAndMail(app.getCandidate().getId(), "Rappel d'entretien",
+        notifications.pushAndMail("interview:" + app.getId(), app.getCandidate().getId(), "Rappel d'entretien",
                 "Demain : « " + job + " » — " + interviews.summary(app), "INTERVIEW", Kind.INTERVIEW, "rappel d'entretien : " + job,
                 interviewEmail(app, "Rappel : votre entretien approche", "Votre entretien pour « " + job + " » a lieu dans moins de 24 heures.")
                         .withButton("Voir les détails", page("candidate-applications.html?id=" + app.getId())),
                 calendar(app));
         for (Long target : staff(app)) {
-            notifications.pushAndMail(target, "Rappel d'entretien",
+            notifications.pushAndMail("interview:" + app.getId(), target, "Rappel d'entretien",
                     "Demain : " + app.getCandidate().getFullName() + " — " + interviews.summary(app), "INTERVIEW", Kind.INTERVIEW,
                     "rappel d'entretien : " + app.getCandidate().getFullName(),
                     interviewEmail(app, "Rappel : entretien dans moins de 24 h", "Entretien avec " + app.getCandidate().getFullName() + " pour « " + job + " ».")

@@ -68,6 +68,7 @@
     const wrap = document.createElement("div");
     wrap.className = "offer-managed" + (o.published ? "" : " is-draft");
     wrap.dataset.id = o.id;
+    wrap.dataset.focus = "offer:" + o.id;
     wrap.appendChild(HireLinkOffer.card(o, {
       href: (x) => "recruiter-offers.html?offer=" + encodeURIComponent(x.id),
       onOpen: (x) => openDetail(x, n),

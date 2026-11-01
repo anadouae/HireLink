@@ -157,13 +157,13 @@ Détails, scénarios par rôle et dépannage : [`docs/GUIDE_INSTALLATION_ET_TEST
 | Email | Mot de passe | Rôle |
 |-------|--------------|------|
 | `admin@hirelink.ma` | `Admin123!` **+ code TOTP** (activation à la première connexion, voir le guide §14) | Admin |
-| `recruteur@hirelink.ma` | `Recruteur123!` | Recruteur |
+| `recruteur@hirelink.ma` | `Recruteur123!` | Recruteur (Salma Berrada, Atlas Digital) |
 | `candidat@hirelink.ma` | `Candidat123!` | Candidat |
 | `n.bennani@atlasdigital.ma` | `Recruteur123!` | Recruteur · Owner d’Atlas Digital |
 | `k.benali@atlasdigital.ma` | `Recruteur123!` | Recruteur (Atlas Digital) |
 | `m.alaoui@atlasdigital.ma` | `Recruteur123!` | Hiring Manager (Atlas Digital) |
 
-`recruteur@hirelink.ma` est rattaché à l’organisation **Atlas Digital** (Owner) : il voit les mêmes offres et le même pipeline que Nadia Bennani.
+`recruteur@hirelink.ma` (Salma Berrada) est **Recruteur** de l’organisation **Atlas Digital** : elle voit les mêmes offres et le même pipeline que Nadia Bennani (Owner), sans les actions réservées à l’Owner (inviter un membre, changer de formule).
 
 > Adapter `spring.datasource.password` dans `backend/src/main/resources/application.properties` selon votre MySQL (souvent vide en local), de préférence via `application-local.properties` (ignoré par Git).
 >

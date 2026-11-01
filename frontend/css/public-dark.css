@@ -1,0 +1,184 @@
+/* =============================================================================
+   HireLink — thème sombre des pages publiques
+   Même bascule et même clé que l'application (hirelink.theme), même palette
+   (variables html[data-theme="dark"] de design-system.css).
+   ============================================================================= */
+
+/* Bouton de bascule */
+.pub-theme {
+  display: inline-grid; place-items: center; width: 2.4rem; height: 2.4rem; flex: none;
+  border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface, #fff);
+  color: var(--ink); cursor: pointer; margin-right: .5rem;
+  transition: background .2s var(--ease, ease), transform .2s var(--ease, ease), color .2s;
+}
+.pub-theme:hover { transform: translateY(-1px); color: var(--burgundy); }
+.pub-theme:focus-visible { outline: 2px solid var(--burgundy); outline-offset: 2px; }
+.pub-theme.is-floating { position: fixed; top: 1rem; right: 1rem; z-index: 50; margin: 0; box-shadow: var(--shadow); }
+.pay-top .pub-theme { margin: 0 0 0 .75rem; }
+.site-header > .row .pub-theme { margin-right: .25rem; }
+@media (prefers-reduced-motion: reduce) { .pub-theme { transition: none; } .pub-theme:hover { transform: none; } }
+
+html[data-theme="dark"] .pub-theme { background: var(--surface-2); color: var(--champagne-light); }
+html[data-theme="dark"] { background: var(--paper); }
+html[data-theme="dark"] body,
+html[data-theme="dark"] .home { background: var(--paper); color: var(--ink); }
+/* — home.css — */
+html[data-theme="dark"] .home .eyebrow { color: #f0b8c4; }
+html[data-theme="dark"] .site-header { background: rgba(24, 20, 26, 0.6); }
+html[data-theme="dark"] .site-header.is-scrolled { background: rgba(24, 20, 26, 0.86); box-shadow: 0 18px 40px -22px rgba(0, 0, 0, 0.62); }
+html[data-theme="dark"] .hero-title em { color: #f0b8c4; }
+html[data-theme="dark"] .search-card { background: rgba(30, 26, 34, 0.72); }
+html[data-theme="dark"] .search-tabs button.is-on { background: var(--surface); color: #f0b8c4; box-shadow: 0 4px 14px -4px rgba(0, 0, 0, 0.44); }
+html[data-theme="dark"] .search-row input,
+html[data-theme="dark"] .search-row select { background: var(--surface); }
+html[data-theme="dark"] .suggest-menu { background: var(--surface); }
+html[data-theme="dark"] .suggest-menu button { background: var(--surface); }
+html[data-theme="dark"] .quick-row > span { color: #f0b8c4; }
+html[data-theme="dark"] #quick-chips button { background: rgba(30, 26, 34, 0.8); }
+html[data-theme="dark"] #quick-chips button:hover { background: var(--surface); }
+html[data-theme="dark"] .scroll-cue { border: 1.5px solid var(--line-strong); }
+html[data-theme="dark"] .stat dd { color: #f0b8c4; }
+html[data-theme="dark"] .frame { background: var(--surface); }
+html[data-theme="dark"] .frame-bar { background: var(--surface-2); }
+html[data-theme="dark"] .rail-btn { background: var(--surface); }
+html[data-theme="dark"] .city-tile { background: var(--surface); }
+html[data-theme="dark"] .pricing-switch button.is-active { background: var(--surface); color: #f0b8c4; box-shadow: 0 6px 16px -6px rgba(0, 0, 0, 0.55); }
+html[data-theme="dark"] .price-card { background: var(--surface); }
+/* — landing.css — */
+html[data-theme="dark"] .site-header .btn-ghost:hover { background: rgba(30, 26, 34, 0.85); }
+html[data-theme="dark"] .hero-accent--go { color: #f0b8c4; }
+@media (prefers-reduced-motion: reduce) { html[data-theme="dark"] .hero-accent--go { color: #f0b8c4; } }
+html[data-theme="dark"] .feature { background: rgba(30, 26, 34, 0.88); }
+html[data-theme="dark"] .lux-step-dot { background: var(--surface); }
+html[data-theme="dark"] .lux-step-card { background: rgba(30, 26, 34, 0.92); }
+html[data-theme="dark"] .river-step { background: rgba(30, 26, 34, 0.94); }
+html[data-theme="dark"] .journey-step { background: var(--surface); }
+html[data-theme="dark"] .trust-card { background: rgba(30, 26, 34, 0.9); }
+html[data-theme="dark"] .pricing-vs-item { background: var(--surface); }
+html[data-theme="dark"] .pricing-vs-item.is-muted { background: rgba(30, 26, 34, 0.65); }
+html[data-theme="dark"] .pricing-switch button.is-active { background: var(--surface); }
+html[data-theme="dark"] .price-card { background: rgba(30, 26, 34, 0.92); }
+html[data-theme="dark"] .footer-pulse::before,
+html[data-theme="dark"] .footer-pulse::after { background: var(--surface-2); }
+html[data-theme="dark"] .co-profile { background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.13); }
+html[data-theme="dark"] .co-about,
+html[data-theme="dark"] .co-layout > section { background: var(--surface); border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .co-facts span { color: #f0b8c4; }
+html[data-theme="dark"] .board-landing { background: var(--surface); }
+html[data-theme="dark"] .board-landing .site-header { background: var(--surface); border-bottom: 1px solid var(--line-strong); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.11); }
+html[data-theme="dark"] .board-landing .nav a.is-current { color: #f0b8c4; }
+html[data-theme="dark"] .search-card { background: var(--surface); }
+html[data-theme="dark"] .search-tabs button { background: var(--surface); }
+html[data-theme="dark"] .suggest-menu { background: var(--surface); }
+html[data-theme="dark"] .suggest-menu button { background: var(--surface); color: var(--ink); }
+html[data-theme="dark"] .search-row input,
+html[data-theme="dark"] .search-row select { border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); }
+html[data-theme="dark"] .quick-row > span { color: #f0b8c4; }
+html[data-theme="dark"] .quick-row button,
+html[data-theme="dark"] .metier-grid button,
+html[data-theme="dark"] .line-tabs button { border: 1px solid var(--line-strong); background: var(--surface); }
+html[data-theme="dark"] .line-tabs button.is-on { color: #f0b8c4; }
+html[data-theme="dark"] .job-card,
+html[data-theme="dark"] .plain-card { background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.09); }
+html[data-theme="dark"] .job-co a { color: #f0b8c4; }
+html[data-theme="dark"] .job-meta span { background: var(--surface); }
+html[data-theme="dark"] .metier-grid button { background: var(--surface); }
+html[data-theme="dark"] .path-row li { background: var(--surface); }
+/* — auth.css — */
+html[data-theme="dark"] .auth-panel { background: var(--surface); }
+html[data-theme="dark"] .auth-tabs-pill { background: var(--surface); }
+html[data-theme="dark"] .role-option { background: var(--surface); }
+html[data-theme="dark"] .check-set { border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .suggest-menu { background: var(--surface); }
+html[data-theme="dark"] .suggest-menu button { background: var(--surface); }
+html[data-theme="dark"] .pw-toggle:hover { color: #f0b8c4; }
+html[data-theme="dark"] .demo-chip { border: 1px solid var(--line-strong); background: var(--surface); }
+html[data-theme="dark"] .progress-head strong { color: var(--ink); }
+html[data-theme="dark"] .progress-track { background: var(--surface-2); }
+html[data-theme="dark"] .sheet { border: 1px solid var(--line-strong); background: var(--surface); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.09); }
+html[data-theme="dark"] .step-kicker span { color: #f0b8c4; }
+html[data-theme="dark"] .phone-row { border: 1px solid var(--line-strong); background: var(--surface); }
+html[data-theme="dark"] .phone-row input { color: var(--ink); }
+html[data-theme="dark"] .phone-country { background: var(--surface); color: var(--ink); }
+html[data-theme="dark"] .phone-menu { background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 16px 40px rgba(0, 0, 0, 0.26); }
+html[data-theme="dark"] .phone-menu input { border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .phone-menu button.phone-opt { color: var(--ink); }
+html[data-theme="dark"] .phone-menu button.phone-opt:hover,
+html[data-theme="dark"] .phone-menu button.phone-opt.is-on { background: var(--surface); }
+html[data-theme="dark"] .mission-card { border: 1px solid var(--line-strong); background: var(--surface); }
+html[data-theme="dark"] .mission-card strong { color: var(--ink); }
+html[data-theme="dark"] .mission-card.is-on { background: var(--surface); }
+html[data-theme="dark"] .mission-card.is-on strong { color: #f0b8c4; }
+/* — legal.css — */
+html[data-theme="dark"] .faq details { background: var(--surface); }
+html[data-theme="dark"] .faq summary::after { color: #f0b8c4; }
+html[data-theme="dark"] .sec-card { background: var(--surface); }
+html[data-theme="dark"] .pricing-switch button.is-active { background: var(--surface); }
+/* — checkout.css — */
+html[data-theme="dark"] .pay-top { background: var(--surface); }
+html[data-theme="dark"] .pay-summary,
+html[data-theme="dark"] .pay-form-card,
+html[data-theme="dark"] .pay-receipt { background: var(--surface); }
+html[data-theme="dark"] .pay-cycle button,
+html[data-theme="dark"] .pay-secondary { background: var(--surface); }
+html[data-theme="dark"] input,
+html[data-theme="dark"] select { background: var(--surface); }
+/* — offer-card.css — */
+html[data-theme="dark"] .offer-card { border: 1px solid var(--line, var(--line-strong)); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.11); }
+html[data-theme="dark"] .offer-card:hover,
+html[data-theme="dark"] .offer-card:focus-within,
+html[data-theme="dark"] .offer-card.is-selected { box-shadow: 0 18px 38px rgba(0, 0, 0, 0.26); }
+html[data-theme="dark"] .oc-chip { border: 1px solid var(--line, var(--line-strong)); }
+html[data-theme="dark"] .offer-card--showcase { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.09); }
+html[data-theme="dark"] .offer-card__foot { border-top: 1px solid var(--line, var(--line-strong)); }
+html[data-theme="dark"] .offer-fact { border: 1px solid var(--line, var(--line-strong)); }
+/* — search.css — */
+html[data-theme="dark"] .hl-combo-option.is-custom { border-top: 1px dashed var(--line-strong, var(--line-strong)); }
+/* — components.css — */
+html[data-theme="dark"] .topbar { border-bottom-color: var(--line-strong); }
+html[data-theme="dark"] .dialog-lead .modal-title { color: #f0b8c4; }
+html[data-theme="dark"] .modal-actions { background: var(--surface); }
+html[data-theme="dark"] .filter-board { border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .filter-count { color: #f0b8c4; }
+html[data-theme="dark"] .plan-fold summary em { color: #f0b8c4; }
+html[data-theme="dark"] .split-list { border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .split-detail { border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .cv-preview-col,
+html[data-theme="dark"] .cv-analysis { border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .cv-zoom button { border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .cv-stage { border: 1px solid var(--line-strong); background: var(--surface); }
+html[data-theme="dark"] .score-card { border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .score-card strong { color: #f0b8c4; }
+html[data-theme="dark"] .score-track { background: var(--surface-2); }
+html[data-theme="dark"] .cv-tabs button { background: var(--surface); }
+html[data-theme="dark"] .cv-level { color: #f0b8c4; }
+html[data-theme="dark"] .cv-fix { color: #f0b8c4; }
+html[data-theme="dark"] .cv-score-legend { background: var(--surface); }
+html[data-theme="dark"] .cv-score-legend strong { color: #f0b8c4; }
+html[data-theme="dark"] .co-mark { background: var(--surface); border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .co-mark img { background: var(--surface); }
+html[data-theme="dark"] .co-mark-fallback { color: #f0b8c4; }
+html[data-theme="dark"] .detail-company { color: #f0b8c4; }
+html[data-theme="dark"] .detail-sub { color: #f0b8c4; }
+html[data-theme="dark"] .match-meter strong { color: #f0b8c4; }
+html[data-theme="dark"] .mail-preview { border: 1px solid var(--line, var(--line-strong)); background: var(--surface); }
+
+/* —— Ajustements manuels —— */
+html[data-theme="dark"] .search-card { border-color: var(--line-strong); }
+html[data-theme="dark"] .hero-title em,
+html[data-theme="dark"] .home .eyebrow { color: #f0b8c4; }
+html[data-theme="dark"] .nav a:hover,
+html[data-theme="dark"] .nav a.is-current { background: rgba(240, 184, 196, 0.1); color: var(--ink); }
+html[data-theme="dark"] .site-header { border-color: var(--line); }
+
+/* —— Paiement (checkout.html n'embarque que tokens.css) —— */
+html[data-theme="dark"] body:has(.pay-wrap) {
+  --bg: #121014; --ink: #f5f0eb; --muted: #b8b0b4; --line: rgba(245, 240, 235, 0.12); --burg: #f0b8c4;
+  --surface: #1e1a22; --surface-2: #262129; --line-strong: rgba(245, 240, 235, 0.18);
+  color-scheme: dark; background: var(--bg); color: var(--ink);
+}
+html[data-theme="dark"] .pay-cycle button.is-on { background: rgba(240, 184, 196, 0.12); }
+html[data-theme="dark"] .pay-error { color: #f5a3a3; }
+html[data-theme="dark"] .pay-submit, html[data-theme="dark"] button.pay-submit { color: #fff; }
+html[data-theme="dark"] .co-facts .co-site { color: #f0b8c4; }
+html[data-theme="dark"] .pipe-step.is-active span, html[data-theme="dark"] .pipe-step.is-done span { color: #f0b8c4; }

@@ -46,9 +46,9 @@ public class SlaMonitorService {
             String body = "« " + app.getJobOffer().getTitle() + " » — "
                     + app.getCandidate().getFullName()
                     + " attend une décision (fiabilité / conversion).";
-            notificationService.push(recruiterId, title, body, "SLA");
+            notificationService.push("application:" + app.getId(), recruiterId, title, body, "SLA");
             if (app.getAssignedHmUserId() != null) {
-                notificationService.push(app.getAssignedHmUserId(), title, body, "SLA");
+                notificationService.push("application:" + app.getId(), app.getAssignedHmUserId(), title, body, "SLA");
             }
             app.setSlaBreachNotified(true);
             applicationRepository.save(app);

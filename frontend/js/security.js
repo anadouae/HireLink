@@ -84,7 +84,7 @@
       "</div></section>";
 
     h +=
-      '<section class="rc-card" id="sec-sessions"><div class="rc-card-head"><div><h2>Appareils connectés</h2><p>Chaque connexion est une session. Déconnectez celles que vous ne reconnaissez pas.</p></div><div class="sec-actions">' +
+      '<section class="rc-card" id="sec-sessions" data-focus="security"><div class="rc-card-head"><div><h2>Appareils connectés</h2><p>Chaque connexion est une session. Déconnectez celles que vous ne reconnaissez pas.</p></div><div class="sec-actions">' +
       '<button type="button" class="btn btn-soft btn-sm" data-act="revoke-others"' +
       (sessions.length < 2 ? " disabled" : "") +
       '>Déconnecter les autres</button>' +

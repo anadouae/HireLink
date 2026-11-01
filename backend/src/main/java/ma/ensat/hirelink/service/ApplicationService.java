@@ -139,7 +139,8 @@ public class ApplicationService {
         Instant now = Instant.now();
         app.setSubmittedAt(now);
         app.setResponseDeadline(now.plus(offer.getResponseSlaDays(), ChronoUnit.DAYS));
-        double score = matchingService.computeMatchScore(candidate.getSkills(), offer.getRequiredSkills());
+        var compat = matchingService.evaluate(candidate, offer);
+        double score = compat.score();
         app.setMatchScore(score);
         app.setCvSource(cvSource);
         app.setCvFileName(req.cvFileName() != null && !req.cvFileName().isBlank()
@@ -150,6 +151,7 @@ public class ApplicationService {
             if (letter.length() > 8000) letter = letter.substring(0, 8000);
             app.setCoverLetter(letter);
         }
+        app.setApplicationDetails(cleanDetails(req.details()));
         String sections = cleanSections(req.cvSections());
         if (sections == null && "PROFILE".equals(cvSource)) {
             sections = candidate.getCvSections();
@@ -174,9 +176,8 @@ public class ApplicationService {
         MatchingAnalysis ma = new MatchingAnalysis();
         ma.setApplicationId(app.getId());
         ma.setScore(score);
-        var detail = matchingService.explain(candidate.getSkills(), offer.getRequiredSkills());
-        ma.setCoveredSkills(String.join(", ", detail.covered()));
-        ma.setMissingSkills(String.join(", ", detail.missing()));
+        ma.setCoveredSkills(String.join(", ", compat.covered()));
+        ma.setMissingSkills(String.join(", ", compat.missing()));
         matchingAnalysisRepository.save(ma);
 
         timelineService.append(app.getId(), reopen ? ApplicationStatus.WITHDRAWN.name() : null,
@@ -248,7 +249,7 @@ public class ApplicationService {
         applicationRepository.save(app);
         audit.ok("HM_ASSIGNED", actor, "APPLICATION", app.getId(), "HM " + hmUserId);
         if (hmUserId != null) {
-            notificationService.push(hmUserId, "Dossier assigné",
+            notificationService.push("application:" + app.getId(), hmUserId, "Dossier assigné",
                     "Vous êtes Hiring Manager sur « " + app.getJobOffer().getTitle() + " »", "ASSIGN");
         }
         return toDto(app);
@@ -276,7 +277,7 @@ public class ApplicationService {
             timelineService.append(app.getId(), from.name(), ApplicationStatus.WITHDRAWN.name(),
                     actor.getId(), "{\"event\":\"WITHDRAW\"}");
             for (Long target : organizationService.offerNotificationTargets(app.getJobOffer())) {
-                notificationService.push(target,
+                notificationService.push("application:" + app.getId(), target,
                         "Candidature retirée",
                         app.getCandidate().getFullName() + " a retiré sa candidature",
                         "STATUS");
@@ -334,7 +335,7 @@ public class ApplicationService {
             notifier.statusChanged(app);
         }
         if (app.getAssignedHmUserId() != null && !app.getAssignedHmUserId().equals(actor.getId())) {
-            notificationService.push(app.getAssignedHmUserId(),
+            notificationService.push("application:" + app.getId(), app.getAssignedHmUserId(),
                     "Pipeline mis à jour",
                     app.getCandidate().getFullName() + " → " + STATUS_FR.get(req.status()),
                     "STATUS");
@@ -421,6 +422,7 @@ public class ApplicationService {
             remaining = ChronoUnit.DAYS.between(Instant.now(), deadline);
             breached = Instant.now().isAfter(deadline);
         }
+        var compat = matchingService.evaluate(app.getCandidate(), o);
         return new ApiDtos.ApplicationResponse(
                 app.getId(),
                 o.getId(),
@@ -430,7 +432,7 @@ public class ApplicationService {
                 app.getCandidate().getEmail(),
                 app.getCandidate().getSkills(),
                 app.getStatus(),
-                app.getMatchScore(),
+                compat.score(),
                 app.getRejectionReason(),
                 app.getRefusalReasonCode(),
                 app.getCvSource(),
@@ -460,7 +462,9 @@ public class ApplicationService {
                 remaining,
                 breached,
                 app.getCvSections(),
-                app.getCvStorageName() != null && !app.getCvStorageName().isBlank()
+                app.getCvStorageName() != null && !app.getCvStorageName().isBlank(),
+                compat,
+                app.getApplicationDetails()
         );
     }
 
@@ -575,5 +579,18 @@ public class ApplicationService {
         String trimmed = raw.trim();
         if (!trimmed.startsWith("{")) return null;
         return trimmed.length() > 8000 ? trimmed.substring(0, 8000) : trimmed;
+    }
+
+    /** Réponses facultatives du candidat : JSON objet uniquement, longueur bornée, sinon ignorées. */
+    private static String cleanDetails(String raw) {
+        if (raw == null) return null;
+        String t = raw.trim();
+        if (t.isEmpty() || t.length() > 4000 || !t.startsWith("{") || !t.endsWith("}")) return null;
+        try {
+            new com.fasterxml.jackson.databind.ObjectMapper().readTree(t);
+            return t;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

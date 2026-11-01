@@ -128,7 +128,7 @@ public class AccountService {
         users.save(user);
         int n = sessions.revokeAll(user.getId(), "PASSWORD_CHANGE", currentSid);
         audit.ok("PASSWORD_CHANGE", user, "USER", user.getId(), n + " autre(s) session(s) révoquée(s)");
-        notifications.push(user.getId(), "Mot de passe modifié", "Votre mot de passe a été modifié. Vos autres appareils ont été déconnectés.", "SYSTEM");
+        notifications.push("security", user.getId(), "Mot de passe modifié", "Votre mot de passe a été modifié. Vos autres appareils ont été déconnectés.", "SYSTEM");
         mail.send(user.getEmail(), "HireLink — votre mot de passe a été modifié",
                 "Votre mot de passe HireLink vient d'être modifié. Si ce n'était pas vous, contactez immédiatement le support.", false);
     }
@@ -195,7 +195,7 @@ public class AccountService {
         }
         List<String> codes = auth.enableMfa(user);
         int n = sessions.revokeAll(user.getId(), "MFA_CHANGE", AuthService.currentSessionId());
-        notifications.push(user.getId(), "Double authentification activée", "Votre compte est maintenant protégé par un code à usage unique.", "SYSTEM");
+        notifications.push("security", user.getId(), "Double authentification activée", "Votre compte est maintenant protégé par un code à usage unique.", "SYSTEM");
         return codes;
     }
 
@@ -212,7 +212,7 @@ public class AccountService {
         users.save(user);
         sessions.revokeAll(user.getId(), "MFA_CHANGE", AuthService.currentSessionId());
         audit.ok("MFA_DISABLED", user, "USER", user.getId(), null);
-        notifications.push(user.getId(), "Double authentification désactivée", "La double authentification vient d'être désactivée sur votre compte.", "SYSTEM");
+        notifications.push("security", user.getId(), "Double authentification désactivée", "La double authentification vient d'être désactivée sur votre compte.", "SYSTEM");
     }
 
     @Transactional
@@ -238,7 +238,7 @@ public class AccountService {
         if (req.credential() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passkey manquante");
         WebAuthnCredential c = webAuthn.finishRegistration(user, req.requestId(), req.credential().toString(), req.name());
         audit.ok("PASSKEY_ADDED", user, "PASSKEY", c.getId(), c.getName());
-        notifications.push(user.getId(), "Passkey ajoutée", "Une passkey « " + c.getName() + " » a été ajoutée à votre compte.", "SYSTEM");
+        notifications.push("security", user.getId(), "Passkey ajoutée", "Une passkey « " + c.getName() + " » a été ajoutée à votre compte.", "SYSTEM");
     }
 
     @Transactional
