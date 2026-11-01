@@ -10,7 +10,8 @@
   const $ = (id) => document.getElementById(id);
   const esc = RC.esc;
   let apps = [];
-  let view = "active";
+  const qv = new URLSearchParams(location.search).get("view");
+  let view = qv && ["active","interview","hired","rejected","withdrawn","all"].includes(qv) ? qv : "active";
   let loaded = false;
 
   const GROUPS = {
@@ -77,7 +78,7 @@
         '</span><span class="rc-cell-sub">' + esc(a.candidateEmail || "") + "</span></div></div></td><td>" + esc(a.jobTitle || "—") +
         '</td><td><span class="rc-pill' + (TONE[a.status] ? " rc-pill--" + TONE[a.status] : "") + '">' + esc(RC.STATUS_FR[a.status] || a.status) + "</span></td><td>" +
         (m != null ? '<span class="badge ' + (m >= 80 ? "badge-ok" : m >= 55 ? "badge-info" : "badge-rose") + '">' + m + " %</span>" : "—") +
-        "</td><td>" + slaCell + "</td><td>" + RC.fmtDate(a.submittedAt) + '</td><td><div class="rc-row-actions"><a class="btn btn-soft btn-sm" href="recruiter-pipeline.html?app=' + a.id + '">Ouvrir le dossier</a></div></td></tr>';
+        "</td><td>" + slaCell + "</td><td>" + RC.fmtDate(a.submittedAt) + '</td><td><div class="rc-row-actions"><a class="btn btn-soft btn-sm" href="recruiter-pipeline.html?app=' + a.id + '&focus=application:' + a.id + '">Voir le dossier</a></div></td></tr>';
     }).join("");
     HireLinkSearch.mark(body, q);
   }

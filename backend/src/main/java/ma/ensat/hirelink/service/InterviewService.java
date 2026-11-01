@@ -32,7 +32,10 @@ public class InterviewService {
     public static final Map<String, String> TYPE_FR = Map.of(
             "ONSITE", "Sur site", "VISIO", "Visioconférence", "PHONE", "Téléphone");
     public static final Map<String, String> KIND_FR = Map.of(
-            "HR", "Entretien RH", "TECHNICAL", "Entretien technique", "MANAGER", "Entretien avec le manager", "FINAL", "Entretien final");
+            "HR", "Entretien RH", "TECHNICAL", "Entretien technique", "MANAGER", "Entretien avec le manager",
+            "CASE", "Étude de cas", "TEAM", "Rencontre avec l'équipe", "FINAL", "Entretien final");
+    /** Modes proposés à la planification. « PHONE » reste lisible pour les anciens dossiers, mais n'est plus proposé. */
+    private static final Set<String> SCHEDULABLE = Set.of("ONSITE", "VISIO");
 
     private static final String DEFAULT_ZONE = "Africa/Casablanca";
     private static final int DEFAULT_DURATION = 45;
@@ -43,7 +46,7 @@ public class InterviewService {
     /** Valide la demande et applique l'entretien (nouvelle planification ou report) : réponse du candidat remise à zéro. */
     public void schedule(Application app, InterviewRequest req) {
         String type = req.type().trim().toUpperCase();
-        if (!TYPE_FR.containsKey(type)) throw bad("Type d'entretien invalide.");
+        if (!SCHEDULABLE.contains(type)) throw bad("Choisissez un entretien sur site ou en visioconférence.");
         String kind = req.kind().trim().toUpperCase();
         if (!KIND_FR.containsKey(kind)) throw bad("Nature d'entretien invalide.");
         String zone = req.timeZone() == null || req.timeZone().isBlank() ? DEFAULT_ZONE : req.timeZone().trim();
@@ -52,11 +55,9 @@ public class InterviewService {
         if (at.isBefore(Instant.now())) throw bad("Le créneau d'entretien est dans le passé.");
         String location = clean(req.location());
         String video = clean(req.videoUrl());
-        String phone = clean(req.phone());
         switch (type) {
             case "ONSITE" -> require(location, "Indiquez l'adresse de l'entretien.");
-            case "VISIO" -> require(video, "Indiquez le lien de visioconférence.");
-            default -> require(phone, "Indiquez le numéro de téléphone de l'entretien.");
+            default -> require(video, "Indiquez le lien de visioconférence.");
         }
         app.setInterviewType(type);
         app.setInterviewKind(kind);
@@ -66,7 +67,7 @@ public class InterviewService {
         app.setInterviewLocation("ONSITE".equals(type) ? location : null);
         app.setInterviewMapUrl("ONSITE".equals(type) ? clean(req.mapUrl()) : null);
         app.setInterviewVideoUrl("VISIO".equals(type) ? video : null);
-        app.setInterviewPhone("PHONE".equals(type) ? phone : null);
+        app.setInterviewPhone(null);
         app.setInterviewParticipants(clean(req.participants()));
         app.setInterviewNotes(clean(req.instructions()));
         app.setInterviewStatus(SCHEDULED);

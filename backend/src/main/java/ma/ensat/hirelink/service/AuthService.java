@@ -345,7 +345,7 @@ public class AuthService {
         SessionService.Issued issued = sessionService.create(user, ci);
         audit.log("LOGIN_SUCCESS", user, "USER", user.getId(), true, "Méthode : " + method + " · " + issued.session().getDeviceLabel());
         if (newDevice) {
-            notifications.push(user.getId(), "Nouvelle connexion",
+            notifications.push("security", user.getId(), "Nouvelle connexion",
                     "Connexion depuis un nouvel appareil : " + issued.session().getDeviceLabel() + ". Si ce n'était pas vous, révoquez la session dans Sécurité.", "SYSTEM");
             mail.send(user.getEmail(), "HireLink — nouvelle connexion",
                     "Une connexion vient d'avoir lieu depuis un nouvel appareil (" + issued.session().getDeviceLabel()

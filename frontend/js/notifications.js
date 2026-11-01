@@ -56,7 +56,11 @@
       }
       const base = rows.filter((n) => (kindFilter === "all" || n.kind === kindFilter) && matchesWhen(n));
       em.textContent = b.dataset.v === "unread" ? base.filter((n) => !n.read).length : base.length;
+      b.setAttribute("aria-pressed", b.dataset.v === view ? "true" : "false");
     });
+    const unreadAll = rows.filter((n) => !n.read).length;
+    $("btn-readall").disabled = unreadAll === 0;
+    $("btn-readall").title = unreadAll === 0 ? "Aucune notification non lue" : "";
     let list = rows.filter((n) => {
       if (view === "unread" && n.read) return false;
       if (kindFilter !== "all" && n.kind !== kindFilter) return false;
@@ -125,7 +129,7 @@
     if (!e.target.closest("button")) {
       const n = rows.find((x) => String(x.id) === id);
       await RC.notifications.markRead(id);
-      location.href = RC.notifications.target(n);
+      if (n) RC.notifications.open(n);
       return;
     }
     if (e.target.closest("[data-del]")) {

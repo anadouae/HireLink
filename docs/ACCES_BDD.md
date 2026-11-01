@@ -38,7 +38,7 @@ Puis relancer le backend Spring Boot — le `DataSeeder` recrée comptes, offres
 | Email | Mot de passe | Rôle |
 |-------|--------------|------|
 | `admin@hirelink.ma` | `Admin123!` | ADMINISTRATEUR |
-| `recruteur@hirelink.ma` | `Recruteur123!` | RECRUTEUR |
+| `recruteur@hirelink.ma` | `Recruteur123!` | RECRUTEUR (Salma Berrada, Atlas Digital) |
 | `cabinet@atlasdigital.ma` | `Recruteur123!` | RECRUTEUR |
 | `candidat@hirelink.ma` | `Candidat123!` | CANDIDAT (Sara) |
 | `youssef.data@hirelink.ma` | `Candidat123!` | CANDIDAT |

@@ -53,6 +53,10 @@ public class Application {
     @Column(name = "cv_sections", columnDefinition = "TEXT")
     private String cvSections;
 
+    /** Réponses du candidat au moment de postuler (disponibilité, préavis, prétentions, mobilité…), en JSON. */
+    @Column(name = "application_details", columnDefinition = "TEXT")
+    private String applicationDetails;
+
     @Column(name = "cover_letter", columnDefinition = "TEXT")
     private String coverLetter;
 
@@ -175,6 +179,9 @@ public class Application {
 
     public String getCvStorageName() { return cvStorageName; }
     public void setCvStorageName(String cvStorageName) { this.cvStorageName = cvStorageName; }
+
+    public String getApplicationDetails() { return applicationDetails; }
+    public void setApplicationDetails(String applicationDetails) { this.applicationDetails = applicationDetails; }
 
     public String getCvSections() { return cvSections; }
     public void setCvSections(String cvSections) { this.cvSections = cvSections; }

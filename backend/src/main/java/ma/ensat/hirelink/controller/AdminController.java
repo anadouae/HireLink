@@ -109,6 +109,10 @@ public class AdminController {
     @GetMapping("/users")
     public List<Map<String, Object>> users(@AuthenticationPrincipal User user) {
         requireAdmin(user);
+        Map<Long, ma.ensat.hirelink.model.Membership> memberOf = new java.util.HashMap<>();
+        for (ma.ensat.hirelink.model.Membership m : membershipRepository.findAllActiveWithOrganization()) {
+            memberOf.merge(m.getUser().getId(), m, (a, b) -> a.getOrgRole().ordinal() <= b.getOrgRole().ordinal() ? a : b);
+        }
         List<Map<String, Object>> rows = new ArrayList<>();
         for (User u : userRepository.findAll()) {
             Map<String, Object> row = new LinkedHashMap<>();
@@ -119,6 +123,10 @@ public class AdminController {
             row.put("active", u.isActive());
             row.put("mustSetPassword", u.isMustSetPassword());
             row.put("emailVerified", u.isEmailVerified());
+            ma.ensat.hirelink.model.Membership m = memberOf.get(u.getId());
+            row.put("orgRole", m == null ? null : m.getOrgRole().name());
+            row.put("orgId", m == null ? null : m.getOrganization().getId());
+            row.put("orgName", m == null ? null : m.getOrganization().getName());
             rows.add(row);
         }
         return rows;

@@ -23,6 +23,9 @@ public class InAppNotification {
     private String kind = "INFO";
     @Column(nullable = false)
     private boolean readFlag = false;
+    /** Cible de la notification (« application:12 », « interview:12 », « offer:5 », « team », « security »), facultative. */
+    @Column(length = 120)
+    private String link;
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -37,6 +40,8 @@ public class InAppNotification {
     public void setKind(String kind) { this.kind = kind; }
     public boolean isReadFlag() { return readFlag; }
     public void setReadFlag(boolean readFlag) { this.readFlag = readFlag; }
+    public String getLink() { return link; }
+    public void setLink(String link) { this.link = link; }
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 }

@@ -20,9 +20,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final AuthThrottle throttle;
     private final int perMinute;
 
-    public RateLimitFilter(AuthThrottle throttle, @Value("${hirelink.ratelimit.per-ip-per-minute:600}") int perMinute) {
+    private final java.util.Set<String> allowedOrigins;
+
+    public RateLimitFilter(AuthThrottle throttle,
+                           @Value("${hirelink.ratelimit.per-ip-per-minute:600}") int perMinute,
+                           @Value("${hirelink.cors.allowed-origins:}") String origins) {
         this.throttle = throttle;
         this.perMinute = perMinute;
+        this.allowedOrigins = new java.util.HashSet<>();
+        for (String o : origins.split(",")) if (!o.isBlank()) allowedOrigins.add(o.trim());
     }
 
     @Override
@@ -37,6 +43,13 @@ public class RateLimitFilter extends OncePerRequestFilter {
             throttle.hit("global:" + request.getRemoteAddr(), perMinute, 60, "Trop de requêtes. Réessayez dans un instant.");
         } catch (TooManyRequestsException e) {
             response.setStatus(429);
+            // Sans en-tête CORS, le navigateur masquerait le 429 derrière une erreur CORS illisible.
+            String origin = request.getHeader("Origin");
+            if (origin != null && allowedOrigins.contains(origin)) {
+                response.setHeader("Access-Control-Allow-Origin", origin);
+                response.setHeader("Access-Control-Allow-Credentials", "true");
+                response.setHeader("Vary", "Origin");
+            }
             response.setHeader("Retry-After", String.valueOf(e.getRetryAfterSeconds()));
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"status\":429,\"message\":\"" + e.getMessage() + "\"}");

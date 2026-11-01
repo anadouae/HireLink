@@ -22,6 +22,9 @@ public class OrganizationService {
     private final BillingCatalogService billingCatalogService;
     private final NotificationService notificationService;
 
+    @org.springframework.beans.factory.annotation.Value("${hirelink.frontend.base-url:http://localhost:5500}")
+    private String frontendBase = "http://localhost:5500";
+
     public OrganizationService(OrganizationRepository organizationRepository,
                                MembershipRepository membershipRepository,
                                UserRepository userRepository,
@@ -207,6 +210,12 @@ public class OrganizationService {
 
     @Transactional
     public Membership invite(User owner, String email, OrgRole role) {
+        return invite(owner, email, role, true);
+    }
+
+    /** Ajoute un compte recruteur existant à l'organisation ; il est prévenu dans l'application et (si {@code mail}) par e-mail. */
+    @Transactional
+    public Membership invite(User owner, String email, OrgRole role, boolean mail) {
         Membership om = requireMembership(owner);
         if (om.getOrgRole() != OrgRole.OWNER) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul l'Owner invite (R13)");
@@ -234,8 +243,23 @@ public class OrganizationService {
                 .filter(Membership::isActive).isPresent();
         Membership m = joinOrganization(u, org, role);
         if (!already) {
-            notificationService.push(u.getId(), "Vous avez rejoint « " + org.getName() + " »",
-                    "Rôle : " + (role == OrgRole.HIRING_MANAGER ? "Hiring Manager" : "Recruteur") + ". Retrouvez l'équipe dans votre espace.", "SYSTEM");
+            String roleFr = role == OrgRole.HIRING_MANAGER ? "Hiring Manager" : "Recruteur";
+            String title = "Vous avez rejoint « " + org.getName() + " »";
+            String body = "Rôle : " + roleFr + ". Retrouvez l'équipe dans votre espace.";
+            if (mail) {
+                String rights = role == OrgRole.HIRING_MANAGER
+                        ? "En tant que Hiring Manager, vous voyez uniquement les dossiers qui vous sont assignés depuis le pipeline."
+                        : "En tant que Recruteur, vous accédez aux offres, au pipeline, aux entretiens et à l'agenda de l'entreprise.";
+                notificationService.pushAndMail("team", u.getId(), title, body, "SYSTEM", MailService.Kind.ACCOUNT,
+                        "vous avez rejoint " + org.getName(),
+                        EmailTemplates.Email.of("Bienvenue dans l'équipe " + org.getName(),
+                                        owner.getFullName() + " vous a ajouté(e) à l'espace recruteur de « " + org.getName() + " » (rôle : " + roleFr + ").",
+                                        rights + " Connectez-vous avec votre adresse e-mail et votre mot de passe habituels.")
+                                .withButton("Ouvrir l'espace équipe", frontendBase.replaceAll("/$", "") + "/app/recruiter-team.html"),
+                        null);
+            } else {
+                notificationService.push("team", u.getId(), title, body, "SYSTEM");
+            }
         }
         return m;
     }

@@ -223,6 +223,14 @@
       if (open && kind !== "text") open.href = url;
   }
 
+  /** Sans CV déposé, le serveur refuse la confirmation : le bouton reste désactivé avec une explication. */
+  function setConfirmCv(enabled) {
+    const b = document.getElementById("btn-confirm-cv");
+    if (!b) return;
+    b.disabled = !enabled;
+    b.title = enabled ? "" : "Déposez d’abord un CV (PDF ou image) pour confirmer ses sections.";
+  }
+
   function showCvEmpty() {
     const empty = document.getElementById("cv-empty");
     const bench = document.getElementById("cv-workbench");
@@ -237,6 +245,7 @@
     try {
       sections = profile.cvSections ? JSON.parse(profile.cvSections) : null;
     } catch (_) {}
+    setConfirmCv(!!profile.cvFileName);
     if (!profile.cvFileName) {
       if (label) label.textContent = "";
       showCvEmpty();
@@ -354,6 +363,7 @@
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     pendingFile = file;
+    setConfirmCv(true);
     document.getElementById("cv-file-label").textContent = file.name + " · lecture en cours";
     const fd = new FormData();
     fd.append("file", file);
@@ -613,7 +623,7 @@
       });
       pushCoach("Synthèse", data.content || "Pas de synthèse.");
     } catch (err) {
-      HireLink.toast("Synthèse", err.message, "danger");
+      HireLink.toast(err.status === 402 ? "Crédits épuisés" : "Synthèse", err.message, err.status === 402 ? "warn" : "danger");
     } finally {
       if (send) send.disabled = false;
     }

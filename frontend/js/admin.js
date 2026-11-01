@@ -9,6 +9,14 @@
   const STATUS_FR = App.STATUS_FR;
   const PAY_FR = { EMISE: "Émise", REGLEE: "Réglée", OFFERTE: "Incluse" };
   const ROLE_FR = { CANDIDAT: "Candidat", RECRUTEUR: "Recruteur", ADMINISTRATEUR: "Administrateur" };
+  const ORG_ROLE_FR = { OWNER: "Owner", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Hiring Manager" };
+  const ORG_ROLE_TONE = { OWNER: "rc-pill--rose", RECRUTEUR: "", HIRING_MANAGER: "rc-pill--info" };
+  /** Filtre de rôle : rôle plateforme (CANDIDAT, RECRUTEUR, ADMINISTRATEUR) ou rôle dans l'organisation (OWNER, HIRING_MANAGER). */
+  function userMatches(u, f) {
+    if (f === "all") return true;
+    if (f === "OWNER" || f === "HIRING_MANAGER") return u.orgRole === f;
+    return u.role === f;
+  }
 
   const state = { orgs: [], plans: [], invoices: [], users: [], stats: {}, charts: {}, orgFilter: "all", userFilter: "all", reasons: null };
   const loaded = {};
@@ -20,7 +28,15 @@
 
   /* ------------------------------------------------------------- navigation */
   function show(view) {
+    // Lien contextuel : #orgs/pending, #users/CANDIDAT… ouvre l'onglet déjà filtré.
+    const sub = String(view || "").split("/")[1];
+    view = String(view || "").split("/")[0];
     if (VIEWS.indexOf(view) < 0) view = "dash";
+    if (sub) setTimeout(() => {
+      const bar = $(view === "orgs" ? "org-filter" : view === "users" ? "user-filter" : "");
+      const chip = bar && bar.querySelector('[data-f="' + sub + '"]');
+      if (chip) chip.click();
+    }, 0);
     VIEWS.forEach((id) => { $("view-" + id).hidden = id !== view; });
     App.setActive(view);
     if (view === "refusals") loadRefusals();
@@ -43,28 +59,42 @@
   /* -------------------------------------------------------------- dashboard */
   function paintDash() {
     const { stats, orgs } = state;
+    const ico = (n) => (window.HLIcons ? HLIcons.svg(n) : "");
     const pending = orgs.filter((o) => !o.verified);
-    const kpi = (label, value, hint, tone) =>
-      '<div class="rc-kpi rc-fade' + (tone ? " rc-kpi--" + tone : "") + '"><small>' + esc(label) + "</small><strong>" + esc(value) + "</strong><span>" + esc(hint || "") + "</span></div>";
+    const recent = orgs.filter((o) => o.createdAt && Date.now() - new Date(o.createdAt) < 7 * 864e5);
+    const inactive = state.users.filter((u) => u.active === false);
+    const unset = state.users.filter((u) => u.mustSetPassword);
+    const tile = (o) => '<a class="db-action' + (!o.count ? " is-zero" : "") + (o.tone ? " is-" + o.tone : "") + '" href="' + o.href + '"><span class="db-action-ico" aria-hidden="true">' + ico(o.icon) +
+      '</span><span class="db-action-txt"><b>' + (o.count || "—") + "</b><strong>" + esc(o.title) + "</strong><small>" + esc(o.count ? o.sub : o.calm) + '</small></span><span class="db-go" aria-hidden="true">' + ico("right") + "</span></a>";
+    $("db-actions").innerHTML = [
+      { icon: "shield", title: "Entreprises à vérifier", count: pending.length, tone: "warn", sub: pending[0] ? pending[0].name + (pending.length > 1 ? " et " + (pending.length - 1) + " autre(s)" : "") : "", calm: "Tout est vérifié", href: "#orgs/pending" },
+      { icon: "building", title: "Nouvelles entreprises", count: recent.length, tone: "info", sub: "Inscrites ces 7 derniers jours", calm: "Aucune cette semaine", href: "#orgs/all" },
+      { icon: "user", title: "Invitations en attente", count: unset.length, sub: "Mot de passe pas encore défini", calm: "Aucune invitation en attente", href: "#users/all" },
+      { icon: "ban", title: "Comptes désactivés", count: inactive.length, tone: "danger", sub: "À examiner si besoin", calm: "Aucun compte désactivé", href: "#users/all" },
+    ].map(tile).join("");
+    const kpi = (label, value, hint, href) => '<a class="db-kpi" href="' + href + '"><small>' + esc(label) + "</small><b>" + esc(String(value == null ? "—" : value)) + "</b><span>" + esc(hint || "") + "</span></a>";
     $("stats").innerHTML =
-      kpi("Comptes", stats.users, stats.candidates + " candidats · " + stats.recruiters + " recruteurs") +
-      kpi("Entreprises", orgs.length, orgs.filter((o) => o.planTier === "PREMIUM").length + " en Premium", "info") +
-      kpi("À vérifier", pending.length, pending.length ? "Action requise" : "Tout est à jour", pending.length ? "warn" : "ok") +
-      kpi("Offres", stats.offers, stats.publishedOffers + " publiées") +
-      kpi("Candidatures", stats.applications, "toutes offres confondues", "ok");
+      kpi("Comptes", stats.users, (stats.candidates || 0) + " candidats · " + (stats.recruiters || 0) + " recruteurs", "#users/all") +
+      kpi("Entreprises", orgs.length, orgs.filter((o) => o.planTier === "PREMIUM").length + " en Premium", "#orgs/all") +
+      kpi("Offres publiées", stats.publishedOffers, (stats.offers || 0) + " au total", "#orgs/all") +
+      kpi("Candidatures", stats.applications, "Toutes offres confondues", "#dash");
 
     const byStatus = state.charts.applicationsByStatus || {};
-    bars($("chart-apps"), Object.keys(byStatus).filter((k) => byStatus[k] > 0).map((k) => ({ label: STATUS_FR[k] || k, value: byStatus[k] })));
-    const byPlan = {};
-    orgs.forEach((o) => { byPlan[o.planTier] = (byPlan[o.planTier] || 0) + 1; });
-    bars($("chart-plans"), Object.keys(byPlan).map((code) => ({ label: planLabel(code), value: byPlan[code] })));
+    const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"];
+    const max = Math.max(1, ...keys.map((k) => byStatus[k] || 0));
+    $("chart-apps").innerHTML = keys.map((k, i) => {
+      const v = byStatus[k] || 0, sumFrom = (j) => keys.slice(j).reduce((a, x) => a + (byStatus[x] || 0), 0), reached = sumFrom(i), prev = i ? sumFrom(i - 1) : 0;
+      return '<div class="db-stage"><small>' + esc(STATUS_FR[k] || k) + "</small><b>" + v + '</b><span class="db-stage-bar"><i style="--w:' + Math.max(4, Math.round((v / max) * 100)) + '%"></i></span><em>' +
+        (i && prev ? Math.round((reached / prev) * 100) + " % ont atteint cette étape" : "&nbsp;") + "</em></div>";
+    }).join("");
 
     const box = $("dash-pending");
+    box.closest("section").hidden = !pending.length;
     if (!pending.length) {
-      App.empty(box, { title: "Aucune entreprise en attente", text: "Les entreprises dont l’ICE et l’e-mail professionnel concordent sont vérifiées automatiquement." });
+      box.innerHTML = '<div class="db-empty">' + ico("check") + "<strong>Aucune entreprise en attente</strong><span>Les entreprises dont l’ICE et l’e-mail professionnel concordent sont vérifiées automatiquement.</span></div>";
       return;
     }
-    box.innerHTML = '<div class="rc-list">' + pending.map((o) =>
+    box.innerHTML = '<div class="rc-list">' + pending.slice(0, 5).map((o) =>
       '<div class="rc-item"><div class="rc-item-main"><strong>' + esc(o.name) + '</strong><span class="rc-muted">ICE ' + esc(o.ice || "non renseigné") + " · " + esc(o.ownerEmail || "—") +
       '</span></div><button type="button" class="btn btn-soft btn-sm" data-open="' + o.id + '">Examiner</button></div>').join("") + "</div>";
   }
@@ -149,18 +179,21 @@
   /* ----------------------------------------------------------------- comptes */
   function paintUsers() {
     const q = ($("user-search").value || "").trim();
-    const rows = HireLinkSearch.rank(state.users.filter((u) => state.userFilter === "all" || u.role === state.userFilter), q,
-      [{ get: (u) => u.fullName, weight: 3 }, { get: (u) => u.email, weight: 2 }]);
+    const org = ($("user-org").value || "");
+    const rows = HireLinkSearch.rank(state.users.filter((u) => userMatches(u, state.userFilter) && (!org || String(u.orgId) === org)), q,
+      [{ get: (u) => u.fullName, weight: 3 }, { get: (u) => u.email, weight: 2 }, { get: (u) => u.orgName, weight: 1 }]);
     const body = $("users-body");
     if (!rows.length) {
-      body.innerHTML = '<tr><td colspan="4"></td></tr>';
-      HireLinkSearch.emptyState(body.firstChild.firstChild, q, { emptyTitle: "Aucun compte ne correspond", onClear: () => { $("user-search").value = ""; paintUsers(); } });
+      body.innerHTML = '<tr><td colspan="5"></td></tr>';
+      HireLinkSearch.emptyState(body.firstChild.firstChild, q, { emptyTitle: "Aucun compte ne correspond", onClear: () => { $("user-search").value = ""; $("user-org").value = ""; paintUsers(); } });
       return;
     }
     body.innerHTML = rows.map((u) => {
       const self = u.id === session.userId;
       return '<tr><td><div class="rc-logo-row"><span class="rc-orgmark">' + esc(App.initials(u.fullName)) + '</span><div class="rc-cell-main"><strong>' + esc(u.fullName) + (self ? " (vous)" : "") +
-        '</strong><span class="rc-cell-sub">' + esc(u.email) + "</span></div></div></td><td>" + esc(ROLE_FR[u.role] || u.role) + "</td>" +
+        '</strong><span class="rc-cell-sub">' + esc(u.email) + "</span></div></div></td><td>" + esc(ROLE_FR[u.role] || u.role) +
+        (u.orgRole ? ' <span class="rc-pill ' + (ORG_ROLE_TONE[u.orgRole] || "") + '">' + esc(ORG_ROLE_FR[u.orgRole] || u.orgRole) + "</span>" : "") + "</td>" +
+        "<td>" + (u.orgName ? esc(u.orgName) : '<span class="rc-cell-sub">—</span>') + "</td>" +
         '<td><span class="rc-pill ' + (u.active ? "rc-pill--ok" : "rc-pill--danger") + '">' + (u.active ? "Actif" : "Désactivé") + "</span></td>" +
         '<td><div class="rc-row-actions">' + (self ? "" : '<button type="button" class="btn btn-ghost btn-sm" data-user="' + u.id + '">' + (u.active ? "Désactiver" : "Réactiver") + "</button>") + "</div></td></tr>";
     }).join("");
@@ -182,6 +215,15 @@
     } catch (err) { fail("Compte", err); }
   });
   $("user-search").addEventListener("input", App.debounce(paintUsers, 120));
+  $("user-org").addEventListener("change", paintUsers);
+  /** Liste des organisations présentes parmi les comptes (filtre). */
+  function paintUserOrgs() {
+    const sel = $("user-org"), keep = sel.value, seen = new Map();
+    state.users.forEach((u) => { if (u.orgId && !seen.has(u.orgId)) seen.set(u.orgId, u.orgName); });
+    sel.innerHTML = '<option value="">Toutes les organisations</option>' + [...seen].sort((a, b) => String(a[1]).localeCompare(String(b[1]), "fr"))
+      .map(([id, n]) => '<option value="' + id + '">' + esc(n) + "</option>").join("");
+    sel.value = keep && seen.has(Number(keep)) ? keep : "";
+  }
   $("user-filter").addEventListener("click", (e) => {
     const b = e.target.closest("[data-f]");
     if (!b) return;
@@ -373,7 +415,7 @@
     orgs: ["/admin/organizations", (d) => { state.orgs = d || []; }],
     plans: ["/admin/plans", (d) => { state.plans = d || []; }],
     invoices: ["/admin/invoices", (d) => { state.invoices = d || []; }],
-    users: ["/admin/users", (d) => { state.users = d || []; }],
+    users: ["/admin/users", (d) => { state.users = d || []; paintUserOrgs(); }],
   };
   function paintAll() { paintDash(); paintOrgs(); paintUsers(); paintPlans(); paintInvoices(); }
   async function refresh(...names) {

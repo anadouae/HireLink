@@ -7,14 +7,14 @@ import java.time.Instant;
 import java.util.Optional;
 
 /**
- * Verification 2 — existence / identite d'entreprise pour un ICE.
+ * Verification 2 â€” existence / identite d'entreprise pour un ICE.
  * <p>
  * Etat des sources officielles (nov. 2026) :
  * <ul>
- *   <li>{@code ice.gov.ma} — recuperation / declaration ICE, pas d'API publique de recherche</li>
- *   <li>{@code directinfo.ma} (OMPIC) — services payants / abonnement, pas d'API REST gratuite documentee</li>
- *   <li>{@code ompic.ma} — documentation ICE, pas d'API ouverte</li>
- *   <li>SIMPL Recherche entreprise (DGI) — interface web publique, pas d'API documentee pour usage commercial</li>
+ *   <li>{@code ice.gov.ma} â€” recuperation / declaration ICE, pas d'API publique de recherche</li>
+ *   <li>{@code directinfo.ma} (OMPIC) â€” services payants / abonnement, pas d'API REST gratuite documentee</li>
+ *   <li>{@code ompic.ma} â€” documentation ICE, pas d'API ouverte</li>
+ *   <li>SIMPL Recherche entreprise (DGI) â€” interface web publique, pas d'API documentee pour usage commercial</li>
  * </ul>
  * Donc : registre interne HireLink (seed) + file manuelle. Un fournisseur HTTP optionnel peut etre branche
  * via {@code hirelink.ice.registry-url} + {@code hirelink.ice.registry-api-key} sans exposer la cle au front.
@@ -52,7 +52,7 @@ public class IceIdentityLookup {
         if (normalizedIce == null || normalizedIce.length() != 15) {
             return Optional.empty();
         }
-        // Fournisseur externe optionnel (contrat commercial) — non active sans config.
+        // Fournisseur externe optionnel (contrat commercial) â€” non active sans config.
         // Intentionnel : pas d'appel HTTP tant que URL + cle ne sont pas fournies.
         if (externalProviderConfigured()) {
             // Placeholder reserve : brancher le client HTTP officiel ici uniquement

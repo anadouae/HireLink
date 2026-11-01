@@ -12,7 +12,7 @@
     if (!c) return;
     const used = c.used != null ? c.used : c.limit - c.remaining;
     $("ai-credits").textContent = c.remaining + " / " + c.limit;
-    $("ai-plan").textContent = "Palier " + (c.plan || "ACCES") + " · crédits partagés par l’organisation";
+    $("ai-plan").textContent = "Formule " + (c.plan === "PREMIUM" ? "Premium" : "Accès") + " · crédits partagés par l’organisation";
     $("ai-meter").style.width = Math.max(0, Math.min(100, Math.round((c.remaining / Math.max(1, c.limit)) * 100))) + "%";
     void used;
   }

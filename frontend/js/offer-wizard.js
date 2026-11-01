@@ -74,6 +74,7 @@
       weeklyHours: o && o.contractType === "Temps partiel" && hours ? hours[1] : "",
       benefits: (o && o.benefits ? o.benefits.split(",").map((b) => b.trim()) : []),
       requiredSkills: (o && o.requiredSkills) || "",
+      niceToHaveSkills: (o && o.niceToHaveSkills) || "",
       experienceLevel: (o && o.experienceLevel) || "",
       educationLevel: (o && o.educationLevel) || "",
       positions: o && o.positions ? String(o.positions) : "1",
@@ -157,6 +158,7 @@
       educationLevel: s.educationLevel || null,
       positions: num(s.positions),
       benefits: s.benefits.join(", ") || null,
+      niceToHaveSkills: (s.niceToHaveSkills || "").trim() || null,
     };
   }
 
@@ -397,14 +399,24 @@
         h("p", { class: "ow-error", role: "alert" }),
       ]);
       skills.querySelector("label").append(h("span", { class: "ow-req", "aria-hidden": "true", text: " *" }));
+      const nicePicker = h("div", { id: "ow-niceToHaveSkills" });
+      const nice = h("div", { class: "ow-field is-wide", "data-field": "niceToHaveSkills" }, [
+        h("label", { for: "ow-niceToHaveSkills", text: "Compétences appréciées (facultatif)" }),
+        nicePicker,
+        h("p", { class: "ow-hint", text: "Un plus, pas un prérequis : elles pèsent moins que les compétences demandées dans le score de compatibilité." }),
+      ]);
       queueMicrotask(() => {
         ui.skills = global.HireLinkSkills.mount(picker, {
           value: state.requiredSkills,
           onChange: (csv) => { state.requiredSkills = csv; ui.touched.add("requiredSkills"); refreshErrors(); },
         });
+        global.HireLinkSkills.mount(nicePicker, {
+          value: state.niceToHaveSkills,
+          onChange: (csv) => { state.niceToHaveSkills = csv; },
+        });
       });
       return [
-        h("section", { class: "ow-section" }, [h("h3", { text: "Compétences" }), h("div", { class: "ow-grid" }, [skills])]),
+        h("section", { class: "ow-section" }, [h("h3", { text: "Compétences" }), h("div", { class: "ow-grid" }, [skills, nice])]),
         section("Profil", null, [
           field("experienceLevel", "Niveau d’expérience", exp),
           field("educationLevel", "Niveau d’études", edu),

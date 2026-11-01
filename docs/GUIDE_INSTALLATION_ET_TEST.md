@@ -126,7 +126,7 @@ Le fichier est lu à ces trois emplacements (le premier trouvé gagne) : `applic
 | n.bennani@atlasdigital.ma | Recruteur123! | Recruteur, **Owner** d’Atlas Digital |
 | k.benali@atlasdigital.ma | Recruteur123! | Recruteur (Atlas Digital) |
 | m.alaoui@atlasdigital.ma | Recruteur123! | **Hiring Manager** (Atlas Digital) |
-| recruteur@hirelink.ma | Recruteur123! | Alias Owner d’Atlas Digital |
+| recruteur@hirelink.ma | Recruteur123! | Recruteur (Salma Berrada, Atlas Digital) |
 | candidat@hirelink.ma | Candidat123! | Candidat (Sara El Amrani, alias) |
 | y.idrissi@outlook.com | Candidat123! | Candidat (utilisé pour la sécurité) |
 | i.chraibi@gmail.com | Candidat123! | Candidat (utilisé pour le verrouillage) |
@@ -836,3 +836,26 @@ Cette version regroupe trois chantiers en un seul projet : la recherche et les o
 - « Premier emploi » est enregistré, relu et affiché de la même façon dans le profil, les paramètres et les données de démonstration.
 - Nouvelle étape *Embauché* avec e-mails, notifications et célébration.
 - Une série de notifications rapprochées ne fige plus la page (limite de trois notifications visibles).
+
+## 19. Version premium : scénarios de test
+
+Après remplacement des fichiers : `Ctrl+C` dans le terminal du backend, puis `mvn spring-boot:run`, puis `Ctrl+F5` dans le navigateur. La nouvelle colonne `application_details` est créée automatiquement au démarrage (aucune action dans phpMyAdmin).
+
+| # | Où | Action | Résultat attendu |
+|---|----|--------|------------------|
+| 1 | Toute page connectée (ordinateur) | Cliquer l’icône en haut du menu à gauche | Le menu se replie (icônes seules, infobulle au survol), le contenu s’élargit ; le choix reste après rechargement. Sur téléphone, le menu reste un tiroir. |
+| 2 | Recruteur › Tableau de bord | Lire « À faire aujourd’hui » puis cliquer une tuile | On arrive sur l’écran déjà filtré (pipeline, agenda du jour, offres qui expirent). |
+| 3 | Recruteur › Tableau de bord | Cliquer une étape de l’entonnoir | Le pipeline s’ouvre sur la colonne correspondante, avec le halo. |
+| 4 | Candidat › Offres › Postuler | Aller jusqu’à l’étape « Disponibilité » | Disponibilité, préavis, prétentions, mode de travail, source, mobilité ; une date est exigée si « À partir d’une date ». Le brouillon est conservé si on ferme. |
+| 5 | Recruteur › Pipeline › Dossier | Ouvrir le dossier de cette candidature | Bloc « Disponibilité et attentes ». « Aperçu » du CV s’ouvre au-dessus du dossier, et la fermeture revient au dossier. |
+| 6 | Recruteur › Pipeline › Avancer | Avancer un dossier | Aucune évaluation obligatoire : la note interne et le retour d’entretien sont facultatifs. |
+| 7 | Recruteur › Entretiens | Changer « Regrouper par » et le mode | Groupes Aujourd’hui / Demain / date, couleurs par nature, aucun chevauchement. Pas de type « Téléphone ». |
+| 8 | Recruteur › Agenda | Vue Jour, ouvrir un entretien | Liens « Voir dans le pipeline » et « Voir le dossier » ; pas d’export .ics ni « Écrire au candidat ». |
+| 9 | Candidat › Offres | Cliquer le logo ou le nom d’une entreprise | Page de l’entreprise dans l’espace candidat : présentation, offres ouvertes (Voir / Postuler), bouton « Suivre ». |
+| 10 | Recruteur › Entreprise & équipe | Ouvrir la page | Siège animé aux couleurs du logo, logo sur la façade, secteur, ville avec drapeau, compteurs. |
+| 11 | Entreprise & équipe › Paramètres | Modifier secteur, ville, présentation ou couleur, puis revenir à « Présentation » | L’aperçu de la fiche publique et le siège suivent les modifications avant même l’enregistrement. |
+| 12 | Entreprise & équipe › Membres | « Ajouter un membre » | Panneau latéral fluide ; le membre ajouté apparaît dans l’organigramme avec une animation d’arrivée. |
+| 13 | Entreprise & équipe › Paramètres | Choisir un logo | Fenêtre de recadrage avant l’envoi ; le logo tient dans son cadre. |
+| 14 | Candidat › Tableau de bord | Lire la page | « L’essentiel », suivi des candidatures par étapes, prochaines étapes, profil à compléter. |
+| 15 | Administration › Tableau de bord | Cliquer « Entreprises à vérifier » | La liste des entreprises s’ouvre filtrée sur « À vérifier ». |
+| 16 | Toutes ces pages | Thème sombre et largeur téléphone | Lisible, sans chevauchement ; animations réduites si le système le demande. |

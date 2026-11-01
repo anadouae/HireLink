@@ -75,8 +75,10 @@
     file: '<path d="M7 3.5h7.2L19.5 9v11.5A1.5 1.5 0 0 1 18 22H7a1.5 1.5 0 0 1-1.5-1.5v-17A1.5 1.5 0 0 1 7 3.5z"/><path d="M14 3.5V9h5.5M8.5 13h7M8.5 16.5h7"/>',
     card: '<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><path d="M3 10h18M7 15h3"/>',
     ban: '<circle cx="12" cy="12" r="8.5"/><path d="m6 6 12 12"/>',
+    sidebar: '<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M9.5 4.5v15M6 9h1.5M6 12h1.5"/>',
     shield: '<path d="M12 3.2 5 6v5.6c0 4.2 2.9 7.6 7 9.2 4.1-1.6 7-5 7-9.2V6z"/><path d="m9.2 12.2 2 2 3.6-4"/>',
   };
+  try { if (localStorage.getItem("hirelink.sidebar.collapsed") === "1") document.documentElement.classList.add("rc-collapsed"); } catch (_) {}
   function svg(name) {
     return '<svg viewBox="0 0 24 24" aria-hidden="true">' + (P[name] || "") + "</svg>";
   }
@@ -227,22 +229,58 @@
     var side = document.getElementById("rc-sidebar");
     if (!side) return;
     var logo = (location.pathname.indexOf("/app/") >= 0 ? "../" : "") + "assets/logo-hirelink-icon.png";
-    var html = '<a class="rc-brand" href="' + CFG.home + '"><img src="' + logo + '" alt="" width="30" height="30" /><span>Hire<b>Link</b></span></a><nav class="rc-nav" aria-label="Navigation principale">';
+    var collapsed = document.documentElement.classList.contains("rc-collapsed");
+    var html = '<div class="rc-brandrow"><a class="rc-brand" href="' + CFG.home + '"><img src="' + logo + '" alt="" width="30" height="30" /><span>Hire<b>Link</b></span></a>' +
+      '<button type="button" class="rc-collapse" id="rc-collapse" aria-expanded="' + !collapsed + '" aria-label="' + (collapsed ? "Déplier le menu" : "Replier le menu") + '" data-tip="' + (collapsed ? "Déplier le menu" : "Replier le menu") + '">' + svg("sidebar") + '</button></div><nav class="rc-nav" aria-label="Navigation principale">';
     CFG.nav.forEach(function (n) {
       if (n.section) { html += '<div class="rc-nav-label">' + n.section + "</div>"; return; }
       html += '<a class="rc-link' + (n.id === active ? " is-active" : "") + '" href="' + n.href + '" data-nav="' + n.id + '"' + (n.manage ? ' data-manage="1"' : "") +
-        (n.id === active ? ' aria-current="page"' : "") + ">" + svg(n.icon) + "<span>" + n.label + "</span>" +
+        (n.id === active ? ' aria-current="page"' : "") + ' data-tip="' + n.label + '">' + svg(n.icon) + "<span>" + n.label + "</span>" +
         (n.badge ? '<b class="rc-count" id="rc-nav-count" hidden>0</b>' : "") + "</a>";
     });
     var isRec = session.role === "RECRUTEUR";
     var cardHref = isRec ? "recruiter-team.html" : session.role === "CANDIDAT" ? "candidate-profile.html" : "admin.html#dash";
-    html += '</nav><a class="rc-orgcard" href="' + cardHref + '" id="rc-orgcard"><div class="rc-orgmark" id="rc-orgmark">·</div><div><strong id="rc-orgname">' + esc(isRec ? "Organisation" : session.fullName || CFG.label) + '</strong><span id="rc-orgrole">' + (isRec ? "&nbsp;" : esc(CFG.label)) + "</span></div></a>";
+    html += '</nav><a class="rc-orgcard" href="' + cardHref + '" id="rc-orgcard" data-tip="' + esc(isRec ? "Entreprise & équipe" : "Mon compte") + '"><div class="rc-orgmark" id="rc-orgmark">·</div><div><strong id="rc-orgname">' + esc(isRec ? "Organisation" : session.fullName || CFG.label) + '</strong><span id="rc-orgrole">' + (isRec ? "&nbsp;" : esc(CFG.label)) + "</span></div></a>";
     side.innerHTML = html;
+    bindCollapse(side);
     if (isRec) paintOrg();
     else document.getElementById("rc-orgmark").textContent = initials(session.fullName || CFG.label).charAt(0);
   }
 
+  /* Barre latérale repliable (bureau) : icônes seules + infobulles, choix mémorisé. */
+  function bindCollapse(side) {
+    var btn = document.getElementById("rc-collapse");
+    var tip = document.createElement("div");
+    tip.className = "rc-tip"; tip.setAttribute("role", "tooltip"); tip.hidden = true;
+    document.body.appendChild(tip);
+    btn.addEventListener("click", function () {
+      var on = !document.documentElement.classList.contains("rc-collapsed");
+      document.documentElement.classList.toggle("rc-collapsed", on);
+      try { localStorage.setItem("hirelink.sidebar.collapsed", on ? "1" : "0"); } catch (_) {}
+      var label = on ? "Déplier le menu" : "Replier le menu";
+      btn.setAttribute("aria-expanded", String(!on)); btn.setAttribute("aria-label", label); btn.dataset.tip = label;
+      tip.hidden = true;
+      global.dispatchEvent(new Event("resize"));
+    });
+    function show(e) {
+      var el = e.target.closest && e.target.closest("[data-tip]");
+      if (!el || !document.documentElement.classList.contains("rc-collapsed") || global.innerWidth <= 960) return;
+      var r = el.getBoundingClientRect();
+      tip.textContent = el.dataset.tip;
+      tip.style.top = Math.round(r.top + r.height / 2) + "px";
+      tip.style.left = Math.round(r.right + 10) + "px";
+      tip.hidden = false;
+    }
+    side.addEventListener("mouseover", show);
+    side.addEventListener("focusin", show);
+    side.addEventListener("mouseleave", function () { tip.hidden = true; });
+    side.addEventListener("focusout", function () { tip.hidden = true; });
+  }
+
   function paintOrg() {
+    /* Seul l'Owner peut souscrire : la couronne « Passer Premium » est masquée pour les autres rôles. */
+    var crownEl = document.querySelector(".rc-crown"), og = orgInfo || cacheGet("org");
+    if (crownEl && og && og.myRole) crownEl.hidden = og.myRole !== "OWNER" && !HireLinkAPI.isPremium();
     var name = document.getElementById("rc-orgname");
     if (!name) return;
     var o = orgInfo || cacheGet("org");
@@ -419,22 +457,128 @@
     pop.querySelectorAll(".rc-notif").forEach(function (row) {
       row.addEventListener("click", function () {
         var n = notifRows.find(function (x) { return String(x.id) === row.getAttribute("data-id"); });
-        markRead(row.getAttribute("data-id")).then(function () { if (n) location.href = notifTarget(n); });
+        markRead(row.getAttribute("data-id")).then(function () { if (n) openNotif(n); });
       });
     });
     var all = pop.querySelector("#rc-readall");
     if (all) all.addEventListener("click", markAllRead);
   }
-  /** Page où mène une notification, selon le rôle et le type d'événement. */
+  /**
+   * Page où mène une notification, selon le rôle et sa cible (« application:12 », « interview:12 », « offer:5 »,
+   * « team », « security »). Le paramètre ?focus= fait défiler jusqu'à l'élément et l'entoure d'un halo.
+   */
   function notifTarget(n) {
     var k = n && n.kind;
-    if (session.role === "CANDIDAT") return "candidate-applications.html";
+    var link = String((n && n.link) || "");
+    var type = link.split(":")[0];
+    var id = link.split(":")[1] || "";
+    var f = function (page, key) { return page + (page.indexOf("?") < 0 ? "?" : "&") + "focus=" + encodeURIComponent(key || link); };
+    if (type === "security") return f("security.html", "security");
+    if (session.role === "CANDIDAT") {
+      if ((type === "application" || type === "interview") && id) return f("candidate-applications.html?id=" + encodeURIComponent(id), "application:" + id);
+      return "candidate-applications.html";
+    }
     if (session.role === "ADMINISTRATEUR") return "admin.html";
-    if (k === "INTERVIEW") return "recruiter-interviews.html";
+    if (type === "interview" && id) return f("recruiter-agenda.html", "interview:" + id);
+    if (type === "application" && id) return f("recruiter-pipeline.html", "application:" + id);
+    if (type === "offer" && id) return isHM() ? "recruiter-pipeline.html" : f("recruiter-offers.html", "offer:" + id);
+    if (type === "team") return f("recruiter-team.html", "team");
+    if (k === "INTERVIEW") return "recruiter-agenda.html";
     if (k === "MODERATION") return "recruiter-offers.html";
     if (k === "SYSTEM") return "recruiter-team.html";
     return "recruiter-pipeline.html";
   }
+  /** Va vers la cible d'une notification : même page → halo sans rechargement ; sinon navigation. */
+  function openNotif(n) {
+    var url = notifTarget(n);
+    var u = new URL(url, location.href);
+    var key = u.searchParams.get("focus");
+    if (key && u.pathname === location.pathname) { closePops(); spotlightKey(key); return; }
+    location.href = url;
+  }
+  function closePops() { Object.keys(pops).forEach(function (k) { pops[k].classList.remove("is-open"); }); }
+
+  /* ------------------------------------------------------------ spotlight */
+  var reduceMotion = function () { return global.matchMedia && global.matchMedia("(prefers-reduced-motion: reduce)").matches; };
+  /** Halo lumineux autour d'un élément : anneau qui tourne et pulse quelques secondes, puis s'efface. */
+  function spotlight(el, ms) {
+    if (!el) return;
+    ms = ms || 4200;
+    var halo = document.createElement("div");
+    halo.className = "hl-spot" + (reduceMotion() ? " is-static" : "");
+    halo.setAttribute("aria-hidden", "true");
+    halo.innerHTML = "<i></i>";
+    document.body.appendChild(halo);
+    el.classList.add("hl-spot-target");
+    var radius = parseFloat(getComputedStyle(el).borderTopLeftRadius) || 12;
+    var alive = true;
+    function place() {
+      if (!alive) return;
+      var r = el.getBoundingClientRect();
+      var pad = 6;
+      halo.style.left = r.left - pad + "px";
+      halo.style.top = r.top - pad + "px";
+      halo.style.width = r.width + pad * 2 + "px";
+      halo.style.height = r.height + pad * 2 + "px";
+      halo.style.borderRadius = radius + pad + "px";
+      halo.style.display = r.width || r.height ? "" : "none";
+      requestAnimationFrame(place);
+    }
+    place();
+    requestAnimationFrame(function () { halo.classList.add("is-on"); });
+    setTimeout(function () {
+      halo.classList.remove("is-on");
+      halo.classList.add("is-off");
+      el.classList.remove("hl-spot-target");
+      setTimeout(function () { alive = false; halo.remove(); }, 650);
+    }, ms);
+  }
+  function findFocus(key) {
+    var all = document.querySelectorAll("[data-focus]");
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].getAttribute("data-focus").split(/\s+/).indexOf(key) >= 0 && all[i].getClientRects().length) return all[i];
+    }
+    return null;
+  }
+  /**
+   * Cherche [data-focus~="type:id"] (la page peut l'afficher plus tard : données asynchrones), le fait défiler
+   * au centre puis l'entoure du halo. Avant, un événement « hirelink:focus-request » permet à la page de se
+   * préparer (changer de vue, de date, de filtre…).
+   */
+  function spotlightKey(key) {
+    if (!key) return;
+    document.dispatchEvent(new CustomEvent("hirelink:focus-request", { detail: { key: key } }));
+    var started = Date.now();
+    var done = false;
+    var mo;
+    function attempt() {
+      if (done) return;
+      var el = findFocus(key);
+      if (el) {
+        done = true;
+        if (mo) mo.disconnect();
+        el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center", inline: "center" });
+        setTimeout(function () { spotlight(el); }, reduceMotion() ? 30 : 420);
+        document.dispatchEvent(new CustomEvent("hirelink:focused", { detail: { key: key, el: el } }));
+      } else if (Date.now() - started > 9000) {
+        done = true;
+        if (mo) mo.disconnect();
+        toast("Élément introuvable", "Il a peut-être été supprimé, ou il n’est pas dans votre périmètre.", "warn");
+      }
+    }
+    mo = new MutationObserver(function () { setTimeout(attempt, 60); });
+    mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["hidden", "data-focus", "class"] });
+    setTimeout(attempt, 80);
+    setTimeout(attempt, 9100);
+  }
+  var pendingFocus = (function () {
+    try {
+      var u = new URL(location.href);
+      var key = u.searchParams.get("focus");
+      if (key) { u.searchParams.delete("focus"); history.replaceState(history.state, "", u.pathname + u.search + u.hash); }
+      return key;
+    } catch (_) { return null; }
+  })();
   function markRead(id) {
     var n = notifRows.find(function (x) { return String(x.id) === String(id); });
     if (!n || n.read) return Promise.resolve();
@@ -526,6 +670,7 @@
     window.addEventListener("storage", function (e) { if (String(e.key || "").indexOf("hirelink.photo.") === 0) paintProfile(); });
     if (CFG.premiumKey) syncPlan();
     Mascotte.welcome(session);
+    if (pendingFocus) { var fk = pendingFocus; pendingFocus = null; setTimeout(function () { spotlightKey(fk); }, 0); }
     return session;
   }
 
@@ -536,7 +681,8 @@
     svg: svg, data: data, swr: swr, cacheGet: cacheGet, cacheSet: cacheSet, cacheClear: cacheClear,
     skeleton: skeleton, empty: empty, errorState: errorState, toast: toast, busy: busy,
     isHM: isHM, isOwner: isOwner, canManage: canManage, getOrg: function () { return orgInfo; }, getSession: function () { return session; },
-    notifications: { target: notifTarget, all: function () { return notifRows; }, markRead: markRead, markAllRead: markAllRead, refresh: pullNotifs },
+    focus: spotlightKey, spotlight: spotlight,
+    notifications: { target: notifTarget, open: openNotif, all: function () { return notifRows; }, markRead: markRead, markAllRead: markAllRead, refresh: pullNotifs },
     paintProfile: paintProfile, logout: logout,
   };
 })(window);

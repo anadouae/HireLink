@@ -8,15 +8,14 @@
  */
 (function (global) {
   const TYPES = [
-    { value: "ONSITE", label: "Sur site", hint: "Dans vos locaux" },
-    { value: "VISIO", label: "Visioconférence", hint: "Meet, Teams, Zoom…" },
-    { value: "PHONE", label: "Téléphone", hint: "Appel" },
+    { value: "ONSITE", label: "Sur site", hint: "Dans vos locaux", icon: "building", cls: "t-onsite" },
+    { value: "VISIO", label: "Visioconférence", hint: "Meet, Teams, Zoom…", icon: "video", cls: "t-visio" },
   ];
-  const KINDS = [["HR", "Entretien RH"], ["TECHNICAL", "Entretien technique"], ["MANAGER", "Avec le manager"], ["FINAL", "Entretien final"]];
+  const KINDS = [["HR", "Entretien RH"], ["TECHNICAL", "Entretien technique"], ["MANAGER", "Avec le manager"], ["CASE", "Étude de cas"], ["TEAM", "Rencontre avec l’équipe"], ["FINAL", "Entretien final"]];
   const DURATIONS = [15, 30, 45, 60, 90, 120];
   const ZONES = [["Africa/Casablanca", "Casablanca (UTC+1)"], ["Europe/Paris", "Paris"], ["Europe/London", "Londres"], ["UTC", "UTC"]];
   const TYPE_FR = { ONSITE: "Sur site", VISIO: "Visioconférence", PHONE: "Téléphone" };
-  const KIND_FR = { HR: "Entretien RH", TECHNICAL: "Entretien technique", MANAGER: "Entretien avec le manager", FINAL: "Entretien final" };
+  const KIND_FR = { HR: "Entretien RH", TECHNICAL: "Entretien technique", MANAGER: "Entretien avec le manager", CASE: "Étude de cas", TEAM: "Rencontre avec l’équipe", FINAL: "Entretien final" };
 
   function h(tag, attrs, children) {
     const e = document.createElement(tag);
@@ -52,7 +51,7 @@
     const zone = (app && app.interviewTimeZone) || "Africa/Casablanca";
     const when = app && app.interviewAt ? partsIn(app.interviewAt, zone) : { date: "", time: "10:00" };
     const s = {
-      type: (app && app.interviewType) || "VISIO",
+      type: app && app.interviewType === "ONSITE" ? "ONSITE" : "VISIO",
       kind: (app && app.interviewKind) || "HR",
       date: when.date, time: when.time, zone: zone,
       duration: String((app && app.interviewDurationMinutes) || 45),
@@ -74,7 +73,6 @@
         else if (!/^https?:\/\/\S+$/i.test(s.videoUrl.trim())) e.videoUrl = "Le lien doit commencer par https://";
       }
       if (s.type === "ONSITE" && s.mapUrl.trim() && !/^https?:\/\/\S+$/i.test(s.mapUrl.trim())) e.mapUrl = "Le lien doit commencer par https://";
-      if (s.type === "PHONE" && !/^[0-9+() .-]{6,30}$/.test(s.phone.trim())) e.phone = "Indiquez un numéro valide (ex. +212 6 12 34 56 78).";
       return e;
     }
 
@@ -118,7 +116,9 @@
         const r = h("input", { type: "radio", name: "iv-type", id: id, value: t.value });
         r.checked = s.type === t.value;
         r.addEventListener("change", () => { s.type = t.value; paint(); const n = root.querySelector("#" + id); if (n) n.focus(); });
-        return h("div", {}, [r, h("label", { for: id }, [h("strong", { text: t.label }), h("small", { text: t.hint })])]);
+        const ico = h("span", { class: "iv-type-ico " + t.cls, "aria-hidden": "true" });
+        ico.innerHTML = global.HLIcons ? HLIcons.svg(t.icon) : "";
+        return h("div", {}, [r, h("label", { for: id }, [ico, h("span", { class: "iv-type-txt" }, [h("strong", { text: t.label }), h("small", { text: t.hint })])])]);
       }));
       root.append(
         h("div", { class: "iv-field is-wide" }, [h("span", { class: "iv-label", text: "Mode de l’entretien" }), types]),
@@ -136,10 +136,8 @@
           field("location", "Adresse *", input("location", "text", { maxlength: 255, placeholder: "Bureau Casablanca, 12 rue Moulay Youssef, 3ᵉ étage" }), true),
           field("mapUrl", "Lien du plan (facultatif)", input("mapUrl", "url", { maxlength: 300, placeholder: "https://maps.google.com/…" }), true, "Google Maps, Waze… : le candidat pourra s’y rendre en un clic."),
         );
-      } else if (s.type === "VISIO") {
-        conditional.push(field("videoUrl", "Lien de la visioconférence *", input("videoUrl", "url", { maxlength: 300, placeholder: "https://meet.google.com/abc-defg-hij" }), true));
       } else {
-        conditional.push(field("phone", "Numéro à appeler *", input("phone", "tel", { maxlength: 30, placeholder: "+212 6 12 34 56 78" }), true, "Indiquez qui appelle qui : le candidat voit ce numéro."));
+        conditional.push(field("videoUrl", "Lien de la visioconférence *", input("videoUrl", "url", { maxlength: 300, placeholder: "https://meet.google.com/abc-defg-hij" }), true));
       }
       root.append(
         h("div", { class: "iv-grid" }, conditional),
@@ -172,7 +170,7 @@
         return {
           type: s.type, kind: s.kind, startsAt: s.date + "T" + s.time + ":00", timeZone: s.zone, durationMinutes: Number(s.duration),
           location: s.type === "ONSITE" ? s.location.trim() : null, mapUrl: s.type === "ONSITE" ? s.mapUrl.trim() : null,
-          videoUrl: s.type === "VISIO" ? s.videoUrl.trim() : null, phone: s.type === "PHONE" ? s.phone.trim() : null,
+          videoUrl: s.type === "VISIO" ? s.videoUrl.trim() : null, phone: null,
           participants: s.participants.trim() || null, instructions: s.instructions.trim() || null,
         };
       },
@@ -246,7 +244,7 @@
     root.append(dl);
 
     const actions = h("div", { class: "iv-actions" });
-    if (!cancelled) {
+    if (!cancelled && role === "candidate") {
       const ics = h("button", { type: "button", class: "btn btn-soft btn-sm", text: "Ajouter à mon agenda (.ics)" });
       ics.addEventListener("click", () => download(app).catch(failure));
       actions.append(ics);

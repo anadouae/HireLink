@@ -10,16 +10,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
-  <script data-role="ADMINISTRATEUR" src="../js/app-guard.js?v=20261101a"></script>
-  <script src="../js/theme.js?v=20261101a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <script data-role="ADMINISTRATEUR" src="../js/app-guard.js?v=20261101r"></script>
+  <script src="../js/theme.js?v=20261101r"></script>
 </head>
 <body class="rc" data-role="ADMINISTRATEUR" data-active="dash">
   <div class="rc-app">
@@ -29,15 +30,18 @@
       <main class="rc-content" id="rc-content">
         <section id="view-dash">
           <div class="rc-head"><div><p class="rc-eyebrow">Administration</p><h1>Tableau de bord</h1><p>Vue d’ensemble de la plateforme : comptes, entreprises, offres et candidatures.</p></div></div>
-          <div class="rc-kpis" id="stats"></div>
-          <div class="rc-grid rc-grid--2">
-            <section class="rc-card"><div class="rc-card-head"><h2>Candidatures par statut</h2></div><div class="rc-card-body"><div class="rc-bars" id="chart-apps"></div></div></section>
-            <section class="rc-card"><div class="rc-card-head"><h2>Entreprises par plan</h2></div><div class="rc-card-body"><div class="rc-bars" id="chart-plans"></div></div></section>
-          </div>
-          <section class="rc-card" style="margin-top:1rem">
-            <div class="rc-card-head"><div><h2>Entreprises à vérifier</h2><p>Les badges automatiques (ICE + e-mail professionnel) passent sans revue.</p></div></div>
+          <h2 class="db-h">À traiter</h2>
+          <div class="db-actions" id="db-actions"></div>
+          <section class="rc-card db-card" style="margin-top:1.4rem">
+            <div class="rc-card-head"><div><h2>Entreprises à vérifier</h2><p>Les badges automatiques (ICE + e-mail professionnel) passent sans revue.</p></div><a class="btn btn-ghost btn-sm" href="#orgs/pending">Tout voir</a></div>
             <div class="rc-card-body" id="dash-pending"></div>
           </section>
+          <section class="rc-card db-card">
+            <div class="rc-card-head"><div><h2>Entonnoir de la plateforme</h2><p>Candidatures par étape, toutes entreprises confondues</p></div></div>
+            <div class="rc-card-body"><div class="db-funnel" id="chart-apps"></div></div>
+          </section>
+          <h2 class="db-h">Indicateurs</h2>
+          <div class="db-kpis" id="stats"></div>
         </section>
 
         <section id="view-orgs" hidden>
@@ -56,12 +60,13 @@
         <section id="view-users" hidden>
           <div class="rc-head"><div><p class="rc-eyebrow">Comptes</p><h1>Utilisateurs</h1><p>Activez ou désactivez un compte. Un compte désactivé ne peut plus se connecter.</p></div></div>
           <div class="rc-toolbar">
-            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Admins</button></div>
+            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="OWNER">Owners</button><button type="button" class="rc-chip" data-f="HIRING_MANAGER">Hiring Managers</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Admins</button></div>
             <span class="rc-spacer"></span>
+            <select id="user-org" aria-label="Filtrer par organisation"><option value="">Toutes les organisations</option></select>
             <input id="user-search" class="rc-search-input" type="search" placeholder="Rechercher un compte…" aria-label="Rechercher un compte" />
           </div>
           <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Compte</th><th>Rôle</th><th>Statut</th><th></th></tr></thead>
+            <thead><tr><th>Compte</th><th>Rôle</th><th>Organisation</th><th>Statut</th><th></th></tr></thead>
             <tbody id="users-body"></tbody>
           </table></div></section>
         </section>
@@ -116,13 +121,14 @@
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101a"></script>
-  <script defer src="../js/ui.js?v=20261101a"></script>
-  <script defer src="../js/api.js?v=20261101a"></script>
-  <script defer src="../js/search.js?v=20261101a"></script>
-  <script defer src="../js/places.js?v=20261101a"></script>
-  <script defer src="../js/in-app-help.js?v=20261101a"></script>
-  <script defer src="../js/app-shell.js?v=20261101a"></script>
-  <script defer src="../js/admin.js?v=20261101a"></script>
+  <script defer src="../js/mascotte.js?v=20261101r"></script>
+  <script defer src="../js/premium.js?v=20261102s"></script>
+  <script defer src="../js/ui.js?v=20261101r"></script>
+  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/search.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261101r"></script>
+  <script defer src="../js/in-app-help.js?v=20261102q"></script>
+  <script defer src="../js/app-shell.js?v=20261102q"></script>
+  <script defer src="../js/admin.js?v=20261102q"></script>
 </body>
 </html>

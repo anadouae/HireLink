@@ -9,7 +9,8 @@
 
   let apps = [];
   let selectedId = null;
-  let statusFilter = "all";
+  const qst = new URLSearchParams(location.search).get("status");
+  let statusFilter = ["all", "active", "INTERVIEW", "REJECTED", "WITHDRAWN"].includes(qst) ? qst : "all";
 
   const viewDetail = document.getElementById("view-detail");
   const listRoot = document.getElementById("apps-list");
@@ -118,6 +119,7 @@
       row.type = "button";
       row.className = "cand-app-row" + (selectedId === a.id ? " is-selected" : "");
       row.dataset.id = String(a.id);
+      row.dataset.focus = "application:" + a.id + " interview:" + a.id;
       const sla = a.slaRemainingDays;
       const slaTxt =
         ["INTERVIEW", "OFFER", "HIRED", "REJECTED", "WITHDRAWN"].includes(a.status)
@@ -215,6 +217,13 @@
     setText(el("d-match-pct"), pct != null ? pct + "%" : "—");
     const bar = el("d-match-bar");
     if (bar) bar.style.width = (pct != null ? pct : 0) + "%";
+    const why = el("d-match-why");
+    if (why) {
+      why.replaceChildren();
+      const panel = window.HireLinkMatch && app.matchBreakdown ? HireLinkMatch.panel(app.matchBreakdown, { audience: "candidate", compact: true }) : null;
+      if (panel) why.appendChild(panel);
+      why.hidden = !panel;
+    }
 
     let rows = [];
     try {

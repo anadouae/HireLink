@@ -298,22 +298,6 @@
     return '<div class="hl-dossier-section"><h5>Synthèse des évaluateurs</h5><div class="hl-fact-grid">' + rows + "</div></div>";
   }
 
-  async function saveQuickScores(c, scores) {
-    try {
-      const criteria = await HireLinkAPI.api("/offers/" + c.jobOfferId + "/scorecard-criteria");
-      const map = { tech: /tech/i, soft: /soft/i, culture: /cultur/i };
-      for (const cr of criteria) {
-        const key = Object.keys(map).find((k) => map[k].test(cr.label));
-        if (key && scores[key]) {
-          await HireLinkAPI.api("/applications/" + c.id + "/scorecard", {
-            method: "POST",
-            body: { criterionId: Number(cr.id), score: Number(scores[key]), comment: null },
-          });
-        }
-      }
-    } catch (_) { /* best effort : la note texte reste enregistrée */ }
-  }
-
   async function rateScorecard(c) {
     try {
       let criteria = await HireLinkAPI.api("/offers/" + c.jobOfferId + "/scorecard-criteria");
@@ -419,46 +403,19 @@
   function showBlobPreview(title, blob, fileName) {
     const type = (blob.type || "").toLowerCase();
     const name = fileName || "fichier";
-    let url = null;
-    let body;
+    const url = URL.createObjectURL(blob);
+    const done = () => setTimeout(() => URL.revokeObjectURL(url), 1000);
     if (type.indexOf("pdf") >= 0 || /\.pdf$/i.test(name)) {
-      url = URL.createObjectURL(blob);
-      body =
-        '<iframe src="' +
-        url +
-        '" title="Aperçu" style="width:100%;height:420px;border:0;border-radius:12px;background:#fff"></iframe>';
-    } else if (type.indexOf("text") >= 0 || /\.(txt|md)$/i.test(name)) {
-      return blob.text().then((text) => {
-        HireLink.openModal({
-          title: title,
-          bodyHtml:
-            "<pre style='white-space:pre-wrap;max-height:420px;overflow:auto;margin:0;font:inherit'>" +
-            esc(String(text || "").slice(0, 12000)) +
-            "</pre>",
-          confirmLabel: "Fermer",
-          hideCancel: true,
-          large: true,
-          zIndex: 9800,
-        });
-      });
-    } else {
-      body =
-        "<p><strong>" +
-        esc(name) +
-        "</strong> (" +
-        Math.round(blob.size / 1024) +
-        " Ko)</p><p class='muted'>Aperçu intégré pour PDF et texte. Utilisez Télécharger pour ouvrir le fichier.</p>";
+      return HireLink.openPreview({ title, url, downloadName: name, bodyHtml: '<iframe src="' + url + '" title="Aperçu du document" class="hl-preview-frame"></iframe>' }).then(done);
     }
-    return HireLink.openModal({
-      title: title,
-      bodyHtml: body,
-      confirmLabel: "Fermer",
-      hideCancel: true,
-      large: true,
-      zIndex: 9800,
-    }).then(() => {
-      if (url) URL.revokeObjectURL(url);
-    });
+    if (type.indexOf("text") >= 0 || /\.(txt|md)$/i.test(name)) {
+      return blob.text().then((text) =>
+        HireLink.openPreview({ title, url, downloadName: name, bodyHtml: '<pre class="hl-preview-text">' + esc(String(text || "").slice(0, 12000)) + "</pre>" }).then(done));
+    }
+    return HireLink.openPreview({
+      title, url, downloadName: name,
+      bodyHtml: "<p><strong>" + esc(name) + "</strong> (" + Math.round(blob.size / 1024) + " Ko)</p><p class='muted'>L’aperçu intégré est disponible pour les PDF et les textes. Utilisez Télécharger pour ouvrir ce fichier.</p>",
+    }).then(done);
   }
 
   function downloadBlob(blob, fileName) {
@@ -492,17 +449,7 @@
     if (letterPrev) {
       const src = document.getElementById(letterPrev.getAttribute("data-preview-letter") || "");
       const text = (src && src.textContent) || "";
-      HireLink.openModal({
-        title: "Aperçu — Lettre de motivation",
-        bodyHtml:
-          "<pre style='white-space:pre-wrap;max-height:420px;overflow:auto;margin:0;font:inherit'>" +
-          esc(text) +
-          "</pre>",
-        confirmLabel: "Fermer",
-        hideCancel: true,
-        large: true,
-        zIndex: 9800,
-      });
+      HireLink.openPreview({ title: "Aperçu — Lettre de motivation", bodyHtml: '<pre class="hl-preview-text">' + esc(text) + "</pre>" });
       return;
     }
     const letterDl = e.target.closest("[data-download-letter]");
@@ -513,6 +460,24 @@
       downloadBlob(new Blob([text], { type: "text/plain;charset=utf-8" }), name);
     }
   });
+
+  /** Disponibilité, préavis, prétentions… saisis par le candidat dans le parcours de candidature. */
+  function detailsHtml(c) {
+    let d = null;
+    try { d = c.applicationDetails ? JSON.parse(c.applicationDetails) : null; } catch (_) { d = null; }
+    if (!d) return "";
+    let when = "—";
+    if (d.availability === "NOW") when = "Immédiatement";
+    else if (d.availableFrom) { const p = String(d.availableFrom).split("-"); when = "À partir du " + new Date(+p[0], +p[1] - 1, +p[2]).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }); }
+    return '<div class="hl-dossier-section"><h5>Disponibilité et attentes</h5><div class="hl-fact-grid">' +
+      fact("Disponible", when) +
+      fact("Préavis", d.notice || "—") +
+      fact("Prétentions", d.salary ? Number(d.salary).toLocaleString("fr-FR") + " MAD / mois" : "Non communiquées") +
+      fact("Mode de travail", d.workMode || "—") +
+      fact("Mobilité", d.relocation ? "Prêt(e) à déménager" : "Non précisée") +
+      fact("Source", d.source || "—") +
+      "</div></div>";
+  }
 
   function dossierHtml(c, opts) {
     opts = opts || {};
@@ -557,7 +522,7 @@
       (matchPct != null
         ? '<div class="hl-match-ring" style="--m:' +
           matchPct +
-          '" title="Match compétences">' +
+          '" title="Compatibilité (détail dans le dossier)">' +
           matchPct +
           "%</div>"
         : "") +
@@ -573,7 +538,9 @@
         fact("Statut", statusLabel) +
         fact("Compatibilité", matchPct != null ? matchPct + " %" : "—") +
         fact("Délai de réponse", slaTxt, slaBreached ? "is-danger" : "is-ok") +
-        "</div></div>" +
+        "</div>" +
+        (c.matchBreakdown ? '<div style="margin-top:.75rem" data-match-slot></div>' : "") +
+        "</div>" +
         '<div class="hl-dossier-section"><h5>2. Profil</h5><div class="hl-fact-grid">' +
         fact("Nom", c.candidateName || "—") +
         fact("E-mail", c.candidateEmail || "—") +
@@ -582,6 +549,7 @@
           ? "<div style='margin-top:.65rem' data-sk-slot></div>"
           : "<p class='muted'>Aucune compétence renseignée.</p>") +
         "</div>" +
+        detailsHtml(c) +
         '<div class="hl-dossier-section"><h5>3. CV</h5><article class="doc-card"><strong>' +
         esc(cvTxt) +
         "</strong><p class='muted'>" +
@@ -729,12 +697,6 @@
   }
 
   function advanceValid(needInterview, interviewForm) {
-    const note = ((document.getElementById("adv-note") || {}).value || "").trim();
-    const st = (document.getElementById("score-tech") || {}).value;
-    const ss = (document.getElementById("score-soft") || {}).value;
-    const scul = (document.getElementById("score-culture") || {}).value;
-    const scoresOk = !!(st && ss && scul);
-    if (!note && !scoresOk) return false;
     return !needInterview || interviewForm.isValid();
   }
 
@@ -745,90 +707,56 @@
       return;
     }
     const needInterview = next === "INTERVIEW";
+    const leavingInterview = c.status === "INTERVIEW";
     const interviewForm = needInterview ? HireLinkInterview.form() : null;
     const body =
       '<div class="hl-step-banner"><div><strong>' +
-      esc(RC.STATUS_FR[c.status] || c.status) +
-      " → " +
-      esc(RC.STATUS_FR[next] || next) +
-      "</strong>" +
-      esc(STEP_HINT[next] || "") +
-      "</div></div>" +
-      dossierHtml(c, { hideLetter: true, showNote: false }) +
-      (c.coverLetter && !/\.(pdf|docx?|txt)$/i.test(String(c.coverLetter).trim())
-        ? '<div class="hl-dossier-section"><h5>Lettre de motivation</h5><p class="hl-letter-box">' +
-          esc(c.coverLetter) +
-          "</p></div>"
-        : "") +
-      '<div class="hl-dossier-section"><h5>Évaluation</h5>' +
-      '<div class="field"><label>Note interne</label>' +
-      '<textarea id="adv-note" rows="2" placeholder="Points forts, risques, suite…"></textarea></div>' +
-      '<div class="hl-score-row" style="margin-top:0.65rem">' +
-      starsHtml("score-tech", "Technique") +
-      starsHtml("score-soft", "Soft skills") +
-      starsHtml("score-culture", "Culture fit") +
-      "</div>" +
-      '<p class="muted" style="margin:0.55rem 0 0;font-size:0.75rem">Renseignez la note <em>ou</em> les 3 scores pour débloquer la confirmation.</p></div>' +
-      (needInterview ? '<div class="hl-interview-block"><h5>Organisation de l’entretien</h5><div id="adv-interview"></div></div>' : "");
+      esc(RC.STATUS_FR[c.status] || c.status) + " → " + esc(RC.STATUS_FR[next] || next) +
+      "</strong>" + esc(STEP_HINT[next] || "") + "</div></div>" +
+      dossierHtml(c, { hideLetter: true, showNote: false, compact: true }) +
+      (needInterview ? '<div class="hl-interview-block"><h5>Organisation de l’entretien</h5><div id="adv-interview"></div></div>' : "") +
+      (leavingInterview
+        ? '<details class="hl-opt-block" open><summary>Retour d’entretien <small>facultatif</small></summary>' +
+          '<div class="hl-feedback-pick" role="radiogroup" aria-label="Impression générale">' +
+          [["++", "Très favorable"], ["+", "Favorable"], ["=", "Mitigé"], ["-", "Réservé"]]
+            .map((x, i) => '<label><input type="radio" name="adv-feel" value="' + esc(x[1]) + '"' + (i === 1 ? "" : "") + "/><span>" + x[1] + "</span></label>").join("") +
+          "</div>" +
+          '<textarea id="adv-note" rows="3" placeholder="Ce qui a convaincu, points à vérifier, suite proposée…"></textarea></details>'
+        : '<details class="hl-opt-block"><summary>Ajouter une note interne <small>facultatif</small></summary>' +
+          '<textarea id="adv-note" rows="2" placeholder="Visible uniquement par votre équipe"></textarea></details>');
 
     const ok = await HireLink.openDrawer({
       title: "Avancer · " + c.candidateName,
-      description: "Note ou scores, puis confirmation",
+      description: needInterview ? "Planifiez l’entretien puis confirmez" : "Confirmez le passage à l’étape suivante",
       bodyHtml: body,
-      confirmLabel: "Confirmer l’étape",
-      confirmDisabled: true,
+      confirmLabel: needInterview ? "Planifier et confirmer" : "Confirmer l’étape",
+      confirmDisabled: needInterview,
       wide: true,
       onReady: (api) => {
-        bindStars(api.root);
         if (needInterview) api.root.querySelector("#adv-interview").appendChild(interviewForm.el);
         const refresh = () => api.setConfirmEnabled(advanceValid(needInterview, interviewForm));
         api.root.addEventListener("change", refresh);
         api.root.addEventListener("input", refresh);
-        api.root.addEventListener("hl-score-change", refresh);
         refresh();
       },
     });
     if (!ok) return;
 
     if (!advanceValid(needInterview, interviewForm)) {
-      HireLink.toast("Incomplet", "Note ou scores + entretien si requis", "warn");
+      HireLink.toast("Entretien incomplet", "Complétez la date, l’heure et le lieu ou le lien.", "warn");
       return;
     }
-
-    const payload = {
-      status: next,
-      advanceNote: null,
-      confirmIdentity: true,
-      confirmCvReviewed: true,
-      confirmSlaAware: true,
-    };
-    const noteParts = [];
+    const payload = { status: next, advanceNote: null, confirmIdentity: true, confirmCvReviewed: true, confirmSlaAware: true };
+    const parts = [];
+    const feel = document.querySelector('input[name="adv-feel"]:checked');
+    if (feel) parts.push("Retour d’entretien : " + feel.value);
     const rawNote = ((document.getElementById("adv-note") || {}).value || "").trim();
-    if (rawNote) noteParts.push(rawNote);
-    const st = (document.getElementById("score-tech") || {}).value;
-    const ss = (document.getElementById("score-soft") || {}).value;
-    const scul = (document.getElementById("score-culture") || {}).value;
-    if (st || ss || scul) {
-      noteParts.push(
-        "Scorecard · tech " +
-          (st || "—") +
-          "/5 · soft " +
-          (ss || "—") +
-          "/5 · culture " +
-          (scul || "—") +
-          "/5"
-      );
-    }
-    if (noteParts.length) payload.advanceNote = noteParts.join("\n");
-
+    if (rawNote) parts.push(rawNote);
+    if (parts.length) payload.advanceNote = parts.join("\n");
     if (needInterview) payload.interview = interviewForm.values();
 
     try {
-      await HireLinkAPI.api("/applications/" + c.id + "/status", {
-        method: "PATCH",
-        body: payload,
-      });
-      if (st || ss || scul) saveQuickScores(c, { tech: st, soft: ss, culture: scul });
+      await HireLinkAPI.api("/applications/" + c.id + "/status", { method: "PATCH", body: payload });
       HireLink.toast("Étape validée", c.candidateName + " → " + (RC.STATUS_FR[next] || next), "ok");
       load(true);
     } catch (err) {
@@ -1009,6 +937,11 @@
         mountHmAssign(c);
         const skSlot = document.querySelector("[data-sk-slot]");
         if (skSlot) HireLinkSkills.renderBoxes(skSlot, c.candidateSkills);
+        const mSlot = document.querySelector("[data-match-slot]");
+        if (mSlot && window.HireLinkMatch) {
+          const p = HireLinkMatch.panel(c.matchBreakdown, { audience: "recruiter", compact: true });
+          if (p) mSlot.appendChild(p);
+        }
         const ivSlot = document.querySelector("[data-iv-slot]");
         if (ivSlot) {
           ivSlot.appendChild(HireLinkInterview.card(c, { role: "recruiter", onChange: () => { HireLink.closeModal(false); load(true); } }));
@@ -1036,6 +969,7 @@
   }
 
   function paint() {
+    if (allApps.length) { syncPipeUrl(); paintCtxChip(); }
     const root = document.getElementById("kanban");
     const filter = (document.getElementById("pipe-filter") || {}).value || "all";
     const scope = appsForScope();
@@ -1095,6 +1029,7 @@
         });
       const el = document.createElement("div");
       el.className = "rc-col rc-col--" + (col.tone || "neutral");
+      el.dataset.focus = "stage:" + col.key;
       el.innerHTML = '<div class="rc-col-head"><span></span><em></em></div><div class="rc-col-body"></div>';
       el.querySelector(".rc-col-head span").textContent = col.label;
       el.querySelector(".rc-col-head em").textContent = String(cards.length);
@@ -1106,6 +1041,7 @@
         const card = document.createElement("article");
         const breached = !!(c.slaBreached || (c.slaRemainingDays != null && c.slaRemainingDays < 0));
         const urgent = !breached && c.slaRemainingDays != null && c.slaRemainingDays <= 2;
+        card.dataset.focus = "application:" + c.id;
         card.className = "rc-card-k" + (breached ? " is-late" : urgent ? " is-urgent" : "");
         card.style.animationDelay = Math.min(idx, 8) * 30 + "ms";
         card.tabIndex = 0;
@@ -1164,6 +1100,47 @@
   let pendingApp = new URLSearchParams(location.search).get("app");
   let loaded = false;
 
+  const hadFocus = /(^|[?&])focus=/.test(location.search);
+  function syncPipeUrl() {
+    const u = new URL(location.href);
+    const oid = selectedOfferId();
+    if (oid != null && !Number.isNaN(oid)) u.searchParams.set("offer", oid); else u.searchParams.delete("offer");
+    u.searchParams.delete("offerId");
+    const f = (document.getElementById("pipe-filter") || {}).value || "all";
+    if (f !== "all") u.searchParams.set("view", f); else u.searchParams.delete("view");
+    history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+  }
+  function paintCtxChip() {
+    let box = document.getElementById("pipe-ctx");
+    const sel = document.getElementById("pipe-offer");
+    if (!box && sel) {
+      box = document.createElement("div");
+      box.id = "pipe-ctx"; box.className = "hl-ctx-row";
+      const anchor = document.querySelector(".rc-head") || sel.parentNode;
+      anchor.insertAdjacentElement("afterend", box);
+    }
+    if (!box) return;
+    box.replaceChildren();
+    const oid = selectedOfferId();
+    if (oid == null || Number.isNaN(oid)) return;
+    const o = offerCatalog().find((x) => x.id === oid);
+    const chip = document.createElement("button");
+    chip.type = "button"; chip.className = "hl-ctx-chip";
+    chip.setAttribute("aria-label", "Retirer le filtre offre");
+    chip.innerHTML = '<span>Offre : <b></b></span><i aria-hidden="true">×</i>';
+    chip.querySelector("b").textContent = o ? o.title : "#" + oid;
+    chip.addEventListener("click", () => { sel.value = "all"; paint(); });
+    box.appendChild(chip);
+  }
+  document.addEventListener("hirelink:focus-request", (e) => {
+    const k = String((e.detail && e.detail.key) || "");
+    if (!/^application:/.test(k)) return;
+    const a = allApps.find((x) => String(x.id) === k.split(":")[1]);
+    const oid = selectedOfferId();
+    const sel = document.getElementById("pipe-offer");
+    if (a && sel && oid != null && Number(a.jobOfferId) !== oid) { sel.value = "all"; paint(); }
+  });
+
   function onData(apps) {
     allApps = apps || [];
     rebuildOfferSelect();
@@ -1172,8 +1149,9 @@
     if (pendingApp) {
       const found = allApps.find((a) => String(a.id) === String(pendingApp));
       pendingApp = null;
-      history.replaceState(null, "", location.pathname);
-      if (found) openDossier(found);
+      const u = new URL(location.href); u.searchParams.delete("app");
+      history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+      if (found) setTimeout(() => openDossier(found), hadFocus ? 1300 : 0);
       else RC.toast("Dossier introuvable", "Ce dossier n’existe plus ou n’est pas dans votre périmètre.", "warn");
     }
   }
@@ -1215,5 +1193,7 @@
   }
   const offerFilt = document.getElementById("pipe-offer");
   if (offerFilt) offerFilt.addEventListener("change", paint);
+  const viewParam = params.get("view");
+  if (viewParam && filt && Array.from(filt.options).some((o) => o.value === viewParam)) filt.value = viewParam;
   load();
 })();

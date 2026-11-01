@@ -10,17 +10,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/interview.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
-  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101a"></script>
-  <script src="../js/theme.js?v=20261101a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/interview.css?v=20261102p" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101r"></script>
+  <script src="../js/theme.js?v=20261101r"></script>
 </head>
 <body class="rc" data-role="RECRUTEUR">
   <div class="rc-app">
@@ -32,7 +33,7 @@
           <div>
             <p class="rc-eyebrow">Espace recruteur</p>
             <h1 id="hello">Bonjour</h1>
-            <p id="wins-wrap"><span id="wins-line">Chargement des indicateurs…</span></p>
+            <p id="wins-wrap"><span id="wins-line">Chargement…</span></p>
           </div>
           <div class="rc-head-actions"><a class="btn btn-secondary" href="recruiter-pipeline.html">Ouvrir le pipeline</a><a class="btn btn-primary" href="recruiter-offers.html#new" data-manage>Nouvelle offre</a></div>
         </div>
@@ -40,56 +41,40 @@
           <div><strong>Votre entreprise n’est pas encore vérifiée</strong><span>Vous pouvez préparer des brouillons ; la publication s’ouvre dès la validation (ICE) par l’administration.</span></div>
           <a class="btn btn-primary btn-sm" href="recruiter-team.html">Voir mon entreprise</a>
         </div>
-        <div id="sla-nudge" class="rc-banner rc-banner--danger" hidden>
-          <div><strong id="sla-nudge-title">Délais de 1ʳᵉ réponse</strong><span id="sla-nudge-sub"></span></div>
-          <a class="btn btn-primary btn-sm" href="recruiter-pipeline.html">Voir le pipeline</a>
-        </div>
-        <div class="rc-kpis" aria-label="Indicateurs clés">
-          <div class="rc-kpi"><small>Offres publiées</small><strong id="st-offers">—</strong><span id="st-offers-d">&nbsp;</span></div>
-          <div class="rc-kpi rc-kpi--info"><small>Candidatures en cours</small><strong id="st-apps">—</strong><span id="st-apps-d">&nbsp;</span></div>
-          <div class="rc-kpi rc-kpi--ok"><small>Délais tenus</small><strong id="st-sla">—</strong><span>Dossiers en attente de réponse</span></div>
-          <div class="rc-kpi rc-kpi--warn"><small>Compatibilité moyenne</small><strong id="st-match">—</strong><span>Profils vs postes</span></div>
-        </div>
-        <div class="rc-grid rc-grid--2">
-          <section class="rc-card is-flush">
-            <div class="rc-card-head"><div><h2>Inbox prioritaire</h2><p>Triée par échéance de réponse puis compatibilité</p></div><a class="btn btn-ghost btn-sm" href="recruiter-candidates.html">Tous les candidats</a></div>
+        <section class="db-today" aria-labelledby="db-today-t">
+          <h2 class="db-h" id="db-today-t">À faire aujourd’hui</h2>
+          <div class="db-actions" id="db-actions"></div>
+        </section>
+        <div class="db-grid">
+          <section class="rc-card is-flush db-card">
+            <div class="rc-card-head"><div><h2>À traiter en priorité</h2><p>Classés par échéance de réponse</p></div><a class="btn btn-ghost btn-sm" href="recruiter-candidates.html?view=active">Tout voir</a></div>
             <div class="rc-card-body"><div class="rc-list" id="inbox-list"></div></div>
           </section>
-          <section class="rc-card">
-            <div class="rc-card-head"><h2>Répartition du pipeline</h2></div>
-            <div class="rc-card-body"><div class="rc-bars" id="chart-bars"></div><p class="rc-muted" id="conversion" style="margin:1rem 0 0;font-size:.86rem"></p></div>
+          <section class="rc-card is-flush db-card">
+            <div class="rc-card-head"><div><h2>Prochains événements</h2><p>Sept prochains jours</p></div><a class="btn btn-ghost btn-sm" href="recruiter-agenda.html?view=week">Ouvrir l’agenda</a></div>
+            <div class="rc-card-body"><div class="db-events" id="upcoming"></div></div>
           </section>
         </div>
-        <div class="rc-grid rc-grid--2">
-          <section class="rc-card is-flush">
-            <div class="rc-card-head"><h2>Prochains événements</h2><a class="btn btn-ghost btn-sm" href="recruiter-agenda.html">Ouvrir l’agenda</a></div>
-            <div class="rc-card-body"><div class="rc-list" id="upcoming"></div></div>
-          </section>
-          <section class="rc-card is-flush">
-            <div class="rc-card-head"><h2>Activité récente</h2><a class="btn btn-ghost btn-sm" href="notifications.html">Tout voir</a></div>
-            <div class="rc-card-body"><div class="rc-list" id="activity"></div></div>
-          </section>
-        </div>
-        <section class="rc-card">
-          <div class="rc-card-head"><h2>Accès rapides</h2></div>
-          <div class="rc-card-body"><div class="rc-quick">
-            <a href="recruiter-offers.html" data-manage><strong>Offres</strong><span>Publier et piloter</span></a>
-            <a href="recruiter-pipeline.html"><strong>Pipeline</strong><span>Avancer chaque dossier</span></a>
-            <a href="recruiter-assistant.html"><strong>Assistant IA</strong><span>Grille d’entretien et synthèse CV</span></a>
-            <a href="recruiter-team.html"><strong>Entreprise &amp; équipe</strong><span>Fiche, vérification, membres</span></a>
-          </div></div>
+        <section class="rc-card db-card">
+          <div class="rc-card-head"><div><h2>Entonnoir de recrutement</h2><p id="conversion">Dossiers ouverts par étape</p></div></div>
+          <div class="rc-card-body"><div class="db-funnel" id="chart-bars"></div></div>
+        </section>
+        <section aria-labelledby="db-kpi-t">
+          <h2 class="db-h" id="db-kpi-t">Indicateurs</h2>
+          <div class="db-kpis" id="db-kpis"></div>
         </section>
       </main>
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101a"></script>
-  <script defer src="../js/ui.js?v=20261101a"></script>
-  <script defer src="../js/api.js?v=20261101a"></script>
-  <script defer src="../js/search.js?v=20261101a"></script>
-  <script defer src="../js/places.js?v=20261101a"></script>
-  <script defer src="../js/in-app-help.js?v=20261101a"></script>
-  <script defer src="../js/app-shell.js?v=20261101o"></script>
-  <script defer src="../js/recruiter-home.js?v=20261101f"></script>
+  <script defer src="../js/mascotte.js?v=20261101r"></script>
+  <script defer src="../js/premium.js?v=20261102s"></script>
+  <script defer src="../js/ui.js?v=20261101r"></script>
+  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/search.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261101r"></script>
+  <script defer src="../js/in-app-help.js?v=20261102q"></script>
+  <script defer src="../js/app-shell.js?v=20261102q"></script>
+  <script defer src="../js/recruiter-home.js?v=20261102q"></script>
 </body>
 </html>

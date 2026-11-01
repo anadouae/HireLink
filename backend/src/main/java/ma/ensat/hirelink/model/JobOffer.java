@@ -47,6 +47,10 @@ public class JobOffer {
     @Column(name = "required_skills", length = 500)
     private String requiredSkills;
 
+    /** Compétences appréciées (bonus), séparées par virgule ; pèsent moins que les compétences demandées. */
+    @Column(name = "nice_to_have_skills", length = 500)
+    private String niceToHaveSkills;
+
     @Column(length = 120)
     private String location;
 
@@ -251,4 +255,7 @@ public class JobOffer {
 
     public Set<Tag> getTags() { return tags; }
     public void setTags(Set<Tag> tags) { this.tags = tags; }
+
+    public String getNiceToHaveSkills() { return niceToHaveSkills; }
+    public void setNiceToHaveSkills(String niceToHaveSkills) { this.niceToHaveSkills = niceToHaveSkills; }
 }

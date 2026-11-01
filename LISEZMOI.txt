@@ -1,0 +1,19 @@
+HireLink — version premium
+==========================
+
+1. Arrêter le backend : dans le terminal où il tourne, appuyer sur Ctrl+C.
+
+2. Extraire ce fichier zip dans C:\Users\daurinia\Desktop\HireLink
+   et accepter de REMPLACER les fichiers existants.
+   (Le fichier application-local.properties n'est pas dans le zip : vos réglages sont conservés.)
+
+3. Base de données (facultatif) : dans phpMyAdmin, choisir la base « hirelink »,
+   onglet Importer, puis le fichier database\update_logos_entreprises_maroc.sql.
+   La nouvelle colonne des candidatures est créée toute seule au démarrage.
+
+4. Relancer le backend, dans le dossier backend :
+       mvn spring-boot:run
+
+5. Dans le navigateur, recharger chaque page avec Ctrl+F5.
+
+Les scénarios de test sont dans docs\GUIDE_INSTALLATION_ET_TEST.md (section 19).

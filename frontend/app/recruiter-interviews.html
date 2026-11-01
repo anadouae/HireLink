@@ -10,17 +10,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/interview.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
-  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101a"></script>
-  <script src="../js/theme.js?v=20261101a"></script>
+  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/interview.css?v=20261102p" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101r"></script>
+  <script src="../js/theme.js?v=20261101r"></script>
 </head>
 <body class="rc" data-role="RECRUTEUR">
   <div class="rc-app">
@@ -44,20 +45,35 @@
           <button type="button" class="rc-tab" data-t="todo">À replanifier</button>
           <button type="button" class="rc-tab" data-t="past">Passés</button>
         </div>
-        <section class="rc-card is-flush"><div class="rc-list" id="iv-list"></div></section>
+        <div class="iv-toolbar" id="iv-toolbar">
+          <div class="iv-seg" role="group" aria-label="Regrouper par">
+            <span>Regrouper par</span>
+            <button type="button" data-g="date" aria-pressed="true">Date</button>
+            <button type="button" data-g="kind" aria-pressed="false">Nature</button>
+            <button type="button" data-g="offer" aria-pressed="false">Offre</button>
+          </div>
+          <div class="iv-seg" role="group" aria-label="Mode">
+            <button type="button" data-m="all" aria-pressed="true">Tous</button>
+            <button type="button" data-m="VISIO" aria-pressed="false">Visio</button>
+            <button type="button" data-m="ONSITE" aria-pressed="false">Sur site</button>
+          </div>
+          <div id="iv-chips" class="iv-chips"></div>
+        </div>
+        <section class="iv-board"><div id="iv-list"></div></section>
       </main>
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101a"></script>
-  <script defer src="../js/ui.js?v=20261101a"></script>
-  <script defer src="../js/api.js?v=20261101a"></script>
-  <script defer src="../js/search.js?v=20261101a"></script>
-  <script defer src="../js/places.js?v=20261101a"></script>
-  <script defer src="../js/skills.js?v=20261101a"></script>
-  <script defer src="../js/interview.js?v=20261101h"></script>
-  <script defer src="../js/in-app-help.js?v=20261101a"></script>
-  <script defer src="../js/app-shell.js?v=20261101o"></script>
-  <script defer src="../js/recruiter-interviews.js?v=20261101o"></script>
+  <script defer src="../js/mascotte.js?v=20261101r"></script>
+  <script defer src="../js/premium.js?v=20261102s"></script>
+  <script defer src="../js/ui.js?v=20261101r"></script>
+  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/search.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261101r"></script>
+  <script defer src="../js/skills.js?v=20261101r"></script>
+  <script defer src="../js/interview.js?v=20261102p"></script>
+  <script defer src="../js/in-app-help.js?v=20261102q"></script>
+  <script defer src="../js/app-shell.js?v=20261102q"></script>
+  <script defer src="../js/recruiter-interviews.js?v=20261102p"></script>
 </body>
 </html>

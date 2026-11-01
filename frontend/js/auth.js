@@ -34,6 +34,8 @@
     forgot: document.getElementById("form-forgot"),
     reset: document.getElementById("form-reset"),
   };
+  /* Aucun client Google ni mode démo : le bloc Google reste masqué. */
+  let googleOff = false;
   const NO_GOOGLE = ["otp", "profile", "mfa", "enroll", "backup", "forgot", "reset"];
   const NO_PIPE = ["password", "profile", "mfa", "enroll", "backup", "forgot", "reset"];
   let mfaToken = "";
@@ -44,7 +46,7 @@
     Object.keys(panels).forEach((key) => {
       if (panels[key]) panels[key].classList.toggle("is-active", key === name);
     });
-    if (googleBlock) googleBlock.hidden = NO_GOOGLE.indexOf(name) >= 0;
+    if (googleBlock) googleBlock.hidden = googleOff || NO_GOOGLE.indexOf(name) >= 0;
     if (pipe) pipe.classList.toggle("is-hidden", mode !== "register" || NO_PIPE.indexOf(name) >= 0);
     const card = document.querySelector(".auth-card");
     if (card) card.classList.toggle("is-wide", name === "profile");
@@ -472,6 +474,12 @@
 
   panels.password.addEventListener("submit", async (e) => {
     e.preventDefault();
+    const pwEmail = document.getElementById("email-pw").value.trim();
+    if (!pwEmail || !document.getElementById("password").value) {
+      HireLink.toast("Champs requis", "Indiquez votre e-mail et votre mot de passe.", "warn");
+      (pwEmail ? document.getElementById("password") : document.getElementById("email-pw")).focus();
+      return;
+    }
     try {
       const auth = await HireLinkAPI.api("/auth/login", {
         method: "POST",
@@ -589,13 +597,16 @@
           if (hint) hint.textContent = "Google temporairement indisponible.";
           if (fallback) fallback.hidden = false;
         }
-      } else {
+      } else if (cfg.googleDevBypass) {
         if (fallback) fallback.hidden = false;
+      } else {
+        googleOff = true;
+        if (googleBlock) googleBlock.hidden = true;
       }
     })
     .catch(() => {
-      const fallback = document.getElementById("btn-google");
-      if (fallback) fallback.hidden = false;
+      googleOff = true;
+      if (googleBlock) googleBlock.hidden = true;
     });
 
   function foldText(value) {

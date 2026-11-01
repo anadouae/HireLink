@@ -44,7 +44,7 @@
     },
     {
       q: "Organiser un entretien ?",
-      a: "Au passage Shortlist → Entretien : choisissez PHONE / VISIO / ONSITE / ASYNC, date-heure, lieu ou lien, notes internes.",
+      a: "Au passage Shortlist → Entretien : choisissez visioconférence ou sur site, la nature de l’entretien, la date et l’heure, le lieu ou le lien.",
     },
     {
       q: "Canaux entreprise (pas un cabinet juridique) ?",
