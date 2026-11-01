@@ -19,9 +19,20 @@ public class Organization {
     /** Même sémantique que User.verificationStatus (LinkedIn-like a posteriori). */
     @Column(name = "verification_status", length = 48)
     private String verificationStatus = "PENDING";
-    /** AUTO_REGISTRY | ADMIN | PENDING */
+    /** AUTO_REGISTRY | ADMIN | PENDING | FORMAT_OK | … */
     @Column(name = "verification_method", length = 24)
     private String verificationMethod = "PENDING";
+    /** Dénomination issue de la vérif identité ICE (registre interne ou futur fournisseur). */
+    @Column(name = "ice_legal_name", length = 200)
+    private String iceLegalName;
+    @Column(name = "ice_address", length = 400)
+    private String iceAddress;
+    @Column(name = "ice_source", length = 180)
+    private String iceSource;
+    @Column(name = "ice_checked_at")
+    private Instant iceCheckedAt;
+    @Column(name = "ice_format_valid")
+    private Boolean iceFormatValid;
     @Column(length = 180)
     private String website;
     @Column(name = "logo_url", length = 400)
@@ -59,6 +70,16 @@ public class Organization {
     public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
     public String getVerificationMethod() { return verificationMethod; }
     public void setVerificationMethod(String verificationMethod) { this.verificationMethod = verificationMethod; }
+    public String getIceLegalName() { return iceLegalName; }
+    public void setIceLegalName(String iceLegalName) { this.iceLegalName = iceLegalName; }
+    public String getIceAddress() { return iceAddress; }
+    public void setIceAddress(String iceAddress) { this.iceAddress = iceAddress; }
+    public String getIceSource() { return iceSource; }
+    public void setIceSource(String iceSource) { this.iceSource = iceSource; }
+    public Instant getIceCheckedAt() { return iceCheckedAt; }
+    public void setIceCheckedAt(Instant iceCheckedAt) { this.iceCheckedAt = iceCheckedAt; }
+    public Boolean getIceFormatValid() { return iceFormatValid; }
+    public void setIceFormatValid(Boolean iceFormatValid) { this.iceFormatValid = iceFormatValid; }
     public String getWebsite() { return website; }
     public void setWebsite(String website) { this.website = website; }
     public String getLogoUrl() { return logoUrl; }

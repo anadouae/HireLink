@@ -32,7 +32,12 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
         response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
         response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-        response.setHeader("Cross-Origin-Resource-Policy", "same-site");
+        // Logos servis au front (autre port :5500 / localhost vs 127.0.0.1) : CORP cross-origin obligatoire.
+        if (uri.startsWith("/api/v1/media/")) {
+            response.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+        } else {
+            response.setHeader("Cross-Origin-Resource-Policy", "same-site");
+        }
         response.setHeader("X-XSS-Protection", "0");
         if (!swagger) {
             response.setHeader("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; sandbox");

@@ -12,7 +12,7 @@
     SUBMITTED: "Envoyée", SCREENING: "Présélection", SHORTLISTED: "Shortlist", INTERVIEW: "Entretien", OFFER: "Offre", HIRED: "Embauché(e)",
     REJECTED: "Refusée", WITHDRAWN: "Retirée",
   };
-  var ACTIVE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER"];
+  var ACTIVE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
   var INTERVIEW_TYPE_FR = { PHONE: "Téléphone", VISIO: "Visioconférence", ONSITE: "Sur site" };
   var ROLE_FR = { OWNER: "Owner", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Hiring Manager" };
 
@@ -55,6 +55,7 @@
     columns: '<rect x="4" y="4" width="4.5" height="16" rx="1.2"/><rect x="10" y="4" width="4.5" height="10" rx="1.2"/><rect x="16" y="4" width="4.5" height="13" rx="1.2"/>',
     users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3.2 19c.6-3 2.8-4.7 5.8-4.7s5.2 1.7 5.8 4.7"/><path d="M16 5.6a3 3 0 0 1 0 5.8M17.6 14.6c1.8.5 3 2 3.4 4.4"/>',
     calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
+    mic: '<rect x="9" y="3.5" width="6" height="10" rx="3"/><path d="M6.5 11a5.5 5.5 0 0 0 11 0M12 16.5V20.5M9 20.5h6"/>',
     briefcase: '<rect x="3.5" y="7.5" width="17" height="12" rx="2"/><path d="M9 7.5V6.2A1.7 1.7 0 0 1 10.7 4.5h2.6A1.7 1.7 0 0 1 15 6.2v1.3M3.5 13h17"/>',
     spark: '<path d="M12 3.5 13.6 9 19 10.6 13.6 12.2 12 17.7 10.4 12.2 5 10.6 10.4 9z"/><path d="M18.5 16.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z"/>',
     bell: '<path d="M6.2 16.2h11.6l-1.1-1.5V11a4.7 4.7 0 1 0-9.4 0v3.7l-1.1 1.5z"/><path d="M10 16.2a2 2 0 0 0 4 0"/>',
@@ -167,7 +168,8 @@
         { id: "dashboard", href: "recruiter.html", label: "Tableau de bord", icon: "home" },
         { id: "pipeline", href: "recruiter-pipeline.html", label: "Pipeline", icon: "columns" },
         { id: "candidates", href: "recruiter-candidates.html", label: "Candidats", icon: "users" },
-        { id: "interviews", href: "recruiter-interviews.html", label: "Entretiens", icon: "calendar" },
+        { id: "interviews", href: "recruiter-interviews.html", label: "Entretiens", icon: "mic" },
+        { id: "agenda", href: "recruiter-agenda.html", label: "Agenda", icon: "calendar" },
         { id: "offers", href: "recruiter-offers.html", label: "Offres", icon: "briefcase", manage: true },
         { id: "assistant", href: "recruiter-assistant.html", label: "Assistant IA", icon: "spark" },
         { section: "Organisation" },
@@ -248,7 +250,7 @@
     name.textContent = o.name || "Organisation";
     document.getElementById("rc-orgrole").textContent = (ROLE_FR[o.myRole] || "Recruteur") + (o.verified ? " · vérifiée" : " · non vérifiée");
     var mark = document.getElementById("rc-orgmark");
-    var src = o.logoUrl && o.logoUrl.indexOf("google.com/s2/favicons") < 0 ? HireLinkAPI.mediaUrl(o.logoUrl) : "";
+    var src = o.logoUrl ? HireLinkAPI.mediaUrl(o.logoUrl) : "";
     if (src) {
       mark.innerHTML = '<img alt="" src="' + esc(src) + '" />';
       mark.firstChild.onerror = function () { mark.textContent = initials(o.name).charAt(0); };

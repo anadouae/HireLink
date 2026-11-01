@@ -4,7 +4,8 @@
 
   const STATUS_LABEL = HireLinkApp.STATUS_FR;
 
-  const PIPELINE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"];
+  // Parcours HireLink : s’arrête à l’entretien (pas d’offre / embauche sur la plateforme).
+  const PIPELINE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
 
   let apps = [];
   let selectedId = null;
@@ -15,7 +16,7 @@
 
   function statusBadgeClass(st) {
     if (st === "REJECTED" || st === "WITHDRAWN") return "badge-danger";
-    if (st === "INTERVIEW" || st === "OFFER" || st === "HIRED") return "badge-ok";
+    if (st === "INTERVIEW" || st === "OFFER" || st === "HIRED") return "badge-ok"; // OFFER/HIRED = données legacy
     if (st === "SHORTLISTED") return "badge-rose";
     if (st === "SCREENING") return "badge-info";
     return "badge-chrome";
@@ -169,10 +170,13 @@
       if (step === "SUBMITTED") return "done";
       return "todo";
     }
-    const idx = PIPELINE.indexOf(status);
+    // Anciens dossiers Offre / Embauché : tout le parcours jusqu’à Entretien est considéré terminé.
+    const effective =
+      status === "OFFER" || status === "HIRED" ? "INTERVIEW" : status;
+    const idx = PIPELINE.indexOf(effective);
     const sIdx = PIPELINE.indexOf(step);
     if (sIdx < 0 || idx < 0) return "todo";
-    if (status === "HIRED" && step === "HIRED") return "done";
+    if ((status === "OFFER" || status === "HIRED") && step === "INTERVIEW") return "done";
     if (sIdx < idx) return "done";
     if (sIdx === idx) return "now";
     return "todo";

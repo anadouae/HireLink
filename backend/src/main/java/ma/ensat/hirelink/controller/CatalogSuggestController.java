@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -62,12 +63,56 @@ public class CatalogSuggestController {
     private static final List<String> LEVELS = List.of(
             "Bac", "Bac+2", "Bac+3", "Bac+4", "Bac+5", "Doctorat", "Stagiaire", "Junior", "Confirmé", "Senior"
     );
+    private static final List<String> STUDY_LEVELS = List.of(
+            "Bac", "Bac+1", "Bac+2", "Bac+3", "Bac+4", "Bac+5", "Master", "Doctorat", "Autre"
+    );
+    private static final List<String> DOMAINS = List.of(
+            "Informatique", "Génie logiciel", "Réseaux et télécoms", "Cybersécurité", "Data / IA",
+            "Génie civil", "Génie industriel", "Génie électrique", "Génie mécanique", "Génie des procédés",
+            "Finance", "Comptabilité", "Marketing", "Commerce", "Management", "Ressources humaines",
+            "Droit", "Économie", "Architecture", "Design", "Médecine", "Pharmacie", "Biologie",
+            "Chimie", "Mathématiques", "Physique", "Langues", "Communication", "Logistique", "Autre"
+    );
 
 
-    public record Suggestion(String label, String flag, String country) {}
+    /** {@code icon} : URL de logo (école / contrat) ; {@code flag} : emoji drapeau (lieu, nationalité, écoles MA). */
+    public record Suggestion(String label, String flag, String country, String icon) {
+        public Suggestion(String label, String flag, String country) {
+            this(label, flag, country, "");
+        }
+    }
 
     /** Lieu du catalogue, avec son drapeau : le frontend s'en sert pour afficher un drapeau devant toute localisation. */
     public record PlaceDto(String city, String country, String flag) {}
+
+    private static final Map<String, String> SCHOOL_DOMAINS = Map.ofEntries(
+            Map.entry("ENSA Tétouan", "ensatetouan.ac.ma"),
+            Map.entry("ENSA Tanger", "ensat.ac.ma"),
+            Map.entry("ENSA Agadir", "ensa-agadir.ac.ma"),
+            Map.entry("ENSA Fès", "ensaf.ac.ma"),
+            Map.entry("ENSA Kénitra", "ensak.uit.ac.ma"),
+            Map.entry("ENSA Marrakech", "ensa.ac.ma"),
+            Map.entry("ENCG Casablanca", "encgcasa.ma"),
+            Map.entry("ENCG Tanger", "encgt.ma"),
+            Map.entry("ENCG Settat", "encg-settat.ma"),
+            Map.entry("EMI", "emi.ac.ma"),
+            Map.entry("ENSIAS", "ensias.um5.ac.ma"),
+            Map.entry("EHTP", "ehtp.ac.ma"),
+            Map.entry("INPT", "inpt.ac.ma"),
+            Map.entry("ENSEM", "ensem.ac.ma"),
+            Map.entry("ENSAM Casablanca", "ensam-casa.ma"),
+            Map.entry("FST Tanger", "fstt.ac.ma"),
+            Map.entry("FST Mohammedia", "fstm.ac.ma"),
+            Map.entry("ISCAE", "iscae.ma"),
+            Map.entry("HEM", "hem.ac.ma"),
+            Map.entry("ESCA", "esca.ac.ma"),
+            Map.entry("UIR", "uir.ac.ma"),
+            Map.entry("UM6P", "um6p.ma"),
+            Map.entry("Al Akhawayn", "aui.ma"),
+            Map.entry("Université Hassan II", "univh2c.ma"),
+            Map.entry("Université Mohammed V", "um5.ac.ma"),
+            Map.entry("EST Casablanca", "est-uh2c.ac.ma")
+    );
 
     private final TextMatcher matcher;
     private final PlaceCatalogService places;
@@ -89,10 +134,12 @@ public class CatalogSuggestController {
                     .map(p -> new Suggestion(p.label(), p.flag(), p.city().isEmpty() ? "" : p.country())).toList();
             case "nationality" -> places.nationalities(query, LIMIT).stream()
                     .map(n -> new Suggestion(n.label(), n.flag(), n.country())).toList();
-            case "school" -> rank(SCHOOLS, query);
+            case "school" -> rankSchools(query);
             case "contract" -> rank(CONTRACTS, query);
             case "mode" -> rank(MODES, query);
             case "level" -> rank(LEVELS, query);
+            case "study" -> rank(STUDY_LEVELS, query);
+            case "domain" -> rank(DOMAINS, query);
             default -> jobs(query);
         };
     }
@@ -123,6 +170,28 @@ public class CatalogSuggestController {
                 .limit(LIMIT)
                 .map(h -> new Suggestion(h.label(), "", ""))
                 .toList());
+    }
+
+    private List<Suggestion> rankSchools(String query) {
+        List<String> items = SCHOOLS;
+        List<String> picked;
+        if (TextMatcher.fold(query).isEmpty()) {
+            picked = items.stream().limit(LIMIT).toList();
+        } else {
+            record Hit(String label, double score) {}
+            picked = items.stream()
+                    .map(i -> new Hit(i, matcher.score(query, i)))
+                    .filter(h -> h.score() > 0)
+                    .sorted(Comparator.comparingDouble(Hit::score).reversed())
+                    .limit(LIMIT)
+                    .map(Hit::label)
+                    .toList();
+        }
+        return picked.stream().map(label -> {
+            String domain = SCHOOL_DOMAINS.getOrDefault(label, "");
+            String icon = domain.isBlank() ? "" : "https://www.google.com/s2/favicons?domain=" + domain + "&sz=64";
+            return new Suggestion(label, "🇲🇦", "Maroc", icon);
+        }).toList();
     }
 
     private List<String> esco(String query) {

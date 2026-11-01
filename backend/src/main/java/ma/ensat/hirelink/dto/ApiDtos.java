@@ -54,6 +54,8 @@ public class ApiDtos {
             String gender,
             String availability,
             String school,
+            String educationDomain,
+            Integer graduationYear,
             String workMode,
             boolean emailNotifications
     ) {}
@@ -76,6 +78,8 @@ public class ApiDtos {
             @Size(max = 60) String nationality,
             @Size(max = 10) String birthDate,
             @Size(max = 160) String school,
+            @Size(max = 120) String educationDomain,
+            @Min(1950) @Max(2100) Integer graduationYear,
             @Size(max = 40) String workMode,
             @Size(max = 20) String gender,
             @Size(max = 40) String availability,
@@ -229,7 +233,8 @@ public class ApiDtos {
     public record AdvanceRequest(
             @NotNull ApplicationStatus status,
             @Size(max = 600) String rejectionReason,
-            @Size(max = 1000) String advanceNote,
+            /** Note d’étape, ou message de refus envoyé au candidat (refus). */
+            @Size(max = 4000) String advanceNote,
             @Valid InterviewRequest interview,
             Boolean confirmIdentity,
             Boolean confirmCvReviewed,

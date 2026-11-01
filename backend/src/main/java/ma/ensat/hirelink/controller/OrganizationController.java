@@ -38,7 +38,7 @@ public class OrganizationController {
 
     public record OrgUpdate(
             @jakarta.validation.constraints.Size(max = 160) String name,
-            @jakarta.validation.constraints.Size(max = 20) String ice,
+            @jakarta.validation.constraints.Size(max = 32) String ice,
             @jakarta.validation.constraints.Size(max = 200) String website,
             @jakarta.validation.constraints.Size(max = 80) String sector,
             @jakarta.validation.constraints.Size(max = 100) String city,
@@ -131,6 +131,25 @@ public class OrganizationController {
         }
     }
 
+    public record IceCheckRequest(
+            @jakarta.validation.constraints.Size(max = 32) String ice,
+            @jakarta.validation.constraints.Size(max = 160) String name
+    ) {}
+
+    /** Verification 1 (format) + tentative d'identite — sans pretendere a une API OMPIC gratuite. */
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
+    @PostMapping("/mine/ice/check")
+    public Map<String, Object> checkIce(
+            @AuthenticationPrincipal User user,
+            @jakarta.validation.Valid @RequestBody IceCheckRequest body
+    ) {
+        organizationService.requireMembership(user);
+        return companyVerificationService.inspectIce(
+                body.ice(),
+                body.name()
+        );
+    }
+
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PostMapping("/mine/verify")
     public Map<String, Object> recheck(@AuthenticationPrincipal User user) {
@@ -171,6 +190,11 @@ public class OrganizationController {
         m.put("employees", org.getEmployeeRange() == null ? "" : org.getEmployeeRange());
         m.put("presentation", org.getPresentation() == null ? "" : org.getPresentation());
         m.put("canPublish", org.isVerified());
+        m.put("iceFormatValid", org.getIceFormatValid());
+        m.put("iceLegalName", org.getIceLegalName() == null ? "" : org.getIceLegalName());
+        m.put("iceAddress", org.getIceAddress() == null ? "" : org.getIceAddress());
+        m.put("iceSource", org.getIceSource() == null ? "" : org.getIceSource());
+        m.put("iceCheckedAt", org.getIceCheckedAt() == null ? "" : org.getIceCheckedAt().toString());
         return m;
     }
 }

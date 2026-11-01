@@ -99,9 +99,16 @@ public class EventNotifier {
         Long candidate = app.getCandidate().getId();
         if (app.getStatus() == ApplicationStatus.REJECTED) {
             String reason = app.getRejectionReason();
-            Email email = Email.of("Votre candidature n'a pas été retenue",
-                    "Merci de l'intérêt que vous portez à « " + job + " ». Après étude de votre dossier, l'entreprise a décidé de ne pas y donner suite pour ce poste.",
-                    "Cette décision ne remet pas en cause la valeur de votre parcours. Nous vous encourageons à postuler aux autres offres qui correspondent à votre profil.");
+            String custom = app.getAdvanceNote();
+            Email email;
+            if (custom != null && !custom.isBlank()) {
+                // Message rédigé (ou assisté) par le recruteur au moment du refus.
+                email = Email.of("Votre candidature n'a pas été retenue", custom.trim());
+            } else {
+                email = Email.of("Votre candidature n'a pas été retenue",
+                        "Merci de l'intérêt que vous portez à « " + job + " ». Après étude de votre dossier, l'entreprise a décidé de ne pas y donner suite pour ce poste.",
+                        "Cette décision ne remet pas en cause la valeur de votre parcours. Nous vous encourageons à postuler aux autres offres qui correspondent à votre profil.");
+            }
             if (reason != null) email = email.withFacts(new Fact("Motif communiqué", reason));
             notifications.pushAndMail(candidate, "Candidature non retenue",
                     "« " + job + " »" + (reason != null ? " — " + reason : ""), "STATUS", Kind.APPLICATION,

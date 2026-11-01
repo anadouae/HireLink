@@ -114,8 +114,8 @@ public class Application {
     @Column(name = "interview_reminder_sent")
     private Boolean interviewReminderSent;
 
-    /** Note interne RH lors d’une avancée d’étape */
-    @Column(name = "advance_note", length = 1000)
+    /** Note d’étape, ou message de refus envoyé au candidat */
+    @Column(name = "advance_note", length = 4000)
     private String advanceNote;
 
     /** Code catalogue refus (R04) — ex. PROFILE_MISMATCH */

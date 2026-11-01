@@ -1,5 +1,5 @@
 /**
- * Champs à suggestions ([data-suggest] : job, place, nationality, school, level, contract, mode) :
+ * Champs à suggestions ([data-suggest] : job, place, nationality, school, level, study, domain, contract, mode) :
  * liste de HireLinkSearch avec drapeaux pour les lieux et les nationalités.
  */
 (function () {
@@ -21,7 +21,9 @@
         return fetch(base() + "/catalog/suggest?kind=" + encodeURIComponent(kind) + "&q=" + encodeURIComponent(q))
           .then(function (r) { return r.ok ? r.json() : []; })
           .then(function (rows) {
-            return rows.map(function (row) { return { key: row.label, label: row.label, flag: row.flag, sub: row.country }; });
+            return rows.map(function (row) {
+              return { key: row.label, label: row.label, flag: row.flag, sub: row.country, icon: row.icon || "" };
+            });
           });
       },
       onPick: function (item) {

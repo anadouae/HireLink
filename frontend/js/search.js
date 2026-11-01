@@ -256,7 +256,17 @@
         row.setAttribute("role", "option");
         row.setAttribute("aria-selected", "false");
         if (item.disabled) row.setAttribute("aria-disabled", "true");
-        if (item.flag) {
+        if (item.icon) {
+          const img = document.createElement("img");
+          img.className = "hl-combo-icon";
+          img.alt = "";
+          img.width = 20;
+          img.height = 20;
+          img.src = item.icon;
+          img.loading = "lazy";
+          img.addEventListener("error", function () { img.replaceWith(document.createTextNode(item.flag || "")); });
+          row.appendChild(img);
+        } else if (item.flag) {
           const f = document.createElement("span");
           f.className = "hl-combo-flag";
           f.textContent = item.flag;

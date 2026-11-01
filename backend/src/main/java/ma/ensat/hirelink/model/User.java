@@ -113,6 +113,14 @@ public class User {
     @Column(length = 160)
     private String school;
 
+    /** Domaine / filière d'études (ex. Informatique, Génie civil). */
+    @Column(name = "education_domain", length = 120)
+    private String educationDomain;
+
+    /** Année d'obtention du diplôme (ou année prévue). */
+    @Column(name = "graduation_year")
+    private Integer graduationYear;
+
     @Column(name = "work_mode", length = 40)
     private String workMode;
 
@@ -268,6 +276,12 @@ public class User {
 
     public String getSchool() { return school; }
     public void setSchool(String school) { this.school = school; }
+
+    public String getEducationDomain() { return educationDomain; }
+    public void setEducationDomain(String educationDomain) { this.educationDomain = educationDomain; }
+
+    public Integer getGraduationYear() { return graduationYear; }
+    public void setGraduationYear(Integer graduationYear) { this.graduationYear = graduationYear; }
 
     public String getWorkMode() { return workMode; }
     public void setWorkMode(String workMode) { this.workMode = workMode; }

@@ -37,6 +37,10 @@
       return;
     }
     if (!window.HireLinkApply) { HireLink.toast("Erreur", "Assistant de candidature indisponible", "danger"); return; }
+    if (window.HireLinkApplyGate && typeof HireLinkApplyGate.ensureCompleteThenApply === "function") {
+      HireLinkApplyGate.ensureCompleteThenApply(o, load);
+      return;
+    }
     HireLinkApply.start(o, load);
   }
 

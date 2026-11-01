@@ -107,6 +107,9 @@
     if (options.bodyHtml) modalBody.innerHTML = options.bodyHtml;
     else modalBody.remove();
     const ok = wireActions(modal.querySelector(".modal-actions"), options);
+    // Au-dessus des wizards (postulation ~9200, gate ~9300) si demandé.
+    if (options.zIndex != null) overlay.style.zIndex = String(options.zIndex);
+    else overlay.style.zIndex = "";
     overlay.classList.add("is-open");
     readyApi(modal, ok, options);
     return new Promise((resolve) => {
@@ -155,6 +158,7 @@
     const overlay = document.getElementById("hl-overlay");
     if (overlay) {
       overlay.classList.remove("is-open");
+      overlay.style.zIndex = "";
       setTimeout(() => {
         if (overlay && !overlay.classList.contains("is-open")) {
           overlay.classList.remove("overlay--drawer");

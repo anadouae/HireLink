@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="../css/components.css?v=20261101a" />
   <link rel="stylesheet" href="../css/search.css?v=20261101a" />
   <link rel="stylesheet" href="../css/skills.css?v=20261101a" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261101a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261101i" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261101a" />
   <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101a"></script>
   <script src="../js/theme.js?v=20261101a"></script>
@@ -44,22 +44,15 @@
         </div></section>
         <div class="rc-tabs" role="tablist">
           <button type="button" class="rc-tab is-on" data-t="kit">Grille d’entretien</button>
-          <button type="button" class="rc-tab" data-t="refusal">Message de refus</button>
           <button type="button" class="rc-tab" data-t="cv">Synthèse de CV</button>
         </div>
-        <section class="rc-card rc-panel" id="pane-kit"><div class="rc-card-head"><div><h2>Grille d’entretien structurée</h2><p>5 à 7 questions discriminantes à partir du poste et des compétences.</p></div></div>
+        <section class="rc-card rc-panel" id="pane-kit"><div class="rc-card-head"><div><h2>Grille d’entretien structurée</h2><p>Questions claires en cartes colorées — cliquez pour afficher ce qu’il faut écouter dans la réponse.</p></div></div>
           <div class="rc-card-body"><div class="rc-form">
             <div class="rc-field is-full"><label for="kit-offer">Offre</label><select id="kit-offer"><option value="">— Saisie libre —</option></select></div>
             <div class="rc-field"><label for="kit-title">Intitulé du poste</label><input id="kit-title" placeholder="Développeur Full-Stack Java" /></div>
             <div class="rc-field"><label for="kit-skills">Compétences clés</label><input id="kit-skills" placeholder="Java, Spring Boot, MySQL" /></div>
             <div class="is-full"><button type="button" class="btn btn-primary" id="kit-go">Générer la grille</button></div>
             <div class="is-full rc-ai-out" id="kit-out" hidden></div></div></div></section>
-        <section class="rc-card rc-panel" id="pane-refusal" hidden><div class="rc-card-head"><div><h2>Brouillon de message de refus</h2><p>Basé sur un motif du catalogue — le texte reste à valider avant tout envoi.</p></div></div>
-          <div class="rc-card-body"><div class="rc-form">
-            <div class="rc-field"><label for="ref-reason">Motif (catalogue)</label><select id="ref-reason"><option value="">— Choisir un motif —</option></select></div>
-            <div class="rc-field"><label for="ref-offer">Offre</label><select id="ref-offer"><option value="">— Non précisé —</option></select></div>
-            <div class="is-full"><button type="button" class="btn btn-primary" id="ref-go">Rédiger le brouillon</button></div>
-            <div class="is-full rc-ai-out" id="ref-out" hidden></div></div></div></section>
         <section class="rc-card rc-panel" id="pane-cv" hidden><div class="rc-card-head"><div><h2>Synthèse de CV</h2><p>Résumé en quelques lignes d’un dossier reçu : métier probable, expériences, compétences, point d’attention.</p></div></div>
           <div class="rc-card-body"><div class="rc-form">
             <div class="rc-field is-full"><label for="cv-app">Dossier</label><select id="cv-app"><option value="">— Choisir un dossier —</option></select></div>
@@ -76,6 +69,6 @@
   <script defer src="../js/places.js?v=20261101a"></script>
   <script defer src="../js/in-app-help.js?v=20261101a"></script>
   <script defer src="../js/app-shell.js?v=20261101a"></script>
-  <script defer src="../js/recruiter-assistant.js?v=20261101a"></script>
+  <script defer src="../js/recruiter-assistant.js?v=20261101k"></script>
 </body>
 </html>

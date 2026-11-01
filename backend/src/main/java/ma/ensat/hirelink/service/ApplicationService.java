@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 /**
  * Pipeline ATS — machine d'états R01, isolation org R02, checklist R05,
  * catalogue refus R04, retrait candidat R11, HM R14.
- * Parcours positif : … → INTERVIEW → OFFER → HIRED ; refus possible jusqu'à l'offre, retrait candidat tant que non terminal.
+ * Parcours positif : … → INTERVIEW (fin HireLink) ; refus possible jusqu'à l'entretien, retrait candidat tant que non terminal.
  */
 @Service
 public class ApplicationService {
@@ -46,8 +46,7 @@ public class ApplicationService {
             ApplicationStatus.SUBMITTED, EnumSet.of(ApplicationStatus.SCREENING, ApplicationStatus.REJECTED),
             ApplicationStatus.SCREENING, EnumSet.of(ApplicationStatus.SHORTLISTED, ApplicationStatus.REJECTED),
             ApplicationStatus.SHORTLISTED, EnumSet.of(ApplicationStatus.INTERVIEW, ApplicationStatus.REJECTED),
-            ApplicationStatus.INTERVIEW, EnumSet.of(ApplicationStatus.OFFER, ApplicationStatus.REJECTED),
-            ApplicationStatus.OFFER, EnumSet.of(ApplicationStatus.HIRED, ApplicationStatus.REJECTED)
+            ApplicationStatus.INTERVIEW, EnumSet.of(ApplicationStatus.REJECTED)
     );
 
     private final ApplicationRepository applicationRepository;
@@ -124,6 +123,11 @@ public class ApplicationService {
         }
         if (cvSource.equals("UPLOAD") && (req.cvFileName() == null || req.cvFileName().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CV requis : choisissez un fichier");
+        }
+        if (cvSource.equals("PROFILE")
+                && (candidate.getCvStorageName() == null || candidate.getCvStorageName().isBlank())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Profil HireLink sans CV : déposez un CV dans Mon profil, ou choisissez « Nouveau CV ».");
         }
         Application app = reopen ? existing.get() : new Application();
         if (!reopen) {
@@ -314,7 +318,7 @@ public class ApplicationService {
 
         if (req.advanceNote() != null && !req.advanceNote().isBlank()) {
             String note = req.advanceNote().trim();
-            if (note.length() > 1000) note = note.substring(0, 1000);
+            if (note.length() > 4000) note = note.substring(0, 4000);
             app.setAdvanceNote(note);
         }
 

@@ -305,7 +305,19 @@ public class OrganizationService {
         String previousName = org.getName();
         String previousIce = org.getIce();
         if (name != null && !name.isBlank()) org.setName(name.trim());
-        if (ice != null) org.setIce(ice.isBlank() ? null : ice.trim());
+        if (ice != null) {
+            if (ice.isBlank()) {
+                org.setIce(null);
+                org.setIceFormatValid(null);
+                org.setIceLegalName(null);
+                org.setIceAddress(null);
+                org.setIceSource(null);
+                org.setIceCheckedAt(null);
+            } else {
+                // Normalisation stricte 15 chiffres (zéros de tête conservés) via la vérif.
+                org.setIce(IceFormatValidator.normalize(ice));
+            }
+        }
         if (website != null) org.setWebsite(website.isBlank() ? null : website.trim());
         if (sector != null) org.setSector(sector.isBlank() ? null : sector.trim());
         if (city != null) org.setCity(city.isBlank() ? null : city.trim());
