@@ -3,12 +3,14 @@ package ma.ensat.hirelink.service;
 import ma.ensat.hirelink.model.*;
 import ma.ensat.hirelink.repository.JobOfferRepository;
 import ma.ensat.hirelink.repository.MembershipRepository;
+import ma.ensat.hirelink.repository.OrganizationInvitationRepository;
 import ma.ensat.hirelink.repository.OrganizationRepository;
 import ma.ensat.hirelink.repository.UserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import java.time.Instant;
 
 import java.util.*;
 
@@ -21,9 +23,25 @@ public class OrganizationService {
     private final JobOfferRepository jobOfferRepository;
     private final BillingCatalogService billingCatalogService;
     private final NotificationService notificationService;
+    private final OrganizationInvitationRepository invitationRepository;
+    private final org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+    private final AuditService audit;
 
     @org.springframework.beans.factory.annotation.Value("${hirelink.frontend.base-url:http://localhost:5500}")
     private String frontendBase = "http://localhost:5500";
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public OrganizationService(OrganizationRepository organizationRepository,
+                               MembershipRepository membershipRepository,
+                               UserRepository userRepository,
+                               CompanyVerificationService companyVerificationService,
+                               JobOfferRepository jobOfferRepository,
+                               BillingCatalogService billingCatalogService,
+                               NotificationService notificationService,
+                               OrganizationInvitationRepository invitationRepository,
+                               AuditService audit) {
+        this(organizationRepository, membershipRepository, userRepository, companyVerificationService, jobOfferRepository, billingCatalogService, notificationService, invitationRepository, new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder(12), audit);
+    }
 
     public OrganizationService(OrganizationRepository organizationRepository,
                                MembershipRepository membershipRepository,
@@ -31,7 +49,10 @@ public class OrganizationService {
                                CompanyVerificationService companyVerificationService,
                                JobOfferRepository jobOfferRepository,
                                BillingCatalogService billingCatalogService,
-                               NotificationService notificationService) {
+                               NotificationService notificationService,
+                               OrganizationInvitationRepository invitationRepository,
+                               org.springframework.security.crypto.password.PasswordEncoder passwordEncoder,
+                               AuditService audit) {
         this.notificationService = notificationService;
         this.billingCatalogService = billingCatalogService;
         this.organizationRepository = organizationRepository;
@@ -39,6 +60,9 @@ public class OrganizationService {
         this.userRepository = userRepository;
         this.companyVerificationService = companyVerificationService;
         this.jobOfferRepository = jobOfferRepository;
+        this.invitationRepository = invitationRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.audit = audit;
     }
 
     @Transactional
@@ -213,48 +237,101 @@ public class OrganizationService {
         return invite(owner, email, role, true);
     }
 
-    /** Ajoute un compte recruteur existant à l'organisation ; il est prévenu dans l'application et (si {@code mail}) par e-mail. */
+    /** Ajoute ou invite un compte recruteur à l'organisation ; si le compte n'existe pas encore, il est provisionné automatiquement. */
     @Transactional
     public Membership invite(User owner, String email, OrgRole role, boolean mail) {
         Membership om = requireMembership(owner);
         if (om.getOrgRole() != OrgRole.OWNER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul l'Owner invite (R13)");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace peut inviter des membres");
         }
         if (role == OrgRole.OWNER) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible d'inviter un Owner");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un seul compte crée l'espace : utilisez le transfert de rôle");
         }
-        User u = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucun compte recruteur avec cet e-mail. La personne doit d’abord créer son compte (rôle Recruteur)"));
-        if (u.getRole() != Role.RECRUTEUR) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "L'invité doit être un compte recruteur");
+        if (email == null || email.isBlank() || !email.contains("@")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Adresse e-mail invalide");
         }
+        String cleanEmail = email.trim().toLowerCase();
         Organization org = om.getOrganization();
-        for (Membership other : membershipRepository.findByUserIdAndActiveTrue(u.getId())) {
-            Organization theirs = other.getOrganization();
-            if (theirs.getId().equals(org.getId())) continue;
-            // Une organisation vide (compte tout juste créé) peut être quittée ; sinon on ne débauche personne.
-            boolean alone = membershipRepository.findByOrganizationIdAndActiveTrue(theirs.getId()).size() == 1;
-            if (!alone || !jobOfferRepository.findByRecruiterId(u.getId()).isEmpty()) {
+        PlanTier tier = org.getPlanTier() != null ? org.getPlanTier() : PlanTier.ACCES;
+        int maxMembers = tier == PlanTier.PREMIUM ? 25 : 5;
+        List<Membership> activeMembers = membershipRepository.findByOrganizationIdAndActiveTrue(org.getId());
+        boolean alreadyInOrg = activeMembers.stream().anyMatch(m -> m.getUser().getEmail().equalsIgnoreCase(cleanEmail));
+        if (!alreadyInOrg && activeMembers.size() >= maxMembers) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Capacité d'équipe atteinte (" + activeMembers.size() + "/" + maxMembers + " membres). Passez à la formule supérieure pour inviter d'autres collaborateurs.");
+        }
+
+        boolean wasNew = false;
+        User u = userRepository.findByEmailIgnoreCase(cleanEmail).orElse(null);
+        if (u == null) {
+            wasNew = true;
+            u = new User();
+            u.setEmail(cleanEmail);
+            String local = cleanEmail.split("@")[0].replace(".", " ").replace("_", " ").replace("-", " ");
+            String[] words = local.split("\\s+");
+            StringBuilder sb = new StringBuilder();
+            for (String w : words) {
+                if (!w.isBlank()) {
+                    sb.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1)).append(" ");
+                }
+            }
+            String name = sb.toString().trim();
+            u.setFullName(name.isBlank() ? cleanEmail : name);
+            u.setRole(Role.RECRUTEUR);
+            // An invited account must authenticate with the e-mail code first and
+            // choose its own password; never provision a shared/default secret.
+            u.setPasswordHash(null);
+            u.setMustSetPassword(true);
+            u.setCompany(org.getName());
+            u.setCompanyIce(org.getIce());
+            u.setAssignedOrgId(org.getId());
+            u.setEmailVerified(true);
+            u.setProfileComplete(true);
+            u.setPlanTier(tier);
+            u = userRepository.save(u);
+        } else {
+            if (u.getRole() == Role.CANDIDAT) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
-                        "Ce recruteur fait déjà partie de « " + theirs.getName() + " »");
+                        "Cette adresse appartient déjà à un compte candidat. "
+                                + "Le candidat doit utiliser une adresse distincte pour rejoindre une équipe recruteur.");
+            }
+            for (Membership other : membershipRepository.findByUserIdAndActiveTrue(u.getId())) {
+                Organization theirs = other.getOrganization();
+                if (theirs.getId().equals(org.getId())) continue;
+                boolean alone = membershipRepository.findByOrganizationIdAndActiveTrue(theirs.getId()).size() <= 1;
+                if (alone && jobOfferRepository.findByRecruiterId(u.getId()).isEmpty()) {
+                    other.setActive(false);
+                    membershipRepository.save(other);
+                    audit.ok("MEMBER_RELEASED", owner, "MEMBERSHIP", other.getId(),
+                            cleanEmail + " retiré de « " + theirs.getName() + " » (espace vide) pour rejoindre « " + org.getName() + " »");
+                } else {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Ce recruteur fait déjà partie de « " + theirs.getName() + " »");
+                }
             }
         }
-        boolean already = membershipRepository.findByOrganizationIdAndUserId(org.getId(), u.getId())
-                .filter(Membership::isActive).isPresent();
+
         Membership m = joinOrganization(u, org, role);
-        if (!already) {
-            String roleFr = role == OrgRole.HIRING_MANAGER ? "Hiring Manager" : "Recruteur";
+        if (!alreadyInOrg) {
+            audit.ok("MEMBER_INVITED", owner, "MEMBERSHIP", m.getId(),
+                    cleanEmail + " → " + role.libelleFr() + " · « " + org.getName() + " »" + (wasNew ? " · compte provisionné" : ""));
+        }
+        if (!alreadyInOrg) {
+            String roleFr = role.libelleFr();
             String title = "Vous avez rejoint « " + org.getName() + " »";
             String body = "Rôle : " + roleFr + ". Retrouvez l'équipe dans votre espace.";
             if (mail) {
                 String rights = role == OrgRole.HIRING_MANAGER
-                        ? "En tant que Hiring Manager, vous voyez uniquement les dossiers qui vous sont assignés depuis le pipeline."
+                        ? "En tant que Responsable du poste, vous voyez uniquement les dossiers qui vous sont assignés depuis le pipeline."
                         : "En tant que Recruteur, vous accédez aux offres, au pipeline, aux entretiens et à l'agenda de l'entreprise.";
+                String credsInfo = wasNew
+                        ? " Utilisez « Connexion par code e-mail » avec cette adresse, puis choisissez votre mot de passe personnel."
+                        : " Connectez-vous avec vos identifiants habituels.";
                 notificationService.pushAndMail("team", u.getId(), title, body, "SYSTEM", MailService.Kind.ACCOUNT,
                         "vous avez rejoint " + org.getName(),
                         EmailTemplates.Email.of("Bienvenue dans l'équipe " + org.getName(),
                                         owner.getFullName() + " vous a ajouté(e) à l'espace recruteur de « " + org.getName() + " » (rôle : " + roleFr + ").",
-                                        rights + " Connectez-vous avec votre adresse e-mail et votre mot de passe habituels.")
+                                        rights + credsInfo)
                                 .withButton("Ouvrir l'espace équipe", frontendBase.replaceAll("/$", "") + "/app/recruiter-team.html"),
                         null);
             } else {
@@ -266,23 +343,169 @@ public class OrganizationService {
 
     @Transactional
     public void removeMember(User owner, Long userId) {
-        Membership om = requireMembership(owner);
-        if (om.getOrgRole() != OrgRole.OWNER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul l'Owner retire (R13)");
+        Membership m = requireManagedMember(owner, userId);
+        if (m.getOrgRole() == OrgRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Transférez d'abord le rôle de créateur à un autre membre");
         }
-        if (owner.getId().equals(userId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible de se retirer soi-même");
+        if (isWaiting(m)) {
+            // l'invité n'a jamais eu d'accès : on annule l'invitation, il n'y a rien à retirer
+            invitationRepository.revokePending(m.getOrganization().getId(), m.getUser().getEmail(), Instant.now());
+            audit.ok("INVITATION_REVOKED", owner, "MEMBERSHIP", m.getId(),
+                    m.getUser().getEmail() + " · « " + m.getOrganization().getName() + " »");
+            notificationService.push("team", m.getUser().getId(),
+                    "Invitation annulée — « " + m.getOrganization().getName() + " »",
+                    ownerName(owner) + " a annulé l'invitation qui vous était adressée.", "SYSTEM");
+            return;
         }
-        Membership m = membershipRepository.findByOrganizationIdAndUserId(om.getOrganization().getId(), userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membre introuvable"));
         m.setActive(false);
+        m.setSuspendedAt(null); // retiré : ce n'est plus une pause que l'on peut annuler
         membershipRepository.save(m);
+        audit.ok("MEMBER_REMOVED", owner, "MEMBERSHIP", m.getId(),
+                m.getUser().getEmail() + " (" + m.getOrgRole().libelleFr() + ") retiré de « " + m.getOrganization().getName() + " »");
+        notificationService.push("team", m.getUser().getId(),
+                "Vous n'êtes plus membre de « " + m.getOrganization().getName() + " »",
+                owner.getFullName() + " vous a retiré de l'équipe.", "SYSTEM");
+    }
+
+    /** Ligne de la liste d'équipe sans accès en cours et sans pause : l'invité n'a pas encore répondu. */
+    private static boolean isWaiting(Membership m) {
+        return !m.isActive() && m.getSuspendedAt() == null;
+    }
+
+    /** Rôle, pause et transfert supposent un accès réel ; une attente s'annule, elle ne se suspend pas. */
+    private static void requireAccepted(Membership m) {
+        if (isWaiting(m)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cette personne n'a pas encore répondu à son invitation : annulez-la plutôt que de changer son accès.");
+        }
+    }
+
+    /** Le créateur agit sur un autre membre de son propre espace, jamais sur lui-même. */
+    @Transactional(readOnly = true)
+    protected Membership requireManagedMember(User actor, Long userId) {
+        Membership om = requireMembership(actor);
+        if (om.getOrgRole() != OrgRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace gère l'équipe (R13)");
+        }
+        if (actor.getId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible d'agir sur son propre compte ici");
+        }
+        return membershipRepository.findByOrganizationIdAndUserId(om.getOrganization().getId(), userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Membre introuvable"));
+    }
+
+    /** Promotion / rétrogradation d'un membre. Le rôle de créateur ne s'octroie pas ici : il se transfère. */
+    @Transactional
+    public Membership changeMemberRole(User actor, Long userId, OrgRole newRole) {
+        Membership m = requireManagedMember(actor, userId);
+        if (newRole == null || newRole == OrgRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle invalide : utilisez le transfert du rôle de créateur");
+        }
+        if (m.getOrgRole() == OrgRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce compte est le créateur de l'espace : transférez-lui d'abord le rôle");
+        }
+        requireAccepted(m);
+        String previousRole = m.getOrgRole().libelleFr();
+        m.setOrgRole(newRole);
+        if (!m.isActive()) {
+            m.setActive(true);
+            m.setSuspendedAt(null); // un rôle nouveau vaut rétablissement : pas de « Responsable du poste » sans accès
+        }
+        membershipRepository.save(m);
+        audit.ok("MEMBER_ROLE_CHANGED", actor, "MEMBERSHIP", m.getId(),
+                m.getUser().getEmail() + " · " + previousRole + " → " + newRole.libelleFr());
+        notificationService.push("team", m.getUser().getId(),
+                "Nouveau rôle chez « " + m.getOrganization().getName() + " »",
+                "Vous êtes désormais " + newRole.libelleFr() + ".", "SYSTEM");
+        return m;
+    }
+
+    /** Mise en pause : le compte garde son rôle et ses dossiers, il perd seulement l'accès, de façon réversible. */
+    @Transactional
+    public void suspendMember(User actor, Long userId) {
+        Membership m = requireManagedMember(actor, userId);
+        if (m.getOrgRole() == OrgRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le créateur de l'espace ne peut pas être mis en pause");
+        }
+        requireAccepted(m);
+        if (!m.isActive()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce membre est déjà en pause");
+        }
+        m.setActive(false);
+        m.setSuspendedAt(Instant.now());
+        membershipRepository.save(m);
+        audit.ok("MEMBER_SUSPENDED", actor, "MEMBERSHIP", m.getId(),
+                m.getUser().getEmail() + " (" + m.getOrgRole().libelleFr() + ") · « " + m.getOrganization().getName() + " »");
+        notificationService.push("team", m.getUser().getId(),
+                "Accès en pause — « " + m.getOrganization().getName() + " »",
+                ownerName(actor) + " a mis votre accès en pause. Un créateur peut le rétablir à tout moment.", "SYSTEM");
+    }
+
+    @Transactional
+    public void reinstateMember(User actor, Long userId) {
+        Membership m = requireManagedMember(actor, userId);
+        requireAccepted(m);
+        if (m.isActive()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce membre a déjà accès");
+        }
+        m.setActive(true);
+        m.setSuspendedAt(null);
+        membershipRepository.save(m);
+        audit.ok("MEMBER_REINSTATED", actor, "MEMBERSHIP", m.getId(),
+                m.getUser().getEmail() + " (" + m.getOrgRole().libelleFr() + ") · « " + m.getOrganization().getName() + " »");
+        notificationService.push("team", m.getUser().getId(),
+                "Accès rétabli — « " + m.getOrganization().getName() + " »",
+                ownerName(actor) + " vous a redonné l'accès à l'espace.", "SYSTEM");
+    }
+
+    /** Un seul compte gouverne l'espace : le transfert déplace le rôle, il n'en crée pas un second. */
+    @Transactional
+    public Membership transferOwnership(User actor, Long userId) {
+        Membership next = requireManagedMember(actor, userId);
+        Membership om = requireMembership(actor);
+        if (om.getOrgRole() != OrgRole.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace peut le transférer");
+        }
+        if (isWaiting(next)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Ce compte n'a pas encore répondu à son invitation : le rôle de créateur ne se transfère qu'à un membre actif.");
+        }
+        if (!next.isActive()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rétablissez d'abord l'accès de ce membre");
+        }
+        om.setOrgRole(OrgRole.RECRUTEUR);
+        membershipRepository.save(om);
+        next.setOrgRole(OrgRole.OWNER);
+        membershipRepository.save(next);
+        audit.ok("OWNER_TRANSFERRED", actor, "MEMBERSHIP", next.getId(),
+                actor.getEmail() + " → " + next.getUser().getEmail() + " · « " + next.getOrganization().getName() + " »");
+        notificationService.pushAndMail("team", next.getUser().getId(),
+                "Vous êtes le créateur de « " + next.getOrganization().getName() + " »",
+                "Vous gérez l'équipe, la fiche entreprise et la formule.", "SYSTEM", MailService.Kind.ACCOUNT,
+                "vous êtes désormais le créateur de " + next.getOrganization().getName(),
+                EmailTemplates.Email.of("Vous dirigez l'espace " + next.getOrganization().getName(),
+                                actor.getFullName() + " vous a transféré la gestion de l'espace recruteur.",
+                                "En tant que Créateur, vous pouvez inviter et retirer des membres, changer leur rôle, "
+                                        + "modifier la fiche entreprise et choisir la formule. "
+                                        + "Votre propre compte reste le seul à pouvoir transmettre cette responsabilité.")
+                        .withButton("Ouvrir l'espace équipe", frontendBase.replaceAll("/$", "") + "/app/recruiter-team.html"),
+                null);
+        return next;
+    }
+
+    private static String ownerName(User actor) {
+        return actor.getFullName() == null || actor.getFullName().isBlank() ? "Un administrateur de l'espace" : actor.getFullName();
+    }
+
+    @Transactional(readOnly = true)
+    public int memberCount(Organization org) {
+        return membershipRepository.findByOrganizationIdAndActiveTrue(org.getId()).size();
     }
 
     @Transactional(readOnly = true)
     public List<Membership> listMembers(User user) {
         Membership m = requireMembership(user);
-        List<Membership> list = membershipRepository.findByOrganizationIdAndActiveTrue(m.getOrganization().getId());
+        List<Membership> list = membershipRepository.findTeamRows(m.getOrganization().getId());
         list.forEach(x -> {
             x.getUser().getEmail();
             x.getUser().getFullName();
@@ -440,43 +663,59 @@ public class OrganizationService {
 
     @Transactional(readOnly = true)
     public List<Map<String, Object>> listPublic() {
-        Map<Long, Map<String, Object>> byOrg = new LinkedHashMap<>();
+        Map<String, Map<String, Object>> byName = new LinkedHashMap<>();
+        Map<String, Integer> liveOffers = new LinkedHashMap<>();
         for (JobOffer offer : jobOfferRepository.findByPublishedTrueAndSuspendedFalse()) {
+            // une offre close ou archivée ne fait plus vivre la fiche publique de l'entreprise
+            if (offer.getClosedAt() != null || offer.getArchivedAt() != null) continue;
             Organization org = membershipRepository.findByUserIdAndActiveTrue(offer.getRecruiter().getId()).stream()
                     .map(Membership::getOrganization)
                     .findFirst()
                     .orElse(null);
             String name = org != null && org.getName() != null ? org.getName()
                     : (offer.getRecruiter().getCompany() != null ? offer.getRecruiter().getCompany() : "Entreprise");
-            Long key = org != null ? org.getId() : -offer.getRecruiter().getId();
-            Map<String, Object> row = byOrg.get(key);
-            if (row == null) {
-                row = new LinkedHashMap<>();
-                row.put("id", org == null ? null : org.getId());
-                row.put("name", name);
-                row.put("logoUrl", org != null && org.getLogoUrl() != null && !org.getLogoUrl().isBlank()
-                        ? org.getLogoUrl()
-                        : CompanyDirectory.logoFor(org == null ? null : org.getIce(), name));
-                row.put("website", org == null ? "" : nvl(org.getWebsite()));
-                row.put("sector", org == null ? "" : nvl(org.getSector()));
-                row.put("city", org != null && org.getCity() != null && !org.getCity().isBlank()
-                        ? org.getCity()
-                        : firstCity(offer.getLocation()));
-                row.put("employees", org == null ? "" : nvl(org.getEmployeeRange()));
-                row.put("verified", (org != null && org.isVerified()) || offer.getRecruiter().isCompanyVerified());
-                row.put("verificationStatus", org == null ? "" : nvl(org.getVerificationStatus()));
-                row.put("presentation", org != null && org.getPresentation() != null && !org.getPresentation().isBlank()
-                        ? org.getPresentation()
-                        : name + " recrute actuellement sur HireLink.");
-                row.put("offerCount", 0);
-                byOrg.put(key, row);
-            }
-            row.put("offerCount", ((Number) row.get("offerCount")).intValue() + 1);
+            // un recruteur sorti de son équipe n'a plus d'organisation active : son offre porte malgré tout
+            // le nom de l'entreprise, saisi dans son compte. Regrouper par nom évite une fiche jumelle sans id.
+            String key = name.toLowerCase();
+            liveOffers.merge(key, 1, Integer::sum);
+            Map<String, Object> row = byName.get(key);
+            if (row == null || (row.get("id") == null && org != null)) row = publicSheet(org, offer, name, row);
             if (row.get("city") == null || String.valueOf(row.get("city")).isBlank()) {
                 row.put("city", firstCity(offer.getLocation()));
             }
+            byName.put(key, row);
         }
-        return new ArrayList<>(byOrg.values());
+        List<Map<String, Object>> sheets = new ArrayList<>(byName.values());
+        for (Map<String, Object> sheet : sheets) {
+            sheet.put("offerCount", liveOffers.getOrDefault(String.valueOf(sheet.get("name")).toLowerCase(), 0));
+        }
+        return sheets;
+    }
+
+    /**
+     * Fiche publique d'une entreprise. {@code previous} est la fiche déjà constituée sous ce nom, souvent par
+     * un recruteur sans organisation : ses offres sont comptées, mais ses champs d'identité sont vides.
+     */
+    private Map<String, Object> publicSheet(Organization org, JobOffer offer, String name, Map<String, Object> previous) {
+        Map<String, Object> row = previous == null ? new LinkedHashMap<>() : previous;
+        row.put("id", org == null ? null : org.getId());
+        row.put("name", name);
+        row.put("logoUrl", org != null && org.getLogoUrl() != null && !org.getLogoUrl().isBlank()
+                ? org.getLogoUrl()
+                : CompanyDirectory.logoFor(org == null ? null : org.getIce(), name));
+        row.put("website", org == null ? "" : nvl(org.getWebsite()));
+        row.put("sector", org == null ? "" : nvl(org.getSector()));
+        row.put("city", org != null && org.getCity() != null && !org.getCity().isBlank()
+                ? org.getCity()
+                : firstCity(offer.getLocation()));
+        row.put("employees", org == null ? "" : nvl(org.getEmployeeRange()));
+        row.put("verified", (org != null && org.isVerified()) || offer.getRecruiter().isCompanyVerified());
+        row.put("verificationStatus", org == null ? "" : nvl(org.getVerificationStatus()));
+        row.put("presentation", org != null && org.getPresentation() != null && !org.getPresentation().isBlank()
+                ? org.getPresentation()
+                : name + " recrute actuellement sur HireLink.");
+        row.put("offerCount", 0);
+        return row;
     }
 
     private static String nvl(String value) {

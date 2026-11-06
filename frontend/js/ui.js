@@ -86,12 +86,36 @@
     return overlay.querySelector(".modal, .drawer");
   }
 
+  /** Panneau ouvert = dialog pour les lecteurs d'écran, et le clavier doit y entrer : sans focus initial il reste derrière le voile. */
+  function markDialog(panel) {
+    panel.setAttribute("role", "dialog");
+    panel.setAttribute("aria-modal", "true");
+    panel.setAttribute("aria-labelledby", "hl-modal-title");
+    if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "-1");
+  }
+
+  function focusInto(panel) {
+    if (!panel.contains(document.activeElement)) {
+      try { panel.focus(); } catch (_) {}
+    }
+  }
+
+  /** Un panneau qui en remplace un autre détruit son propre déclencheur : ne pas le mémoriser. */
+  function rememberOpener() {
+    const el = document.activeElement;
+    const overlay = document.getElementById("hl-overlay");
+    if (!el || el === document.body) return;
+    if (overlay && overlay.contains(el)) return;
+    previouslyFocused = el;
+  }
+
   function openModal(options) {
     ensureHosts();
-    previouslyFocused = document.activeElement;
+    rememberOpener();
     const overlay = document.getElementById("hl-overlay");
     overlay.classList.remove("overlay--drawer");
     const modal = dialogPanel(overlay);
+    markDialog(modal);
     modal.className = "modal" + (options.large ? " modal-lg" : "");
     modal.innerHTML =
       '<div class="dialog-lead">' +
@@ -112,6 +136,7 @@
     else overlay.style.zIndex = "";
     overlay.classList.add("is-open");
     readyApi(modal, ok, options);
+    focusInto(modal);
     return new Promise((resolve) => {
       modalResolver = resolve;
     });
@@ -120,10 +145,11 @@
   /** Panneau latéral droit — garde le kanban visible (ATS type Greenhouse). */
   function openDrawer(options) {
     ensureHosts();
-    previouslyFocused = document.activeElement;
+    rememberOpener();
     const overlay = document.getElementById("hl-overlay");
     overlay.classList.add("overlay--drawer");
     const panel = dialogPanel(overlay);
+    markDialog(panel);
     panel.className =
       "drawer" +
       (options.wide ? " drawer--wide" : "") +
@@ -149,6 +175,7 @@
     const ok = wireActions(panel.querySelector(".modal-actions"), options);
     overlay.classList.add("is-open");
     readyApi(panel, ok, options);
+    focusInto(panel);
     return new Promise((resolve) => {
       modalResolver = resolve;
     });
@@ -169,10 +196,14 @@
       modalResolver(result);
       modalResolver = null;
     }
-    if (previouslyFocused && previouslyFocused.focus) {
+    const back = previouslyFocused && previouslyFocused.isConnected ? previouslyFocused : null;
+    previouslyFocused = null;
+    if (back) {
       try {
-        previouslyFocused.focus();
+        back.focus();
       } catch (_) {}
+    } else if (overlay && overlay.contains(document.activeElement)) {
+      document.activeElement.blur();
     }
   }
 
@@ -187,9 +218,7 @@
     if (e.key !== "Tab") return;
     const panel = dialogPanel(overlay);
     if (!panel) return;
-    const focusables = panel.querySelectorAll(
-      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    );
+    const focusables = panel.querySelectorAll(FOCUSABLE);
     if (!focusables.length) return;
     const first = focusables[0];
     const last = focusables[focusables.length - 1];
@@ -202,6 +231,86 @@
     }
   });
 
+  const FOCUSABLE =
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+  /* Voiles dessinés hors de cette page (assistant de postulation, popup d'offre) : pile pour qu'une
+     couche posée sur une autre soit la seule à répondre, sinon Escape fermerait les deux. */
+  const trapStack = [];
+
+  function layeredAbove(panel) {
+    const ov = document.getElementById("hl-overlay");
+    if (ov && ov.classList.contains("is-open")) return true;
+    return trapStack.length && trapStack[trapStack.length - 1] !== panel;
+  }
+
+  /**
+   * Contrat clavier d'un voile aria-modal : Tab ne sort pas du panneau, Escape déclenche la sortie
+   * prévue par l'hôte, le focus entre à l'ouverture et revient au déclencheur à la fermeture.
+   * Renvoie la fonction de libération — l'hôte doit l'appeler dans son propre close().
+   */
+  function trapDialog(panel, onClose) {
+    if (!panel) return function () {};
+    const opener = document.activeElement;
+    if (!panel.hasAttribute("tabindex")) panel.setAttribute("tabindex", "-1");
+    trapStack.push(panel);
+    function onKey(e) {
+      if (trapStack[trapStack.length - 1] !== panel || layeredAbove(panel)) return;
+      if (e.key === "Escape") {
+        // onClose peut répondre `false` : un widget imbriqué (menu déroulant, combo) garde la main sur Escape.
+        if (onClose(e) === false) return;
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const f = panel.querySelectorAll(FOCUSABLE);
+      if (!f.length) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = f[0];
+      const last = f[f.length - 1];
+      const active = document.activeElement;
+      if (!panel.contains(active)) {
+        e.preventDefault();
+        (e.shiftKey ? last : first).focus();
+      } else if (e.shiftKey && (active === first || active === panel)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    document.addEventListener("keydown", onKey, true);
+    setTimeout(() => {
+      if (!panel.isConnected) return;
+      const d = panel.matches('[role="dialog"], [role="alertdialog"]')
+        ? panel
+        : panel.querySelector('[role="dialog"], [role="alertdialog"]');
+      const target = d || panel;
+      if (target !== panel && !target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
+      if (!panel.contains(document.activeElement)) {
+        try { target.focus(); } catch (_) {}
+      }
+    }, 60);
+    let done = false;
+    return function release() {
+      if (done) return;
+      done = true;
+      document.removeEventListener("keydown", onKey, true);
+      const at = trapStack.indexOf(panel);
+      if (at !== -1) trapStack.splice(at, 1);
+      // Le piège ne rend le focus que s'il le détient encore : un hôte qui l'a déjà restauré n'est pas dédoublé.
+      const held = panel.contains(document.activeElement);
+      if (held && opener && opener.isConnected && opener.focus) {
+        try { opener.focus(); } catch (_) {}
+      }
+    };
+  }
+
   function bindScrollProgress() {
     const bar = document.querySelector(".scroll-progress");
     if (!bar) return;
@@ -213,10 +322,16 @@
   }
 
   global.HireLink = {
-    toast: Mascotte.toast,
+    // La référence se prend à l'appel : une page qui charge ui.js avant mascotte.js doit quand même avoir ses toasts.
+    toast: function () { return Mascotte.toast.apply(Mascotte, arguments); },
     openModal,
     openDrawer,
+    openPreview: function (o) {
+      if (global.HLUI && global.HLUI.openPreview) return global.HLUI.openPreview(o);
+      return openModal(Object.assign({ large: true, hideConfirm: true, cancelLabel: "Fermer" }, o));
+    },
     closeModal,
+    trapDialog,
   };
 
   document.addEventListener("DOMContentLoaded", () => {

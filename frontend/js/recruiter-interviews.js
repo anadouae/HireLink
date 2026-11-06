@@ -58,7 +58,7 @@
     wrap.className = "iv-item " + k[1];
     wrap.dataset.focus = "interview:" + a.id + " application:" + a.id;
     const d = new Date(a.interviewAt);
-    const visio = a.interviewType !== "ONSITE";
+    const t = RC.interviewTypeUi(a.interviewType);
     const head = document.createElement("header");
     head.className = "iv-item-head";
     head.innerHTML =
@@ -66,7 +66,7 @@
       d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + "</small></div>" +
       '<span class="ivx-ava" aria-hidden="true"></span>' +
       '<div class="iv-who"><strong></strong><span></span></div>' +
-      '<div class="iv-tags"><span class="iv-kind"></span><span class="iv-mode ' + (visio ? "t-visio" : "t-onsite") + '">' + ico(visio ? "video" : "building") + (visio ? "Visio" : "Sur site") + "</span></div>";
+      '<div class="iv-tags"><span class="iv-kind"></span><span class="iv-mode ' + t.cls + '"><i class="iv-light-green" aria-hidden="true"></i>' + ico(t.icon) + t.label + "</span></div>";
     head.querySelector(".ivx-ava").textContent = initials(a.candidateName);
     head.querySelector(".iv-who strong").textContent = a.candidateName || "Candidat";
     head.querySelector(".iv-who span").textContent = a.jobTitle || "";

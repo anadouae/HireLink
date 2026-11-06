@@ -31,14 +31,24 @@ public class AiCreditService {
         this.billingCatalogService = billingCatalogService;
     }
 
+    /** Une action IA réussie = un crédit. Le coût n'est pas une variable d'ajustement invisible. */
+    public static final int COST_PER_ACTION = 1;
+
     public record CreditStatus(
             String plan,
+            String planLabel,
+            int monthlyMad,
             int limit,
             int used,
             int remaining,
+            int costPerAction,
+            int daysToReset,
             boolean premiumUnlimited,
             boolean allowed
     ) {}
+
+    /** Ce qu'une formule a consommé, fonctionnalité par fonctionnalité, depuis le début du mois. */
+    public record FeatureUse(String feature, int actions, int credits) {}
 
     public PlanTier resolveTier(User user) {
         if (user.getPlanTier() != null) return user.getPlanTier();
@@ -53,10 +63,44 @@ public class AiCreditService {
     @Transactional(readOnly = true)
     public CreditStatus status(User user) {
         PlanTier tier = resolveTier(user);
-        int limit = limitFor(tier);
+        ma.ensat.hirelink.model.CommercialPlan plan = billingCatalogService.require(tier);
+        int limit = plan.getCredits();
         int u = usedThisMonth(user.getId());
         boolean paid = tier == PlanTier.PREMIUM || tier == PlanTier.PERFORMANCE;
-        return new CreditStatus(tier.name(), limit, u, Math.max(0, limit - u), paid, u < limit);
+        return new CreditStatus(
+                tier.name(),
+                plan.getLabel(),
+                plan.getMonthlyMad(),
+                limit,
+                u,
+                Math.max(0, limit - u),
+                COST_PER_ACTION,
+                daysToReset(),
+                paid,
+                u < limit
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<FeatureUse> monthlyByFeature(User user) {
+        YearMonth ym = YearMonth.now(ZoneOffset.UTC);
+        Instant from = ym.atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant to = ym.plusMonths(1).atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        List<FeatureUse> out = new ArrayList<>();
+        for (Object[] row : aiUsageLogRepository.sumByFeature(user.getId(), from, to)) {
+            String feature = String.valueOf(row[0]);
+            int actions = row[1] == null ? 0 : ((Number) row[1]).intValue();
+            int credits = row[2] == null ? 0 : ((Number) row[2]).intValue();
+            out.add(new FeatureUse(feature, actions, credits));
+        }
+        return out;
+    }
+
+    /** Le compteur repart le 1er : le dire évite la question « quand est-ce que j'aurai de nouveau des crédits ? ». */
+    private static int daysToReset() {
+        java.time.LocalDate today = java.time.LocalDate.now(ZoneOffset.UTC);
+        return (int) java.time.temporal.ChronoUnit.DAYS.between(
+                today, YearMonth.from(today).atEndOfMonth().plusDays(1));
     }
 
     private int usedThisMonth(Long userId) {

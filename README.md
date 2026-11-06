@@ -156,7 +156,7 @@ Détails, scénarios par rôle et dépannage : [`docs/GUIDE_INSTALLATION_ET_TEST
 
 | Email | Mot de passe | Rôle |
 |-------|--------------|------|
-| `admin@hirelink.ma` | `Admin123!` **+ code TOTP** (activation à la première connexion, voir le guide §14) | Admin |
+| `admin@hirelink.ma` | `Admin123!` seul (double authentification activable, et imposée par `HIRELINK_ADMIN_MFA_REQUIRED=true` — guide §14) | Admin |
 | `recruteur@hirelink.ma` | `Recruteur123!` | Recruteur (Salma Berrada, Atlas Digital) |
 | `candidat@hirelink.ma` | `Candidat123!` | Candidat |
 | `n.bennani@atlasdigital.ma` | `Recruteur123!` | Recruteur · Owner d’Atlas Digital |
@@ -172,7 +172,7 @@ Détails, scénarios par rôle et dépannage : [`docs/GUIDE_INSTALLATION_ET_TEST
 
 ### Sécurité
 
-Authentification par jeton court (15 min) + refresh opaque haché en cookie `HttpOnly` (rotation, détection de réutilisation, expiration par inactivité et durée absolue), liste et révocation des sessions, mots de passe BCrypt 12 avec politique (12–64 caractères, liste noire), verrouillage et limitation de débit, double authentification TOTP (obligatoire pour l’administrateur, avec codes de secours), passkeys WebAuthn optionnelles, ré-authentification pour les actions sensibles, réinitialisation du mot de passe, contrôle d’accès par rôle **et** par organisation, validation des entrées, téléversements vérifiés par signature, CSP et en-têtes de sécurité, CORS restreint, journal d’audit, export et effacement RGPD, profil `prod`. Détails, table OWASP/ASVS et limites : [`docs/SECURITE.md`](docs/SECURITE.md).
+Authentification par jeton court (15 min) + refresh opaque haché en cookie `HttpOnly` (rotation, détection de réutilisation, expiration par inactivité et durée absolue), liste et révocation des sessions, mots de passe BCrypt 12 avec politique (12–64 caractères, liste noire), verrouillage et limitation de débit, double authentification TOTP (activable par tout compte, avec codes de secours ; imposée à l’administrateur lorsque `hirelink.security.admin-mfa-required=true`, réglage de production), passkeys WebAuthn optionnelles, ré-authentification pour les actions sensibles, réinitialisation du mot de passe, contrôle d’accès par rôle **et** par organisation, validation des entrées, téléversements vérifiés par signature, CSP et en-têtes de sécurité, CORS restreint, journal d’audit, export et effacement RGPD, profil `prod`. Détails, table OWASP/ASVS et limites : [`docs/SECURITE.md`](docs/SECURITE.md).
 
 ---
 

@@ -10,15 +10,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
   <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -51,7 +51,7 @@
             <div class="panel-head"><h2>Recherche</h2></div>
             <div class="panel-body profile-form">
               <div class="field">
-                <label for="pf-level">Niveau</label>
+                <label for="pf-level">Niveau d'expérience</label>
                 <select id="pf-level">
                   <option value="">—</option>
                   <option>Stagiaire</option>
@@ -88,6 +88,11 @@
               <div id="pf-skills-picker"></div>
               <h3 class="detail-sub">Votre profil en un coup d’œil</h3>
               <div id="pf-skill-boxes" aria-live="polite"></div>
+              <div class="profile-ai-row">
+                <button type="button" class="btn btn-ghost btn-sm" id="profile-rewrite" data-ai-cost>Améliorer ce profil avec l’IA</button>
+                <p class="muted" style="margin:.2rem 0 0">L’IA propose, vous enregistrez. Rien n’est écrit à votre place.</p>
+              </div>
+              <div class="coach-log" id="ai-result" hidden></div>
             </div>
           </section>
 
@@ -162,7 +167,11 @@
             <ul class="cv-findings" id="cv-findings"></ul>
             <button type="button" class="btn btn-ghost btn-sm" id="cv-more">Voir le détail</button>
             <div class="coach-log" id="coach-log" hidden></div>
-            <button type="button" class="btn btn-primary" id="coach-analyze">Faire la synthèse</button>
+            <button type="button" class="btn btn-primary" id="coach-analyze" data-ai-cost>Faire la synthèse</button>
+            <form class="coach-ask" id="coach-form">
+              <input id="coach-input" type="text" maxlength="300" placeholder="Une question précise sur ce CV…" aria-label="Votre question pour le coach" />
+              <button type="submit" class="btn btn-ghost btn-sm" data-ai-cost>Interroger le coach</button>
+            </form>
           </aside>
         </section>
       
@@ -170,16 +179,17 @@
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101r"></script>
-  <script defer src="../js/premium.js?v=20261102s"></script>
-  <script defer src="../js/ui.js?v=20261101r"></script>
-  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/mascotte.js?v=20261105i"></script>
+  <script defer src="../js/premium.js?v=20261106g"></script>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261106c"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261101r"></script>
-  <script defer src="../js/in-app-help.js?v=20261102q"></script>
-  <script defer src="../js/app-shell.js?v=20261102q"></script>
-  <script defer src="../js/growth.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261103h"></script>
+  <script defer src="../js/in-app-help.js?v=20261105s"></script>
+  <script defer src="../js/credits.js?v=20261105v"></script>
+  <script defer src="../js/app-shell.js?v=20261105y"></script>
+  <script defer src="../js/growth.js?v=20261106g"></script>
   <script defer src="../js/skills.js?v=20261101r"></script>
-  <script defer src="../js/candidate-profile.js?v=20261101t"></script>
+  <script defer src="../js/candidate-profile.js?v=20261105w"></script>
 </body>
 </html>

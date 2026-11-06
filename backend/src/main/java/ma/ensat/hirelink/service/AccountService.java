@@ -8,6 +8,7 @@ import ma.ensat.hirelink.model.WebAuthnCredential;
 import ma.ensat.hirelink.repository.UserRepository;
 import ma.ensat.hirelink.security.AuthThrottle;
 import ma.ensat.hirelink.security.PasswordPolicy;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,9 @@ public class AccountService {
     private final PrivacyService privacy;
     private final MailService mail;
     private final NotificationService notifications;
+
+    @Value("${hirelink.security.admin-mfa-required:false}")
+    private boolean adminMfaRequired;
 
     public AccountService(UserRepository users, PasswordEncoder encoder, SessionService sessions, AuthService auth,
                           AuditService audit, AuthThrottle throttle, TotpService totp, OtpService otp,
@@ -97,7 +101,7 @@ public class AccountService {
         m.put("hasPassword", user.getPasswordHash() != null && !user.getPasswordHash().isBlank());
         m.put("passwordChangedAt", user.getPasswordChangedAt() == null ? null : user.getPasswordChangedAt().toString());
         m.put("mfaEnabled", user.isMfaEnabled());
-        m.put("mfaMandatory", user.getRole() == Role.ADMINISTRATEUR);
+        m.put("mfaMandatory", adminMfaRequired && user.getRole() == Role.ADMINISTRATEUR);
         m.put("backupCodesLeft", user.getMfaBackupHashes() == null || user.getMfaBackupHashes().isBlank() ? 0 : user.getMfaBackupHashes().split(",").length);
         m.put("passwordRules", PasswordPolicy.RULES);
         List<Map<String, Object>> keys = new ArrayList<>();
@@ -201,7 +205,7 @@ public class AccountService {
 
     @Transactional
     public void mfaDisable(User user, AuthDtos.MfaCode req) {
-        if (user.getRole() == Role.ADMINISTRATEUR) {
+        if (adminMfaRequired && user.getRole() == Role.ADMINISTRATEUR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "La double authentification est obligatoire pour l'administrateur.");
         }
         if (!user.isMfaEnabled()) throw new ResponseStatusException(HttpStatus.CONFLICT, "La double authentification n'est pas active.");

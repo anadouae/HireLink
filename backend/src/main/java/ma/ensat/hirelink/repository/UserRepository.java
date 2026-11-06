@@ -13,4 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     java.util.List<User> findAllByCompanyIce(String companyIce);
     long countByRole(Role role);
     boolean existsByRole(Role role);
+
+    List<User> findTop10ByFullNameContainingIgnoreCaseOrEmailContainingIgnoreCase(String name, String email);
 }

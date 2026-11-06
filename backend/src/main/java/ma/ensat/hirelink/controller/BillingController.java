@@ -39,6 +39,18 @@ public class BillingController {
         this.billingCatalogService = billingCatalogService;
     }
 
+    /** Catalogue lisible : le compteur de crédits affiche le prix et le plafond réels, pas un texte figé. */
+    @GetMapping("/plans")
+    @Transactional(readOnly = true)
+    public java.util.List<Map<String, Object>> plans(@AuthenticationPrincipal User user) {
+        String audience = user.getRole() == Role.CANDIDAT ? "CANDIDAT" : "RECRUTEUR";
+        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
+        for (ma.ensat.hirelink.model.CommercialPlan plan : billingCatalogService.plans()) {
+            if (audience.equals(plan.getAudience())) out.add(billingCatalogService.toPlan(plan));
+        }
+        return out;
+    }
+
     @PostMapping("/subscribe")
     @Transactional
     public Map<String, Object> subscribe(@AuthenticationPrincipal User user, @RequestBody(required = false) Map<String, Object> body) {
@@ -60,7 +72,7 @@ public class BillingController {
         } else if (user.getRole() == Role.RECRUTEUR) {
             Membership m = organizationService.requireMembership(user);
             if (m.getOrgRole() != OrgRole.OWNER) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le propriétaire de l'organisation gère la formule");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace choisit la formule");
             }
             if (m.getOrganization().getPlanTier() != tier) {
                 invoice = organizationService.changePlan(m.getOrganization(), tier, cycle);

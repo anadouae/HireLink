@@ -10,15 +10,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="css/auth.css?v=20261101r" />
-  <link rel="stylesheet" href="css/motion.css?v=20261101r" />
-  <link rel="stylesheet" href="css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="css/public-dark.css?v=20261101s" />
-  <link rel="stylesheet" href="css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="css/auth.css?v=20261105l" />
+  <link rel="stylesheet" href="css/motion.css?v=20261103a" />
+  <link rel="stylesheet" href="css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="css/public-dark.css?v=20261104l" />
+  <link rel="stylesheet" href="css/premium.css?v=20261106g" />
 </head>
 <body class="auth-body">
   <div class="auth-layout">
@@ -57,21 +57,24 @@
               <label for="email" id="email-label">Email</label>
               <input id="email" type="email" required placeholder="Entrez votre adresse e-mail" autocomplete="email" />
             </div>
+            <div class="auth-captcha" data-captcha hidden></div>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Continuer</button>
             </div>
           </form>
 
           <form id="form-otp" class="auth-step auth-form" data-panel="otp" novalidate>
-            <p class="field-hint" id="otp-hint">Entrez le code à 6 chiffres envoyé à votre adresse.</p>
+            <p class="field-hint" id="otp-hint">Un code à 6 chiffres vient d’être envoyé à votre adresse. Il est valable 15 minutes ; vérifiez vos indésirables s’il n’arrive pas.</p>
             <div class="field">
               <label for="otp">Code à 6 chiffres</label>
               <input id="otp" inputmode="numeric" maxlength="6" required placeholder="••••••" autocomplete="one-time-code" />
             </div>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Vérifier le code</button>
+              <button type="button" class="btn btn-secondary btn-block" id="btn-otp-resend" disabled>Renvoyer le code</button>
               <button type="button" class="btn btn-ghost btn-block" id="btn-back-email">Retour</button>
             </div>
+            <p class="otp-clock" id="otp-clock" hidden></p>
           </form>
 
           <form id="form-profile" class="auth-step auth-form" data-panel="profile" novalidate>
@@ -204,10 +207,50 @@
               <label for="password">Mot de passe</label>
               <input id="password" type="password" required autocomplete="current-password" />
             </div>
+            <div class="auth-captcha" data-captcha hidden></div>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
-              <button type="button" class="btn btn-secondary btn-block" id="btn-passkey" hidden>Se connecter avec une passkey</button>
               <button type="button" class="btn btn-ghost btn-block" id="btn-forgot">Mot de passe oublié ?</button>
+            </div>
+            <p class="auth-divider">ou</p>
+            <div class="auth-actions">
+              <button type="button" class="btn btn-secondary btn-block" id="btn-login-otp">Recevoir un code par e-mail (sans mot de passe)</button>
+              <button type="button" class="btn btn-secondary btn-block" id="btn-passkey" hidden>Se connecter avec une passkey</button>
+            </div>
+          </form>
+
+          <form id="form-passkey" class="auth-step auth-form" data-panel="passkey" novalidate>
+            <div class="field-hint" style="background:var(--surface-2, #faf7f3);border:1px solid var(--line);border-radius:12px;padding:.85rem 1rem;margin-bottom:1rem">
+              <strong style="display:flex;align-items:center;gap:.4rem;color:var(--ink);margin-bottom:.25rem">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5z"/><circle cx="12" cy="16" r="1"/></svg>
+                Connexion biométrique par Passkey
+              </strong>
+              <span>Accédez à votre compte instantanément sans mot de passe avec votre <strong>empreinte digitale</strong>, <strong>reconnaissance faciale (Windows Hello / Touch ID)</strong> ou le <strong>code PIN</strong> de votre appareil.</span>
+            </div>
+
+            <div id="pk-feedback" class="rc-banner" hidden style="margin-bottom:.85rem"></div>
+
+            <div class="field">
+              <label for="pk-email">E-mail de votre compte</label>
+              <input id="pk-email" type="email" required autocomplete="username" placeholder="vous@exemple.ma" />
+            </div>
+
+            <div id="pk-mode-login" class="auth-actions">
+              <button type="button" class="btn btn-primary btn-block" id="btn-pk-run">Se connecter avec ma passkey</button>
+              <button type="button" class="btn btn-soft btn-block" id="btn-pk-switch-create">Je n’ai pas encore de passkey sur cet appareil (La créer)</button>
+              <button type="button" class="btn btn-ghost btn-block" data-back-login>Retour à la connexion par mot de passe</button>
+            </div>
+
+            <div id="pk-mode-create" class="is-hidden" style="margin-top:.5rem">
+              <p class="field-hint" style="margin-bottom:.8rem">Pour enregistrer une nouvelle passkey sur cet appareil, confirmez d’abord le mot de passe de votre compte.</p>
+              <div class="field">
+                <label for="pk-create-pw">Mot de passe de votre compte</label>
+                <input id="pk-create-pw" type="password" placeholder="Mot de passe" autocomplete="current-password" />
+              </div>
+              <div class="auth-actions">
+                <button type="button" class="btn btn-primary btn-block" id="btn-pk-do-create">Créer et enregistrer la passkey</button>
+                <button type="button" class="btn btn-ghost btn-block" id="btn-pk-switch-login">Retour</button>
+              </div>
             </div>
           </form>
 
@@ -255,6 +298,7 @@
               <label for="forgot-email">Email</label>
               <input id="forgot-email" type="email" required autocomplete="username" placeholder="vous@exemple.ma" />
             </div>
+            <div class="auth-captcha" data-captcha hidden></div>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Envoyer le lien</button>
               <button type="button" class="btn btn-ghost btn-block" data-back-login>Retour</button>
@@ -288,16 +332,15 @@
   </div>
 
   <script src="js/config.js?v=20261101r"></script>
-  <script src="js/mascotte.js?v=20261101r"></script>
-  <script src="js/ui.js?v=20261101r"></script>
-  <script src="js/api.js?v=20261101r"></script>
+  <script src="js/mascotte.js?v=20261105i"></script>
+  <script src="js/ui.js?v=20261106g"></script>
+  <script src="js/api.js?v=20261106c"></script>
   <script src="js/password-toggle.js?v=20261101r"></script>
-  <script src="js/auth-timeline.js?v=20261101r"></script>
   <script src="js/search.js?v=20261101r"></script>
-  <script src="js/places.js?v=20261101r"></script>
-  <script src="js/suggest.js?v=20261101r"></script>
+  <script src="js/places.js?v=20261103h"></script>
+  <script src="js/suggest.js?v=20261103g"></script>
   <script src="js/webauthn.js?v=20261101r"></script>
-  <script src="js/auth.js?v=20261101s"></script>
-<script defer src="js/premium.js?v=20261102s"></script>
+  <script src="js/auth.js?v=20261106d"></script>
+<script defer src="js/premium.js?v=20261106g"></script>
 </body>
 </html>

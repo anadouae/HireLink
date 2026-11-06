@@ -8,13 +8,13 @@
  */
 (function (global) {
   const TYPES = [
-    { value: "ONSITE", label: "Sur site", hint: "Dans vos locaux", icon: "building", cls: "t-onsite" },
     { value: "VISIO", label: "Visioconférence", hint: "Meet, Teams, Zoom…", icon: "video", cls: "t-visio" },
+    { value: "ONSITE", label: "Sur site", hint: "Dans vos locaux", icon: "building", cls: "t-onsite" },
   ];
   const KINDS = [["HR", "Entretien RH"], ["TECHNICAL", "Entretien technique"], ["MANAGER", "Avec le manager"], ["CASE", "Étude de cas"], ["TEAM", "Rencontre avec l’équipe"], ["FINAL", "Entretien final"]];
   const DURATIONS = [15, 30, 45, 60, 90, 120];
   const ZONES = [["Africa/Casablanca", "Casablanca (UTC+1)"], ["Europe/Paris", "Paris"], ["Europe/London", "Londres"], ["UTC", "UTC"]];
-  const TYPE_FR = { ONSITE: "Sur site", VISIO: "Visioconférence", PHONE: "Téléphone" };
+  const TYPE_FR = { VISIO: "Visioconférence", ONSITE: "Sur site", PHONE: "Téléphone" };
   const KIND_FR = { HR: "Entretien RH", TECHNICAL: "Entretien technique", MANAGER: "Entretien avec le manager", CASE: "Étude de cas", TEAM: "Rencontre avec l’équipe", FINAL: "Entretien final" };
 
   function h(tag, attrs, children) {
@@ -56,7 +56,7 @@
       date: when.date, time: when.time, zone: zone,
       duration: String((app && app.interviewDurationMinutes) || 45),
       location: (app && app.interviewLocation) || "", mapUrl: (app && app.interviewMapUrl) || "",
-      videoUrl: (app && app.interviewVideoUrl) || "", phone: (app && app.interviewPhone) || "",
+      videoUrl: (app && app.interviewVideoUrl) || "",
       participants: (app && app.interviewParticipants) || "", instructions: (app && app.interviewNotes) || "",
     };
     const root = h("div", { class: "iv-form" });
@@ -117,15 +117,15 @@
         r.checked = s.type === t.value;
         r.addEventListener("change", () => { s.type = t.value; paint(); const n = root.querySelector("#" + id); if (n) n.focus(); });
         const ico = h("span", { class: "iv-type-ico " + t.cls, "aria-hidden": "true" });
-        ico.innerHTML = global.HLIcons ? HLIcons.svg(t.icon) : "";
-        return h("div", {}, [r, h("label", { for: id }, [ico, h("span", { class: "iv-type-txt" }, [h("strong", { text: t.label }), h("small", { text: t.hint })])])]);
+        ico.innerHTML = (global.HLIcons ? HLIcons.svg(t.icon) : "") + '<span class="iv-light-green" title="Créneau direct"></span>';
+        return h("div", {}, [r, h("label", { for: id }, [ico, h("span", { class: "iv-type-txt" }, [h("strong", {}, [document.createTextNode(t.label + " "), h("span", { class: "iv-pulse-badge", text: "En ligne" })]), h("small", { text: t.hint })])])]);
       }));
       root.append(
         h("div", { class: "iv-field is-wide" }, [h("span", { class: "iv-label", text: "Mode de l’entretien" }), types]),
         h("div", { class: "iv-grid" }, [
           field("kind", "Nature de l’entretien", select("kind", KINDS)),
           field("duration", "Durée", select("duration", DURATIONS.map((d) => [String(d), d + " min"]))),
-          field("date", "Date", input("date", "date", { min: new Date().toISOString().slice(0, 10) })),
+          field("date", "Date", input("date", "date", { min: global.HireLinkApp.localDate() })),
           field("time", "Heure", input("time", "time", { step: 300 })),
           field("zone", "Fuseau horaire", select("zone", ZONES), true),
         ]),
@@ -170,7 +170,7 @@
         return {
           type: s.type, kind: s.kind, startsAt: s.date + "T" + s.time + ":00", timeZone: s.zone, durationMinutes: Number(s.duration),
           location: s.type === "ONSITE" ? s.location.trim() : null, mapUrl: s.type === "ONSITE" ? s.mapUrl.trim() : null,
-          videoUrl: s.type === "VISIO" ? s.videoUrl.trim() : null, phone: null,
+          videoUrl: s.type === "VISIO" ? s.videoUrl.trim() : null,
           participants: s.participants.trim() || null, instructions: s.instructions.trim() || null,
         };
       },
@@ -222,12 +222,21 @@
     const cancelled = app.interviewStatus === "CANCELLED";
     const when = whenText(app);
     const root = h("section", { class: "iv-card" + (cancelled ? " is-cancelled" : ""), "aria-label": "Entretien" });
+    const modeBadge = h("span", { class: "iv-mode" }, [
+      h("span", { class: "iv-light-green", "aria-hidden": "true" }),
+      document.createTextNode(" " + (TYPE_FR[app.interviewType] || "Entretien"))
+    ]);
     root.append(h("header", {}, [
-      h("div", {}, [h("span", { class: "iv-kind", text: KIND_FR[app.interviewKind] || "Entretien" }), h("span", { class: "iv-mode", text: TYPE_FR[app.interviewType] || "" })]),
+      h("div", { class: "iv-head-info" }, [h("span", { class: "iv-kind", text: KIND_FR[app.interviewKind] || "Entretien" }), modeBadge]),
       cancelled ? h("span", { class: "badge badge-danger", text: "Annulé" }) : confirmation(app, role),
     ]));
     root.append(h("p", { class: "iv-when" }, [h("strong", { text: when.day }), document.createTextNode(" à "), h("strong", { text: when.time }),
       h("small", { text: " · " + (app.interviewDurationMinutes || 45) + " min · " + when.zone })]));
+    if (!cancelled && app.interviewAt) {
+      const ics = h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Ajouter à mon agenda (.ics)" });
+      ics.onclick = () => download(app).catch(failure);
+      root.append(h("p", { class: "iv-ics" }, [ics]));
+    }
     const dl = h("dl", { class: "iv-facts" });
     if (app.interviewType === "ONSITE") {
       dl.append(row("Adresse", app.interviewLocation || "—"));
@@ -235,7 +244,9 @@
     } else if (app.interviewType === "VISIO" && app.interviewVideoUrl) {
       dl.append(row("Lien", link(app.interviewVideoUrl, "Rejoindre la visioconférence")));
     } else if (app.interviewType === "PHONE") {
-      dl.append(row("Téléphone", app.interviewPhone || "—"));
+      dl.append(row("Numéro", app.interviewLocation || "—"));
+    } else if (app.interviewLocation) {
+      dl.append(row("Accès", app.interviewLocation));
     }
     if (app.interviewParticipants) dl.append(row("Participants", app.interviewParticipants));
     if (app.interviewNotes) dl.append(row("Consignes", app.interviewNotes));
@@ -244,11 +255,6 @@
     root.append(dl);
 
     const actions = h("div", { class: "iv-actions" });
-    if (!cancelled && role === "candidate") {
-      const ics = h("button", { type: "button", class: "btn btn-soft btn-sm", text: "Ajouter à mon agenda (.ics)" });
-      ics.addEventListener("click", () => download(app).catch(failure));
-      actions.append(ics);
-    }
     if (!cancelled && role === "candidate") actions.append(...candidateActions(app, o));
     if (!cancelled && role === "recruiter") actions.append(...recruiterActions(app, o));
     if (actions.children.length) root.append(actions);
@@ -310,11 +316,40 @@
     return [move, cancel];
   }
 
+  /**
+   * Fenêtre de planification pour un dossier sans créneau : réutilise le formulaire du kit.
+   * opts.onDone() est appelé après un envoi réussi.
+   */
+  function plan(app, opts) {
+    const o = opts || {};
+    const f = form(app);
+    HireLink.openDrawer({
+      title: "Planifier un entretien",
+      description: (app.candidateName || "Candidat") + " — le candidat reçoit la convocation et l’invitation calendrier.",
+      bodyHtml: '<div id="iv-plan"></div>',
+      confirmLabel: "Planifier et prévenir",
+      confirmDisabled: true,
+      wide: true,
+      onConfirm: () => HireLinkAPI.api("/applications/" + app.id + "/interview", { method: "PUT", body: f.values() }),
+      onReady: (api) => {
+        api.root.querySelector("#iv-plan").appendChild(f.el);
+        const refresh = () => api.setConfirmEnabled(f.isValid());
+        f.el.addEventListener("input", refresh);
+        f.el.addEventListener("change", refresh);
+        refresh();
+      },
+    }).then((ok) => {
+      if (!ok) return;
+      HireLink.toast("Entretien planifié", (app.candidateName || "Candidat") + " a reçu la convocation.", "ok");
+      if (o.onDone) o.onDone();
+    });
+  }
+
   /** « Jeudi 5 novembre 2026 à 10h30 · Visioconférence » pour une ligne de texte. */
   function summary(app) {
     const w = whenText(app);
     return w.day + " à " + w.time + " · " + (TYPE_FR[app.interviewType] || "");
   }
 
-  global.HireLinkInterview = { form: form, card: card, summary: summary, whenText: whenText, TYPE_FR: TYPE_FR, KIND_FR: KIND_FR };
+  global.HireLinkInterview = { form: form, card: card, plan: plan, summary: summary, whenText: whenText, download: download, TYPE_FR: TYPE_FR, KIND_FR: KIND_FR };
 })(window);

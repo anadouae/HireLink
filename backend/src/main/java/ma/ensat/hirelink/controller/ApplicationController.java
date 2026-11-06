@@ -46,6 +46,12 @@ public class ApplicationController {
     }
 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
+    @GetMapping("/pace")
+    public ApiDtos.PaceSignal pace(@AuthenticationPrincipal User user) {
+        return applicationService.paceForRecruiter(user);
+    }
+
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @GetMapping("/by-offer/{offerId}")
     public List<ApiDtos.ApplicationResponse> byOffer(
             @AuthenticationPrincipal User user,

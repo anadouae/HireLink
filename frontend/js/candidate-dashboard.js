@@ -71,7 +71,7 @@
       : active.length ? RC.plural(active.length, "candidature") + " en cours. Vous êtes notifié à chaque étape." : "Complétez votre profil puis postulez à une première offre.";
 
     $("db-actions").innerHTML = [
-      { icon: "calendar", title: "Entretiens à venir", count: upcoming.length, tone: "info", sub: toConfirm.length ? RC.plural(toConfirm.length, "présence") + " à confirmer" : next ? "Le " + RC.fmtDateTime(next.interviewAt) : "",
+      { icon: "calendar", title: "Entretiens à venir", count: upcoming.length, tone: "info", sub: toConfirm.length ? "L’invitation est dans votre e-mail" : next ? "Le " + RC.fmtDateTime(next.interviewAt) : "",
         calm: "Aucun entretien prévu", href: next ? "candidate-applications.html?id=" + next.id : "candidate-applications.html?status=INTERVIEW" },
       { icon: "hourglass", title: "Réponses attendues", count: active.length, sub: "Dossiers en cours d’étude", calm: "Aucune candidature en cours", href: "candidate-applications.html?status=active" },
       { icon: "user", title: "Profil complété", big: pct + " %", count: missing.length, tone: "warn", sub: missing[0] ? missing[0][1] : "", calm: "Profil complet, bravo", href: missing[0] ? missing[0][2] : "candidate-profile.html" },
@@ -81,10 +81,10 @@
     // Prochaines étapes
     const steps = upcoming.slice(0, 3).map((a) => {
       const d = new Date(a.interviewAt);
-      const visio = a.interviewType !== "ONSITE";
+      const t = RC.interviewTypeUi(a.interviewType);
       const soon = d.getTime() - now < 24 * 3600e3;
-      return '<a class="db-ev ' + (visio ? "t-visio" : "t-onsite") + (soon ? " is-soon" : "") + '" href="candidate-applications.html?id=' + a.id + '"><span class="db-ev-ico" aria-hidden="true">' + ico(visio ? "video" : "building") +
-        '</span><span class="db-ev-main"><strong>' + esc(KIND_FR[a.interviewKind] || "Entretien") + "</strong><span>" + (visio ? "Visioconférence" : "Sur site") + " · " + esc(a.jobTitle || "") +
+      return '<a class="db-ev ' + t.cls + (soon ? " is-soon" : "") + '" href="candidate-applications.html?id=' + a.id + '"><span class="db-ev-ico" aria-hidden="true">' + ico(t.icon) +
+        '</span><span class="db-ev-main"><strong>' + esc(KIND_FR[a.interviewKind] || "Entretien") + "</strong><span>" + [t.label, esc(a.jobTitle || "")].filter((v) => v && v !== (KIND_FR[a.interviewKind] || "Entretien")).join(" · ") +
         '</span></span><span class="db-ev-when"><b>' + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + "</b><small>" + d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" }) + "</small></span></a>";
     });
     $("next-steps").innerHTML = steps.length ? steps.join("")
@@ -99,7 +99,7 @@
       : '<div class="db-empty">' + ico("briefcase") + '<strong>Aucune candidature</strong><span>Postulez à une offre pour suivre ici chaque étape.</span><a class="btn btn-soft btn-sm" href="candidate.html">Parcourir les offres</a></div>';
 
     if (reco.length) $("reco-list").innerHTML = reco.map((o) => {
-      const place = (o.location || "").split(/[·,]/)[0].trim();
+      const place = HireLinkPlaces.placeLabel(o.location, o.companyCity);
       const score = o.matchScore != null ? '<span class="badge ' + (o.matchScore >= 60 ? "badge-ok" : "badge-info") + '">' + Math.round(o.matchScore) + " %</span>" : "";
       return '<div class="rc-item"><div class="rc-item-main"><strong>' + esc(o.title) + "</strong><span>" + '<a class="db-co-link" href="candidate-companies.html?name=' + encodeURIComponent(o.companyName || "") + '">' + esc(o.companyName || "Entreprise") + "</a>" + (place ? " · " + esc(place) : "") +
         (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div>" + score + '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler</a></div>';

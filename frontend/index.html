@@ -15,12 +15,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="css/offer-card.css?v=20261102q" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="css/offer-card.css?v=20261105a" />
   <link rel="stylesheet" href="css/home.css?v=20261101r" />
-  <link rel="stylesheet" href="css/public-dark.css?v=20261101s" />
-  <link rel="stylesheet" href="css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="css/public-dark.css?v=20261104l" />
+  <link rel="stylesheet" href="css/premium.css?v=20261106g" />
 </head>
 <body class="home">
   <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -53,7 +53,7 @@
       <div class="hero-inner">
         <p class="eyebrow" data-reveal>Recrutement à performance équitable</p>
         <h1 class="hero-title" id="hero-title" data-split>Plus de <em id="offer-count">—</em> offres ouvertes au Maroc</h1>
-        <p class="hero-lead" data-reveal>Stages, premiers emplois et CDI. Chaque offre affiche son délai de réponse.</p>
+        <p class="hero-lead" data-reveal>Stages, premiers emplois et CDI. Les entreprises qui répondent vite portent un badge.</p>
 
         <form class="search-card" id="finder" data-reveal>
           <div class="search-tabs" role="tablist" aria-label="Type de recherche">
@@ -81,7 +81,7 @@
         <div class="stat"><dt>Offres ouvertes</dt><dd data-stat="offers">—</dd></div>
         <div class="stat"><dt>Entreprises qui recrutent</dt><dd data-stat="companies">—</dd></div>
         <div class="stat"><dt>Villes</dt><dd data-stat="cities">—</dd></div>
-        <div class="stat"><dt>Jours de réponse annoncés, en moyenne</dt><dd data-stat="sla">—</dd></div>
+        <div class="stat"><dt>Entreprises réactives, mesurées</dt><dd data-stat="pace">—</dd></div>
       </dl>
     </section>
 
@@ -105,7 +105,7 @@
                 <ul class="step-list">
                   <li>CV lu automatiquement, corrigeable avant d’enregistrer</li>
                   <li>Candidature guidée : compétences, CV, lettre</li>
-                  <li>Statut et délai de réponse restant, à chaque étape</li>
+                  <li>Statut à chaque étape, date de l’entretien dès qu’elle est fixée</li>
                 </ul>
                 <a class="link-arrow" href="auth.html?mode=register&role=CANDIDAT">Créer mon espace candidat</a>
               </div>
@@ -163,7 +163,7 @@
       <header class="block-head">
         <p class="eyebrow">Offres</p>
         <h2 id="offres-title" data-split>Les offres ouvertes</h2>
-        <p id="offers-lead">Classées par ville, type de contrat et délai de réponse annoncé.</p>
+        <p id="offers-lead">Classées par ville, type de contrat et réactivité réellement mesurée.</p>
       </header>
       <div class="offer-grid" id="public-offers" data-reveal-group><p class="muted">Chargement des offres…</p></div>
       <p class="block-more" data-reveal>
@@ -211,7 +211,7 @@
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-                <img src="assets/landing/dossier-etapes.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Suivi d’une candidature : étapes, entretien daté et délai de réponse" />
+                <img src="assets/landing/dossier-etapes.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Suivi d’une candidature : étapes, entretien daté et réponse de l’entreprise" />
               </figure>
             </li>
           </ol>
@@ -282,7 +282,7 @@
           <ul>
             <li><strong>Transparence totale :</strong> Postuler et suivre son parcours en temps réel.</li>
             <li><strong>Matching intelligent :</strong> Offres classées selon votre profil réel.</li>
-            <li><strong>Zéro saisie :</strong> Import de CV automatisé en un geste.</li>
+            <li><strong>CV déposé, pas recopié :</strong> Synthèse automatique et points manquants signalés.</li>
           </ul>
           <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=CANDIDAT">Activer ma recherche</a>
         </article>
@@ -290,12 +290,13 @@
           <span class="tag">ROI perso</span>
           <p class="eyebrow">Performance</p>
           <div class="price">39 <small>MAD / mois</small></div>
-          <p class="price-note">Divisez votre temps de recherche par deux.</p>
+          <p class="price-note">Beaucoup plus d’usages du même assistant.</p>
           <ul>
-            <li><strong>Visibilité maximale :</strong> Profil certifié mis en avant auprès des recruteurs.</li>
-            <li><strong>Zéro opportunité manquée :</strong> Alertes ultra-ciblées en temps réel.</li>
-            <li><strong>Avantage premier arrivé :</strong> Accès prioritaire exclusif aux nouvelles offres.</li>
+            <li><strong>40 usages IA par mois :</strong> contre 5 en Essentiel, 1 usage = 1 crédit.</li>
+            <li><strong>Réécriture de profil :</strong> synthèse, pitch et contrôle de la langue.</li>
+            <li><strong>Préparation d’entretien :</strong> questions et réponses à partir du poste et de votre CV.</li>
           </ul>
+          <p class="price-note">Votre profil n’est ni mieux classé ni mis en avant : le matching reste calculé sur vos compétences.</p>
           <a class="btn btn-primary btn-block" href="checkout.html?plan=candidate">Passer en Performance</a>
         </article>
       </div>
@@ -307,8 +308,8 @@
           <p class="price-note">Automatisez votre sourcing de confiance.</p>
           <ul>
             <li><strong>Pipeline fluide :</strong> Outils de suivi des candidatures (ATS) inclus.</li>
-            <li><strong>Badge de confiance :</strong> Vérification légale instantanée par API.</li>
-            <li><strong>Engagement visible :</strong> Affichage de vos délais de réponse garantis.</li>
+            <li><strong>Badge de confiance :</strong> Vérification légale par registre (ICE).</li>
+            <li><strong>Engagement visible :</strong> Délais de réponse affichés d’après vos vraies réponses.</li>
           </ul>
           <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=RECRUTEUR">Activer mon sourcing</a>
         </article>
@@ -316,16 +317,17 @@
           <span class="tag">ROI entreprise</span>
           <p class="eyebrow">Premium</p>
           <div class="price">299 <small>MAD / mois</small></div>
-          <p class="price-note">Sécurisez les meilleurs talents avant vos concurrents.</p>
+          <p class="price-note">Une équipe complète, et beaucoup d’usages IA.</p>
           <ul>
-            <li><strong>Collaboration totale :</strong> Multi-sièges pour aligner vos équipes.</li>
-            <li><strong>Attraction augmentée :</strong> Offres prioritaires à forte visibilité.</li>
-            <li><strong>Pilotage par la donnée :</strong> Alertes intelligentes et reporting ROI automatisé.</li>
+            <li><strong>Collaboration totale :</strong> jusqu’à 25 sièges (5 en Accès), rôles d’équipe définis.</li>
+            <li><strong>Assistant IA :</strong> 200 usages par mois contre 20 en Accès.</li>
+            <li><strong>Pilotage par la donnée :</strong> alertes de délai, motifs de refus, reporting d’équipe.</li>
           </ul>
-          <a class="btn btn-primary btn-block" href="checkout.html?plan=recruiter">Sécuriser les talents</a>
+          <p class="price-note">La formule ne change pas la visibilité de vos offres : elles restent classées sur les compétences.</p>
+          <a class="btn btn-primary btn-block" href="checkout.html?plan=recruiter">Activer Premium</a>
         </article>
       </div>
-      <p class="pricing-footnote">Vous ne payez pas le bruit — vous investissez la valeur. Gratuit pour activer. Premium pour accélérer.</p>
+      <p class="pricing-footnote">Vous ne payez pas le bruit — vous investissez la valeur. Gratuit pour activer. Performance et Premium pour multiplier les usages de l’assistant et les sièges d’équipe.</p>
     </section>
 
     <section class="finale" aria-labelledby="finale-title">
@@ -397,12 +399,12 @@
   <script src="js/pricing-switch.js?v=20261101r"></script>
   <script src="js/nav.js?v=20261101r"></script>
   <script src="js/search.js?v=20261101r"></script>
-  <script src="js/places.js?v=20261101r"></script>
-  <script src="js/offer-card.js?v=20261102q"></script>
-  <script src="js/suggest.js?v=20261101r"></script>
-  <script src="js/landing-offers.js?v=20261101r"></script>
+  <script src="js/places.js?v=20261103h"></script>
+  <script src="js/offer-card.js?v=20261105o"></script>
+  <script src="js/suggest.js?v=20261103g"></script>
+  <script src="js/landing-offers.js?v=20261103k"></script>
   <script src="js/footer-year.js?v=20261101r"></script>
-  <script src="js/home-motion.js?v=20261101r"></script>
-<script defer src="js/premium.js?v=20261102s"></script>
+  <script src="js/home-motion.js?v=20261103k"></script>
+<script defer src="js/premium.js?v=20261106g"></script>
 </body>
 </html>

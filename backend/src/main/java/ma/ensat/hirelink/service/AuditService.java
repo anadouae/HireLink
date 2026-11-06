@@ -41,15 +41,37 @@ public class AuditService {
         record(action, null, actorEmail, null, null, false, detail);
     }
 
+    /**
+     * Refus d'accès : la trace porte l'auteur connecté (nul s'il est anonyme) et la ressource visée,
+     * sinon le journal admin affiche « — » et le filtre par compte ne retrouve rien.
+     * La requête est passée explicitement : appelée depuis la chaîne de filtres Spring Security,
+     * aucun contexte de requête n'est encore installé et l'IP serait perdue.
+     */
+    public void denied(String reason, jakarta.servlet.http.HttpServletRequest req) {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        User actor = auth != null && auth.getPrincipal() instanceof User u ? u : null;
+        write("ACCESS_DENIED",
+                actor == null ? null : actor.getId(),
+                actor == null ? null : actor.getEmail(),
+                "ENDPOINT",
+                req.getMethod() + " " + req.getRequestURI(),
+                false,
+                reason,
+                ClientInfo.from(req).ip());
+    }
+
     public void record(String action, Long actorId, String actorEmail, String targetType, Object targetId, boolean success, String detail) {
-        try {
+        write(action, actorId, actorEmail, targetType, targetId, success, detail, ClientInfo.current().ip());
+    }
+
+    private void write(String action, Long actorId, String actorEmail, String targetType, Object targetId, boolean success, String detail, String ip) {        try {
             AuditLog a = new AuditLog();
             a.setAction(action);
             a.setActorUserId(actorId);
             a.setActorEmail(clip(actorEmail, 160));
             a.setTargetType(targetType);
             a.setTargetId(targetId == null ? null : clip(String.valueOf(targetId), 64));
-            a.setIp(clip(ClientInfo.current().ip(), 64));
+            a.setIp(clip(ip, 64));
             a.setSuccess(success);
             a.setDetail(clip(detail, 500));
             tx.executeWithoutResult(st -> repository.save(a));

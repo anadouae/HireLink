@@ -89,7 +89,7 @@ public class OfferTermsService {
     private void applyDates(JobOffer offer, JobOfferRequest req) {
         boolean asap = Boolean.TRUE.equals(req.startAsap());
         LocalDate start = asap ? null : req.startDate();
-        if (req.deadline() != null && !req.deadline().equals(offer.getDeadline()) && req.deadline().isBefore(LocalDate.now())) {
+        if (req.deadline() != null && !req.deadline().equals(offer.getDeadline()) && req.deadline().isBefore(BusinessTime.today())) {
             throw bad("La date limite de candidature est déjà passée.");
         }
         if (start != null && req.deadline() != null && req.deadline().isAfter(start)) {

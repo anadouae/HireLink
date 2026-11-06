@@ -4,7 +4,6 @@
   const session = RC.mount({ active: "settings", title: "Paramètres" });
   if (!session) return;
   const $ = (id) => document.getElementById(id);
-  const NOTIF_KEY = "hirelink.notif.recruiter";
   const photoKey = "hirelink.photo." + (session.userId || "me");
 
   function openTab(id) {
@@ -17,7 +16,7 @@
     openTab(b.dataset.t);
     history.replaceState(null, "", "#" + b.dataset.t);
   });
-  const hash = () => { const h = location.hash.slice(1); openTab(["compte", "alertes", "apparence", "plans"].includes(h) ? h : h === "image" || h === "photo-upload" ? "compte" : "compte"); };
+  const hash = () => { const h = location.hash.slice(1); openTab(["compte", "alertes", "apparence", "plans"].includes(h) ? h : "compte"); };
   hash();
   window.addEventListener("hashchange", hash);
 
@@ -29,7 +28,7 @@
     $("n-mail").checked = p.emailNotifications !== false;
     paintPhoto();
   }).catch((err) => RC.toast("Profil", err.message, "danger"));
-  document.addEventListener("rc:org", (e) => { $("set-role").textContent = RC.ROLE_FR[e.detail.myRole] || "Recruteur"; });
+  document.addEventListener("rc:org", (e) => { $("set-role").textContent = RC.ROLE_FR[e.detail.myRole] || "Recruteur"; refreshBilling(); });
 
   $("form-account").addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -79,12 +78,7 @@
   });
 
   /* Alertes */
-  try {
-    const n = JSON.parse(localStorage.getItem(NOTIF_KEY) || "{}");
-    $("n-sla").checked = n.sla !== false; $("n-new").checked = n.neu !== false; $("n-interview").checked = n.interview !== false;
-  } catch (_) {}
   $("btn-save-notif").addEventListener("click", async () => {
-    localStorage.setItem(NOTIF_KEY, JSON.stringify({ sla: $("n-sla").checked, neu: $("n-new").checked, interview: $("n-interview").checked }));
     try {
       await HireLinkAPI.api("/me", { method: "PATCH", body: { emailNotifications: $("n-mail").checked } });
       RC.toast("Alertes", "Préférences enregistrées", "ok");
@@ -100,15 +94,18 @@
     if (t) t.innerHTML = RC.svg(dark.checked ? "sun" : "moon");
   });
 
-  /* Formules */
+  /* Formules — réservées au créateur de l'espace, comme côté serveur. */
   function refreshBilling() {
     const prem = HireLinkAPI.isPremium();
+    const governs = RC.isCreator();
     $("plan-access").classList.toggle("is-current", !prem);
     $("plan-premium").classList.toggle("is-current", prem);
     $("mark-access").textContent = prem ? "Toujours disponible" : "Formule en cours";
     $("mark-premium").textContent = prem ? "Formule en cours" : "À activer";
-    $("btn-billing-cancel").hidden = !prem;
-    $("btn-billing-premium").hidden = prem;
+    $("btn-billing-cancel").hidden = !prem || !governs;
+    $("btn-billing-premium").hidden = prem || !governs;
+    const note = document.getElementById("plan-owner-only");
+    if (note) note.hidden = governs;
   }
   $("btn-billing-premium").addEventListener("click", () => { HireLinkGrowth.showPremium("recruiter"); });
   $("btn-billing-cancel").addEventListener("click", async () => {

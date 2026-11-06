@@ -5,11 +5,16 @@
   if (!session) return;
 
   const esc = App.esc;
-  const VIEWS = ["dash", "orgs", "users", "plans", "refusals", "audit", "emails"];
+  const VIEWS = ["dash", "orgs", "users", "moderation", "offers", "plans", "refusals", "audit", "emails"];
+  /** Un seul fichier pour neuf vues : l'onglet doit dire laquelle est ouverte, sinon les captures ne correspondent à rien. */
+  const VIEW_TITLE = {
+    dash: "Tableau de bord", orgs: "Entreprises", users: "Comptes", moderation: "Modération", offers: "Offres",
+    plans: "Plans & factures", refusals: "Motifs de refus", audit: "Journal d’audit", emails: "E-mails envoyés",
+  };
   const STATUS_FR = App.STATUS_FR;
-  const PAY_FR = { EMISE: "Émise", REGLEE: "Réglée", OFFERTE: "Incluse" };
+  const PAY_FR = { EMISE: "À encaisser", REGLEE: "Payée", OFFERTE: "Incluse", AVOIR: "Avoir", ANNULEE: "Annulée" };
   const ROLE_FR = { CANDIDAT: "Candidat", RECRUTEUR: "Recruteur", ADMINISTRATEUR: "Administrateur" };
-  const ORG_ROLE_FR = { OWNER: "Owner", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Hiring Manager" };
+  const ORG_ROLE_FR = { OWNER: "Créateur", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Responsable du poste" };
   const ORG_ROLE_TONE = { OWNER: "rc-pill--rose", RECRUTEUR: "", HIRING_MANAGER: "rc-pill--info" };
   /** Filtre de rôle : rôle plateforme (CANDIDAT, RECRUTEUR, ADMINISTRATEUR) ou rôle dans l'organisation (OWNER, HIRING_MANAGER). */
   function userMatches(u, f) {
@@ -18,7 +23,7 @@
     return u.role === f;
   }
 
-  const state = { orgs: [], plans: [], invoices: [], users: [], stats: {}, charts: {}, orgFilter: "all", userFilter: "all", reasons: null };
+  const state = { orgs: [], plans: [], invoices: [], users: [], aiUsage: [], stats: {}, charts: {}, orgFilter: "all", userFilter: "all", reasons: null, offers: [], reports: { queue: [], handled: [] }, offerFilter: "all", invoiceFilter: "all" };
   const loaded = {};
 
   const money = (n) => Number(n || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MAD";
@@ -33,11 +38,12 @@
     view = String(view || "").split("/")[0];
     if (VIEWS.indexOf(view) < 0) view = "dash";
     if (sub) setTimeout(() => {
-      const bar = $(view === "orgs" ? "org-filter" : view === "users" ? "user-filter" : "");
+      const bar = $(({ orgs: "org-filter", users: "user-filter", offers: "offer-filter" })[view] || "");
       const chip = bar && bar.querySelector('[data-f="' + sub + '"]');
       if (chip) chip.click();
     }, 0);
     VIEWS.forEach((id) => { $("view-" + id).hidden = id !== view; });
+    document.title = (VIEW_TITLE[view] || "Administration") + " · Administration — HireLink";
     App.setActive(view);
     if (view === "refusals") loadRefusals();
     if (view === "audit") loadAudit();
@@ -66,8 +72,10 @@
     const unset = state.users.filter((u) => u.mustSetPassword);
     const tile = (o) => '<a class="db-action' + (!o.count ? " is-zero" : "") + (o.tone ? " is-" + o.tone : "") + '" href="' + o.href + '"><span class="db-action-ico" aria-hidden="true">' + ico(o.icon) +
       '</span><span class="db-action-txt"><b>' + (o.count || "—") + "</b><strong>" + esc(o.title) + "</strong><small>" + esc(o.count ? o.sub : o.calm) + '</small></span><span class="db-go" aria-hidden="true">' + ico("right") + "</span></a>";
+    const reports = (state.reports.queue || []).length;
     $("db-actions").innerHTML = [
-      { icon: "shield", title: "Entreprises à vérifier", count: pending.length, tone: "warn", sub: pending[0] ? pending[0].name + (pending.length > 1 ? " et " + (pending.length - 1) + " autre(s)" : "") : "", calm: "Tout est vérifié", href: "#orgs/pending" },
+      { icon: "flag", title: "Offres à modérer", count: reports, tone: reports ? "danger" : "", sub: App.plural(state.reports.pendingCount || 0, "signalement non tranché", "signalements non tranchés"), calm: "Aucun signalement en attente", href: "#moderation/all" },
+      { icon: "shield", title: "Entreprises à vérifier", count: pending.length, tone: "warn", sub: pending[0] ? pending[0].name + (pending.length > 1 ? " et " + App.plural(pending.length - 1, "autre") : "") : "", calm: "Tout est vérifié", href: "#orgs/pending" },
       { icon: "building", title: "Nouvelles entreprises", count: recent.length, tone: "info", sub: "Inscrites ces 7 derniers jours", calm: "Aucune cette semaine", href: "#orgs/all" },
       { icon: "user", title: "Invitations en attente", count: unset.length, sub: "Mot de passe pas encore défini", calm: "Aucune invitation en attente", href: "#users/all" },
       { icon: "ban", title: "Comptes désactivés", count: inactive.length, tone: "danger", sub: "À examiner si besoin", calm: "Aucun compte désactivé", href: "#users/all" },
@@ -76,7 +84,7 @@
     $("stats").innerHTML =
       kpi("Comptes", stats.users, (stats.candidates || 0) + " candidats · " + (stats.recruiters || 0) + " recruteurs", "#users/all") +
       kpi("Entreprises", orgs.length, orgs.filter((o) => o.planTier === "PREMIUM").length + " en Premium", "#orgs/all") +
-      kpi("Offres publiées", stats.publishedOffers, (stats.offers || 0) + " au total", "#orgs/all") +
+      kpi("Offres en ligne", state.offers.filter((o) => o.published && !o.suspended && !o.closedAt && !o.archivedAt).length, (stats.offers || 0) + " au total", "#offers/all") +
       kpi("Candidatures", stats.applications, "Toutes offres confondues", "#dash");
 
     const byStatus = state.charts.applicationsByStatus || {};
@@ -152,7 +160,7 @@
       "<option value='" + esc(p.code) + "'" + (p.code === org.planTier ? " selected" : "") + ">" + esc(p.label) + " · " + p.monthlyMad + " MAD / mois</option>").join("");
     const body =
       "<p style='margin:0 0 .6rem'>" + statusPill(org) + " <span class='rc-muted'>ICE " + esc(org.ice || "—") + " · " + esc(org.offerCount) + " offre(s)</span></p>" +
-      "<p style='margin:0 0 1rem'><strong>Responsable.</strong> " + esc(org.ownerName || "—") + " · " + esc(org.ownerEmail || "") + "</p>" +
+      "<p style='margin:0 0 1rem'><strong>Créateur de l’espace.</strong> " + esc(org.ownerName || "—") + " · " + esc(org.ownerEmail || "") + "</p>" +
       "<h4 style='margin:0 0 .4rem'>Équipe</h4><ul class='rc-list' style='list-style:none;padding:0;margin:0 0 1rem'>" + (members || "<li class='rc-muted'>Aucun membre actif.</li>") + "</ul>" +
       "<h4 style='margin:0 0 .4rem'>Plan</h4><div class='rc-form'><div class='rc-field'><label for='org-plan'>Plan</label><select id='org-plan'>" + plansOpts + "</select></div>" +
       "<div class='rc-field'><label for='org-cycle'>Période de facturation</label><select id='org-cycle'><option value='month'>Mensuelle</option><option value='year'>Annuelle</option></select></div></div>" +
@@ -167,8 +175,12 @@
       },
     });
     if (!ok) return;
-    const payload = verifyToggle ? { verified: !org.verified } : { planTier: $("org-plan").value, cycle: $("org-cycle").value };
-    if (!verifyToggle && payload.planTier === org.planTier) return;
+    const planChange = $("org-plan").value !== org.planTier;
+    // Le PATCH serveur traite les deux clés indépendamment : les envoyer ensemble évite de perdre le plan choisi.
+    const payload = verifyToggle
+      ? Object.assign({ verified: !org.verified }, planChange ? { planTier: $("org-plan").value, cycle: $("org-cycle").value } : {})
+      : { planTier: $("org-plan").value, cycle: $("org-cycle").value };
+    if (!verifyToggle && !planChange) return;
     try {
       await HireLinkAPI.api("/admin/organizations/" + id, { method: "PATCH", body: payload });
       App.toast("Entreprise mise à jour", org.name, "ok");
@@ -232,6 +244,218 @@
     paintUsers();
   });
 
+  /* ------------------------------------------------------------- modération */
+  const DECISION_FR = { FONDE: "Sanction confirmée", ECARTE: "Signalement écarté" };
+
+  function paintModeration() {
+    const queue = state.reports.queue || [];
+    const box = $("mod-queue");
+    $("mod-note").textContent = queue.length
+      ? App.plural(queue.length, "offre signalée", "offres signalées") + " · "
+        + App.plural(state.reports.pendingCount || 0, "signalement à trancher", "signalements à trancher")
+      : "Aucun signalement en attente.";
+    if (!queue.length) {
+      box.innerHTML = '<div class="db-empty">' + (window.HLIcons ? HLIcons.svg("check") : "") +
+        "<strong>Rien à modérer</strong><span>Les offres signalées par les candidats arrivent ici, avec tous leurs signalements.</span></div>";
+    } else {
+      box.innerHTML = '<div class="rc-list mod-list">' + queue.map((o) => {
+        const st = App.offerState(o);
+        return '<div class="rc-item mod-item"><div class="rc-item-main"><strong>' + esc(o.title) + "</strong>" +
+          '<span class="rc-muted">' + esc(o.organization || "compte individuel") + " · " + esc(o.recruiter) + " · " +
+          App.plural(o.applications, "candidature") + "</span>" +
+          '<ul class="mod-reasons">' + o.reports.map((r) =>
+            "<li><b>" + esc(r.reason) + "</b><span>" + esc(r.reporter) + " · " + esc(App.fmtDate(r.at)) + "</span></li>").join("") + "</ul>" +
+          (o.quarantineReason ? '<p class="mod-why">Motif retenu : ' + esc(o.quarantineReason) + "</p>" : "") +
+          '</div><div class="mod-actions"><span class="rc-pill ' + (st.key === "suspended" ? "rc-pill--danger" : st.key === "online" ? "rc-pill--ok" : "") + '">' + esc(st.label) + "</span>" +
+          (st.key === "suspended"
+            ? '<button type="button" class="btn btn-primary btn-sm" data-mod="restore" data-id="' + o.id + '">Rétablir l’offre</button>'
+            : '<button type="button" class="btn btn-soft btn-sm" data-mod="suspend" data-id="' + o.id + '">Suspendre l’offre</button>') +
+          '<button type="button" class="btn btn-ghost btn-sm" data-mod="dismiss" data-id="' + o.id + '">' +
+          (o.reports.length > 1 ? "Écarter les signalements" : "Écarter le signalement") + "</button>" +
+          "</div></div>";
+      }).join("") + "</div>";
+    }
+    const done = state.reports.handled || [];
+    $("mod-handled").innerHTML = done.length
+      ? done.map((r) => "<tr><td><strong>" + esc(r.offerTitle) + "</strong></td><td>" + esc(r.reason || "—") +
+        '</td><td><span class="rc-pill ' + (r.decision === "FONDE" ? "rc-pill--danger" : "rc-pill--ok") + '">' + esc(DECISION_FR[r.decision] || r.decision) + "</span></td><td>" +
+        esc(r.resolvedAt ? App.fmtDateTime(r.resolvedAt) : "—") + "</td><td class=\"rc-muted\">" + esc(r.handledBy || "—") + "</td></tr>").join("")
+      : '<tr><td colspan="5" class="rc-muted" style="text-align:center;padding:1.4rem">Aucune décision enregistrée pour le moment.</td></tr>';
+  }
+
+  $("mod-queue").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-mod]");
+    const id = btn && Number(btn.dataset.id);
+    if (!id) return;
+    const offer = (state.reports.queue || []).find((o) => o.id === id);
+    if (!offer) return;
+    try {
+      if (btn.dataset.mod === "suspend") {
+        const reason = await Mascotte.confirm({
+          title: "Suspendre cette offre ?",
+          description: "« " + offer.title + " » quitte la vitrine et n'accepte plus de candidature. Le recruteur est prévenu avec le motif.",
+          confirmLabel: "Suspendre", cancelLabel: "Y renoncer", danger: true,
+          field: { label: "Motif visible par le recruteur", placeholder: "Annonce qui demande un paiement avant l'embauche", maxlength: 200, required: true },
+        });
+        if (!reason) return;
+        await HireLinkAPI.api("/admin/offers/" + id + "/suspend", { method: "POST", body: { reason } });
+        App.toast("Offre suspendue", offer.title, "danger");
+      } else if (btn.dataset.mod === "restore") {
+        const ok = await Mascotte.confirm({
+          title: "Rétablir cette offre ?",
+          description: "La suspension est levée. L'offre reste hors ligne : le recruteur la republie lui-même.",
+          confirmLabel: "Rétablir", cancelLabel: "Garder suspendue",
+        });
+        if (!ok) return;
+        await HireLinkAPI.api("/admin/offers/" + id + "/restore", { method: "POST" });
+        App.toast("Offre rétablie", offer.title, "ok");
+      } else {
+        const ok = await Mascotte.confirm({
+          title: "Écarter ce signalement ?",
+          description: "Aucune sanction : l'offre garde son état et les signalements sont clos comme non confirmés.",
+          confirmLabel: "Écarter", cancelLabel: "Y réfléchir",
+        });
+        if (!ok) return;
+        const r = await HireLinkAPI.api("/admin/offers/" + id + "/dismiss-reports", { method: "POST" });
+        App.toast("Signalements écartés", App.plural(r.handled || 0, "signalement clôturé", "signalements clôturés"), "ok");
+      }
+      await refresh("reports", "offers");
+    } catch (err) { fail("Modération", err); }
+  });
+  $("mod-refresh").addEventListener("click", () => refresh("reports", "offers"));
+
+  /* ------------------------------------------------------------------ offres */
+  function paintOffers() {
+    const q = ($("offer-search").value || "").trim();
+    const f = state.offerFilter;
+    const rows = HireLinkSearch.rank(state.offers.filter((o) => {
+      if (f === "reported") return o.reportCount > 0;
+      if (f === "all") return true;
+      return App.offerState(o).key === f;
+    }), q, [{ get: (o) => o.title, weight: 3 }, { get: (o) => o.organization, weight: 2 }, { get: (o) => o.recruiter, weight: 2 }, { get: (o) => o.location, weight: 1 }]);
+    const body = $("offers-body");
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="6"></td></tr>';
+      HireLinkSearch.emptyState(body.firstChild.firstChild, q, { emptyTitle: "Aucune offre ne correspond", onClear: () => { $("offer-search").value = ""; paintOffers(); } });
+      return;
+    }
+    body.innerHTML = rows.map((o) => {
+      const st = App.offerState(o);
+      const acts = st.key === "suspended"
+        ? '<button type="button" class="btn btn-soft btn-sm" data-offer="restore" data-id="' + o.id + '">Rétablir</button>'
+        : o.published
+          ? '<button type="button" class="btn btn-ghost btn-sm" data-offer="unpublish" data-id="' + o.id + '">Dépublier</button>' +
+            '<button type="button" class="btn btn-ghost btn-sm" data-offer="suspend" data-id="' + o.id + '">Suspendre</button>'
+          : "";
+      return '<tr><td><div class="rc-cell-main"><strong>' + esc(o.title) + "</strong>" +
+        '<span class="rc-cell-sub">' + esc([o.recruiter, o.location].filter(Boolean).join(" · ") || "—") + "</span></div></td>" +
+        "<td>" + (o.organization ? esc(o.organization) : '<span class="rc-cell-sub">compte individuel</span>') + "</td>" +
+        '<td><span class="rc-pill ' + (st.key === "online" ? "rc-pill--ok" : st.key === "suspended" ? "rc-pill--danger" : "") + '"' +
+        (o.quarantineReason ? ' title="' + esc(o.quarantineReason) + '"' : "") + ">" + esc(st.label) + "</span></td>" +
+        "<td>" + o.applications + "</td>" +
+        "<td>" + (o.reportCount ? '<a class="rc-pill rc-pill--warn" href="#moderation">' + o.reportCount + "</a>" : "—") + "</td>" +
+        '<td><div class="rc-row-actions">' + acts + "</div></td></tr>";
+    }).join("");
+    HireLinkSearch.mark(body, q);
+  }
+  $("offers-body").addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-offer]");
+    const id = btn && Number(btn.dataset.id);
+    if (!id) return;
+    const offer = state.offers.find((o) => o.id === id);
+    if (!offer) return;
+    try {
+      if (btn.dataset.offer === "suspend") {
+        const reason = await Mascotte.confirm({
+          title: "Suspendre cette offre ?",
+          description: "« " + offer.title + " » quitte la vitrine. Le recruteur reçoit le motif que vous indiquez.",
+          confirmLabel: "Suspendre", cancelLabel: "Y renoncer", danger: true,
+          field: { label: "Motif visible par le recruteur", placeholder: "Coordonnées bancaires demandées dans l'annonce", maxlength: 200, required: true },
+        });
+        if (!reason) return;
+        await HireLinkAPI.api("/admin/offers/" + id + "/suspend", { method: "POST", body: { reason } });
+        App.toast("Offre suspendue", offer.title, "danger");
+      } else if (btn.dataset.offer === "restore") {
+        const ok = await Mascotte.confirm({
+          title: "Rétablir cette offre ?",
+          description: "« " + offer.title + " » n'est plus suspendue. Elle reste hors ligne jusqu'à ce que le recruteur la publie.",
+          confirmLabel: "Rétablir", cancelLabel: "Garder suspendue",
+        });
+        if (!ok) return;
+        await HireLinkAPI.api("/admin/offers/" + id + "/restore", { method: "POST" });
+        App.toast("Offre rétablie", offer.title, "ok");
+      } else {
+        const ok = await Mascotte.confirm({
+          title: "Retirer cette offre de la vitrine ?",
+          description: "Les candidats ne la voient plus ; le recruteur peut la republier lui-même.",
+          confirmLabel: "Dépublier", cancelLabel: "Laisser en ligne",
+        });
+        if (!ok) return;
+        await HireLinkAPI.api("/admin/offers/" + id + "/unpublish", { method: "POST" });
+        App.toast("Offre dépubliée", offer.title, "warn");
+      }
+      await refresh("offers", "reports");
+    } catch (err) { fail("Offre", err); }
+  });
+  $("offer-search").addEventListener("input", App.debounce(paintOffers, 120));
+  $("offer-filter").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-f]");
+    if (!b) return;
+    state.offerFilter = b.dataset.f;
+    $("offer-filter").querySelectorAll(".rc-chip").forEach((c) => c.classList.toggle("is-on", c === b));
+    paintOffers();
+  });
+
+  /* ------------------------------------------------- recherche transversale */
+  function searchGroups(r) {
+    return [
+      { title: "Comptes", rows: r.users, main: (u) => u.fullName, sub: (u) => (ROLE_FR[u.role] || u.role) + " · " + u.email + (u.active ? "" : " · désactivé"), go: () => ["users", "user-search", r.term] },
+      { title: "Entreprises", rows: r.organizations, main: (o) => o.name, sub: (o) => "ICE " + (o.ice || "—") + " · " + (o.city || "—"), go: () => ["orgs", "org-search", r.term] },
+      { title: "Offres", rows: r.offers, main: (o) => o.title, sub: (o) => (o.organization || "compte individuel") + " · " + App.offerState(o).label + " · " + App.plural(o.applications, "candidature"), go: () => ["offers", "offer-search", r.term] },
+      { title: "Candidatures", rows: r.applications, main: (a) => a.candidate + " → " + a.offerTitle, sub: (a) => (STATUS_FR[a.status] || a.status) + " · " + a.candidateEmail + " · " + App.fmtDate(a.submittedAt), go: () => ["offers", "offer-search", ""] },
+    ];
+  }
+
+  async function runSearch() {
+    const q = ($("gs-query").value || "").trim();
+    const box = $("gs-results");
+    if (q.length < 2) { box.innerHTML = ""; return; }
+    let r;
+    try {
+      r = await HireLinkAPI.api("/admin/search?q=" + encodeURIComponent(q), { noDedupe: true });
+    } catch (err) {
+      box.innerHTML = '<p class="rc-muted">' + esc(err.message || "Recherche impossible") + "</p>";
+      return;
+    }
+    state.lastSearch = r;
+    const groups = searchGroups(r).filter((g) => g.rows && g.rows.length);
+    if (!groups.length) {
+      box.innerHTML = '<p class="rc-muted">Rien qui ressemble à « ' + esc(q) + " ».</p>";
+      return;
+    }
+    box.innerHTML = groups.map((g) => '<div class="gs-group"><h3>' + esc(g.title) + " · " + g.rows.length + "</h3>" +
+      '<div class="rc-list">' + g.rows.slice(0, 6).map((row, i) =>
+        '<div class="rc-item"><div class="rc-item-main"><strong>' + esc(g.main(row)) + '</strong><span class="rc-muted">' + esc(g.sub(row)) +
+        '</span></div><button type="button" class="btn btn-soft btn-sm" data-gs="' + groups.indexOf(g) + ":" + i + '">Ouvrir</button></div>').join("") +
+      "</div></div>").join("");
+  }
+  /** Ouvrir le bon onglet avec la recherche déjà posée : l'admin rebondit, il ne recopie pas. */
+  $("gs-results").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-gs]");
+    if (!b) return;
+    const [gi, ri] = b.dataset.gs.split(":").map(Number);
+    const groups = searchGroups(state.lastSearch || { users: [], organizations: [], offers: [], applications: [], term: "" }).filter((g) => g.rows && g.rows.length);
+    const g = groups[gi];
+    if (!g) return;
+    const [view, inputId, term] = g.go();
+    if (inputId) $(inputId).value = term;
+    show(view);
+    if (view === "orgs") paintOrgs();
+    if (view === "users") paintUsers();
+    if (view === "offers") paintOffers();
+  });
+  $("gs-query").addEventListener("input", App.debounce(runSearch, 250));
+
   /* ------------------------------------------------------- plans et factures */
   function paintPlans() {
     $("plan-cards").innerHTML = state.plans.map((p) => {
@@ -239,7 +463,7 @@
       const feats = String(p.features || "").split("\n").map((l) => l.trim()).filter(Boolean);
       return '<article class="rc-card rc-fade"><div class="rc-card-head"><div><h2>' + esc(p.label) + "</h2><p>" + (p.audience === "CANDIDAT" ? "Candidats" : "Entreprises") +
         '</p></div><button type="button" class="btn btn-soft btn-sm" data-plan="' + esc(p.code) + '">Modifier</button></div><div class="rc-card-body">' +
-        "<p style='margin:0 0 .6rem'><strong style='font-size:1.4rem'>" + p.monthlyMad + "</strong> MAD / mois <span class='rc-muted'>· " + p.yearlyMad + " MAD / an · " + p.credits + " crédits IA</span></p>" +
+        "<p style='margin:0 0 .6rem'><strong style='font-size: var(--text-xl)'>" + p.monthlyMad + "</strong> MAD / mois <span class='rc-muted'>· " + p.yearlyMad + " MAD / an · " + p.credits + " crédits IA</span></p>" +
         "<ul style='margin:0 0 .6rem;padding-left:1.1rem'>" + (feats.map((f) => "<li>" + esc(f) + "</li>").join("") || "<li class='rc-muted'>Aucune fonctionnalité renseignée</li>") + "</ul>" +
         (count == null ? "" : "<p class='rc-muted' style='margin:0'>" + count + " entreprise(s) sur ce plan</p>") + "</div></article>";
     }).join("");
@@ -266,23 +490,111 @@
         label: $("plan-label").value, monthlyMad: Number($("plan-month").value || 0), yearlyMad: Number($("plan-year").value || 0),
         credits: Number($("plan-credits").value || 0), features: $("plan-features").value } });
       App.toast("Plan enregistré", p.label, "ok");
-      await refresh("plans");
+      await refresh("plans", "aiUsage");
     } catch (err) { fail("Plan", err); }
+  }
+
+  /* --------------------------------------------------- consommation IA du mois */
+  function paintAiUsage() {
+    const body = $("ai-usage-body");
+    if (!body) return;
+    const data = state.aiUsage || {};
+    const rows = data.rows || [];
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="6" class="rc-muted" style="text-align:center;padding:1.6rem">Aucune consommation IA ce mois-ci.</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map((r) => {
+      const seats = Math.max(1, Number(r.seats || 0));
+      const limit = Number(r.limit || 0);
+      const used = Number(r.credits || 0);
+      const pct = limit ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+      const tone = pct >= 100 ? " is-out" : pct >= 70 ? " is-high" : "";
+      const who = (r.people || []).slice(0, 3).map(function (p) {
+        const name = r.organization === p.fullName ? p.email : p.fullName;
+        return esc(name) + " (" + p.credits + ")";
+      }).join(" · ");
+      const more = (r.people || []).length > 3 ? " <span class='rc-muted'>+ " + ((r.people || []).length - 3) + "</span>" : "";
+      return "<tr><td><strong>" + esc(r.organization) + "</strong>" +
+        (who ? "<div class='rc-muted' style='font-size: var(--text-xs)'>" + who + more + "</div>" : "") +
+        "</td><td>" + esc(r.planLabel) + (Number(r.monthlyMad) ? " · " + r.monthlyMad + " MAD" : " · gratuite") + "</td><td>" + seats +
+        '</td><td title="' + r.limitPerSeat + " crédit(s) par siège · " + r.actions + " action(s) IA'>" + limit + "</td><td>" + r.actions +
+        '</td><td><span class="rc-meter-val">' + used + " / " + limit + " · " + pct + " %</span><div class=\"rc-meter" + tone + '" style="--w:' + pct + '%"><i></i></div></td></tr>';
+    }).join("") +
+      (data.quietOrganizations
+        ? '<tr><td colspan="6" class="rc-muted" style="font-size: var(--text-xs)">' + data.quietOrganizations +
+          " entreprise(s) sans aucune action ce mois-ci · " + data.quietEnvelope + " crédits d’enveloppe non utilisés</td></tr>"
+        : "");
   }
 
   function paintInvoices() {
     const body = $("invoices-body");
+    const rows = state.invoices.filter((r) => state.invoiceFilter === "all"
+      || (state.invoiceFilter === "AVOIR" ? (r.status === "AVOIR" || r.status === "ANNULEE") : r.status === state.invoiceFilter));
     if (!state.invoices.length) {
       body.innerHTML = '<tr><td colspan="7" class="rc-muted" style="text-align:center;padding:1.6rem">Aucune facture. Elles apparaissent à chaque changement de plan d’une entreprise.</td></tr>';
       return;
     }
-    body.innerHTML = state.invoices.map((r, i) =>
-      "<tr><td>" + esc(r.number) + "</td><td>" + esc(App.fmtDate(r.issuedAt)) + "</td><td>" + esc(r.organization) + "</td><td>" + esc(r.planLabel) + " · " + (r.cycle === "year" ? "annuel" : "mensuel") + "</td><td>" + money(r.amountTtc) +
-      '</td><td><span class="rc-pill ' + (r.status === "REGLEE" ? "rc-pill--ok" : "") + '">' + esc(PAY_FR[r.status] || r.status) + '</span></td><td><div class="rc-row-actions"><button type="button" class="btn btn-soft btn-sm" data-inv="' + i + '">Ouvrir</button></div></td></tr>').join("");
+    if (!rows.length) {
+      body.innerHTML = '<tr><td colspan="7" class="rc-muted" style="text-align:center;padding:1.4rem">Aucune facture dans ce filtre.</td></tr>';
+      return;
+    }
+    body.innerHTML = rows.map((r) => {
+      const idx = state.invoices.indexOf(r);
+      const tone = r.status === "REGLEE" ? "rc-pill--ok" : r.status === "EMISE" ? "rc-pill--warn" : r.status === "AVOIR" ? "rc-pill--info" : "";
+      const acts = r.status === "AVOIR" || r.status === "ANNULEE" || r.status === "OFFERTE"
+        ? '<button type="button" class="btn btn-soft btn-sm" data-inv="' + idx + '">Ouvrir</button>'
+        : '<button type="button" class="btn btn-soft btn-sm" data-inv="' + idx + '">Ouvrir</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-inv-act="' + (r.status === "REGLEE" ? "EMISE" : "REGLEE") + '" data-id="' + r.id + '">' +
+          (r.status === "REGLEE" ? "Marquer non payée" : "Marquer payée") + "</button>" +
+          '<button type="button" class="btn btn-ghost btn-sm" data-inv-act="avoir" data-id="' + r.id + '">Créer un avoir</button>';
+      return "<tr><td>" + esc(r.number) + (r.cancels ? '<div class="rc-cell-sub">annule ' + esc(r.cancels) + "</div>" : "") + "</td><td>" + esc(App.fmtDate(r.issuedAt)) + "</td><td>" + esc(r.organization) +
+        "</td><td>" + esc(r.planLabel) + " · " + (r.cycle === "year" ? "annuel" : "mensuel") + (r.note ? '<div class="rc-cell-sub">' + esc(r.note) + "</div>" : "") + "</td><td>" + money(r.amountTtc) +
+        '</td><td><span class="rc-pill ' + tone + '">' + esc(PAY_FR[r.status] || r.status) + "</span></td>" +
+        '<td><div class="rc-row-actions">' + acts + "</div></td></tr>";
+    }).join("");
+    // L'avoir est une ligne négative : il vient en déduction de ce qui a été encaissé.
+    const paid = state.invoices.filter((r) => r.status === "REGLEE" || r.status === "AVOIR").reduce((s, r) => s + r.amountTtc, 0);
+    const due = state.invoices.filter((r) => r.status === "EMISE").length;
+    $("invoices-note").textContent = money(paid) + " encaissés" + (due ? " · " + App.plural(due, "facture à encaisser", "factures à encaisser") : " · rien à encaisser");
   }
-  $("invoices-body").addEventListener("click", (e) => {
-    const b = e.target.closest("[data-inv]");
-    if (b) printInvoice(state.invoices[Number(b.dataset.inv)]);
+  $("invoice-filter").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-f]");
+    if (!b) return;
+    state.invoiceFilter = b.dataset.f;
+    $("invoice-filter").querySelectorAll(".rc-chip").forEach((c) => c.classList.toggle("is-on", c === b));
+    paintInvoices();
+  });
+  $("invoices-body").addEventListener("click", async (e) => {
+    const open = e.target.closest("[data-inv]");
+    if (open) return printInvoice(state.invoices[Number(open.dataset.inv)]);
+    const btn = e.target.closest("[data-inv-act]");
+    const r = btn && state.invoices.find((x) => String(x.id) === btn.dataset.id);
+    if (!r) return;
+    try {
+      if (btn.dataset.invAct === "avoir") {
+        const motif = await Mascotte.confirm({
+          title: "Créer un avoir pour " + r.number + " ?",
+          description: r.organization + " · " + money(r.amountTtc) + ". La facture d'origine est conservée, annulée par un avoir négatif.",
+          confirmLabel: "Créer l'avoir", cancelLabel: "Y renoncer", danger: true,
+          field: { label: "Motif de l'avoir", placeholder: "Geste commercial — erreur de facturation", maxlength: 200, required: true },
+        });
+        if (!motif) return;
+        const avoir = await HireLinkAPI.api("/admin/invoices/" + r.id + "/credit-note", { method: "POST", body: { motif } });
+        App.toast("Avoir émis", avoir.number + " annule " + r.number, "ok");
+      } else {
+        const toPaid = btn.dataset.invAct === "REGLEE";
+        const ok = await Mascotte.confirm({
+          title: toPaid ? "Marquer cette facture payée ?" : "Revenir à « à encaisser » ?",
+          description: r.number + " · " + r.organization + " · " + money(r.amountTtc),
+          confirmLabel: toPaid ? "Facture payée" : "Non payée", cancelLabel: "Annuler",
+        });
+        if (!ok) return;
+        await HireLinkAPI.api("/admin/invoices/" + r.id, { method: "PATCH", body: { status: btn.dataset.invAct } });
+        App.toast("Facture mise à jour", r.number + " · " + (toPaid ? "payée" : "à encaisser"), "ok");
+      }
+      await refresh("invoices");
+    } catch (err) { fail("Facture", err); }
   });
 
   function printInvoice(row) {
@@ -298,12 +610,25 @@
   }
 
   /* ----------------------------------------------------------- journal d'audit */
+  /** Le filtre se complète avec les actions réellement écrites : aucune trace ne devient infiltrable. */
+  function syncAuditFilter(rows) {
+    const sel = $("audit-filter");
+    const have = new Set(Array.from(sel.options, (o) => o.value));
+    Array.from(new Set(rows.map((r) => r.action))).filter((a) => a && !have.has(a)).sort()
+      .forEach((a) => {
+        const o = document.createElement("option");
+        o.textContent = a;
+        sel.appendChild(o);
+      });
+  }
+
   async function loadAudit() {
     const body = $("audit-body");
     const action = $("audit-filter").value;
     body.innerHTML = '<tr><td colspan="6" class="rc-muted" style="text-align:center;padding:1.4rem">Chargement…</td></tr>';
     try {
       const rows = await HireLinkAPI.api("/admin/audit" + (action ? "?action=" + encodeURIComponent(action) : ""), { noDedupe: true });
+      if (!action) syncAuditFilter(rows);
       body.innerHTML = rows.length
         ? rows.map((r) =>
             "<tr><td>" + esc(App.fmtDateTime(r.at)) + '</td><td><span class="rc-pill ' + (r.success ? "rc-pill--ok" : "rc-pill--danger") + '">' + esc(r.action) + "</span></td><td>" +
@@ -311,11 +636,34 @@
         : '<tr><td colspan="6" class="rc-muted" style="text-align:center;padding:1.6rem">Aucun évènement.</td></tr>';
     } catch (err) {
       body.innerHTML = '<tr><td colspan="6"></td></tr>';
-      App.errorState(body.firstChild.firstChild, err.message, loadEmails);
+      App.errorState(body.firstChild.firstChild, err.message, loadAudit);
     }
   }
   $("audit-filter").addEventListener("change", loadAudit);
   $("audit-refresh").addEventListener("click", loadAudit);
+  /** authFetch, pas un lien : l'en-tête d'autorisation ne voyage pas dans une navigation. */
+  $("audit-export").addEventListener("click", async () => {
+    const btn = $("audit-export");
+    const action = $("audit-filter").value;
+    btn.disabled = true;
+    try {
+      const res = await HireLinkAPI.authFetch("/admin/audit/export" + (action ? "?action=" + encodeURIComponent(action) : ""));
+      if (!res.ok) throw new Error("Export impossible (" + res.status + ")");
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "audit-hirelink-" + App.localDate() + (action ? "-" + action.toLowerCase() : "") + ".csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      App.toast("Export prêt", "Jusqu’à 2 000 évènements, filtre en cours inclus.", "ok");
+      loadAudit();
+    } catch (err) {
+      fail("Export", err);
+    }
+    btn.disabled = false;
+  });
 
   /* ------------------------------------------------------------ e-mails envoyés */
   const MAIL_STATE = { SENT: ["Envoyé", "ok"], LOGGED: ["Journalisé (sans SMTP)", ""], FAILED: ["Échec d’envoi", "danger"] };
@@ -416,8 +764,11 @@
     plans: ["/admin/plans", (d) => { state.plans = d || []; }],
     invoices: ["/admin/invoices", (d) => { state.invoices = d || []; }],
     users: ["/admin/users", (d) => { state.users = d || []; paintUserOrgs(); }],
+    aiUsage: ["/admin/ai-usage", (d) => { state.aiUsage = d || []; }],
+    offers: ["/admin/offers", (d) => { state.offers = d || []; }],
+    reports: ["/admin/reports", (d) => { state.reports = d || { queue: [], handled: [] }; }],
   };
-  function paintAll() { paintDash(); paintOrgs(); paintUsers(); paintPlans(); paintInvoices(); }
+  function paintAll() { paintDash(); paintOrgs(); paintUsers(); paintModeration(); paintOffers(); paintPlans(); paintAiUsage(); paintInvoices(); }
   async function refresh(...names) {
     const list = names.length ? names : Object.keys(SOURCES);
     await Promise.all(list.map(async (k) => SOURCES[k][1](await HireLinkAPI.api(SOURCES[k][0]))));

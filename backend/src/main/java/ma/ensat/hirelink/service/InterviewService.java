@@ -67,7 +67,6 @@ public class InterviewService {
         app.setInterviewLocation("ONSITE".equals(type) ? location : null);
         app.setInterviewMapUrl("ONSITE".equals(type) ? clean(req.mapUrl()) : null);
         app.setInterviewVideoUrl("VISIO".equals(type) ? video : null);
-        app.setInterviewPhone(null);
         app.setInterviewParticipants(clean(req.participants()));
         app.setInterviewNotes(clean(req.instructions()));
         app.setInterviewStatus(SCHEDULED);
@@ -103,12 +102,17 @@ public class InterviewService {
         return HUMAN.format(app.getInterviewAt().atZone(zone)) + " (" + zone.getId() + ")";
     }
 
+    /** Numéro de l'entretien téléphonique : ces dossiers, les seuls à ce mode, portent le numéro dans le lieu. */
+    public String phoneOf(Application app) {
+        return app.getInterviewLocation();
+    }
+
     /** Lieu, lien ou numéro selon le mode, pour les messages. */
     public String whereOrHow(Application app) {
         return switch (app.getInterviewType() == null ? "" : app.getInterviewType()) {
             case "ONSITE" -> app.getInterviewLocation();
             case "VISIO" -> app.getInterviewVideoUrl();
-            case "PHONE" -> "Téléphone : " + app.getInterviewPhone();
+            case "PHONE" -> "Téléphone : " + phoneOf(app);
             default -> "";
         };
     }
@@ -118,8 +122,13 @@ public class InterviewService {
         return when(app) + " · " + label(TYPE_FR, app.getInterviewType(), "") + " · " + label(KIND_FR, app.getInterviewKind(), "Entretien");
     }
 
+    /** Créneau posé et toujours valide : seul cas où l'étape « Entretien » peut envoyer une invitation. */
+    public boolean isPlanned(Application app) {
+        return SCHEDULED.equals(app.getInterviewStatus()) && app.getInterviewAt() != null;
+    }
+
     /** {@link Map#getOrDefault} refuse une clé null sur les maps immuables (JDK). */
-    private static String label(Map<String, String> labels, String key, String fallback) {
+    static String label(Map<String, String> labels, String key, String fallback) {
         if (key == null || key.isBlank()) return fallback;
         return labels.getOrDefault(key, fallback);
     }

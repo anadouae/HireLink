@@ -60,6 +60,9 @@ public class ScorecardService {
 
     @Transactional
     public ScorecardEntry rate(User evaluator, Long applicationId, Long criterionId, int score, String comment) {
+        if (criterionId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisissez un critère d'évaluation.");
+        }
         if (score < 1 || score > 5) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Note entre 1 et 5");
         }

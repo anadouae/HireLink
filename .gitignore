@@ -51,3 +51,9 @@ run-*.err
 *.toc
 docs/**/main.out
 tools/
+
+# Artéfacts locaux jamais versionnés : sauvegarde de base (hashs de mots de passe),
+# paquets livrés, scripts et jeux de données de mes sondes
+backup-db/
+tmp/
+*.zip

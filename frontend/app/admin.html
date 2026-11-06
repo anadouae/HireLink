@@ -4,21 +4,21 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Administration — HireLink</title>
+  <title>Tableau de bord · Administration — HireLink</title>
   <meta name="robots" content="noindex" />
   <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
   <script data-role="ADMINISTRATEUR" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -32,6 +32,13 @@
           <div class="rc-head"><div><p class="rc-eyebrow">Administration</p><h1>Tableau de bord</h1><p>Vue d’ensemble de la plateforme : comptes, entreprises, offres et candidatures.</p></div></div>
           <h2 class="db-h">À traiter</h2>
           <div class="db-actions" id="db-actions"></div>
+          <section class="rc-card db-card" style="margin-top:1.4rem">
+            <div class="rc-card-head"><div><h2>Recherche transversale</h2><p>Un compte, une entreprise, une offre ou une candidature — sans savoir laquelle on cherche.</p></div></div>
+            <div class="rc-card-body">
+              <input id="gs-query" class="rc-search-input" type="search" placeholder="Nom, e-mail, ICE, titre d’offre, ville…" aria-label="Rechercher sur la plateforme" autocomplete="off" />
+              <div id="gs-results" class="gs-results" aria-live="polite"></div>
+            </div>
+          </section>
           <section class="rc-card db-card" style="margin-top:1.4rem">
             <div class="rc-card-head"><div><h2>Entreprises à vérifier</h2><p>Les badges automatiques (ICE + e-mail professionnel) passent sans revue.</p></div><a class="btn btn-ghost btn-sm" href="#orgs/pending">Tout voir</a></div>
             <div class="rc-card-body" id="dash-pending"></div>
@@ -60,7 +67,7 @@
         <section id="view-users" hidden>
           <div class="rc-head"><div><p class="rc-eyebrow">Comptes</p><h1>Utilisateurs</h1><p>Activez ou désactivez un compte. Un compte désactivé ne peut plus se connecter.</p></div></div>
           <div class="rc-toolbar">
-            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="OWNER">Owners</button><button type="button" class="rc-chip" data-f="HIRING_MANAGER">Hiring Managers</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Admins</button></div>
+            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="OWNER">Créateurs d’espace</button><button type="button" class="rc-chip" data-f="HIRING_MANAGER">Responsables de poste</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Admins</button></div>
             <span class="rc-spacer"></span>
             <select id="user-org" aria-label="Filtrer par organisation"><option value="">Toutes les organisations</option></select>
             <input id="user-search" class="rc-search-input" type="search" placeholder="Rechercher un compte…" aria-label="Rechercher un compte" />
@@ -71,11 +78,48 @@
           </table></div></section>
         </section>
 
+        <section id="view-moderation" hidden>
+          <div class="rc-head"><div><p class="rc-eyebrow">Modération</p><h1>Signalements d’offres</h1><p>Trois signalements suspendent une offre automatiquement. Vous confirmez la sanction, vous la annulez, ou vous écartez le signalement.</p></div>
+            <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="mod-refresh">Actualiser</button></div></div>
+          <section class="rc-card is-flush">
+            <div class="rc-card-head"><div><h2>En attente de décision</h2><p class="rc-muted" style="margin:.15rem 0 0" id="mod-note">Une ligne par offre, tous ses signalements dessous.</p></div></div>
+            <div class="rc-card-body" id="mod-queue"></div>
+          </section>
+          <section class="rc-card is-flush" style="margin-top:1rem">
+            <div class="rc-card-head"><div><h2>Dernières décisions</h2><p class="rc-muted" style="margin:.15rem 0 0">Ce qui a été tranché, et par qui.</p></div></div>
+            <div class="rc-tablewrap"><table class="rc-table">
+              <thead><tr><th>Offre</th><th>Motif invoqué</th><th>Décision</th><th>Tranché le</th><th>Par</th></tr></thead>
+              <tbody id="mod-handled"></tbody>
+            </table></div>
+          </section>
+        </section>
+
+        <section id="view-offers" hidden>
+          <div class="rc-head"><div><p class="rc-eyebrow">Contenu</p><h1>Offres de la plateforme</h1><p>Suspendez une annonce douteuse, rétablissez-la si le doute est levé. Le recruteur reçoit une notification dans les deux cas.</p></div></div>
+          <div class="rc-toolbar">
+            <div class="rc-chips" id="offer-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="online">En ligne</button><button type="button" class="rc-chip" data-f="suspended">Suspendues</button><button type="button" class="rc-chip" data-f="draft">Hors ligne</button><button type="button" class="rc-chip" data-f="closed">Clôturées</button><button type="button" class="rc-chip" data-f="archived">Archivées</button><button type="button" class="rc-chip" data-f="reported">Signalées</button></div>
+            <span class="rc-spacer"></span>
+            <input id="offer-search" class="rc-search-input" type="search" placeholder="Rechercher une offre…" aria-label="Rechercher une offre" />
+          </div>
+          <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
+            <thead><tr><th>Offre</th><th>Entreprise</th><th>État</th><th>Candidatures</th><th>Signalements</th><th></th></tr></thead>
+            <tbody id="offers-body"></tbody>
+          </table></div></section>
+        </section>
+
         <section id="view-plans" hidden>
           <div class="rc-head"><div><p class="rc-eyebrow">Facturation</p><h1>Plans et factures</h1><p>Les factures sont émises automatiquement à chaque changement de plan d’une entreprise.</p></div></div>
           <div class="rc-grid rc-grid--2" id="plan-cards"></div>
           <section class="rc-card is-flush" style="margin-top:1rem">
-            <div class="rc-card-head"><h2>Factures émises</h2></div>
+            <div class="rc-card-head"><div><h2>Consommation IA — mois en cours</h2><p class="rc-muted" style="margin:.15rem 0 0">1 crédit par action IA réussie. Une action échouée n’est jamais débitée.</p></div></div>
+            <div class="rc-tablewrap"><table class="rc-table">
+              <thead><tr><th>Compte</th><th>Formule</th><th>Sièges</th><th>Enveloppe</th><th>Actions</th><th>Utilisation</th></tr></thead>
+              <tbody id="ai-usage-body"></tbody>
+            </table></div>
+          </section>
+          <section class="rc-card is-flush" style="margin-top:1rem">
+            <div class="rc-card-head"><div><h2>Factures</h2><p class="rc-muted" style="margin:.15rem 0 0" id="invoices-note">Une facture naît d’un changement de plan ; l’avoir l’annule sans l’effacer.</p></div></div>
+            <div class="rc-toolbar" style="padding:0 1rem"><div class="rc-chips" id="invoice-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="EMISE">À encaisser</button><button type="button" class="rc-chip" data-f="REGLEE">Payées</button><button type="button" class="rc-chip" data-f="AVOIR">Avoirs</button></div></div>
             <div class="rc-tablewrap"><table class="rc-table">
               <thead><tr><th>N°</th><th>Date</th><th>Entreprise</th><th>Plan</th><th>Total TTC</th><th>Statut</th><th></th></tr></thead>
               <tbody id="invoices-body"></tbody>
@@ -102,7 +146,7 @@
 
         <section id="view-audit" hidden>
           <div class="rc-head"><div><p class="rc-eyebrow">Sécurité</p><h1>Journal d’audit</h1><p>Connexions, échecs, changements de rôle ou d’étape, décisions ICE, exports de données : les 200 derniers évènements. Aucun mot de passe ni jeton n’y est enregistré.</p></div>
-            <div class="rc-head-actions"><select id="audit-filter" aria-label="Filtrer par action"><option value="">Toutes les actions</option><option>LOGIN_FAILURE</option><option>LOGIN_LOCKED</option><option>LOGIN_SUCCESS</option><option>MFA_FAILURE</option><option>SESSION_TOKEN_REUSE</option><option>ACCESS_DENIED</option><option>USER_SUSPENDED</option><option>ORG_VERIFIED</option><option>STAGE_CHANGE</option><option>DATA_EXPORT</option><option>ACCOUNT_ERASED</option></select><button type="button" class="btn btn-soft btn-sm" id="audit-refresh">Actualiser</button></div></div>
+            <div class="rc-head-actions"><select id="audit-filter" aria-label="Filtrer par action"><option value="">Toutes les actions</option><option>LOGIN_FAILURE</option><option>LOGIN_LOCKED</option><option>LOGIN_SUCCESS</option><option>MFA_FAILURE</option><option>SESSION_TOKEN_REUSE</option><option>ACCESS_DENIED</option><option>USER_SUSPENDED</option><option>ORG_VERIFIED</option><option>STAGE_CHANGE</option><option>OFFER_SUSPENDED</option><option>OFFER_RESTORED</option><option>INVOICE_STATUS_CHANGED</option><option>DATA_EXPORT</option><option>AUDIT_EXPORTED</option><option>ACCOUNT_ERASED</option></select><button type="button" class="btn btn-ghost btn-sm" id="audit-export" title="2 000 derniers évènements, filtre en cours inclus">Exporter CSV</button><button type="button" class="btn btn-soft btn-sm" id="audit-refresh">Actualiser</button></div></div>
           <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
             <thead><tr><th>Date</th><th>Action</th><th>Compte</th><th>Cible</th><th>IP</th><th>Détail</th></tr></thead>
             <tbody id="audit-body"></tbody>
@@ -121,14 +165,15 @@
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101r"></script>
-  <script defer src="../js/premium.js?v=20261102s"></script>
-  <script defer src="../js/ui.js?v=20261101r"></script>
-  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/mascotte.js?v=20261105i"></script>
+  <script defer src="../js/premium.js?v=20261106g"></script>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261106c"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261101r"></script>
-  <script defer src="../js/in-app-help.js?v=20261102q"></script>
-  <script defer src="../js/app-shell.js?v=20261102q"></script>
-  <script defer src="../js/admin.js?v=20261102q"></script>
+  <script defer src="../js/places.js?v=20261103h"></script>
+  <script defer src="../js/in-app-help.js?v=20261105s"></script>
+  <script defer src="../js/credits.js?v=20261105v"></script>
+  <script defer src="../js/app-shell.js?v=20261105y"></script>
+  <script defer src="../js/admin.js?v=20261105y"></script>
 </body>
 </html>

@@ -70,7 +70,15 @@
       }
       document.getElementById("set-phone").value = dial ? (p.phone || "").replace(/^\+\d+/, "") : (p.phone || "");
       document.getElementById("set-school").value = p.school || "";
-      document.getElementById("set-level").value = p.experienceLevel || "";
+      const levelSel = document.getElementById("set-level");
+      const level = p.experienceLevel || "";
+      if (level && ![].some.call(levelSel.options, (o) => o.value === level)) {
+        const opt = document.createElement("option");
+        opt.value = level;
+        opt.textContent = level;
+        levelSel.appendChild(opt);
+      }
+      levelSel.value = level;
       document.getElementById("set-domain").value = p.educationDomain || "";
       document.getElementById("set-grad-year").value = p.graduationYear != null ? p.graduationYear : "";
       document.getElementById("set-mode").value = p.workMode || "";
@@ -173,16 +181,17 @@
     }
   };
 
-  HireLinkAPI.api("/ai/credits")
-    .then((c) => {
-      const line = document.getElementById("credits-line");
-      if (line) {
-        line.textContent = c.premium
-          ? "Performance est active : " + c.remaining + " synthèse(s) du CV restante(s) ce mois-ci, sur " + c.limit + "."
-          : "Essentiel : " + c.remaining + " synthèse" + (Number(c.remaining) > 1 ? "s" : "") + " du CV ce mois-ci, sur " + c.limit + ".";
-      }
-    })
-    .catch(() => {});
+  HireLinkCredits.load(true).then((c) => {
+    const line = document.getElementById("credits-line");
+    if (!line || !c) return;
+    const used = (c.byFeature || []).reduce((n, f) => n + f.actions, 0);
+    line.textContent =
+      "Formule " + (c.planLabel || (c.premium ? "Performance" : "Essentiel")) +
+      (c.monthlyMad ? " · " + c.monthlyMad + " MAD / mois" : " · gratuite") +
+      " · " + c.remaining + " crédit" + (c.remaining > 1 ? "s" : "") + " sur " + c.limit +
+      " · " + c.costPerAction + " crédit par synthèse, recharge dans " + c.daysToReset + " jours" +
+      (used ? " · " + used + " action" + (used > 1 ? "s" : "") + " ce mois" : ".");
+  }).catch(() => {});
 
   Promise.all([
     HireLinkAPI.api("/me").catch(function () { return null; }),
@@ -196,10 +205,6 @@
     if (!me || !me.cvFileName) tips.push("Déposez votre CV. La synthèse n’a rien à lire tant que le document n’est pas là.");
     else if (!String(me.cvSections || "").trim()) tips.push("Confirmez les sections extraites du CV. Sans ça, le classement des offres travaille sur un texte incomplet.");
     else tips.push("Le CV est lisible. Lancez la synthèse pour voir ce qui manque pour le métier visé, puis ajustez les compétences.");
-    const late = apps.filter(function (a) {
-      return a.slaRemainingDays != null && a.slaRemainingDays < 0 && a.status !== "REJECTED" && a.status !== "WITHDRAWN";
-    });
-    if (late.length) tips.push(late.length + " employeur" + (late.length > 1 ? "s ont" : " a") + " dépassé le délai publié sur l’offre.");
     if (apps.some(function (a) { return a.status === "INTERVIEW"; })) tips.push("Un entretien est ouvert. Relisez le poste avant le jour J. La synthèse ne répond pas à votre place.");
     box.innerHTML = tips.map(function (t) { return "<p>" + t + "</p>"; }).join("");
   });

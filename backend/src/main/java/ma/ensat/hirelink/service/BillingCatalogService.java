@@ -92,6 +92,67 @@ public class BillingCatalogService {
         return invoiceRepository.findAllByOrderByIssuedAtDesc();
     }
 
+    /**
+     * L'encaissement se constate ici, pas dans la comptabilité : EMISE = pas encore réglée,
+     * REGLEE = encaissement confirmé. Une facture annulée par un avoir n'est plus modifiable.
+     */
+    @Transactional
+    public BillingInvoice markStatus(Long id, String status, String note) {
+        BillingInvoice inv = invoiceRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable"));
+        if ("AVOIR".equals(inv.getStatus()) || "ANNULEE".equals(inv.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette facture est déjà soldée par un avoir.");
+        }
+        if (!"REGLEE".equalsIgnoreCase(status) && !"EMISE".equalsIgnoreCase(status)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut de facture inconnu.");
+        }
+        inv.setStatus("REGLEE".equalsIgnoreCase(status) ? "REGLEE" : "EMISE");
+        if (note != null) inv.setNote(trimTo(note, 255));
+        return invoiceRepository.save(inv);
+    }
+
+    /**
+     * Un avoir est une facture négative qui en annule une autre : on ne réécrit pas l'originale,
+     * la piste d'audit reste lisible des deux côtés.
+     */
+    @Transactional
+    public BillingInvoice creditNote(Long id, String motif) {
+        BillingInvoice orig = invoiceRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable"));
+        if ("AVOIR".equals(orig.getStatus()) || "ANNULEE".equals(orig.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette facture a déjà fait l'objet d'un avoir.");
+        }
+        String reason = trimTo(motif, 255);
+        if (reason == null || reason.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indiquez le motif de l'avoir.");
+        }
+        BillingInvoice avoir = new BillingInvoice();
+        avoir.setNumber(orig.getNumber() + "-A");
+        avoir.setOrganization(orig.getOrganization());
+        avoir.setPlanCode(orig.getPlanCode());
+        avoir.setPlanLabel(orig.getPlanLabel());
+        avoir.setCycle(orig.getCycle());
+        avoir.setAmountHt(-orig.getAmountHt());
+        avoir.setTva(-orig.getTva());
+        avoir.setAmountTtc(-orig.getAmountTtc());
+        avoir.setStatus("AVOIR");
+        avoir.setNote(reason);
+        avoir.setCancelsInvoiceId(orig.getId());
+        avoir.setIssuedAt(Instant.now());
+        invoiceRepository.save(avoir);
+        orig.setStatus("ANNULEE");
+        orig.setNote(reason);
+        invoiceRepository.save(orig);
+        return avoir;
+    }
+
+    private static String trimTo(String raw, int max) {
+        if (raw == null) return null;
+        String v = raw.trim();
+        if (v.isEmpty()) return null;
+        return v.length() > max ? v.substring(0, max) : v;
+    }
+
     public Map<String, Object> toPlan(CommercialPlan plan) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("code", plan.getCode());
@@ -105,7 +166,13 @@ public class BillingCatalogService {
         return row;
     }
 
-    public Map<String, Object> toInvoice(BillingInvoice invoice) {
+    /**
+     * La ligne se lit dans une session ouverte : après une écriture, l'entité rendue par save() est
+     * détachée et son entreprise reste un proxy non initialisé. On la relit plutôt que de la toucher à l'aveugle.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> toInvoice(BillingInvoice maybeDetached) {
+        BillingInvoice invoice = invoiceRepository.findById(maybeDetached.getId()).orElse(maybeDetached);
         Organization org = invoice.getOrganization();
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", invoice.getId());
@@ -122,6 +189,9 @@ public class BillingCatalogService {
         row.put("amountTtc", invoice.getAmountTtc());
         row.put("currency", "MAD");
         row.put("status", invoice.getStatus());
+        row.put("note", invoice.getNote() == null ? "" : invoice.getNote());
+        row.put("cancels", invoice.getCancelsInvoiceId() == null ? ""
+                : invoiceRepository.findById(invoice.getCancelsInvoiceId()).map(BillingInvoice::getNumber).orElse(""));
         return row;
     }
 
@@ -134,10 +204,10 @@ public class BillingCatalogService {
     @EventListener(ApplicationReadyEvent.class)
     public void ensureDefaults() {
         if (planRepository.count() > 0) return;
-        seed("ACCES", "Accès", "RECRUTEUR", 0, 0, 20, "Publication d’offres\nSuivi des candidatures\n1 recruteur");
-        seed("PREMIUM", "Premium", "RECRUTEUR", 299, 2990, 200, "Équipe\nOffres mises en avant\nAlertes de délai");
-        seed("ESSENTIEL", "Essentiel", "CANDIDAT", 0, 0, 5, "Candidatures\nMatching des compétences");
-        seed("PERFORMANCE", "Performance", "CANDIDAT", 39, 390, 40, "Alertes\nPréparation d’entretien");
+        seed("ACCES", "Accès", "RECRUTEUR", 0, 0, 20, "Publication d’offres\nSuivi des candidatures\nJusqu’à 5 sièges\n20 usages IA par mois");
+        seed("PREMIUM", "Premium", "RECRUTEUR", 299, 2990, 200, "Jusqu’à 25 sièges\n200 usages IA par mois\nCouronne Premium");
+        seed("ESSENTIEL", "Essentiel", "CANDIDAT", 0, 0, 5, "Candidatures\nMatching des compétences\n5 usages IA par mois");
+        seed("PERFORMANCE", "Performance", "CANDIDAT", 39, 390, 40, "40 usages IA par mois\nPréparation d’entretien\nRéécriture de profil");
     }
 
     private void seed(String code, String label, String audience, int month, int year, int credits, String features) {

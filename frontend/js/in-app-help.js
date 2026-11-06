@@ -5,7 +5,7 @@
   const FAQ_CANDIDATE = [
     {
       q: "Comment compléter mon profil ?",
-      a: "Paramètres ou Profil → compétences, métiers, lieux, contrats. Ou importez un CV : extraction automatique des skills.",
+      a: "Paramètres ou Profil → compétences, métiers, lieux, contrats. Ou importez un CV : les compétences en sont extraites automatiquement.",
     },
     {
       q: "Comment postuler correctement ?",
@@ -13,15 +13,15 @@
     },
     {
       q: "Où suivre mes candidatures ?",
-      a: "Mes candidatures : liste puis détail avec timeline — soumise → présélection → shortlist → entretien. Les délais SLA employeur sont visibles.",
+      a: "Mes candidatures : liste puis détail avec timeline — soumise → présélection → shortlist → entretien. Une entreprise reconnue « Réactif » répond en général sous trois jours ; aucun délai ne vous est promis ailleurs.",
     },
     {
       q: "Prep entretien IA ?",
-      a: "Dans le détail d’une candidature ou Profil → Assistant IA. Inclus dans votre quota mensuel ; Premium augmente le plafond.",
+      a: "Dans le détail d’une candidature ou Profil → Assistant IA. Inclus dans votre quota mensuel ; le plan Performance le porte de 5 à 40 usages.",
     },
     {
-      q: "Premium candidat — à quoi ça sert ?",
-      a: "Alertes matching, priorité, IA complète, profil mis en avant. Activez dans Paramètres → Facturation.",
+      q: "Performance candidat — à quoi ça sert ?",
+      a: "Le plan Performance (39 MAD/mois) passe votre quota IA de 5 à 40 usages : réécriture de profil, préparation d’entretien, explication du score et contrôle de la langue. Rien n’est « mis en avant » — le matching reste calculé sur vos compétences.",
     },
     {
       q: "Mode sombre ?",
@@ -32,7 +32,7 @@
   const FAQ_RECRUITER = [
     {
       q: "Comment publier une offre conforme ?",
-      a: "Mes offres → Nouvelle offre. Renseignez compétences, lieu, contrat et SLA de réponse. L’entreprise doit être vérifiée pour publier.",
+      a: "Mes offres → Nouvelle offre. Renseignez le poste, le lieu (une ville), le contrat et les compétences. L’entreprise doit être vérifiée pour publier.",
     },
     {
       q: "Pipeline : comment avancer en sécurité ?",
@@ -52,11 +52,11 @@
     },
     {
       q: "Équipe & sièges Premium ?",
-      a: "Entreprise & équipe → Inviter. Premium débloque multi-recruteurs, offres mises en avant, alertes SLA et reporting.",
+      a: "Entreprise & équipe → Inviter. Premium monte l’équipe à 25 sièges (5 en Accès) et le quota IA à 200 usages par mois. Vos offres ne sont pas mieux classées : le tri reste celui des compétences.",
     },
     {
       q: "Facturation & Premium ?",
-      a: "Paramètres → Facturation : plan actuel, activation Premium, récap avantages. Mode sombre dans Apparence.",
+      a: "Paramètres → Facturation : formule actuelle, activation Premium, plafond de sièges et de crédits IA. Seul le créateur de l’espace change la formule. Mode sombre dans Apparence.",
     },
   ];
 
@@ -86,13 +86,31 @@
   }
 
   function bindHelpLinks(role) {
+    const userRole = role || (global.HireLinkAPI && global.HireLinkAPI.getSession ? global.HireLinkAPI.getSession()?.role : null) || document.body?.dataset?.role || "CANDIDAT";
     document.querySelectorAll('a[href*="help.html"], .js-in-app-help, #btn-help').forEach((el) => {
-      el.addEventListener("click", (e) => {
+      el.removeEventListener("click", el.__hirelinkHelpHandler);
+      const handler = (e) => {
         e.preventDefault();
-        openHelp(role);
-      });
+        openHelp(userRole);
+      };
+      el.__hirelinkHelpHandler = handler;
+      el.addEventListener("click", handler);
     });
   }
 
   global.HireLinkHelp = { openHelp, bindHelpLinks };
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      try {
+        const s = global.HireLinkAPI && global.HireLinkAPI.getSession ? global.HireLinkAPI.getSession() : null;
+        bindHelpLinks((s && s.role) || (document.body && document.body.dataset && document.body.dataset.role) || "CANDIDAT");
+      } catch (_) {}
+    });
+  } else {
+    try {
+      const s = global.HireLinkAPI && global.HireLinkAPI.getSession ? global.HireLinkAPI.getSession() : null;
+      bindHelpLinks((s && s.role) || (document.body && document.body.dataset && document.body.dataset.role) || "CANDIDAT");
+    } catch (_) {}
+  }
 })(window);

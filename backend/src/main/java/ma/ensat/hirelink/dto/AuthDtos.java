@@ -10,7 +10,9 @@ public class AuthDtos {
 
     public record RequestOtp(
             @NotBlank @Email @Size(max = 160) String email,
-            @NotBlank @Size(max = 16) String purpose
+            @NotBlank @Size(max = 16) String purpose,
+            @Size(max = 64) String captchaToken,
+            @Size(max = 24) String captchaAnswer
     ) {}
 
     public record VerifyRegisterOtp(
@@ -58,7 +60,9 @@ public class AuthDtos {
 
     public record PasswordLogin(
             @NotBlank @Email @Size(max = 160) String email,
-            @NotBlank @Size(max = 200) String password
+            @NotBlank @Size(max = 200) String password,
+            @Size(max = 64) String captchaToken,
+            @Size(max = 24) String captchaAnswer
     ) {}
 
     public record SetPassword(
@@ -74,7 +78,11 @@ public class AuthDtos {
             @Size(max = 120) String company
     ) {}
 
-    public record ForgotPassword(@NotBlank @Email @Size(max = 160) String email) {}
+    public record ForgotPassword(
+            @NotBlank @Email @Size(max = 160) String email,
+            @Size(max = 64) String captchaToken,
+            @Size(max = 24) String captchaAnswer
+    ) {}
 
     public record ResetPassword(
             @NotBlank @Size(max = 128) String token,
@@ -114,6 +122,14 @@ public class AuthDtos {
     ) {}
 
     public record PasskeyFinish(@NotBlank @Size(max = 64) String requestId, JsonNode credential, @Size(max = 80) String name) {}
+
+    public record PasskeyEnrollStart(@NotBlank @Email @Size(max = 254) String email, @NotBlank @Size(max = 200) String password) {}
+
+    public record PasskeyEnrollFinish(@NotBlank @Email @Size(max = 254) String email, @NotBlank @Size(max = 64) String requestId, JsonNode credential, @Size(max = 80) String name) {}
+
+    public record PasskeyStatusRequest(@Size(max = 254) String email) {}
+
+    public record PasskeyLoginOptionsRequest(@Size(max = 254) String email) {}
 
     public record Message(String message) {}
 }

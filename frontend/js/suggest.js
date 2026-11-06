@@ -11,7 +11,7 @@
     const kind = input.getAttribute("data-suggest");
     if (!kind || input.dataset.suggestReady === "1") return;
     input.dataset.suggestReady = "1";
-    const withFlag = kind === "place" || kind === "nationality";
+    const withFlag = kind === "place" || kind === "city" || kind === "nationality";
     let flagEl = null;
 
     const combo = HireLinkSearch.combobox(input, {

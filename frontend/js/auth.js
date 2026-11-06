@@ -3,6 +3,9 @@
   let mode = params.get("mode") === "login" ? "login" : "register";
   let role = params.get("role") === "RECRUTEUR" ? "RECRUTEUR" : "CANDIDAT";
   let pendingEmail = "";
+  let otpPurpose = "REGISTER";
+  /** Panneau qui porte l'épreuve anti-robot du prochain envoi de code (email ou mot de passe). */
+  let otpHostPanel = null;
   let viaGoogle = false;
   let profileStep = "role";
   const COUNTRIES = [
@@ -28,6 +31,7 @@
     otp: document.getElementById("form-otp"),
     profile: document.getElementById("form-profile"),
     password: document.getElementById("form-password"),
+    passkey: document.getElementById("form-passkey"),
     mfa: document.getElementById("form-mfa"),
     enroll: document.getElementById("form-enroll"),
     backup: document.getElementById("form-backup"),
@@ -36,20 +40,118 @@
   };
   /* Aucun client Google ni mode démo : le bloc Google reste masqué. */
   let googleOff = false;
-  const NO_GOOGLE = ["otp", "profile", "mfa", "enroll", "backup", "forgot", "reset"];
-  const NO_PIPE = ["password", "profile", "mfa", "enroll", "backup", "forgot", "reset"];
+  const NO_GOOGLE = ["otp", "profile", "mfa", "enroll", "backup", "forgot", "reset", "passkey"];
+  const NO_PIPE = ["password", "profile", "mfa", "enroll", "backup", "forgot", "reset", "passkey"];
   let mfaToken = "";
   let enrollToken = "";
   let pendingAuth = null;
+  let resendTimer = null;
+
+  /** Un code en cours d'attente rend le renvoi immédiat inutile : le délai est affiché plutôt que caché. */
+  function startResendCooldown() {
+    const btn = document.getElementById("btn-otp-resend");
+    const clock = document.getElementById("otp-clock");
+    if (!btn) return;
+    let left = 60;
+    if (resendTimer) clearInterval(resendTimer);
+    btn.disabled = true;
+    btn.textContent = "Renvoyer le code";
+    const tick = () => {
+      if (left <= 0) {
+        clearInterval(resendTimer);
+        resendTimer = null;
+        btn.disabled = false;
+        if (clock) { clock.hidden = true; clock.textContent = ""; }
+        return;
+      }
+      if (clock) { clock.hidden = false; clock.textContent = "Un nouveau code pourra être demandé dans " + left + " s."; }
+      left -= 1;
+    };
+    tick();
+    resendTimer = setInterval(tick, 1000);
+  }
+
+  /* ------------------------------------------------------------ contrôle anti-robot */
+
+  /**
+   * Épreuve fabriquée par le serveur : image SVG de caractères brouillés, ou question de calcul en repli.
+   * Aucune dépendance externe, donc la démonstration passe sans connexion ni clé à enregistrer.
+   */
+  function mountCaptcha(host) {
+    if (!host) return null;
+    if (host.__cap) return host.__cap;
+    host.innerHTML =
+      '<p class="cap-note">Contrôle anti-robot</p>' +
+      '<div class="cap-challenge" aria-live="polite"></div>' +
+      '<div class="cap-line">' +
+      '<input class="cap-answer" type="text" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Votre réponse" aria-label="Réponse au contrôle anti-robot" />' +
+      '<button type="button" class="cap-refresh">Nouvelle question</button>' +
+      '</div>';
+    const challenge = host.querySelector(".cap-challenge");
+    const answer = host.querySelector(".cap-answer");
+    const cap = {
+      draw: async function () {
+        try {
+          const c = await HireLinkAPI.api("/auth/captcha", { method: "POST", body: {} });
+          host.__token = c.token;
+          if (c.kind === "image") challenge.innerHTML = c.svg;
+          else challenge.textContent = c.question;
+          answer.value = "";
+        } catch (err) {
+          challenge.textContent = "Contrôle indisponible pour le moment.";
+        }
+      },
+      show: function () {
+        host.hidden = false;
+        return host.__token ? Promise.resolve() : cap.draw();
+      },
+      hide: function () { host.hidden = true; host.__token = ""; challenge.innerHTML = ""; answer.value = ""; },
+      value: function () { return { captchaToken: host.__token || "", captchaAnswer: answer.value.trim() }; },
+    };
+    host.querySelector(".cap-refresh").addEventListener("click", cap.draw);
+    host.__cap = cap;
+    return cap;
+  }
+
+  const captchaOf = (panel) => mountCaptcha(panel && panel.querySelector("[data-captcha]"));
+
+  /** Le serveur répond 428 quand l'épreuve manque ou est ratée : on la remet en avant, neuve. */
+  function isCaptchaChallenge(err) { return err && err.status === 428; }
+
+  async function sendOtp(email, purpose) {
+    const host = otpHostPanel || panels.email;
+    const cap = captchaOf(host);
+    try {
+      await HireLinkAPI.api("/auth/request-otp", {
+        method: "POST",
+        body: Object.assign({ email, purpose }, cap.value()),
+      });
+    } catch (err) {
+      if (isCaptchaChallenge(err)) {
+        cap.hide();
+        showPanel(host === panels.password ? "password" : "email");
+        cap.show();
+      }
+      throw err;
+    }
+    document.getElementById("otp-hint").textContent =
+      (purpose === "LOGIN" ? "Code de connexion envoyé à " : "Code envoyé à ") + email +
+      ". Valable 15 minutes, vérifiez vos indésirables s’il n’arrive pas.";
+    startResendCooldown();
+    HireLink.toast("Code envoyé", email, "ok");
+  }
 
   function showPanel(name) {
     Object.keys(panels).forEach((key) => {
       if (panels[key]) panels[key].classList.toggle("is-active", key === name);
     });
+    if (name !== "otp" && resendTimer) { clearInterval(resendTimer); resendTimer = null; }
     if (googleBlock) googleBlock.hidden = googleOff || NO_GOOGLE.indexOf(name) >= 0;
     if (pipe) pipe.classList.toggle("is-hidden", mode !== "register" || NO_PIPE.indexOf(name) >= 0);
     const card = document.querySelector(".auth-card");
     if (card) card.classList.toggle("is-wide", name === "profile");
+    // Envoi d'e-mail = cible d'abus : l'épreuve est exigée d'emblée sur ces deux écrans.
+    if (name === "email" || name === "forgot") captchaOf(panels[name]).show();
   }
 
   function setPipe(n) {
@@ -137,7 +239,7 @@
       showPanel("email");
     } else {
       title.textContent = "Connexion";
-      sub.textContent = "Email et mot de passe, ou Google.";
+      sub.textContent = "Email et mot de passe, code par e-mail, ou Google.";
       showPanel("password");
     }
   }
@@ -281,9 +383,10 @@
   panels.forgot.addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
-      const r = await HireLinkAPI.api("/auth/forgot-password", { method: "POST", body: { email: document.getElementById("forgot-email").value.trim() } });
+      const r = await HireLinkAPI.api("/auth/forgot-password", { method: "POST", body: Object.assign({ email: document.getElementById("forgot-email").value.trim() }, captchaOf(panels.forgot).value()) });
       HireLink.toast("Demande envoyée", r.message, "ok");
     } catch (err) {
+      if (isCaptchaChallenge(err)) { const cap = captchaOf(panels.forgot); cap.hide(); cap.show(); }
       HireLink.toast("Échec", err.message, "danger");
     }
   });
@@ -304,16 +407,116 @@
   });
 
   const passkeyBtn = document.getElementById("btn-passkey");
+  const pkFeedback = document.getElementById("pk-feedback");
+  const pkEmailInput = document.getElementById("pk-email");
+  const pkModeLogin = document.getElementById("pk-mode-login");
+  const pkModeCreate = document.getElementById("pk-mode-create");
+  const pkCreatePw = document.getElementById("pk-create-pw");
+
+  function setPkFeedback(msg, tone) {
+    if (!pkFeedback) return;
+    if (!msg) { pkFeedback.hidden = true; pkFeedback.innerHTML = ""; return; }
+    pkFeedback.className = "rc-banner " + (tone === "ok" ? "rc-banner--ok" : tone === "warn" ? "rc-banner--warn" : "rc-banner--danger");
+    pkFeedback.innerHTML = "<div>" + msg + "</div>";
+    pkFeedback.hidden = false;
+  }
+
+  function showPasskeyPanel() {
+    title.textContent = "Connexion par Passkey";
+    sub.textContent = "Empreinte, reconnaissance faciale ou code de l’appareil.";
+    const pwEmail = (document.getElementById("email-pw") || {}).value || "";
+    if (pkEmailInput && pwEmail && !pkEmailInput.value) pkEmailInput.value = pwEmail.trim();
+    if (pkModeLogin) pkModeLogin.classList.remove("is-hidden");
+    if (pkModeCreate) pkModeCreate.classList.add("is-hidden");
+    setPkFeedback(null);
+    showPanel("passkey");
+    if (pkEmailInput) setTimeout(() => pkEmailInput.focus(), 100);
+  }
+
   if (passkeyBtn && window.HireLinkWebAuthn && HireLinkWebAuthn.supported()) {
     passkeyBtn.hidden = false;
-    passkeyBtn.addEventListener("click", async () => {
+    passkeyBtn.addEventListener("click", showPasskeyPanel);
+  }
+
+  const btnPkRun = document.getElementById("btn-pk-run");
+  if (btnPkRun) {
+    btnPkRun.addEventListener("click", async () => {
+      const email = (pkEmailInput ? pkEmailInput.value : "").trim();
+      setPkFeedback(null);
+      btnPkRun.disabled = true;
       try {
-        const opts = await HireLinkAPI.api("/auth/passkey/login/options", { method: "POST", body: {} });
+        if (email) {
+          const st = await HireLinkAPI.api("/auth/passkey/status", { method: "POST", body: { email } });
+          if (!st.hasPasskey) {
+            setPkFeedback("<strong>Aucune passkey enregistrée</strong> pour ce compte sur cet appareil. Vous pouvez la créer immédiatement ci-dessous.", "warn");
+            if (pkModeCreate) pkModeCreate.classList.remove("is-hidden");
+            if (pkModeLogin) pkModeLogin.classList.add("is-hidden");
+            if (pkCreatePw) setTimeout(() => pkCreatePw.focus(), 150);
+            return;
+          }
+        }
+        const opts = await HireLinkAPI.api("/auth/passkey/login/options", { method: "POST", body: email ? { email } : {} });
         const credential = await HireLinkWebAuthn.get(opts);
         const auth = await HireLinkAPI.api("/auth/passkey/login/finish", { method: "POST", body: { requestId: opts.requestId, credential } });
-        enterApp(auth);
+        setPkFeedback("<strong>Authentification réussie !</strong> Connexion en cours…", "ok");
+        setTimeout(() => enterApp(auth), 400);
       } catch (err) {
-        HireLink.toast("Passkey", err.message || "Échec", "danger");
+        setPkFeedback("<strong>Échec de la passkey :</strong> " + (err.message || "Opération annulée ou refusée."), "danger");
+      } finally {
+        btnPkRun.disabled = false;
+      }
+    });
+  }
+
+  const btnPkSwitchCreate = document.getElementById("btn-pk-switch-create");
+  if (btnPkSwitchCreate) {
+    btnPkSwitchCreate.addEventListener("click", () => {
+      setPkFeedback(null);
+      if (pkModeCreate) pkModeCreate.classList.remove("is-hidden");
+      if (pkModeLogin) pkModeLogin.classList.add("is-hidden");
+      if (pkCreatePw) setTimeout(() => pkCreatePw.focus(), 100);
+    });
+  }
+
+  const btnPkSwitchLogin = document.getElementById("btn-pk-switch-login");
+  if (btnPkSwitchLogin) {
+    btnPkSwitchLogin.addEventListener("click", () => {
+      setPkFeedback(null);
+      if (pkModeLogin) pkModeLogin.classList.remove("is-hidden");
+      if (pkModeCreate) pkModeCreate.classList.add("is-hidden");
+    });
+  }
+
+  const btnPkDoCreate = document.getElementById("btn-pk-do-create");
+  if (btnPkDoCreate) {
+    btnPkDoCreate.addEventListener("click", async () => {
+      const email = (pkEmailInput ? pkEmailInput.value : "").trim();
+      const pw = (pkCreatePw ? pkCreatePw.value : "").trim();
+      if (!email || !email.includes("@")) {
+        setPkFeedback("Saisissez l’adresse e-mail de votre compte.", "warn");
+        if (pkEmailInput) pkEmailInput.focus();
+        return;
+      }
+      if (!pw) {
+        setPkFeedback("Saisissez votre mot de passe pour autoriser l'enregistrement de la passkey.", "warn");
+        if (pkCreatePw) pkCreatePw.focus();
+        return;
+      }
+      btnPkDoCreate.disabled = true;
+      setPkFeedback("Préparation de l'enregistrement biométrique…", "ok");
+      try {
+        const opts = await HireLinkAPI.api("/auth/passkey/enroll/options", { method: "POST", body: { email, password: pw } });
+        const credential = await HireLinkWebAuthn.create(opts);
+        const auth = await HireLinkAPI.api("/auth/passkey/enroll/finish", {
+          method: "POST",
+          body: { email, requestId: opts.requestId, credential, name: "Passkey principale" }
+        });
+        setPkFeedback("<strong>Passkey enregistrée avec succès !</strong> Connexion en cours…", "ok");
+        setTimeout(() => enterApp(auth), 600);
+      } catch (err) {
+        setPkFeedback("<strong>Création impossible :</strong> " + (err.message || "Erreur de configuration biométrique"), "danger");
+      } finally {
+        btnPkDoCreate.disabled = false;
       }
     });
   }
@@ -360,6 +563,13 @@
   });
 
   document.getElementById("btn-back-email").addEventListener("click", () => {
+    if (otpPurpose === "LOGIN") {
+      document.getElementById("email-pw").value = pendingEmail;
+      otpPurpose = "REGISTER";
+      otpHostPanel = panels.password;
+      applyMode();
+      return;
+    }
     setPipe(1);
     title.textContent = "Créer un compte";
     sub.textContent = "Avec Google, ou avec votre email puis un code.";
@@ -374,13 +584,11 @@
       return;
     }
     pendingEmail = email;
+    otpPurpose = "REGISTER";
+    otpHostPanel = panels.email;
     viaGoogle = false;
     try {
-      await HireLinkAPI.api("/auth/request-otp", {
-        method: "POST",
-        body: { email, purpose: "REGISTER" },
-      });
-      document.getElementById("otp-hint").textContent = "Code envoyé à " + email + ".";
+      await sendOtp(email, "REGISTER");
       setPipe(2);
       title.textContent = "Vérification";
       sub.textContent = "Saisissez le code reçu par email.";
@@ -395,13 +603,54 @@
     e.preventDefault();
     const code = document.getElementById("otp").value.trim();
     try {
-      const auth = await HireLinkAPI.api("/auth/verify-register-otp", {
+      const auth = await HireLinkAPI.api(otpPurpose === "LOGIN" ? "/auth/verify-login-otp" : "/auth/verify-register-otp", {
         method: "POST",
-        body: { email: pendingEmail, code, role: "CANDIDAT" },
+        body: otpPurpose === "LOGIN"
+          ? { email: pendingEmail, code }
+          : { email: pendingEmail, code, role: "CANDIDAT" },
       });
       afterAuth(auth);
     } catch (err) {
       HireLink.toast("Code invalide", err.message, "danger");
+    }
+  });
+
+  document.getElementById("btn-login-otp").addEventListener("click", async () => {
+    const email = document.getElementById("email-pw").value.trim();
+    if (!email) {
+      HireLink.toast("Email requis", "Indiquez votre adresse avant de demander un code.", "warn");
+      document.getElementById("email-pw").focus();
+      return;
+    }
+    pendingEmail = email;
+    otpPurpose = "LOGIN";
+    otpHostPanel = panels.password;
+    try {
+      await sendOtp(email, "LOGIN");
+      title.textContent = "Connexion par code";
+      sub.textContent = "Saisissez le code reçu par e-mail.";
+      showPanel("otp");
+    } catch (err) {
+      if (isCaptchaChallenge(err)) {
+        HireLink.toast("Contrôle anti-robot", "Répondez à la question affichée, puis relancez l’envoi du code.", "warn");
+        return;
+      }
+      HireLink.toast("Échec", err.message, "danger");
+    }
+  });
+
+  document.getElementById("btn-otp-resend").addEventListener("click", async () => {
+    if (!pendingEmail) return;
+    const btn = document.getElementById("btn-otp-resend");
+    btn.disabled = true;
+    try {
+      await sendOtp(pendingEmail, otpPurpose);
+      const field = document.getElementById("otp");
+      field.value = "";
+      field.focus();
+    } catch (err) {
+      btn.disabled = false;
+      HireLink.toast("Échec", err.message, "danger");
     }
   });
 
@@ -483,13 +732,14 @@
     try {
       const auth = await HireLinkAPI.api("/auth/login", {
         method: "POST",
-        body: {
+        body: Object.assign({
           email: document.getElementById("email-pw").value.trim(),
           password: document.getElementById("password").value,
-        },
+        }, captchaOf(panels.password).value()),
       });
       afterAuth(auth, true);
     } catch (err) {
+      if (isCaptchaChallenge(err)) await captchaOf(panels.password).show();
       HireLink.toast("Connexion refusée", err.message, "danger");
     }
   });
@@ -569,8 +819,8 @@
         description: "Indiquez le compte Google à utiliser.",
         bodyHtml:
           '<div class="stack">' +
-          '<div class="field"><label>Email</label><input id="g-email" type="email" /></div>' +
-          '<div class="field"><label>Nom</label><input id="g-name" /></div>' +
+          '<div class="field"><label for="g-email">Email</label><input id="g-email" type="email" /></div>' +
+          '<div class="field"><label for="g-name">Nom</label><input id="g-name" /></div>' +
           "</div>",
         confirmLabel: "Continuer",
         large: true,
@@ -618,7 +868,7 @@
     const needle = foldText(q);
     if (!menu.dataset.built) {
       menu.dataset.built = "1";
-      menu.innerHTML = '<input id="phone-filter" placeholder="Pays ou indicatif" />' + COUNTRIES.map(function (row, i) {
+      menu.innerHTML = '<input id="phone-filter" aria-label="Filtrer les pays" placeholder="Pays ou indicatif" />' + COUNTRIES.map(function (row, i) {
         return '<button type="button" class="phone-opt" data-i="' + i + '"><span>' + row[0] + '</span><span>' + row[1] + '</span><small>+' + row[2] + '</small></button>';
       }).join("");
       const filter = menu.querySelector("#phone-filter");

@@ -12,7 +12,6 @@ import java.util.*;
 public class PrivacyService {
     private final UserRepository userRepository;
     private final ApplicationRepository applicationRepository;
-    private final ConsentRecordRepository consentRecordRepository;
     private final MembershipRepository membershipRepository;
     private final CvStorage cvStorage;
     private final WebAuthnCredentialRepository webAuthnCredentials;
@@ -20,7 +19,6 @@ public class PrivacyService {
 
     public PrivacyService(UserRepository userRepository,
                           ApplicationRepository applicationRepository,
-                          ConsentRecordRepository consentRecordRepository,
                           MembershipRepository membershipRepository,
                           CvStorage cvStorage,
                           WebAuthnCredentialRepository webAuthnCredentials,
@@ -31,7 +29,6 @@ public class PrivacyService {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
-        this.consentRecordRepository = consentRecordRepository;
     }
 
     @Transactional(readOnly = true)
@@ -58,18 +55,13 @@ public class PrivacyService {
             apps.add(row);
         }
         m.put("applications", apps);
-        List<Map<String, Object>> consents = new ArrayList<>();
-        for (ConsentRecord c : consentRecordRepository.findByUserId(user.getId())) {
-            consents.add(Map.of("purpose", c.getPurpose(), "granted", c.isGranted(), "at", c.getCreatedAt().toString()));
-        }
-        m.put("consents", consents);
         m.put("note", "Export F21 — loi 09-08 / droits d'accès");
         return m;
     }
 
     /**
      * Droit à l'effacement : anonymise le compte (les candidatures restent pour l'historique des recruteurs mais ne sont
-     * plus rattachées à une personne identifiable), supprime CV, passkeys, notifications, consentements et secrets MFA.
+     * plus rattachées à une personne identifiable), supprime CV, passkeys, notifications et secrets MFA.
      */
     @Transactional
     public void erase(User user) {
@@ -89,7 +81,6 @@ public class PrivacyService {
         }
         if (user.getCvStorageName() != null) cvStorage.delete(user.getCvStorageName());
         webAuthnCredentials.deleteByUserId(user.getId());
-        consentRecordRepository.findByUserId(user.getId()).forEach(consentRecordRepository::delete);
         notificationRepository.findByUserIdOrderByCreatedAtDescIdDesc(user.getId()).forEach(notificationRepository::delete);
         user.setEmail("effacé-" + user.getId() + "@anonymise.invalid");
         user.setFullName("Compte supprimé");
@@ -115,14 +106,5 @@ public class PrivacyService {
         user.setMfaBackupHashes(null);
         user.setActive(false);
         userRepository.save(user);
-    }
-
-    @Transactional
-    public ConsentRecord recordConsent(User user, String purpose, boolean granted) {
-        ConsentRecord c = new ConsentRecord();
-        c.setUserId(user.getId());
-        c.setPurpose(purpose);
-        c.setGranted(granted);
-        return consentRecordRepository.save(c);
     }
 }

@@ -97,7 +97,7 @@
     if (!box) return;
     if (s.empty) {
       box.innerHTML = s.hint
-        ? '<p class="muted" style="margin:.35rem 0 0;font-size:.84rem">' + esc(s.hint) + "</p>"
+        ? '<p class="muted" style="margin:.35rem 0 0;font-size: var(--text-sm)">' + esc(s.hint) + "</p>"
         : "";
       return;
     }
@@ -209,7 +209,8 @@
     $("co-bio").value = o.presentation || "";
     f.querySelectorAll("button[type=submit]").forEach((b) => (b.hidden = !canEdit));
     document.querySelectorAll("[data-edit]").forEach((n) => (n.hidden = !canEdit));
-    $("btn-invite").hidden = o.myRole !== "OWNER";
+    $("btn-invite").hidden = !RC.isCreator();
+    document.querySelectorAll("[data-creator]").forEach((n) => (n.hidden = !RC.isCreator()));
     document.querySelectorAll("[data-manage]").forEach((n) => (n.hidden = !RC.canManage()));
     paintLogo(o, false);
     if (!colorTouched) $("co-color").value = savedColor(o) || $("co-color").value;
@@ -231,25 +232,82 @@
   let members = [];
   let newMemberId = null;
   const ROLE_CLS = { OWNER: "r-owner", RECRUTEUR: "r-rec", HIRING_MANAGER: "r-hm" };
-  function paintMembers(list, meOwner) {
+  /** Seuls deux rôles s'attribuent ici : celui de créateur se transfère, il ne se choisit pas. */
+  const ASSIGNABLE_ROLES = ["RECRUTEUR", "HIRING_MANAGER"];
+  /** Gouvernement de l'espace : inviter, changer un rôle, suspendre, retirer, transférer, choisir la formule. */
+  function canGovern() { return org ? org.myRole === "OWNER" : RC.isCreator(); }
+
+  function memberActions(m, me) {
+    if (!canGovern() || me) return "";
+    const label = esc(m.fullName || m.email);
+    if (m.pending) {
+      return '<div class="hq-desk-actions">' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-resend="1" data-email="' + esc(m.email || "") + '" data-role="' + esc(m.orgRole || "RECRUTEUR") + '">Renvoyer l’invitation</button>' +
+        '<button type="button" class="btn btn-soft btn-sm" data-cancel="' + m.userId + '" data-email="' + esc(m.email || "") + '" data-name="' + label + '">Annuler l’invitation</button>' +
+        "</div>";
+    }
+    if (m.suspended) {
+      return '<div class="hq-desk-actions">' +
+        '<button type="button" class="btn btn-soft btn-sm" data-reinstate="' + m.userId + '" data-name="' + label + '">Rétablir l’accès</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-rescind="' + m.userId + '" data-name="' + label + '">Retirer définitivement</button>' +
+        "</div>";
+    }
+    if (m.orgRole === "OWNER") return "";
+    const opts = ASSIGNABLE_ROLES.map((r) =>
+      '<option value="' + r + '"' + (m.orgRole === r ? " selected" : "") + ">" + esc(RC.ROLE_FR[r]) + "</option>").join("");
+    return '<div class="hq-desk-actions">' +
+      '<label class="hq-role-set">Rôle<select data-role="' + m.userId + '" data-name="' + label + '" aria-label="Rôle de ' + label + '">' + opts + "</select></label>" +
+      '<button type="button" class="btn btn-ghost btn-sm" data-suspend="' + m.userId + '" data-name="' + label + '">Mettre en pause</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-remove="' + m.userId + '" data-name="' + label + '">Retirer</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" data-transfer="' + m.userId + '" data-name="' + label + '">Transférer le rôle de créateur</button>' +
+      "</div>";
+  }
+
+  /** Un compte en pause garde son siège : il occupe une place de l'équipe, même sans accès. */
+  const seatOnly = (l) => (l || []).filter((m) => !m.pending);
+  /** Seuls les membres en cours comptent dans le bureau : ni la pause, ni l'attente d'une invitation. */
+  const activeOnly = (l) => seatOnly(l).filter((m) => !m.suspended);
+  const statusLine = (m) => (m.suspended ? "En pause · " : "") + esc(m.roleLabel || RC.ROLE_FR[m.orgRole] || m.orgRole);
+
+  function paintMembers(list) {
     const box = $("members-list");
     const order = ["OWNER", "RECRUTEUR", "HIRING_MANAGER"];
-    const titles = { OWNER: "Direction", RECRUTEUR: "Recrutement", HIRING_MANAGER: "Managers" };
-    const rows = order.map((r) => ({ r, list: list.filter((m) => (m.orgRole || "RECRUTEUR") === r) })).filter((g) => g.list.length);
+    const titles = { OWNER: "Créateur de l’espace", RECRUTEUR: "Recrutement", HIRING_MANAGER: "Responsables du poste" };
+    const rows = order.map((r) => ({ r, list: list.filter((m) => (m.orgRole || "RECRUTEUR") === r && !m.suspended && !m.pending) })).filter((g) => g.list.length);
+    const paused = list.filter((m) => m.suspended && !m.pending);
+    const waiting = list.filter((m) => m.pending);
     box.innerHTML = '<div class="hq-chart">' + rows.map((g, gi) =>
       '<div class="hq-floor" style="--d:' + gi * 90 + 'ms"><h3>' + titles[g.r] + " <small>" + g.list.length + '</small></h3><div class="hq-desks">' +
       g.list.map((m, i) => {
         const name = (m.fullName || m.email).replace(/\s*\(alias\)/, "");
-        const me = m.userId === session.userId;
+        const me = String(m.userId) === String(session.userId);
         return '<article class="hq-desk ' + (ROLE_CLS[m.orgRole] || "") + (String(m.userId) === String(newMemberId) ? " is-new" : "") + '" style="--i:' + i + '" data-focus="member:' + m.userId + '">' +
           '<span class="hq-ava">' + esc(RC.initials(name)) + '<i class="hq-presence" title="Membre actif"></i></span>' +
-          '<div class="hq-desk-txt"><strong>' + esc(name) + (me ? " <em>(vous)</em>" : "") + "</strong><span>" + esc(m.email) + '</span><span class="hq-role ' + (ROLE_CLS[m.orgRole] || "") + '">' + esc(RC.ROLE_FR[m.orgRole] || m.orgRole) + "</span></div>" +
-          (meOwner && !me ? '<button type="button" class="hq-remove" data-remove="' + m.userId + '" data-name="' + esc(name) + '" aria-label="Retirer ' + esc(name) + '" title="Retirer de l’équipe">×</button>' : "") +
+          '<div class="hq-desk-txt"><strong>' + esc(name) + (me ? " <em>(vous)</em>" : "") + "</strong><span>" + esc(m.email) + '</span><span class="hq-role ' + (ROLE_CLS[m.orgRole] || "") + '">' + esc(m.roleLabel || RC.ROLE_FR[m.orgRole] || m.orgRole) + "</span></div>" +
+          memberActions(m, me) +
           "</article>";
-      }).join("") + "</div></div>").join("") + "</div>" +
-      (meOwner ? '<button type="button" class="hq-add" id="hq-add-desk"><span>+</span>Ajouter un membre</button>' : "");
+      }).join("") + "</div></div>").join("") +
+      (paused.length ? '<div class="hq-floor" style="--d:' + rows.length * 90 + 'ms"><h3>Accès en pause <small>' + paused.length + '</small></h3><div class="hq-desks">' +
+        paused.map((m, i) => {
+          const name = (m.fullName || m.email).replace(/\s*\(alias\)/, "");
+          return '<article class="hq-desk is-paused" style="--i:' + i + '">' +
+            '<span class="hq-ava">' + esc(RC.initials(name)) + '<i class="hq-presence hq-presence--paused" title="Accès en pause"></i></span>' +
+            '<div class="hq-desk-txt"><strong>' + esc(name) + "</strong><span>" + esc(m.email) + '</span><span class="hq-role">En pause · ' + esc(m.roleLabel || RC.ROLE_FR[m.orgRole] || m.orgRole) + "</span></div>" +
+            memberActions(m, false) + "</article>";
+        }).join("") + "</div></div>" : "") +
+      (waiting.length ? '<div class="hq-floor" style="--d:' + (rows.length + paused.length) * 90 + 'ms"><h3>Invitations en attente <small>' + waiting.length + '</small></h3><div class="hq-desks">' +
+        waiting.map((m, i) => {
+          const name = (m.fullName || m.email).replace(/\s*\(alias\)/, "");
+          return '<article class="hq-desk is-waiting" style="--i:' + i + '">' +
+            '<span class="hq-ava">' + esc(RC.initials(name)) + '<i class="hq-presence hq-presence--waiting" title="Invitation non reçue"></i></span>' +
+            '<div class="hq-desk-txt"><strong>' + esc(name) + "</strong><span>" + esc(m.email) + '</span><span class="hq-role">Invitation envoyée · ' + statusLine(m) + "</span></div>" +
+            memberActions(m, false) + "</article>";
+        }).join("") + "</div></div>" : "") +
+      "</div>" +
+      (canGovern() ? '<button type="button" class="hq-add btn-invite-trigger" id="hq-add-desk"><span>+</span>Inviter un membre d’équipe</button>'
+        : '<p class="hq-govern-note">Seul le créateur de l’espace invite, change un rôle ou retire un membre.</p>');
     const add = $("hq-add-desk");
-    if (add) add.addEventListener("click", openDrawer);
+    if (add) add.addEventListener("click", () => openDrawer());
     if (newMemberId) {
       const el = box.querySelector(".hq-desk.is-new");
       if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -257,66 +315,206 @@
     }
   }
 
+  function paintSeats(o, memberCount) {
+    const tier = o && o.planTier ? o.planTier : "ACCES";
+    const max = o && o.maxMembers ? o.maxMembers : (tier === "PREMIUM" ? 25 : 5);
+    const count = memberCount != null ? memberCount : (o && o.memberCount != null ? o.memberCount : (members ? seatOnly(members).length : 1));
+    const rem = Math.max(0, max - count);
+
+    const kpiM = $("kpi-members");
+    if (kpiM) kpiM.textContent = count + " / " + max;
+    const kpiS = $("kpi-seats");
+    if (kpiS) kpiS.textContent = rem + " place" + (rem > 1 ? "s" : "") + " restante" + (rem > 1 ? "s" : "") + " · " + (tier === "PREMIUM" ? "Plan Premium" : "Plan Accès");
+
+    const sTxt = $("hq-seats-txt");
+    if (sTxt) sTxt.innerHTML = "Capacité d’équipe : <b>" + count + " / " + max + "</b> (" + rem + " place" + (rem > 1 ? "s" : "") + " disponible" + (rem > 1 ? "s" : "") + ")";
+    const sPill = $("hq-seats-pill");
+    if (sPill) {
+      sPill.textContent = tier === "PREMIUM" ? "Plan Premium (25 places)" : "Plan Accès (5 places)";
+      sPill.className = "badge " + (rem === 0 ? "badge-danger" : rem <= 1 ? "badge-warn" : "badge-ok");
+    }
+  }
+
   function loadMembers() {
     const box = $("members-list");
     RC.skeleton(box, 3, 52);
     HireLinkAPI.api("/organizations/mine/members").then((list) => {
-      $("members-count").textContent = list.length;
-      $("kpi-members").textContent = list.length;
-      const meOwner = org && org.myRole === "OWNER";
       members = list;
-      paintMembers(list, meOwner);
+      $("members-count").textContent = activeOnly(list).length;
+      paintSeats(org, seatOnly(list).length);
+      paintMembers(list);
       paintHq();
     }).catch((err) => RC.errorState(box, err.message, loadMembers));
   }
 
-  $("members-list").addEventListener("click", async (e) => {
-    const b = e.target.closest("[data-remove]");
-    if (!b) return;
-    const ok = await Mascotte.confirm({ title: "Retirer ce membre ?", description: b.dataset.name + " perdra l’accès aux offres et dossiers de l’organisation.", confirmLabel: "Retirer", danger: true });
+  /** Une action d'équipe : confirmation, appel, message clair, relecture du compteur de places. */
+  async function memberAction(opts) {
+    const ok = await Mascotte.confirm({
+      title: opts.title, description: opts.description,
+      confirmLabel: opts.confirmLabel, cancelLabel: opts.cancelLabel, danger: !!opts.danger,
+    });
     if (!ok) return;
     try {
-      await HireLinkAPI.api("/organizations/mine/members/" + b.dataset.remove, { method: "DELETE" });
-      RC.toast("Équipe", "Membre retiré", "ok");
+      await HireLinkAPI.api("/organizations/mine/members/" + opts.userId + opts.path, { method: opts.method, body: opts.body });
+      RC.toast("Équipe", opts.done, "ok");
       RC.cacheClear("members");
       loadMembers();
     } catch (err) { RC.toast("Équipe", err.message, "danger"); }
+  }
+
+  $("members-list").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-resend],[data-remove],[data-cancel],[data-rescind],[data-suspend],[data-reinstate],[data-transfer]");
+    if (!b || !canGovern()) return;
+    const who = b.dataset.name;
+    if (b.dataset.resend) {
+      openDrawer({ email: b.dataset.email, role: b.dataset.role });
+      return;
+    }
+    if (b.dataset.cancel) {
+      return memberAction({
+        userId: b.dataset.cancel, path: "", method: "DELETE", title: "Annuler cette invitation ?", danger: true, confirmLabel: "Retirer l’invitation", cancelLabel: "Garder l’invitation",
+        description: who + " n’a pas encore accepté l’invitation. Vous pourrez toujours lui en renvoyer une plus tard.",
+        done: "Invitation annulée",
+      });
+    }
+    if (b.dataset.rescind) {
+      return memberAction({
+        userId: b.dataset.rescind, path: "", method: "DELETE", title: "Retirer définitivement ce compte en pause ?", danger: true, confirmLabel: "Retirer",
+        description: who + " perdra sa place dans l’équipe et ne pourra plus revenir sans une nouvelle invitation.",
+        done: "Compte retiré de l’équipe",
+      });
+    }
+    if (b.dataset.remove) {
+      return memberAction({
+        userId: b.dataset.remove, path: "", method: "DELETE", title: "Retirer ce membre ?", danger: true, confirmLabel: "Retirer",
+        description: who + " perdra l’accès aux offres et dossiers de l’organisation. Retirer est définitif : préférez « Mettre en pause » si vous voulez pouvoir revenir en arrière.",
+        done: "Membre retiré de l’équipe",
+      });
+    }
+    if (b.dataset.suspend) {
+      return memberAction({
+        userId: b.dataset.suspend, path: "/suspend", method: "PATCH", title: "Mettre ce membre en pause ?", confirmLabel: "Mettre en pause",
+        description: who + " ne pourra plus ouvrir l’espace, mais gardera son rôle et l’historique de ses dossiers. Vous pourrez rétablir l’accès à tout moment.",
+        done: "Accès mis en pause",
+      });
+    }
+    if (b.dataset.reinstate) {
+      return memberAction({
+        userId: b.dataset.reinstate, path: "/reinstate", method: "PATCH", title: "Rétablir l’accès ?", confirmLabel: "Rétablir",
+        description: who + " retrouvera immédiatement l’accès à l’espace, avec le même rôle qu’avant la pause.",
+        done: "Accès rétabli",
+      });
+    }
+    return memberAction({
+      userId: b.dataset.transfer, path: "/ownership", method: "PATCH", title: "Transférer le rôle de créateur ?", danger: true, confirmLabel: "Transférer",
+      description: who + " deviendra le seul compte à gérer l’équipe, la fiche et la formule. Vous deviendrez Recruteur : vous ne pourrez plus inviter ni retirer de membre.",
+      done: "Rôle de créateur transféré",
+    });
+  });
+
+  $("members-list").addEventListener("change", async (e) => {
+    const sel = e.target.closest("[data-role]");
+    if (!sel || !canGovern()) return;
+    const previous = sel.value;
+    try {
+      await HireLinkAPI.api("/organizations/mine/members/" + sel.dataset.role + "/role", { method: "PATCH", body: { orgRole: sel.value } });
+      RC.toast("Équipe", (sel.dataset.name || "Le membre") + " est désormais " + RC.ROLE_FR[sel.value] + ".", "ok");
+      RC.cacheClear("members");
+      loadMembers();
+    } catch (err) {
+      sel.value = previous;
+      RC.toast("Équipe", err.message, "danger");
+    }
   });
 
   const drawer = $("hq-drawer");
   let lastFocus = null;
-  function openDrawer() {
+  /** @param {{email?:string, role?:string}} [prefill] préremplit le panneau quand on renvoie une invitation sans réponse */
+  function openDrawer(prefill) {
     lastFocus = document.activeElement;
+    const fb = $("invite-feedback");
+    if (fb) { fb.hidden = true; fb.innerHTML = ""; }
+    const emailInput = $("invite-email");
+    if (prefill && prefill.email && emailInput) {
+      emailInput.value = prefill.email;
+      const radio = document.querySelector('input[name="invite-role"][value="' + (prefill.role || "RECRUTEUR") + '"]');
+      if (radio) radio.checked = true;
+    } else if (emailInput) emailInput.value = "";
+    if (org) paintSeats(org, members ? seatOnly(members).length : null);
     drawer.classList.add("is-open"); drawer.setAttribute("aria-hidden", "false");
-    setTimeout(() => $("invite-email").focus(), 220);
+    // Contrat clavier partagé : Tab reste dans le tiroir, Escape le referme, le focus revient au déclencheur.
+    if (drawer._hlRelease) drawer._hlRelease();
+    if (window.HireLink && HireLink.trapDialog)
+      drawer._hlRelease = HireLink.trapDialog(drawer.querySelector(".hq-drawer-card"), closeDrawer);
+    setTimeout(() => emailInput && emailInput.focus(), 220);
   }
   function closeDrawer() {
     drawer.classList.remove("is-open"); drawer.setAttribute("aria-hidden", "true");
     if (lastFocus && lastFocus.focus) lastFocus.focus();
+    if (drawer._hlRelease) { drawer._hlRelease(); drawer._hlRelease = null; }
   }
-  $("btn-invite").addEventListener("click", openDrawer);
+  document.querySelectorAll(".btn-invite-trigger").forEach((btn) => btn.addEventListener("click", () => openDrawer()));
+  const topInvite = $("btn-invite");
+  if (topInvite) topInvite.addEventListener("click", () => openDrawer());
   $("hq-drawer-close").addEventListener("click", closeDrawer);
   $("hq-drawer-cancel").addEventListener("click", closeDrawer);
   drawer.addEventListener("click", (e) => { if (e.target === drawer) closeDrawer(); });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && drawer.classList.contains("is-open")) closeDrawer(); });
-  $("hq-invite-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = ($("invite-email").value || "").trim();
-    if (!email) { RC.toast("E-mail requis", "Saisissez l’adresse du collègue.", "warn"); return; }
+
+  async function submitInvite(e) {
+    if (e && e.preventDefault) e.preventDefault();
+    const fb = $("invite-feedback");
+    if (fb) { fb.hidden = true; fb.innerHTML = ""; }
+    const emailInput = $("invite-email");
+    const email = (emailInput.value || "").trim();
+    if (!email || !email.includes("@")) {
+      const msg = "Saisissez une adresse e-mail professionnelle valide.";
+      if (fb) {
+        fb.className = "rc-banner rc-banner--warn";
+        fb.innerHTML = "<div><strong>E-mail requis</strong><span>" + esc(msg) + "</span></div>";
+        fb.hidden = false;
+      }
+      RC.toast("E-mail requis", msg, "warn");
+      emailInput.focus();
+      return;
+    }
     const role = (document.querySelector('input[name="invite-role"]:checked') || {}).value || "RECRUTEUR";
-    const btn = e.submitter || e.target.querySelector("button[type=submit]");
+    const btn = $("btn-submit-invite") || (e && e.target && e.target.querySelector && e.target.querySelector("button[type=submit]"));
     RC.busy(btn, true);
     try {
       const m = await HireLinkAPI.api("/organizations/mine/invite", { method: "POST", body: { email: email, orgRole: role } });
-      RC.toast("Bienvenue dans l’équipe", m.email + " · " + (RC.ROLE_FR[m.orgRole] || m.orgRole), "ok");
+      const roleFr = m.roleLabel || RC.ROLE_FR[m.orgRole] || m.orgRole;
+      if (fb) {
+        fb.className = "rc-banner rc-banner--ok";
+        fb.innerHTML = "<div><strong>Invitation envoyée</strong><span>" + esc(m.email) + " recevra le rôle " + esc(roleFr) +
+          " dès qu’il aura accepté l’invitation, reçue par e-mail et valable trois jours. Suivez-la ici, dans « Invitations en attente ».</span></div>";
+        fb.hidden = false;
+      }
+      RC.toast("Invitation envoyée", m.email + " · " + roleFr, "ok");
       newMemberId = m.userId;
-      e.target.reset();
-      closeDrawer();
-      selectTab("members");
+      emailInput.value = "";
       RC.cacheClear("members");
-      loadMembers();
-    } catch (err) { RC.toast("Ajout impossible", err.message, "danger"); } finally { RC.busy(btn, false); }
-  });
+      await loadMembers();
+      const invited = (members || []).find((x) => (x.email || "").toLowerCase() === m.email.toLowerCase());
+      if (invited) newMemberId = invited.userId;
+      setTimeout(() => {
+        closeDrawer();
+        selectTab("members");
+      }, 1000);
+    } catch (err) {
+      if (fb) {
+        fb.className = "rc-banner rc-banner--danger";
+        fb.innerHTML = "<div><strong>Ajout impossible</strong><span>" + esc(err.message || "Erreur lors de l'invitation") + "</span></div>";
+        fb.hidden = false;
+      }
+      RC.toast("Ajout impossible", err.message, "danger");
+    } finally {
+      RC.busy(btn, false);
+    }
+  }
+
+  $("hq-invite-form").addEventListener("submit", submitInvite);
+  const btnSub = $("btn-submit-invite");
+  if (btnSub) btnSub.addEventListener("click", submitInvite);
 
   $("co-ice").addEventListener("input", scheduleIceCheck);
   $("co-ice").addEventListener("blur", runIceCheck);
@@ -389,8 +587,14 @@
     } catch (err) { RC.toast("Vérification", err.message, "danger"); } finally { RC.busy(e.currentTarget, false); }
   });
 
-  HireLinkAPI.api("/ai/credits")
-    .then((c) => { $("kpi-credits").textContent = c.remaining + " / " + c.limit; $("kpi-plan").textContent = "Formule " + (c.plan === "PREMIUM" ? "Premium" : "Accès") + " · ce mois"; })
+  HireLinkCredits.load(true)
+    .then((c) => {
+      if (!c) { $("kpi-credits").textContent = "—"; return; }
+      $("kpi-credits").textContent = c.remaining + " / " + c.limit;
+      $("kpi-plan").textContent =
+        "Formule " + (c.planLabel || (c.plan === "PREMIUM" ? "Premium" : "Accès")) +
+        " · votre siège, ce mois · recharge dans " + c.daysToReset + " j";
+    })
     .catch(() => { $("kpi-credits").textContent = "—"; });
 
 
@@ -406,6 +610,11 @@
       bio: $("co-bio").value || o.presentation || "", logo: logoSrc(o), verified: !!o.verified, color: brand() };
   }
   function flag(city) { return window.HireLinkPlaces && city ? HireLinkPlaces.flagOf(city) : ""; }
+  /** « 🇲🇦 Tétouan » : la ville de l'offre, jamais un pays ou un mode de travail. */
+  function placeOf(o) {
+    const p = HireLinkPlaces.placeLabel(o.location, o.companyCity);
+    return p ? (flag(p) + " " + p).trim() : "";
+  }
   function logoMark(d, cls) {
     const letters = esc(RC.initials(d.name));
     return '<span class="' + cls + '">' + (d.logo ? '<img alt="" src="' + esc(d.logo) + '" data-mono="' + letters + '"/>' : "<b>" + letters + "</b>") + "</span>";
@@ -425,9 +634,10 @@
     const box = $("hq");
     if (!box || !org) return;
     const d = live();
-    const n = members.length;
+    const staff = activeOnly(members);
+    const n = staff.length;
     const roles = { OWNER: 0, RECRUTEUR: 0, HIRING_MANAGER: 0 };
-    members.forEach((m) => { roles[m.orgRole] = (roles[m.orgRole] || 0) + 1; });
+    staff.forEach((m) => { roles[m.orgRole] = (roles[m.orgRole] || 0) + 1; });
     box.style.setProperty("--brand", d.color);
     box.innerHTML =
       '<div class="hq-sky" aria-hidden="true"><i></i><i></i><i></i></div>' +
@@ -442,7 +652,7 @@
       '<div class="hq-sign">' + logoMark(d, "hq-sign-logo") + "</div></div>" +
       '<div class="hq-id"><small>Siège</small><h2>' + esc(d.name) + (d.verified ? ' <span class="hq-verified">' + (window.HLIcons ? HLIcons.svg("shield", 14) : "") + "Vérifiée</span>" : "") + "</h2>" +
       "<p>" + [d.sector ? esc(d.sector) : "", d.city ? (flag(d.city) + " " + esc(d.city)).trim() : ""].filter(Boolean).join(" · ") + "</p>" +
-      '<div class="hq-stats"><span><b>' + n + "</b> membre" + (n > 1 ? "s" : "") + "</span><span><b>" + (roles.RECRUTEUR || 0) + "</b> recruteur" + ((roles.RECRUTEUR || 0) > 1 ? "s" : "") + "</span><span><b>" + (roles.HIRING_MANAGER || 0) + "</b> manager" + ((roles.HIRING_MANAGER || 0) > 1 ? "s" : "") + "</span><span><b>" + offersOpen + "</b> offre" + (offersOpen > 1 ? "s" : "") + " ouverte" + (offersOpen > 1 ? "s" : "") + "</span></div></div>";
+      '<div class="hq-stats"><span><b>' + n + "</b> membre" + (n > 1 ? "s" : "") + "</span><span><b>" + (roles.RECRUTEUR || 0) + "</b> recruteur" + ((roles.RECRUTEUR || 0) > 1 ? "s" : "") + "</span><span><b>" + (roles.HIRING_MANAGER || 0) + "</b> responsable" + ((roles.HIRING_MANAGER || 0) > 1 ? "s" : "") + "</span><span><b>" + offersOpen + "</b> offre" + (offersOpen > 1 ? "s" : "") + " ouverte" + (offersOpen > 1 ? "s" : "") + "</span></div></div>";
     bindLogoFallback(box);
   }
   function paintPreview() {
@@ -530,7 +740,7 @@
   });
   window.addEventListener("popstate", () => selectTab(new URLSearchParams(location.search).get("tab") || "overview"));
   window.addEventListener("resize", () => selectTab(new URLSearchParams(location.search).get("tab") || "overview"));
-  window.addEventListener("hirelink:focus-request", (e) => {
+  document.addEventListener("hirelink:focus-request", (e) => {
     const k = String((e.detail && (e.detail.key || e.detail)) || "");
     if (/^(member|team)/.test(k)) selectTab("members");
   });
@@ -538,23 +748,37 @@
     const q = new URLSearchParams(location.search);
     const f = q.get("focus") || "";
     selectTab(/^(member|team)/.test(f) ? "members" : q.get("tab") || (location.hash === "#new-member" ? "members" : "overview"));
-    if (location.hash === "#new-member") setTimeout(openDrawer, 400);
+    if (location.hash === "#new-member" && canGovern()) setTimeout(openDrawer, 400);
   })();
 
   /* ------------------------------------------------------------------ offres */
   let offersOpen = 0;
   RC.data.offers((list) => {
     list = list || [];
-    offersOpen = list.filter((o) => o.published && !o.suspended).length;
+    offersOpen = list.filter(RC.isLiveOffer).length;
     $("offers-count").textContent = list.length;
     const box = $("hq-offers");
     if (!list.length) { RC.empty(box, { title: "Aucune offre", text: "Publiez une première offre pour recevoir des candidatures.", action: { href: "recruiter-offers.html#new", label: "Nouvelle offre" } }); paintHq(); return; }
-    box.innerHTML = '<div class="rc-list">' + list.map((o, i) =>
-      '<a class="rc-item hq-offer" style="--i:' + i + '" href="recruiter-pipeline.html?offer=' + o.id + '"><div class="rc-item-main"><strong>' + esc(o.title) + "</strong><span>" +
-      [o.location ? (flag(o.location) + " " + o.location).trim() : "", o.contractType, o.deadline ? "Clôture " + RC.fmtDate(o.deadline) : ""].filter(Boolean).map(esc).join(" · ") +
-      '</span></div><span class="rc-pill' + (o.published && !o.suspended ? " is-ok" : "") + '">' + (o.suspended ? "Suspendue" : o.published ? "Publiée" : "Brouillon") + "</span></a>").join("") + "</div>";
+    function renderOffers() {
+      box.innerHTML = '<div class="rc-list">' + list.map((o, i) =>
+        '<a class="rc-item hq-offer" style="--i:' + i + '" href="recruiter-pipeline.html?offer=' + o.id + '"><div class="rc-item-main"><strong>' + esc(o.title) + "</strong><span>" +
+        [placeOf(o), o.contractType, o.deadline ? "Clôture " + RC.fmtDate(o.deadline) : ""].filter(Boolean).map(esc).join(" · ") +
+        '</span></div><span class="rc-pill' + (RC.isLiveOffer(o) ? " is-ok" : "") + '">' +
+        (o.suspended ? "Suspendue" : o.archivedAt ? "Archivée" : o.closedAt ? "Clôturée" : o.published ? "Publiée" : "Brouillon") + "</span></a>").join("") + "</div>";
+    }
+    renderOffers();
+    // le catalogue des lieux arrive en parallèle : sans cette seconde passe, les drapeaux manqueraient
+    HireLinkPlaces.ready().then(renderOffers);
     paintHq();
-  }, () => {});
+  }, (err) => {
+    // swr() se tait sans second callback : le panneau « Offres » afficherait 0 au lieu d'un échec.
+    const count = $("offers-count");
+    if (count) count.textContent = "—";
+    RC.errorState($("hq-offers"), err.message, () => {
+      RC.data.invalidate();
+      window.location.reload();
+    });
+  });
 
   loadOrg();
   loadMembers();

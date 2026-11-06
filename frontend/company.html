@@ -11,14 +11,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="css/landing.css?v=20261101s" />
-  <link rel="stylesheet" href="css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="css/motion.css?v=20261101r" />
-  <link rel="stylesheet" href="css/offer-card.css?v=20261102q" />
-  <link rel="stylesheet" href="css/public-dark.css?v=20261101s" />
-  <link rel="stylesheet" href="css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="css/landing.css?v=20261105a" />
+  <link rel="stylesheet" href="css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="css/motion.css?v=20261103a" />
+  <link rel="stylesheet" href="css/offer-card.css?v=20261105a" />
+  <link rel="stylesheet" href="css/public-dark.css?v=20261104l" />
+  <link rel="stylesheet" href="css/premium.css?v=20261106g" />
 </head>
 <body class="landing-body">
   <header class="site-header">
@@ -41,26 +41,40 @@
   </header>
   <main class="section">
     <div class="container co-page">
-      <a class="co-back" href="index.html#offres">← Offres</a>
+      <a class="co-back" href="index.html#offres">← Toutes les offres</a>
       <article class="co-profile">
         <div class="co-cover" aria-hidden="true"></div>
         <div class="co-id">
           <div class="co-logo" id="co-logo">—</div>
-          <div>
+          <div class="co-head">
             <h1 id="co-name">Entreprise</h1>
-            <p class="muted" id="co-meta">Chargement…</p>
+            <p class="co-sub" id="co-sub">Chargement…</p>
+            <div class="co-signals" id="co-signals"></div>
           </div>
+          <div class="co-actions" id="co-actions"></div>
         </div>
+        <div class="co-stats" id="co-stats"></div>
       </article>
       <div class="co-layout">
-        <aside class="co-about">
-          <h2>À propos</h2>
-          <p id="co-about">—</p>
-          <h2>Repères</h2>
-          <div class="co-facts" id="co-facts"></div>
+        <aside class="co-side">
+          <section class="co-card">
+            <h2>À propos</h2>
+            <p id="co-about">—</p>
+          </section>
+          <section class="co-card" id="co-keys-box">
+            <h2>Repères</h2>
+            <dl class="co-keys" id="co-keys"></dl>
+          </section>
+          <section class="co-card" id="co-skills-box" hidden>
+            <h2>Compétences recherchées</h2>
+            <div class="co-facts" id="co-facts"></div>
+          </section>
         </aside>
-        <section>
-          <h2 class="co-pub-title">Publications</h2>
+        <section class="co-main">
+          <header class="co-main-head">
+            <h2>Offres en ligne</h2>
+            <span class="co-count" id="co-count"></span>
+          </header>
           <div class="offer-card-grid" id="co-offers"></div>
         </section>
       </div>
@@ -68,9 +82,9 @@
   </main>
   <script src="js/config.js?v=20261101r"></script>
   <script src="js/public-nav.js?v=20261101r"></script>
-  <script src="js/places.js?v=20261101r"></script>
-  <script src="js/offer-card.js?v=20261102q"></script>
-  <script src="js/company.js?v=20261101s"></script>
-<script defer src="js/premium.js?v=20261102s"></script>
+  <script src="js/places.js?v=20261103h"></script>
+  <script src="js/offer-card.js?v=20261105o"></script>
+  <script src="js/company.js?v=20261104q"></script>
+<script defer src="js/premium.js?v=20261106g"></script>
 </body>
 </html>

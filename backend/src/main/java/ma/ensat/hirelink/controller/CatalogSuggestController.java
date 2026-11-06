@@ -132,6 +132,8 @@ public class CatalogSuggestController {
         return switch (kind.toLowerCase(Locale.ROOT)) {
             case "place" -> places.search(query, LIMIT).stream()
                     .map(p -> new Suggestion(p.label(), p.flag(), p.city().isEmpty() ? "" : p.country())).toList();
+            case "city" -> places.searchCities(query, LIMIT).stream()
+                    .map(p -> new Suggestion(p.city(), p.flag(), p.country())).toList();
             case "nationality" -> places.nationalities(query, LIMIT).stream()
                     .map(n -> new Suggestion(n.label(), n.flag(), n.country())).toList();
             case "school" -> rankSchools(query);

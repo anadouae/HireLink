@@ -77,17 +77,17 @@ public class EventNotifier {
                     "nouvelle candidature : " + offer.getTitle(),
                     Email.of("Nouvelle candidature reçue",
                             candidate.getFullName() + " vient de postuler à votre offre « " + offer.getTitle() + " ».",
-                            "Le délai de réponse annoncé aux candidats est de " + offer.getResponseSlaDays() + " jours.")
+                            "Objectif interne de première réponse : " + offer.getResponseSlaDays() + " jours.")
                             .withFacts(new Fact("Candidat", candidate.getFullName()),
                                     new Fact("Compatibilité", app.getMatchScore() == null ? "—" : Math.round(app.getMatchScore()) + " %"))
                             .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")),
                     null);
         }
         notifications.pushAndMail("application:" + app.getId(), candidate.getId(), "Candidature envoyée",
-                "Votre dossier pour « " + offer.getTitle() + " » est soumis. Délai de réponse : " + offer.getResponseSlaDays() + " j.",
+                "Votre dossier pour « " + offer.getTitle() + " » est soumis.",
                 "APPLICATION", Kind.APPLICATION, "candidature envoyée : " + offer.getTitle(),
                 Email.of("Votre candidature est bien envoyée",
-                        "Merci d'avoir postulé à « " + offer.getTitle() + " ». Le recruteur s'engage à vous répondre sous " + offer.getResponseSlaDays() + " jours.",
+                        "Merci d'avoir postulé à « " + offer.getTitle() + " ». L'entreprise examine les dossiers et vous répondra ici dès sa première décision.",
                         "Vous suivez l'avancement de votre dossier à chaque étape depuis votre espace candidat.")
                         .withButton("Suivre ma candidature", page("candidate-applications.html?id=" + app.getId())),
                 null);
@@ -138,13 +138,17 @@ public class EventNotifier {
                     null);
             return;
         }
+        boolean interview = app.getStatus() == ApplicationStatus.INTERVIEW;
         boolean shortlisted = app.getStatus() == ApplicationStatus.SHORTLISTED;
+        String step = interview ? "Entretien" : shortlisted ? "Shortlist" : "Présélection";
+        String phase = interview ? "la phase entretien" : shortlisted ? "la shortlist" : "la présélection";
         notifications.pushAndMail("application:" + app.getId(), candidate, "Votre candidature avance",
-                "« " + job + " » est maintenant en étape « " + (shortlisted ? "Shortlist" : "Présélection") + " ».",
+                "« " + job + " » est maintenant en étape « " + step + " ».",
                 "STATUS", Kind.APPLICATION, "votre candidature avance : " + job,
                 Email.of("Bonne nouvelle : votre candidature avance",
-                        "Votre dossier pour « " + job + " » a été retenu pour " + (shortlisted ? "la shortlist" : "la présélection") + ".",
-                        "Le recruteur reviendra vers vous à l'étape suivante.")
+                        "Votre dossier pour « " + job + " » a été retenu pour " + phase + ".",
+                        interview ? "Le recruteur vous proposera très vite un créneau d'entretien."
+                                : "Le recruteur reviendra vers vous à l'étape suivante.")
                         .withButton("Suivre ma candidature", page("candidate-applications.html?id=" + app.getId())),
                 null);
     }
@@ -161,7 +165,12 @@ public class EventNotifier {
         notifications.pushAndMail("interview:" + app.getId(), app.getCandidate().getId(), title, "« " + job + " » — " + interviews.summary(app), "INTERVIEW",
                 Kind.INTERVIEW, title.toLowerCase() + " : " + job, email, calendar(app));
         for (Long target : staff(app)) {
-            notifications.push("interview:" + app.getId(), target, title, app.getCandidate().getFullName() + " — " + interviews.summary(app), "INTERVIEW");
+            String teamBody = app.getCandidate().getFullName() + " — " + interviews.summary(app);
+            notifications.pushAndMail("interview:" + app.getId(), target, title, teamBody, "INTERVIEW", Kind.INTERVIEW,
+                    title.toLowerCase() + " : " + app.getCandidate().getFullName(),
+                    interviewEmail(app, title, "Entretien avec " + app.getCandidate().getFullName() + " pour « " + job + " ».")
+                            .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")),
+                    calendar(app));
         }
     }
 
@@ -175,7 +184,15 @@ public class EventNotifier {
                         .withButton("Voir ma candidature", page("candidate-applications.html?id=" + app.getId())),
                 null);
         for (Long target : staff(app)) {
-            notifications.push("interview:" + app.getId(), target, "Entretien annulé", app.getCandidate().getFullName() + " — " + app.getInterviewCancelReason(), "INTERVIEW");
+            notifications.pushAndMail("interview:" + app.getId(), target, "Entretien annulé",
+                    app.getCandidate().getFullName() + " — " + app.getInterviewCancelReason(), "INTERVIEW", Kind.INTERVIEW,
+                    "entretien annulé : " + app.getCandidate().getFullName(),
+                    Email.of("Entretien annulé",
+                            "L'entretien avec " + app.getCandidate().getFullName() + " prévu le " + interviews.when(app)
+                                    + " pour « " + job + " » a été annulé.")
+                            .withFacts(new Fact("Motif", app.getInterviewCancelReason()))
+                            .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")),
+                    null);
         }
     }
 
@@ -198,13 +215,13 @@ public class EventNotifier {
     public void interviewReminder(Application app) {
         String job = app.getJobOffer().getTitle();
         notifications.pushAndMail("interview:" + app.getId(), app.getCandidate().getId(), "Rappel d'entretien",
-                "Demain : « " + job + " » — " + interviews.summary(app), "INTERVIEW", Kind.INTERVIEW, "rappel d'entretien : " + job,
+                "« " + job + " » — " + interviews.summary(app), "INTERVIEW", Kind.INTERVIEW, "rappel d'entretien : " + job,
                 interviewEmail(app, "Rappel : votre entretien approche", "Votre entretien pour « " + job + " » a lieu dans moins de 24 heures.")
                         .withButton("Voir les détails", page("candidate-applications.html?id=" + app.getId())),
                 calendar(app));
         for (Long target : staff(app)) {
             notifications.pushAndMail("interview:" + app.getId(), target, "Rappel d'entretien",
-                    "Demain : " + app.getCandidate().getFullName() + " — " + interviews.summary(app), "INTERVIEW", Kind.INTERVIEW,
+                    app.getCandidate().getFullName() + " — " + interviews.summary(app), "INTERVIEW", Kind.INTERVIEW,
                     "rappel d'entretien : " + app.getCandidate().getFullName(),
                     interviewEmail(app, "Rappel : entretien dans moins de 24 h", "Entretien avec " + app.getCandidate().getFullName() + " pour « " + job + " ».")
                             .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")), calendar(app));
@@ -213,22 +230,33 @@ public class EventNotifier {
 
     private Email interviewEmail(Application app, String heading, String intro) {
         List<Fact> facts = new ArrayList<>();
-        facts.add(new Fact("Quand", interviews.when(app) + (app.getInterviewDurationMinutes() == null ? "" : " · " + app.getInterviewDurationMinutes() + " min")));
-        facts.add(new Fact("Nature", InterviewService.KIND_FR.getOrDefault(app.getInterviewKind(), "Entretien")));
-        facts.add(new Fact("Mode", InterviewService.TYPE_FR.getOrDefault(app.getInterviewType(), "")));
-        facts.add(new Fact(switch (app.getInterviewType() == null ? "" : app.getInterviewType()) {
+        facts.add(new Fact("Quand", interviews.when(app)
+                + (app.getInterviewDurationMinutes() == null ? "" : " · " + app.getInterviewDurationMinutes() + " min")));
+        String nature = InterviewService.label(InterviewService.KIND_FR, app.getInterviewKind(), "Entretien");
+        String mode = InterviewService.label(InterviewService.TYPE_FR, app.getInterviewType(), "");
+        String type = app.getInterviewType() == null ? "" : app.getInterviewType();
+        addFact(facts, "Nature", nature);
+        addFact(facts, "Mode", mode);
+        addFact(facts, switch (type) {
             case "ONSITE" -> "Adresse";
             case "VISIO" -> "Lien de visio";
-            default -> "Téléphone";
-        }, switch (app.getInterviewType() == null ? "" : app.getInterviewType()) {
-            case "PHONE" -> app.getInterviewPhone();
+            case "PHONE" -> "Téléphone";
+            default -> "";
+        }, switch (type) {
+            case "ONSITE" -> app.getInterviewLocation();
             case "VISIO" -> app.getInterviewVideoUrl();
-            default -> app.getInterviewLocation();
-        }));
-        if (app.getInterviewMapUrl() != null) facts.add(new Fact("Plan", app.getInterviewMapUrl()));
-        if (app.getInterviewParticipants() != null) facts.add(new Fact("Avec", app.getInterviewParticipants()));
-        if (app.getInterviewNotes() != null) facts.add(new Fact("Consignes", app.getInterviewNotes()));
+            case "PHONE" -> interviews.phoneOf(app);
+            default -> "";
+        });
+        addFact(facts, "Plan", app.getInterviewMapUrl());
+        addFact(facts, "Avec", app.getInterviewParticipants());
+        addFact(facts, "Consignes", app.getInterviewNotes());
         return Email.of(heading, intro, "Le fichier joint (.ics) ajoute l'entretien à votre agenda.").withFacts(facts.toArray(Fact[]::new));
+    }
+
+    /** Une ligne de fait sans valeur sous le gabarit rend un tableau muet : on ne garde que ce qui est renseigné. */
+    private static void addFact(List<Fact> facts, String label, String value) {
+        if (value != null && !value.isBlank()) facts.add(new Fact(label, value.trim()));
     }
 
     private Attachment calendar(Application app) {

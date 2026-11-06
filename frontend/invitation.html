@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Invitation — HireLink</title>
+  <link rel="stylesheet" href="css/tokens.css?v=20261103a">
+  <link rel="stylesheet" href="css/design-system.css?v=20261106b">
+  <link rel="stylesheet" href="css/components.css?v=20261104h">
+  <link rel="stylesheet" href="css/auth.css?v=20261105l">
+  <link rel="stylesheet" href="css/mascotte.css?v=20261105i">
+</head>
+<body>
+  <main class="auth-panel" style="min-height:100vh">
+    <section class="auth-card fade-up">
+      <a class="brand" href="index.html"><span class="brand-mark"></span><span class="brand-name">HireLink</span></a>
+      <div data-mascotte data-mascotte-pose="bienvenue"></div>
+      <h1>Rejoindre une équipe</h1>
+      <p class="muted" id="invitation-info">Vérification de votre invitation…</p>
+      <form class="auth-form" id="invitation-form" hidden>
+        <div class="field"><label for="invitation-password">Votre mot de passe</label><input id="invitation-password" type="password" minlength="12" maxlength="64" autocomplete="new-password" required></div>
+        <div class="field"><label for="invitation-password-confirm">Confirmation</label><input id="invitation-password-confirm" type="password" minlength="12" maxlength="64" autocomplete="new-password" required></div>
+        <button class="btn btn-primary btn-block" type="submit">Accepter et créer mon compte</button>
+      </form>
+      <a class="btn btn-ghost btn-block" href="auth.html?mode=login">J’ai déjà un compte</a>
+    </section>
+  </main>
+  <script src="js/config.js?v=20261101r"></script>
+  <script src="js/ui.js?v=20261106g"></script>
+  <script src="js/api.js?v=20261106c"></script>
+  <script src="js/mascotte.js?v=20261105i"></script>
+  <script src="js/invitation.js?v=20261106a"></script>
+</body>
+</html>

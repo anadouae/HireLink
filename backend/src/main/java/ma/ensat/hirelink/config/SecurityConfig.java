@@ -28,6 +28,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
+    private final ma.ensat.hirelink.service.AuditService audit;
 
     @Value("${hirelink.cors.allowed-origins}")
     private String allowedOrigins;
@@ -38,8 +39,9 @@ public class SecurityConfig {
     @Value("${hirelink.security.bcrypt-strength:12}")
     private int bcryptStrength;
 
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, ma.ensat.hirelink.service.AuditService audit) {
         this.jwtAuthFilter = jwtAuthFilter;
+        this.audit = audit;
     }
 
     @Bean
@@ -52,12 +54,17 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(eh -> eh
                         .authenticationEntryPoint((req, res, e) -> json(res, 401, "Authentification requise ou session expirée."))
-                        .accessDeniedHandler((req, res, e) -> json(res, 403, "Accès refusé.")))
+                        .accessDeniedHandler((req, res, e) -> {
+                            // refus statuaire (/admin/**) : aucun @RestControllerAdvice atteignable ici,
+                            // donc c'est la chaîne de filtres qui doit laisser la trace dans le journal.
+                            audit.denied("Rôle insuffisant", req);
+                            json(res, 403, "Accès refusé.");
+                        }))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(
                             "/api/v1/health",
-                            "/api/v1/meta",
                             "/api/v1/auth/config",
+                            "/api/v1/auth/captcha",
                             "/api/v1/auth/request-otp",
                             "/api/v1/auth/verify-register-otp",
                             "/api/v1/auth/verify-login-otp",
@@ -70,9 +77,9 @@ public class SecurityConfig {
                             "/api/v1/auth/mfa/verify",
                             "/api/v1/auth/mfa/enroll/start",
                             "/api/v1/auth/mfa/enroll/finish",
-                            "/api/v1/auth/passkey/login/options",
-                            "/api/v1/auth/passkey/login/finish"
+                            "/api/v1/auth/passkey/**"
                     ).permitAll();
+                    auth.requestMatchers("/api/v1/organizations/invitations/**").permitAll();
                     if (swaggerEnabled) {
                         auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**", "/v3/api-docs/**").permitAll();
                     } else {
@@ -81,6 +88,7 @@ public class SecurityConfig {
                     auth.requestMatchers("/error").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/offers/public").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/organizations/public").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/v1/organizations/public/company").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/notifications/stream").permitAll() // authentifié par ticket à usage unique
                             .requestMatchers(HttpMethod.GET, "/api/v1/media/org-logos/**").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/catalog/suggest", "/api/v1/catalog/places").permitAll()

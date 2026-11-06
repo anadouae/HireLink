@@ -54,4 +54,23 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             @Param("limit") Instant limit,
             @Param("cancelled") String cancelled
     );
+
+    /** (organisation, recruteur, candidature, première réponse) — la matière première des vélocités mesurées. */
+    @Query("""
+            SELECT o.recruiter.assignedOrgId, o.recruiter.id, a.submittedAt, a.firstDecisionAt
+            FROM Application a JOIN a.jobOffer o
+            WHERE a.firstDecisionAt IS NOT NULL AND a.submittedAt >= :since
+            """)
+    List<Object[]> findDecidedDurations(@Param("since") Instant since);
+
+    /** (offre, nombre de dossiers) en une requête : le tableau admin affiche 100+ offres d'un coup. */
+    @Query("SELECT a.jobOffer.id, COUNT(a) FROM Application a GROUP BY a.jobOffer.id")
+    List<Object[]> countGroupedByOffer();
+
+    @Query("""
+            SELECT a FROM Application a JOIN FETCH a.candidate c JOIN FETCH a.jobOffer o
+            WHERE LOWER(c.fullName) LIKE :like OR LOWER(c.email) LIKE :like OR LOWER(o.title) LIKE :like
+            ORDER BY a.id DESC
+            """)
+    List<Application> search(@Param("like") String like, org.springframework.data.domain.Pageable page);
 }

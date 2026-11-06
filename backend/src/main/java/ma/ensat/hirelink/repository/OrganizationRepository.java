@@ -9,4 +9,6 @@ import java.util.Optional;
 public interface OrganizationRepository extends JpaRepository<Organization, Long> {
     @org.springframework.data.jpa.repository.Query("SELECT o FROM Organization o LEFT JOIN FETCH o.owner")
     java.util.List<Organization> findAllWithOwner();
+
+    java.util.List<Organization> findTop10ByNameContainingIgnoreCaseOrIceContainingIgnoreCase(String name, String ice);
 }

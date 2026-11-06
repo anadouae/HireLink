@@ -49,6 +49,7 @@
     users: '<circle cx="9" cy="8.5" r="3.2"/><path d="M3 20c.4-3.6 2.8-5.5 6-5.5s5.6 1.9 6 5.5M16 5.6a3.2 3.2 0 0 1 0 6M18 14.7c1.8.7 2.8 2.4 3 5.3"/>',
     flag: '<path d="M5 21V4M5 4h11l-1.5 3.5L16 11H5"/>',
     gift: '<rect x="3.5" y="9" width="17" height="4" rx="1"/><path d="M5 13v7h14v-7M12 9v11M12 9c-2.5 0-4-1-4-2.5S9 4 10.5 4C12 4 12 6.5 12 9Zm0 0c2.5 0 4-1 4-2.5S15 4 13.5 4C12 4 12 6.5 12 9Z"/>',
+    bolt: '<path d="M13 2 4.5 13.5H11l-1 8.5 8.5-11.5H12l1-8.5Z"/>',
     arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   };
 
@@ -90,17 +91,31 @@
     return isInternship(o) ? "Gratification · " + money : money;
   }
 
+  /** Segments de lieu qui décrivent l'organisation du travail et non une ville. */
+  const MODE_SEGMENT = /t[ée]l[ée]travail|remote|hybride|sur site|pr[ée]sentiel|[àa] distance|onsite|full[- ]?remote/i;
+
   /** Les anciennes offres portent le mode de travail dans le lieu (« Tétouan · Hybride »). */
   function workModeOf(o) {
     if (o.workMode) return LABELS.workMode[o.workMode];
-    const hit = String(o.location || "").match(/t[ée]l[ée]travail|remote|hybride|sur site|pr[ée]sentiel/i);
+    const hit = String(o.location || "").match(MODE_SEGMENT);
     if (!hit) return "";
     return /hybride/i.test(hit[0]) ? "Hybride" : /sur site|pr[ée]sentiel/i.test(hit[0]) ? "Sur site" : "Télétravail";
   }
 
+  /**
+   * La ville de l'offre, toujours. Un segment qui n'est qu'un mode de travail, ou qui retombe sur un
+   * pays (« Remote Maroc »), n'est pas une ville : on se rabat sur la ville de l'entreprise.
+   */
   function placeOf(o) {
-    const first = String(o.location || "").split(/[·|]/)[0].trim();
-    return /^(t[ée]l[ée]travail|remote|hybride|sur site|pr[ée]sentiel)$/i.test(first) ? "" : first;
+    return HireLinkPlaces.cityOf(o.location, o.companyCity);
+  }
+
+  /**
+   * « Tétouan · Maroc » : le pays est déduit de la ville. Il ne s'affiche que lorsqu'il n'est pas le
+   * Maroc, sinon chaque carte de la liste répéterait la même information sans rien apporter.
+   */
+  function placeWithCountry(o) {
+    return HireLinkPlaces.placeLabel(o.location, o.companyCity);
   }
 
   function flagOf(place) {
@@ -129,11 +144,40 @@
     return e;
   }
 
-  function chip(iconName, text, className) {
+  function chip(iconName, text, className, title) {
     const li = el("li", "oc-chip" + (className ? " " + className : ""));
     li.insertAdjacentHTML("beforeend", icon(iconName, 14));
     li.appendChild(el("span", "", text));
+    if (title) li.title = title;
     return li;
+  }
+
+  const PACE_BADGES = { REACTIF: "Réactif", ATTENTIF: "Attentif" };
+
+  function daysFr(value) {
+    const rounded = Math.round(Number(value) * 10) / 10;
+    return Number.isInteger(rounded) ? String(rounded) : rounded.toLocaleString("fr-FR");
+  }
+
+  /**
+   * La vélocité réellement mesurée sur les dossiers déjà traités — jamais l'engagement d'une offre.
+   * Une entreprise sans historique suffisant renvoie un badge vide : rien n'est affiché, rien n'est pénalisé.
+   */
+  function paceOf(o) {
+    const badge = PACE_BADGES[o.responsiveness] || "";
+    if (!badge) return { badge: "", title: "", label: "", sentence: "" };
+    const known = o.responseMedianDays != null && Number(o.responseMedianDays) <= 3;
+    const speed = "en " + daysFr(o.responseMedianDays) + " j";
+    return {
+      badge: badge,
+      title: known
+        ? "Première réponse " + speed + " en médiane sur les dossiers déjà traités."
+        : "Première réponse rapide pour la majorité des dossiers reçus.",
+      label: badge + (known ? " · réponse " + speed : ""),
+      sentence: known
+        ? "Cette entreprise a répondu " + speed + " en médiane à ses derniers dossiers."
+        : "Cette entreprise répond à la majorité de ses dossiers en moins de 3 jours."
+    };
   }
 
   // --- carte --------------------------------------------------------------
@@ -145,7 +189,8 @@
     if (!s || /google\.com\/s2\/favicons|gstatic\.com\/faviconV2/i.test(s)) return "";
     if (/^https?:\/\//i.test(s) || s.startsWith("data:")) return s;
     const origin = String(global.HIRELINK_API_BASE || "").replace(/\/api\/v1\/?$/, "");
-    return s.startsWith("/") ? origin + s : s;
+    if (!s.startsWith("/")) return "";
+    return origin + s;
   }
 
   function logo(o, opts) {
@@ -212,7 +257,7 @@
     const chips = el("ul", "offer-card__chips");
     const type = o.durationMonths && o.contractType !== "CDI" ? o.contractType + " · " + o.durationMonths + " mois" : o.contractType;
     if (type) chips.appendChild(chip("briefcase", type, "oc-chip--type"));
-    const place = placeOf(o);
+    const place = placeWithCountry(o);
     if (place) {
       const li = el("li", "oc-chip");
       const flag = flagOf(place);
@@ -224,7 +269,8 @@
     if (mode) chips.appendChild(chip("home", mode));
     const comp = compensation(o);
     if (comp) chips.appendChild(chip("money", comp, "oc-chip--money"));
-    if (o.responseSlaDays != null) chips.appendChild(chip("clock", "Réponse " + o.responseSlaDays + " j"));
+    const pace = paceOf(o);
+    if (pace.badge) chips.appendChild(chip("bolt", pace.badge, "oc-chip--pace", pace.title));
     if (opts.statusChip) chips.appendChild(chip("shield", opts.statusChip, "oc-chip--status"));
 
     const reveal = el("div", "offer-card__reveal");
@@ -337,5 +383,5 @@
     return Object.assign(body, overrides || {});
   }
 
-  global.HireLinkOffer = { toRequest: toRequest, card: card, companyCard: companyCard, mediaUrl: mediaUrl, facts: facts, compensation: compensation, icon: icon, placeOf: placeOf, workModeOf: workModeOf, dateFr: dateFr, LABELS: LABELS };
+  global.HireLinkOffer = { toRequest: toRequest, card: card, companyCard: companyCard, mediaUrl: mediaUrl, facts: facts, compensation: compensation, icon: icon, placeOf: placeOf, placeWithCountry: placeWithCountry, paceOf: paceOf, workModeOf: workModeOf, dateFr: dateFr, LABELS: LABELS };
 })(window);

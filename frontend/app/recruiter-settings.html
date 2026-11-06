@@ -10,15 +10,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
   <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -56,12 +56,9 @@
               <input type="file" id="pf-photo-file" accept="image/jpeg,image/png,image/webp" hidden /></div></div></section>
         </div>
         <div class="rc-panel" id="tab-alertes" hidden>
-          <section class="rc-card"><div class="rc-card-head"><div><h2>Ce que la cloche doit remonter</h2><p>Le délai promis sur l’offre est visible du candidat. Ces alertes servent à le tenir.</p></div></div>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Ce que la cloche doit remonter</h2><p>La cloche affiche candidatures, entretiens, échéances et modération. L'interrupteur ci-dessous ajoute l'e-mail pour les candidatures et les entretiens.</p></div></div>
             <div class="rc-card-body">
-              <div class="rc-setting"><div>Dossier proche du délai promis<small>Rappel avant l’échéance de première réponse</small></div><label class="switch"><input type="checkbox" id="n-sla" checked /><span class="slider"></span></label></div>
-              <div class="rc-setting"><div>Nouvelle candidature<small>À chaque dépôt sur vos offres</small></div><label class="switch"><input type="checkbox" id="n-new" checked /><span class="slider"></span></label></div>
-              <div class="rc-setting"><div>Entretien la veille<small>Rappel de préparation</small></div><label class="switch"><input type="checkbox" id="n-interview" checked /><span class="slider"></span></label></div>
-              <div class="rc-setting"><div>Recevoir aussi par e-mail<small>Rappels et résumés ; les e-mails de sécurité et de compte sont toujours envoyés</small></div><label class="switch"><input type="checkbox" id="n-mail" checked /><span class="slider"></span></label></div>
+              <div class="rc-setting"><div>Recevoir aussi par e-mail<small>Candidatures et entretiens ; les e-mails de sécurité et de compte sont toujours envoyés</small></div><label class="switch"><input type="checkbox" id="n-mail" checked /><span class="slider"></span></label></div>
             </div><div class="rc-card-foot"><button type="button" class="btn btn-primary" id="btn-save-notif">Enregistrer</button></div></section>
         </div>
         <div class="rc-panel" id="tab-apparence" hidden>
@@ -73,23 +70,24 @@
             <section class="rc-card rc-plan" id="plan-access"><div class="rc-card-head"><div><h2>Accès</h2><p id="mark-access">Formule en cours</p></div></div><div class="rc-card-body"><ul class="rc-checks">
               <li>Un siège pour publier et suivre le pipeline</li><li>Délai de réponse affiché sur chaque offre</li><li>Vérification de l’entreprise avant publication</li><li>Dossier candidat : CV, étapes, motif de refus</li></ul></div></section>
             <section class="rc-card rc-plan" id="plan-premium"><div class="rc-card-head"><div><h2>Premium · 299 MAD / mois</h2><p id="mark-premium">À activer</p></div></div><div class="rc-card-body"><ul class="rc-checks">
-              <li>Plusieurs sièges (Owner, Recruteur, Hiring Manager)</li><li>Offres mises en avant dans le catalogue candidat</li><li>Alertes SLA dès qu’un dossier dépasse le délai promis</li><li>Plafond de crédits IA relevé</li><li>Reporting : volume, délais tenus, motifs de refus</li></ul></div>
-              <div class="rc-card-foot"><button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Revenir à Accès</button><button type="button" class="btn btn-primary" id="btn-billing-premium">Activer Premium</button></div></section>
+              <li>Jusqu’à 25 sièges : Créateur, Recruteur, Responsable du poste (5 en Accès)</li><li>200 usages de l’assistant IA par mois, contre 20 en Accès</li><li>Couronne « Premium » dans votre barre d’espace</li></ul></div><div class="rc-card-body"><p class="rc-muted" style="margin:0;font-size: var(--text-sm)">Pipeline, alertes de délai, reporting et export : déjà inclus dans Accès. La formule ne change rien à la visibilité de vos offres.</p></div>
+              <div class="rc-card-foot"><p class="rc-muted" id="plan-owner-only" hidden style="margin:0 0 .6rem;font-size: var(--text-sm)">Seul le créateur de l’espace change la formule. Demandez-lui de le faire depuis cette page.</p><button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Revenir à Accès</button><button type="button" class="btn btn-primary" id="btn-billing-premium">Activer Premium</button></div></section>
           </div>
         </div>
       </main>
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101r"></script>
-  <script defer src="../js/premium.js?v=20261102s"></script>
-  <script defer src="../js/ui.js?v=20261101r"></script>
-  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/mascotte.js?v=20261105i"></script>
+  <script defer src="../js/premium.js?v=20261106g"></script>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261106c"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261101r"></script>
-  <script defer src="../js/in-app-help.js?v=20261102q"></script>
-  <script defer src="../js/app-shell.js?v=20261102q"></script>
-  <script defer src="../js/growth.js?v=20261101r"></script>
-  <script defer src="../js/recruiter-settings.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261103h"></script>
+  <script defer src="../js/in-app-help.js?v=20261105s"></script>
+  <script defer src="../js/credits.js?v=20261105v"></script>
+  <script defer src="../js/app-shell.js?v=20261105y"></script>
+  <script defer src="../js/growth.js?v=20261106g"></script>
+  <script defer src="../js/recruiter-settings.js?v=20261105l"></script>
 </body>
 </html>

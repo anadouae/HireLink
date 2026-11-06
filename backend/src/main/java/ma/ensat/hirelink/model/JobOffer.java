@@ -147,6 +147,17 @@ public class JobOffer {
     @Column(name = "deadline")
     private LocalDate deadline;
 
+    /**
+     * Clôture du recrutement (poste pourvu, session annulée) : les candidatures se ferment,
+     * l'offre et ses dossiers restent consultables par l'entreprise.
+     */
+    @Column(name = "closed_at")
+    private Instant closedAt;
+
+    /** Offre rangée : elle quitte l'espace de travail et la vitrine, mais garde son historique. */
+    @Column(name = "archived_at")
+    private Instant archivedAt;
+
     /** Avantages séparés par des virgules (transport, mutuelle, tickets restaurant…). */
     @Column(name = "benefits", length = 400)
     private String benefits;
@@ -246,6 +257,12 @@ public class JobOffer {
 
     public LocalDate getDeadline() { return deadline; }
     public void setDeadline(LocalDate deadline) { this.deadline = deadline; }
+
+    public Instant getClosedAt() { return closedAt; }
+    public void setClosedAt(Instant closedAt) { this.closedAt = closedAt; }
+
+    public Instant getArchivedAt() { return archivedAt; }
+    public void setArchivedAt(Instant archivedAt) { this.archivedAt = archivedAt; }
 
     public String getBenefits() { return benefits; }
     public void setBenefits(String benefits) { this.benefits = benefits; }

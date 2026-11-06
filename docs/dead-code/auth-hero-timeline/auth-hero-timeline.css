@@ -1,0 +1,240 @@
+/* Relocalisé le 2026-11-05 : le panneau gauche de auth.html na plus de markup .auth-timeline-wrap / .auth-lux-*.
+   La logique correspondante est dans js/auth-timeline.js, sorti de auth.html.
+
+.auth-timeline-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
+
+.auth-timeline-kicker {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #e2c98a;
+}
+
+.auth-timeline-title {
+  margin: 0 0 1.5rem;
+  font-size: clamp(1.45rem, 2.6vw, 1.9rem);
+  color: #fff;
+  max-width: 16ch;
+  line-height: 1.2;
+}
+
+.auth-lux-timeline {
+  position: relative;
+  padding: 0.25rem 0 0.5rem;
+}
+
+.auth-lux-line {
+  position: absolute;
+  top: 0.4rem;
+  bottom: 0.4rem;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.auth-lux-progress {
+  display: block;
+  width: 100%;
+  height: 0%;
+  background: linear-gradient(180deg, #7a2032, #e87030);
+  border-radius: inherit;
+  transition: height 0.55s var(--ease);
+}
+
+.auth-lux-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.35rem;
+  align-items: center;
+  margin-bottom: 1.15rem;
+  opacity: 0;
+  transition: opacity 0.55s var(--ease), transform 0.55s var(--ease);
+}
+
+.auth-lux-step:last-child {
+  margin-bottom: 0;
+}
+
+.auth-lux-step[data-side="left"] {
+  transform: translateX(-18px);
+}
+
+.auth-lux-step[data-side="right"] {
+  transform: translateX(18px);
+}
+
+.auth-lux-step.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+.auth-lux-step[data-side="left"] .auth-lux-card {
+  grid-column: 1;
+  justify-self: end;
+  text-align: right;
+}
+
+.auth-lux-step[data-side="right"] .auth-lux-card {
+  grid-column: 2;
+  justify-self: start;
+  text-align: left;
+}
+
+.auth-lux-dot {
+  position: absolute;
+  left: 50%;
+  top: 1.1rem;
+  transform: translateX(-50%);
+  z-index: 2;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: #120e16;
+  border: 2px solid rgba(217, 186, 106, 0.35);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 5px rgba(14, 26, 46, 0.85);
+}
+
+.auth-lux-dot span {
+  width: 0.35rem;
+  height: 0.35rem;
+  border-radius: 50%;
+  background: #7a2032;
+  transform: scale(0.35);
+  opacity: 0.35;
+  transition: transform 0.4s var(--ease), opacity 0.4s var(--ease);
+}
+
+.auth-lux-step.is-visible .auth-lux-dot {
+  border-color: #e2c98a;
+}
+
+.auth-lux-step.is-visible .auth-lux-dot span {
+  transform: scale(1);
+  opacity: 1;
+}
+
+.auth-lux-step.is-current .auth-lux-dot span {
+  animation: auth-lux-pulse 1.8s ease-out infinite;
+}
+
+@keyframes auth-lux-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(122, 32, 50, 0.55); }
+  70% { box-shadow: 0 0 0 10px rgba(122, 32, 50, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(122, 32, 50, 0); }
+}
+
+.auth-lux-card {
+  width: min(100%, 210px);
+  padding: 0.85rem 0.95rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(8px);
+  transition: border-color 0.3s var(--ease), background 0.3s var(--ease),
+    transform 0.3s var(--ease);
+}
+
+.auth-lux-step.is-current .auth-lux-card {
+  background: rgba(122, 32, 50, 0.14);
+  border-color: rgba(217, 186, 106, 0.4);
+  transform: translateY(-2px);
+}
+
+.auth-lux-num {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  letter-spacing: 0.1em;
+  color: #e2c98a;
+  margin-bottom: 0.3rem;
+}
+
+.auth-lux-card h3 {
+  margin: 0 0 0.3rem;
+  font-size: var(--text-base);
+  color: #fff;
+}
+
+.auth-lux-card p {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: rgba(247, 242, 231, 0.7);
+}
+
+
+/* Reprises du media-query max-width 900px, retirées le 2026-11-05 */
+  .auth-timeline-title {
+    max-width: none;
+    margin-bottom: 1.1rem;
+  }
+  .auth-lux-line {
+    left: 0.85rem;
+    transform: none;
+  }
+  .auth-lux-step {
+    grid-template-columns: 1fr;
+    padding-left: 2.2rem;
+    gap: 0;
+  }
+  .auth-lux-step[data-side="left"],
+  .auth-lux-step[data-side="right"] {
+    transform: translateY(14px);
+  }
+  .auth-lux-step.is-visible {
+    transform: none;
+  }
+  .auth-lux-step[data-side="left"] .auth-lux-card,
+  .auth-lux-step[data-side="right"] .auth-lux-card {
+    grid-column: 1;
+    justify-self: stretch;
+    text-align: left;
+    width: 100%;
+  }
+  .auth-lux-dot {
+    left: 0.85rem;
+  }
+  .auth-timeline-title {
+    max-width: none;
+    margin-bottom: 1.1rem;
+  }
+  .auth-lux-line {
+    left: 0.85rem;
+    transform: none;
+  }
+  .auth-lux-step {
+    grid-template-columns: 1fr;
+    padding-left: 2.2rem;
+    gap: 0;
+  }
+  .auth-lux-step[data-side="left"],
+  .auth-lux-step[data-side="right"] {
+    transform: translateY(14px);
+  }
+  .auth-lux-step.is-visible {
+    transform: none;
+  }
+  .auth-lux-step[data-side="left"] .auth-lux-card,
+  .auth-lux-step[data-side="right"] .auth-lux-card {
+    grid-column: 1;
+    justify-self: stretch;
+    text-align: left;
+    width: 100%;
+  }
+  .auth-lux-dot {
+    left: 0.85rem;
+  }

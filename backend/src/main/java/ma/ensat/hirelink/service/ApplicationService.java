@@ -54,7 +54,6 @@ public class ApplicationService {
     private final SkillMatchingService matchingService;
     private final TimelineService timelineService;
     private final RefusalReasonRepository refusalReasonRepository;
-    private final MatchingAnalysisRepository matchingAnalysisRepository;
     private final NotificationService notificationService;
     private final OrganizationService organizationService;
     private final MembershipRepository membershipRepository;
@@ -62,6 +61,7 @@ public class ApplicationService {
     private final AuditService audit;
     private final InterviewService interviews;
     private final EventNotifier notifier;
+    private final ResponsivenessService responsiveness;
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
@@ -69,24 +69,24 @@ public class ApplicationService {
             SkillMatchingService matchingService,
             TimelineService timelineService,
             RefusalReasonRepository refusalReasonRepository,
-            MatchingAnalysisRepository matchingAnalysisRepository,
             NotificationService notificationService,
             OrganizationService organizationService,
             MembershipRepository membershipRepository,
             CvStorage cvStorage,
             AuditService audit,
             InterviewService interviews,
-            EventNotifier notifier
+            EventNotifier notifier,
+            ResponsivenessService responsiveness
     ) {
         this.audit = audit;
         this.interviews = interviews;
         this.notifier = notifier;
+        this.responsiveness = responsiveness;
         this.applicationRepository = applicationRepository;
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
         this.timelineService = timelineService;
         this.refusalReasonRepository = refusalReasonRepository;
-        this.matchingAnalysisRepository = matchingAnalysisRepository;
         this.notificationService = notificationService;
         this.organizationService = organizationService;
         this.membershipRepository = membershipRepository;
@@ -109,7 +109,11 @@ public class ApplicationService {
         if (!offer.isPublished()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Offre non publiée");
         }
-        if (offer.getDeadline() != null && offer.getDeadline().isBefore(java.time.LocalDate.now())) {
+        if (offer.getClosedAt() != null || offer.getArchivedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    offer.getArchivedAt() != null ? "Cette offre n'est plus ouverte" : "Les candidatures de cette offre sont closes");
+        }
+        if (offer.getDeadline() != null && offer.getDeadline().isBefore(BusinessTime.today())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La date limite de candidature est dépassée");
         }
         var existing = applicationRepository.findByCandidateIdAndJobOfferId(candidate.getId(), jobOfferId);
@@ -173,13 +177,6 @@ public class ApplicationService {
         }
         applicationRepository.save(app);
 
-        MatchingAnalysis ma = new MatchingAnalysis();
-        ma.setApplicationId(app.getId());
-        ma.setScore(score);
-        ma.setCoveredSkills(String.join(", ", compat.covered()));
-        ma.setMissingSkills(String.join(", ", compat.missing()));
-        matchingAnalysisRepository.save(ma);
-
         timelineService.append(app.getId(), reopen ? ApplicationStatus.WITHDRAWN.name() : null,
                 ApplicationStatus.SUBMITTED.name(),
                 candidate.getId(), "{\"event\":\"" + (reopen ? "REAPPLY" : "APPLY") + "\",\"match\":" + Math.round(score) + "}");
@@ -199,6 +196,16 @@ public class ApplicationService {
         organizationService.assertSameOrg(recruiter, offer);
         List<Application> apps = applicationRepository.findByJobOfferId(offerId);
         return filterForActor(recruiter, apps).stream().map(this::toDto).toList();
+    }
+
+    /**
+     * Retour de vélocité du tableau de bord : les délais déjà constatés sur les offres du recruteur
+     * connecté. Un Hiring Manager, qui ne possède pas d'offres, reçoit un signal vide.
+     */
+    @Transactional(readOnly = true)
+    public ApiDtos.PaceSignal paceForRecruiter(User recruiter) {
+        ResponsivenessService.Signal s = responsiveness.signalOfRecruiter(recruiter.getId());
+        return new ApiDtos.PaceSignal(s.answered(), s.medianDays(), s.badge());
     }
 
     /**
@@ -233,7 +240,7 @@ public class ApplicationService {
         organizationService.assertSameOrg(actor, app.getJobOffer());
         Membership actorM = organizationService.requireMembership(actor);
         if (actorM.getOrgRole() == OrgRole.HIRING_MANAGER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul Owner/Recruteur assigne un HM (R14)");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul un recruteur assigne un Responsable du poste (R14)");
         }
         if (hmUserId != null) {
             Membership hm = membershipRepository
@@ -250,7 +257,7 @@ public class ApplicationService {
         audit.ok("HM_ASSIGNED", actor, "APPLICATION", app.getId(), "HM " + hmUserId);
         if (hmUserId != null) {
             notificationService.push("application:" + app.getId(), hmUserId, "Dossier assigné",
-                    "Vous êtes Hiring Manager sur « " + app.getJobOffer().getTitle() + " »", "ASSIGN");
+                    "Vous êtes Responsable du poste sur « " + app.getJobOffer().getTitle() + " »", "ASSIGN");
         }
         return toDto(app);
     }
@@ -304,17 +311,8 @@ public class ApplicationService {
             applyRefusalCatalog(app, req.rejectionReason());
         }
 
-        if (req.status() == ApplicationStatus.INTERVIEW) {
-            if (req.interview() == null) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Planifiez l'entretien : type, date et heure sont requis.");
-            }
-            interviews.schedule(app, req.interview());
-        }
-
-        if (req.status() == ApplicationStatus.REJECTED || req.status() == ApplicationStatus.INTERVIEW) {
-            if (app.getFirstDecisionAt() == null && req.status() == ApplicationStatus.REJECTED) {
-                app.setFirstDecisionAt(Instant.now());
-            }
+        if (req.status() == ApplicationStatus.REJECTED && app.getFirstDecisionAt() == null) {
+            app.setFirstDecisionAt(Instant.now());
         }
 
         if (req.advanceNote() != null && !req.advanceNote().isBlank()) {
@@ -329,7 +327,8 @@ public class ApplicationService {
         audit.ok("STAGE_CHANGE", actor, "APPLICATION", app.getId(), from + " → " + req.status());
         String payload = buildTimelinePayload(app, req);
         timelineService.append(app.getId(), from.name(), req.status().name(), actor.getId(), payload);
-        if (req.status() == ApplicationStatus.INTERVIEW) {
+        // Invitation e-mail uniquement si un créneau existe déjà : sinon, on annonce l'étape et rien de plus.
+        if (req.status() == ApplicationStatus.INTERVIEW && interviews.isPlanned(app)) {
             notifier.interviewScheduled(app, false);
         } else {
             notifier.statusChanged(app);
@@ -423,6 +422,7 @@ public class ApplicationService {
             breached = Instant.now().isAfter(deadline);
         }
         var compat = matchingService.evaluate(app.getCandidate(), o);
+        ResponsivenessService.Signal pace = responsiveness.signalOf(o.getRecruiter().getAssignedOrgId());
         return new ApiDtos.ApplicationResponse(
                 app.getId(),
                 o.getId(),
@@ -446,7 +446,6 @@ public class ApplicationService {
                 app.getInterviewDurationMinutes(),
                 app.getInterviewTimeZone(),
                 app.getInterviewVideoUrl(),
-                app.getInterviewPhone(),
                 app.getInterviewMapUrl(),
                 app.getInterviewParticipants(),
                 app.getInterviewAt() == null ? null : app.getInterviewStatus() == null ? InterviewService.SCHEDULED : app.getInterviewStatus(),
@@ -461,6 +460,8 @@ public class ApplicationService {
                 o.getResponseSlaDays(),
                 remaining,
                 breached,
+                pace.labelled() ? pace.medianDays() : null,
+                pace.badge(),
                 app.getCvSections(),
                 app.getCvStorageName() != null && !app.getCvStorageName().isBlank(),
                 compat,
@@ -468,14 +469,16 @@ public class ApplicationService {
         );
     }
 
-    /** Reporter un entretien (ou en replanifier un annulé) : équipe de l'organisation uniquement. */
+    /** Poser ou reporter un entretien (dossier à l'étape Entretien) : équipe de l'organisation uniquement. */
     @Transactional
     public ApiDtos.ApplicationResponse rescheduleInterview(User actor, Long appId, ApiDtos.InterviewRequest req) {
         Application app = interviewApplication(actor, appId);
+        boolean etaitPlanifie = interviews.isPlanned(app);
         interviews.schedule(app, req);
         applicationRepository.save(app);
-        audit.ok("INTERVIEW_RESCHEDULED", actor, "APPLICATION", app.getId(), interviews.summary(app));
-        notifier.interviewScheduled(app, true);
+        audit.ok(etaitPlanifie ? "INTERVIEW_RESCHEDULED" : "INTERVIEW_PLANNED", actor, "APPLICATION", app.getId(), interviews.summary(app));
+        // « reporté » n'est vrai que si un premier créneau avait déjà été envoyé.
+        notifier.interviewScheduled(app, etaitPlanifie);
         return toDto(app);
     }
 
@@ -515,6 +518,9 @@ public class ApplicationService {
         }
         if (app.getInterviewAt() == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucun entretien planifié");
+        }
+        if ("CANCELLED".equals(app.getInterviewStatus())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cet entretien a été annulé.");
         }
         return new CalendarFile(interviews.ics(app), "entretien-hirelink-" + app.getId() + ".ics");
     }

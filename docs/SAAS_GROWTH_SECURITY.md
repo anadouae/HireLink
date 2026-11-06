@@ -34,8 +34,9 @@ Voir aussi `ICE_VERIFICATION.md`.
 - Rejet motivé obligatoire (RM03)  
 - SLA côté candidatures  
 
-## Growth SaaS implémenté
-- Popups **HireLink Premium** (candidat) / **Cabinet** (recruteur) — style soft-gate LinkedIn  
-- Nudge after delay + bouton topbar  
-- Pricing ATS progressif sur la landing  
-- Formulaire profil → offres **triées / boostées** (Jaccard + lieux + contrats + métiers)
+## Growth SaaS réellement implémenté
+- Popup de changement de formule (`frontend/js/growth.js`) — candidat : **Performance 39 MAD**, recruteur : **Premium 299 MAD**
+- Nudge après délai + couronne « Premium » dans la barre d’espace (`app-shell.js`)
+- Cartes de prix de la landing alignées sur la table `commercial_plans`
+- Offres **triées** par score de compatibilité (Jaccard + lieux + contrats + métiers)
+- Ce que la formule change réellement : le **plafond de crédits IA** (5 / 40 / 20 / 200, `AiCreditService`) et le **nombre de sièges** d’équipe (5 / 25, `OrganizationService`). Aucun classement payant, aucune mise en avant — le matching ne regarde pas `plan_tier`.

@@ -22,6 +22,7 @@
   var P = {
     building: '<path d="M5 20.5V5.2A1.2 1.2 0 0 1 6.2 4h7.1a1.2 1.2 0 0 1 1.2 1.2v15.3"/><path d="M14.5 9.5h3.3a1.2 1.2 0 0 1 1.2 1.2v9.8M8 8h2M8 12h2M8 16h2M3.5 20.5h17"/>',
     video: '<rect x="3" y="6.5" width="12.5" height="11" rx="2.2"/><path d="m15.5 10.5 5-3v9l-5-3z"/>',
+    phone: '<path d="M6.4 3.6h2.2l1.6 4-2 1.5a11.6 11.6 0 0 0 5.2 5.2l1.5-2 4 1.6v2.2a2 2 0 0 1-2.2 2A15.6 15.6 0 0 1 4.4 5.8a2 2 0 0 1 2-2.2z"/>',
     pin: '<path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.4"/>',
     calendar: '<rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 10h17M8 3v4M16 3v4"/>',
     clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
@@ -66,6 +67,16 @@
     bookmark: '<path d="M6.5 4h11v16.5L12 16.5l-5.5 4z"/>',
     link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.3 1.3M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.3-1.3"/>',
     dot: '<circle cx="12" cy="12" r="3"/>',
+    dots: '<circle cx="5.5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18.5" cy="12" r="1.4"/>',
+    pen: '<path d="M15.2 4.9 19.1 8.8M4 20l1-4.2L15.9 5.1a2.1 2.1 0 0 1 3 3L8.2 18.9z"/><path d="m13.4 7.4 3.2 3.2"/>',
+    pencil: '<path d="M4 20l1.2-4.6L16.6 4.4a2 2 0 0 1 2.9 2.9L8 18.8z"/><path d="M14.6 6.4 17.7 9.5"/>',
+    trash: '<path d="M4.5 7h15M9.5 7V5.3A1.3 1.3 0 0 1 10.8 4h2.4a1.3 1.3 0 0 1 1.3 1.3V7"/><path d="m6.8 7 .8 12.2A1.6 1.6 0 0 0 9.2 20.7h5.6a1.6 1.6 0 0 0 1.6-1.5L17.2 7"/><path d="M10.3 11v6M13.7 11v6"/>',
+    paperclip: '<path d="M19 10.5 11.4 18a4 4 0 0 1-5.7-5.7l8-8a2.7 2.7 0 0 1 3.8 3.8l-7.9 7.9a1.4 1.4 0 0 1-2-2l7.1-7"/>',
+    palette: '<path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.3 0 2-.9 2-1.9s-.7-1.8-.4-2.6c.3-.9 1.1-1 2-1h1.4a3.5 3.5 0 0 0 3.5-3.6C20.5 6.7 16.6 3.5 12 3.5z"/><circle cx="8" cy="11" r="1.2"/><circle cx="12" cy="8" r="1.2"/><circle cx="16" cy="11" r="1.2"/>',
+    grip: '<circle cx="9" cy="6.5" r="1.3"/><circle cx="15" cy="6.5" r="1.3"/><circle cx="9" cy="12" r="1.3"/><circle cx="15" cy="12" r="1.3"/><circle cx="9" cy="17.5" r="1.3"/><circle cx="15" cy="17.5" r="1.3"/>',
+    note: '<path d="M18.5 14.5V5.2A1.2 1.2 0 0 0 17.3 4H6.7A1.2 1.2 0 0 0 5.5 5.2v13.6A1.2 1.2 0 0 0 6.7 20h7.8z"/><path d="M18.5 14.5h-3.2a1.8 1.8 0 0 0-1.8 1.8v3.7"/><path d="M9 9h6M9 12.5h4"/>',
+    save: '<path d="M6.5 4h8.6L19 8.4V19a1.5 1.5 0 0 1-1.5 1.5H6.5A1.5 1.5 0 0 1 5 19V5.5A1.5 1.5 0 0 1 6.5 4z"/><path d="M8.5 4v5h6V4M8 15.5l2.4 2.4 4.6-4.8"/>',
+    move: '<path d="M12 3.5v17M3.5 12h17"/><path d="m9.3 6.3 2.7-2.8 2.7 2.8M9.3 17.7l2.7 2.8 2.7-2.8M6.3 9.3 3.5 12l2.8 2.7M17.7 9.3 20.5 12l-2.8 2.7"/>',
   };
   function svg(name, cls) {
     return '<svg class="hl-ico' + (cls ? " " + cls : "") + '" viewBox="0 0 24 24" aria-hidden="true" focusable="false">' + (P[name] || P.dot) + "</svg>";
@@ -111,6 +122,15 @@
   global.HLIcons = { svg: svg, guess: guess, names: Object.keys(P) };
 
   /* ============================================================== drapeaux */
+  var SVG_FLAGS = {
+    ma: '<svg class="hl-flag hl-flag--ma" viewBox="0 0 900 600" width="20" height="15" aria-label="Maroc" role="img"><rect width="900" height="600" fill="#c1272d"/><path d="M450 195 L490 320 L385 243 L515 243 L410 320 Z" fill="none" stroke="#006233" stroke-width="19" stroke-linejoin="round"/></svg>',
+    fr: '<svg class="hl-flag hl-flag--fr" viewBox="0 0 900 600" width="20" height="15" aria-label="France" role="img"><rect width="300" height="600" fill="#002654"/><rect x="300" width="300" height="600" fill="#ffffff"/><rect x="600" width="300" height="600" fill="#ce1126"/></svg>',
+    es: '<svg class="hl-flag hl-flag--es" viewBox="0 0 900 600" width="20" height="15" aria-label="Espagne" role="img"><rect width="900" height="150" fill="#aa151b"/><rect y="150" width="900" height="300" fill="#f1bf00"/><rect y="450" width="900" height="150" fill="#aa151b"/></svg>',
+    de: '<svg class="hl-flag hl-flag--de" viewBox="0 0 900 600" width="20" height="15" aria-label="Allemagne" role="img"><rect width="900" height="200" fill="#000000"/><rect y="200" width="900" height="200" fill="#dd0000"/><rect y="400" width="900" height="200" fill="#ffce00"/></svg>',
+    gb: '<svg class="hl-flag hl-flag--gb" viewBox="0 0 900 600" width="20" height="15" aria-label="Royaume-Uni" role="img"><rect width="900" height="600" fill="#012169"/><path d="M0 0 L900 600 M900 0 L0 600" stroke="#fff" stroke-width="60"/><path d="M0 0 L900 600 M900 0 L0 600" stroke="#c8102e" stroke-width="36"/><path d="M450 0 V600 M0 300 H900" stroke="#fff" stroke-width="100"/><path d="M450 0 V600 M0 300 H900" stroke="#c8102e" stroke-width="60"/></svg>',
+    us: '<svg class="hl-flag hl-flag--us" viewBox="0 0 900 600" width="20" height="15" aria-label="USA" role="img"><rect width="900" height="600" fill="#b22234"/><rect y="46" width="900" height="46" fill="#fff"/><rect y="138" width="900" height="46" fill="#fff"/><rect y="230" width="900" height="46" fill="#fff"/><rect y="322" width="900" height="46" fill="#fff"/><rect y="414" width="900" height="46" fill="#fff"/><rect y="506" width="900" height="46" fill="#fff"/><rect width="360" height="322" fill="#3c3b6e"/></svg>',
+    ca: '<svg class="hl-flag hl-flag--ca" viewBox="0 0 900 600" width="20" height="15" aria-label="Canada" role="img"><rect width="225" height="600" fill="#d80621"/><rect x="225" width="450" height="600" fill="#ffffff"/><rect x="675" width="225" height="600" fill="#d80621"/><path d="M450 180 L470 260 L520 250 L480 300 L500 360 L450 330 L400 360 L420 300 L380 250 L430 260 Z" fill="#d80621"/></svg>'
+  };
   var COUNTRY = {
     maroc: "ma", morocco: "ma", france: "fr", espagne: "es", spain: "es", belgique: "be", suisse: "ch", canada: "ca",
     allemagne: "de", germany: "de", "royaume uni": "gb", angleterre: "gb", "etats unis": "us", usa: "us", italie: "it", portugal: "pt",
@@ -153,6 +173,7 @@
   function flagHtml(isoOrEmoji, title) {
     var iso = /^[a-z]{2}$/i.test(isoOrEmoji || "") ? String(isoOrEmoji).toLowerCase() : isoFromEmoji(isoOrEmoji) || isoOf(isoOrEmoji);
     if (!iso) return "";
+    if (SVG_FLAGS[iso]) return SVG_FLAGS[iso];
     return '<img class="hl-flag" src="https://flagcdn.com/w40/' + iso + '.png" srcset="https://flagcdn.com/w80/' + iso + '.png 2x" width="20" height="15" alt="" loading="lazy"' +
       (title ? ' title="' + esc(title) + '"' : "") + ' />';
   }
@@ -187,12 +208,20 @@
     var m = w.length > 1 ? (w[0][0] + w[1][0]) : (w[0] || "?").slice(0, 2);
     return m.toUpperCase();
   }
-  /** Logo d'école : icône officielle du site de l'établissement, sinon monogramme. */
+  /** Logo d'école : logo local (ENSA / UAE) ou logo officiel du site, sinon monogramme de prestige. */
   function schoolLogoHtml(text) {
+    var f = fold(text);
+    var assetPath = (location.pathname.indexOf("/app/") >= 0 ? "../" : "") + "assets/";
+    if (/ensa|ensat/.test(f)) {
+      return '<span class="hl-logo-chip hl-school-chip" title="ENSA"><img src="' + assetPath + 'logo-ensa.png" alt="ENSA" onerror="this.onerror=null;this.src=\'' + assetPath + 'logo-hirelink-icon.png\'" /></span>';
+    }
+    if (/uae|abdelmalek/.test(f)) {
+      return '<span class="hl-logo-chip hl-school-chip" title="UAE"><img src="' + assetPath + 'logo-uae.png" alt="UAE" onerror="this.onerror=null;this.src=\'' + assetPath + 'logo-hirelink-icon.png\'" /></span>';
+    }
     var d = schoolDomain(text);
-    var mono = '<span class="hl-mono" aria-hidden="true">' + esc(monogram(text)) + "</span>";
+    var mono = '<span class="hl-mono hl-school-mono" aria-hidden="true" title="' + esc(text) + '">' + svg("cap") + '<b style="font-size: var(--text-2xs);margin-left:3px">' + esc(monogram(text)) + "</b></span>";
     if (!d) return mono;
-    return '<span class="hl-logo-chip"><img src="https://www.google.com/s2/favicons?domain=' + d + '&sz=64" alt="" loading="lazy" data-mono="' + esc(monogram(text)) + '" /></span>';
+    return '<span class="hl-logo-chip hl-school-chip"><img src="https://www.google.com/s2/favicons?domain=' + d + '&sz=64" alt="" loading="lazy" data-mono="' + esc(monogram(text)) + '" onerror="this.replaceWith(document.createRange().createContextualFragment(\'' + mono.replace(/'/g, "\\'") + '\'))" /></span>';
   }
   global.HLSchools = { domain: schoolDomain, logoHtml: schoolLogoHtml, monogram: monogram };
 
@@ -276,17 +305,13 @@
     if (e.key === "Escape" && openPop) { e.preventDefault(); e.stopImmediatePropagation(); var b = openPop.btn; closePop(); b.focus(); }
   }, true);
 
-  var NO_CUSTOM = /filter|filtre|sort|tri|status|statut|view|vue|period|periode|offer|offre|role|zone|duration|duree|kind|sla|plan|page|lang|theme|mode|level|reason|motif|hm|member|assign/i;
+  var NO_CUSTOM = /sort|tri|period|periode|view|vue|order/i;
   function allowsCustom(sel) {
     if (sel.hasAttribute("data-allow-custom")) return true;
     if (sel.hasAttribute("data-no-custom")) return false;
     var key = (sel.id || "") + " " + (sel.name || "") + " " + (sel.className || "");
     if (NO_CUSTOM.test(key)) return false;
-    var opts = Array.prototype.filter.call(sel.options, function (o) { return o.value; });
-    if (!opts.length) return false;
-    // Liste « libre » : les valeurs sont les libellés eux-mêmes (pas des codes techniques).
-    var same = opts.filter(function (o) { return o.value.trim() === o.text.trim(); }).length;
-    return same / opts.length >= 0.8;
+    return true;
   }
   function ctxOf(sel) {
     var lab = sel.id ? doc.querySelector('label[for="' + sel.id + '"]') : null;
@@ -354,11 +379,11 @@
       var g = o.parentNode && o.parentNode.tagName === "OPTGROUP" ? o.parentNode.label : "";
       return { o: o, i: i, text: o.text, value: o.value, group: g, disabled: o.disabled };
     });
-    var many = all.length > 7 || custom;
+    var many = true; // Toujours proposer la recherche intelligente
     var active = 0, rows = [];
     openPopover(b, function (pop) {
       pop.classList.add("hl-pop-select");
-      pop.innerHTML = (many ? '<div class="hl-pop-search">' + svg("search") + '<input type="text" placeholder="Rechercher' + (custom ? " ou ajouter" : "") + '…" aria-label="Rechercher dans la liste" autocomplete="off" spellcheck="false" /></div>' : "") +
+      pop.innerHTML = '<div class="hl-pop-search">' + svg("search") + '<input type="text" placeholder="Rechercher ou saisir une option…" aria-label="Rechercher dans la liste" autocomplete="off" spellcheck="false" /></div>' +
         '<div class="hl-pop-list" role="listbox"></div><div class="hl-pop-foot"></div>';
       var input = pop.querySelector("input");
       var list = pop.querySelector(".hl-pop-list");
@@ -603,26 +628,59 @@
     ov.className = "hl-preview";
     ov.setAttribute("role", "dialog");
     ov.setAttribute("aria-modal", "true");
-    ov.innerHTML = '<div class="hl-preview-card"><div class="hl-preview-head">' + svg("file") + '<strong></strong>' +
-      (o.downloadName && o.url ? '<a class="btn btn-soft btn-sm" download="' + esc(o.downloadName) + '" href="' + o.url + '">Télécharger</a>' : "") +
-      '<button type="button" class="hl-preview-close" aria-label="Fermer l’aperçu">' + svg("x") + '</button></div><div class="hl-preview-body"></div></div>';
+    ov.innerHTML = '<div class="hl-preview-card">' +
+      '<div class="hl-preview-head">' +
+        '<button type="button" class="btn btn-secondary btn-sm hl-preview-back" aria-label="Retour au dossier">' + svg("left") + ' <span>Retour au dossier</span></button>' +
+        svg("file") + '<strong style="margin-left:.4rem"></strong>' +
+        (o.downloadName && o.url ? '<a class="btn btn-soft btn-sm" download="' + esc(o.downloadName) + '" href="' + o.url + '">Télécharger</a>' : "") +
+        '<button type="button" class="hl-preview-close" aria-label="Fermer l’aperçu">' + svg("x") + '</button>' +
+      '</div>' +
+      '<div class="hl-preview-body"></div>' +
+      '<div class="hl-preview-foot" style="display:flex;justify-content:space-between;align-items:center;padding:.75rem 1rem;border-top:1px solid var(--line,rgba(26,18,20,.08));background:var(--surface-2,#faf7f3)">' +
+        '<span style="font-size: var(--text-sm);color:var(--ink-soft)">Aperçu sécurisé du CV / document</span>' +
+        '<button type="button" class="btn btn-primary btn-sm hl-preview-back-foot">← Fermer et retourner au dossier</button>' +
+      '</div></div>';
     ov.querySelector("strong").textContent = o.title || "Aperçu";
     ov.querySelector(".hl-preview-body").innerHTML = o.bodyHtml || "";
     doc.body.appendChild(ov);
     requestAnimationFrame(function () { ov.classList.add("is-open"); });
     return new Promise(function (resolve) {
-      function close() {
-        doc.removeEventListener("keydown", onKey, true);
+      function close(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        if (trapRelease) trapRelease();
         ov.classList.remove("is-open");
         setTimeout(function () { ov.remove(); }, reduce() ? 0 : 220);
         if (prevFocus && prevFocus.focus) try { prevFocus.focus({ preventScroll: true }); } catch (_) { /* élément retiré */ }
+        if (typeof o.onClose === "function") {
+          try { o.onClose(); } catch (_) {}
+        }
         resolve(true);
       }
-      function onKey(e) { if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); close(); } }
-      doc.addEventListener("keydown", onKey, true);
-      ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
-      ov.querySelector(".hl-preview-close").addEventListener("click", close);
-      setTimeout(function () { ov.querySelector(".hl-preview-close").focus(); }, 30);
+      // Contrat clavier partagé (Tab enfermé, Escape, retour du focus) ; la sortie garde son scroll et son callback.
+      var trapRelease = window.HireLink && HireLink.trapDialog
+        ? HireLink.trapDialog(ov, close)
+        : (function () {
+            function onKey(e) {
+              if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); close(e); }
+            }
+            doc.addEventListener("keydown", onKey, true);
+            return function () { doc.removeEventListener("keydown", onKey, true); };
+          })();
+      ov.addEventListener("click", function (e) {
+        if (e.target === ov) {
+          e.stopPropagation();
+          close(e);
+        }
+      });
+      ov.querySelector(".hl-preview-close").addEventListener("click", function (e) {
+        e.stopPropagation();
+        close(e);
+      });
+      var backBtn = ov.querySelector(".hl-preview-back");
+      if (backBtn) backBtn.addEventListener("click", function (e) { e.stopPropagation(); close(e); });
+      var backFoot = ov.querySelector(".hl-preview-back-foot");
+      if (backFoot) backFoot.addEventListener("click", function (e) { e.stopPropagation(); close(e); });
+      setTimeout(function () { (backBtn || ov.querySelector(".hl-preview-close")).focus(); }, 30);
     });
   }
 

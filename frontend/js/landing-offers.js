@@ -35,8 +35,7 @@
   }
 
   function cityOf(o) {
-    const raw = String(o.location || "").split(/[,·]/)[0].trim();
-    return raw || "Lieu à préciser";
+    return HireLinkPlaces.cityOf(o.location, o.companyCity) || "Lieu à préciser";
   }
 
   function ago(iso) {
@@ -85,7 +84,7 @@
     const lead = document.getElementById("offers-lead");
     if (lead) {
       lead.textContent = list.length
-        ? list.length + " offre" + (list.length > 1 ? "s" : "") + " correspondent à la recherche. Le délai affiché est celui promis par l’entreprise."
+        ? list.length + " offre" + (list.length > 1 ? "s" : "") + " correspondent à la recherche. La réactivité affichée est mesurée sur les dossiers déjà traités."
         : "Aucune offre pour cette recherche.";
     }
     root.replaceChildren();
@@ -201,12 +200,16 @@
   function paintStats() {
     const companies = new Set(offers.map(companyOf));
     const cities = new Set(offers.map(cityOf));
-    const slas = offers.map(function (o) { return o.responseSlaDays; }).filter(function (d) { return d != null; });
+    const quick = new Set(
+      offers
+        .filter(function (o) { return o.responsiveness === "REACTIF"; })
+        .map(companyOf)
+    );
     const values = {
       offers: offers.length,
       companies: companies.size,
       cities: cities.size,
-      sla: slas.length ? Math.round(slas.reduce(function (a, b) { return a + b; }, 0) / slas.length) : 0
+      pace: quick.size
     };
     document.querySelectorAll("[data-stat]").forEach(function (el) {
       el.textContent = String(values[el.getAttribute("data-stat")]);

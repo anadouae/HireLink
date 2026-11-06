@@ -1,115 +1,139 @@
--- HireLink — logos officiels des entreprises marocaines déjà présentes en base.
--- Met à jour UNIQUEMENT organizations.logo_url ; n'insère ni ne supprime aucune ligne.
--- Identification par nom (insensible à la casse et aux espaces). Rejouable sans effet de bord.
--- Sources : fichiers de logo officiels hébergés par Wikimedia (upload.wikimedia.org) ;
--- Intelcia : logo du site officiel intelcia.com. Chaque URL a été vérifiée (HTTP 200, type image/*) le 01/11/2026.
+-- HireLink — logos des entreprises de la base de démonstration.
+-- Met à jour UNIQUEMENT organizations.logo_url ; n'insère ni ne supprime aucune ligne. Rejouable sans effet de bord.
+-- Toutes les adresses sont locales (/api/v1/media/org-logos/...), servies par l'application elle-même :
+-- la démonstration fonctionne donc sans connexion Internet. Les fichiers sont dans backend/data/org-logos/.
+-- Si un fichier manque (installation neuve sans backend/data), le front affiche les initiales de l'entreprise.
 
 SET NAMES utf8mb4;
 START TRANSACTION;
 
--- OCP Group
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Ocp-group.png/330px-Ocp-group.png'
- WHERE LOWER(TRIM(name)) IN ('ocp group', 'ocp', 'groupe ocp', 'ocp sa');
--- Maroc Telecom
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Maroc_Telecom_logo.png/330px-Maroc_Telecom_logo.png'
- WHERE LOWER(TRIM(name)) IN ('maroc telecom', 'itissalat al-maghrib', 'iam');
--- Attijariwafa bank
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/thumb/1/1d/Logo_AWB.svg/330px-Logo_AWB.svg.png'
- WHERE LOWER(TRIM(name)) IN ('attijariwafa bank', 'attijariwafa');
--- Royal Air Maroc
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/thumb/c/c7/Logo_Royal_Air_Maroc_2013_%28Horizontal%29.svg/330px-Logo_Royal_Air_Maroc_2013_%28Horizontal%29.svg.png'
- WHERE LOWER(TRIM(name)) IN ('royal air maroc', 'ram');
--- Renault Group Maroc
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/2021_Renault_Group_logo.svg/330px-2021_Renault_Group_logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('renault group maroc', 'renault', 'renault maroc', 'renault tanger');
--- Stellantis
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Stellantis.svg/330px-Stellantis.svg.png'
- WHERE LOWER(TRIM(name)) IN ('stellantis', 'stellantis kénitra', 'stellantis maroc');
--- inwi
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ef/Logo_inwi.svg/330px-Logo_inwi.svg.png'
- WHERE LOWER(TRIM(name)) IN ('inwi', 'wana corporate');
--- Orange Maroc
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Orange_logo.svg/330px-Orange_logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('orange maroc', 'orange');
--- CIH Bank
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/b/b2/Logo_CIH.png'
- WHERE LOWER(TRIM(name)) IN ('cih bank', 'cih');
--- Deloitte
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/Logo_of_Deloitte.svg/330px-Logo_of_Deloitte.svg.png'
- WHERE LOWER(TRIM(name)) IN ('deloitte', 'deloitte maroc');
--- Yazaki
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Yazaki_company_logo.svg/330px-Yazaki_company_logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('yazaki', 'yazaki morocco', 'yazaki maroc');
--- Lear
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Lear_Corporation_logo.svg/330px-Lear_Corporation_logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('lear', 'lear corporation', 'lear maroc');
--- Valeo
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/Valeo_Logo.svg/330px-Valeo_Logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('valeo', 'valeo maroc');
--- Intelcia
-UPDATE organizations SET logo_url = 'https://www.intelcia.com/themes/custom/intelcia/corpo/images/logo-gradient.svg'
- WHERE LOWER(TRIM(name)) IN ('intelcia');
--- Capgemini Maroc
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/thumb/b/b5/Capgemini_Logo.svg/330px-Capgemini_Logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('capgemini maroc', 'capgemini');
--- CGI Maroc
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/3/32/CGI_logo.svg/330px-CGI_logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('cgi maroc', 'cgi');
--- HPS
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/thumb/6/6d/Logo_hps_0.png/330px-Logo_hps_0.png'
- WHERE LOWER(TRIM(name)) IN ('hps', 'hps worldwide', 'hightech payment systems');
--- Bank of Africa
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Bank_of_Africa_Logo.png/330px-Bank_of_Africa_Logo.png'
- WHERE LOWER(TRIM(name)) IN ('bank of africa', 'bmce', 'bmce bank', 'bmce bank of africa', 'bank of africa - bmce group');
--- Marjane
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/71/Marjane_Holding_Logo.svg/330px-Marjane_Holding_Logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('marjane', 'marjane holding');
--- Decathlon Maroc
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/bc/Decathlon_-_logo_%28France%2C_2024%29.svg/330px-Decathlon_-_logo_%28France%2C_2024%29.svg.png'
- WHERE LOWER(TRIM(name)) IN ('decathlon maroc', 'decathlon');
--- Cosumar
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Logo_nouveau_cosumar.png/330px-Logo_nouveau_cosumar.png'
- WHERE LOWER(TRIM(name)) IN ('cosumar');
--- Managem
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/thumb/1/11/Managem.png/330px-Managem.png'
- WHERE LOWER(TRIM(name)) IN ('managem', 'groupe managem');
--- ONCF
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/thumb/e/e5/Logo_ONCF.svg/330px-Logo_ONCF.svg.png'
- WHERE LOWER(TRIM(name)) IN ('oncf', 'office national des chemins de fer');
--- Tanger Med
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/95/Tanger_Med_logo.png/330px-Tanger_Med_logo.png'
- WHERE LOWER(TRIM(name)) IN ('tanger med', 'tanger med port authority', 'tmsa');
--- Accor
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/thumb/c/c3/Accor_Logo.png/330px-Accor_Logo.png'
- WHERE LOWER(TRIM(name)) IN ('accor', 'accor maroc');
--- Centrale Danone
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c9/Logo-Centrale-Danone.png/330px-Logo-Centrale-Danone.png'
- WHERE LOWER(TRIM(name)) IN ('centrale danone');
--- LabelVie
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e7/Iabel%27vie.png/330px-Iabel%27vie.png'
- WHERE LOWER(TRIM(name)) IN ('labelvie', 'label''vie', 'label vie');
--- Wafa Assurance
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/3/38/Waa.gif'
- WHERE LOWER(TRIM(name)) IN ('wafa assurance');
--- Alstom Maroc
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/1c/Alstom_logo.svg/330px-Alstom_logo.svg.png'
- WHERE LOWER(TRIM(name)) IN ('alstom maroc', 'alstom');
--- Banque Populaire
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/Logo_BCP.svg/330px-Logo_BCP.svg.png'
- WHERE LOWER(TRIM(name)) IN ('banque populaire', 'banque centrale populaire', 'bcp', 'groupe banque populaire');
--- Akwa Group
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/8/83/Akwa_Group.png'
- WHERE LOWER(TRIM(name)) IN ('akwa group', 'akwa');
--- Afriquia
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/fr/thumb/3/3f/Afriquialogo.png/330px-Afriquialogo.png'
- WHERE LOWER(TRIM(name)) IN ('afriquia', 'afriquia smdc');
--- ONEE
-UPDATE organizations SET logo_url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/25/ONEE_logo.png/330px-ONEE_logo.png'
- WHERE LOWER(TRIM(name)) IN ('onee', 'office national de l''electricité et de l''eau potable');
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-1/263d7481-5d73-4948-8bdf-a298114c115a.jpg'
+ WHERE TRIM(name) = 'Atlas Digital';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-3/cb46ead4-5fac-4688-972f-482c37e266ef.png'
+ WHERE TRIM(name) = 'OCP Group';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-4/980bca35-eca1-447e-b791-9176ef482200.png'
+ WHERE TRIM(name) = 'Maroc Telecom';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-5/764dad06-22a9-4f74-a2c6-a6c7f0109c23.png'
+ WHERE TRIM(name) = 'Attijariwafa bank';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-6/377b7c8c-738b-4b1b-8ec0-ded4fa4693a7.png'
+ WHERE TRIM(name) = 'Royal Air Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-7/2b99ba6c-61d8-4793-baf5-0932924dff54.png'
+ WHERE TRIM(name) = 'Renault Group Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-8/67cf8eda-d0b3-415f-ba39-571271f2c010.png'
+ WHERE TRIM(name) = 'Stellantis';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-9/5ef9e20e-1e12-4509-a703-3fcbcf977059.png'
+ WHERE TRIM(name) = 'inwi';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-10/758994a3-57f6-4aa2-b41e-c44ff4992dda.png'
+ WHERE TRIM(name) = 'Intelcia';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-11/b07ba908-53aa-4ba2-828c-ec5ede819b53.png'
+ WHERE TRIM(name) = 'Capgemini Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-12/c4030cc9-b089-4fcb-983a-028acb5c4f91.png'
+ WHERE TRIM(name) = 'CGI Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-13/3ef08db8-714c-4897-affc-80d8989ce9b9.png'
+ WHERE TRIM(name) = 'HPS';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-14/3730638e-22d0-457b-ac73-ae8f8c6cdeb7.png'
+ WHERE TRIM(name) = 'Bank of Africa';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-15/f50003fb-c13f-4a30-94a1-c2f70d9955e1.png'
+ WHERE TRIM(name) = 'Marjane';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-16/15c53b44-cc05-4021-9ad8-e2d324eb1af3.png'
+ WHERE TRIM(name) = 'Decathlon Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-17/f314efa3-bab6-43a9-942f-c32e3b9e4c81.png'
+ WHERE TRIM(name) = 'Cosumar';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-18/034cb20e-1696-4e8f-b1c3-09bd5ffb2877.png'
+ WHERE TRIM(name) = 'Managem';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-19/0582dfd1-acbf-4b3d-8e41-93751852f239.png'
+ WHERE TRIM(name) = 'ONCF';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-20/d8452541-98b6-4326-826e-6acb8f9ebc23.png'
+ WHERE TRIM(name) = 'Tanger Med';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-21/4baf4f33-88e0-471a-9e86-01f5ae80c35a.png'
+ WHERE TRIM(name) = 'Accor';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-22/4d6f8df0-6548-452f-9f7c-e70bc90143f6.png'
+ WHERE TRIM(name) = 'Centrale Danone';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-23/07690343-1e88-4bbc-a9ef-43718ff23842.png'
+ WHERE TRIM(name) = 'LabelVie';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-24/5ee8e8fe-8d00-4908-867e-7b77167a64e5.png'
+ WHERE TRIM(name) = 'Wafa Assurance';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-25/ee7c4ca7-78d2-4e86-aef8-ea8b8512dffb.png'
+ WHERE TRIM(name) = 'Alstom Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-28/7d0f2171-1d8f-4daa-83a9-0f7bd0ada984.png'
+ WHERE TRIM(name) = 'Medina Soft';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-29/f8ea5be9-bf3d-426e-84a1-3d84121a0ab1.png'
+ WHERE TRIM(name) = 'Rif Logistics';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-30/e49d58a2-c17e-4d1f-a4fd-f81c1dd1e69d.png'
+ WHERE TRIM(name) = 'Atlantic Cloud';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-31/9868a89a-7cd2-422e-83a6-fe6a12d11040.png'
+ WHERE TRIM(name) = 'Kasbah Analytics';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-32/logo.png'
+ WHERE TRIM(name) = 'Bouregreg Pay';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-33/logo.png'
+ WHERE TRIM(name) = 'Solaris Nord Énergies';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-34/f41f1a59-d637-47d2-b1e4-14f18bf074f6.png'
+ WHERE TRIM(name) = 'Zellige Studio';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-35/logo.png'
+ WHERE TRIM(name) = 'Nova RH';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-36/logo.png'
+ WHERE TRIM(name) = 'Tanja MedTech';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-37/logo.png'
+ WHERE TRIM(name) = 'Oued Martil Automation';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-38/logo.png'
+ WHERE TRIM(name) = 'Orange Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-39/logo.png'
+ WHERE TRIM(name) = 'CIH Bank';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-40/ce17e9f3-4e67-4093-acb2-d1a65d0696a4.png'
+ WHERE TRIM(name) = 'Deloitte Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-41/5cbc301a-9634-48fa-8e04-716181ffb125.png'
+ WHERE TRIM(name) = 'Yazaki Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-42/06d80ea3-63e3-4da5-9c80-5b115dc33a46.png'
+ WHERE TRIM(name) = 'Lear Corporation Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-43/bf675356-1653-4fa2-97c1-ae221e04bb7b.png'
+ WHERE TRIM(name) = 'Valeo Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-44/45ea8489-4bbb-4bb1-8f7f-1ad75d5c27be.png'
+ WHERE TRIM(name) = 'Sopra Steria Maroc';
+
+UPDATE organizations SET logo_url = '/api/v1/media/org-logos/org-45/b4641da7-5147-401a-b024-b96b047cfbaf.png'
+ WHERE TRIM(name) = 'Schneider Electric Maroc';
 
 COMMIT;
 
--- Contrôle : entreprises encore sans logo ou avec l'ancien favicon Google.
-SELECT id, name, logo_url FROM organizations
- WHERE logo_url IS NULL OR logo_url = '' OR logo_url LIKE 'https://www.google.com/s2/favicons%'
- ORDER BY name;
+-- Contrôle : 0 ligne attendue (aucun logo ne doit pointer hors de localhost)
+SELECT id, name, logo_url FROM organizations WHERE logo_url LIKE 'http%';

@@ -4,23 +4,23 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Offres — HireLink</title>
+  <title>Offres · Candidat — HireLink</title>
   <meta name="robots" content="noindex" />
   <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/offer-card.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/match.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/offer-card.css?v=20261105a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/match.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
   <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -88,12 +88,11 @@
                   <option value="onsite">Présentiel</option>
                 </select>
               </label>
-              <label>Délai de réponse
-                <select id="f-sla">
-                  <option value="">Tous</option>
-                  <option value="5">5 jours ou moins</option>
-                  <option value="7">7 jours ou moins</option>
-                  <option value="14">14 jours ou moins</option>
+              <label>Réponse de l’entreprise
+                <select id="f-pace">
+                  <option value="">Toutes</option>
+                  <option value="answers">Répond aux candidatures</option>
+                  <option value="fast">Répond vite (3 j ou moins)</option>
                 </select>
               </label>
             </div>
@@ -113,21 +112,22 @@
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101r"></script>
-  <script defer src="../js/premium.js?v=20261102s"></script>
-  <script defer src="../js/ui.js?v=20261101r"></script>
-  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/mascotte.js?v=20261105i"></script>
+  <script defer src="../js/premium.js?v=20261106g"></script>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261106c"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261101r"></script>
-  <script defer src="../js/in-app-help.js?v=20261102q"></script>
-  <script defer src="../js/app-shell.js?v=20261102q"></script>
-  <script defer src="../js/growth.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261103h"></script>
+  <script defer src="../js/in-app-help.js?v=20261105s"></script>
+  <script defer src="../js/credits.js?v=20261105v"></script>
+  <script defer src="../js/app-shell.js?v=20261105y"></script>
+  <script defer src="../js/growth.js?v=20261106g"></script>
   <script defer src="../js/skills.js?v=20261101r"></script>
-  <script defer src="../js/offer-card.js?v=20261102q"></script>
-  <script defer src="../js/apply-wizard.js?v=20261102q"></script>
-  <script defer src="../js/apply-profile-gate.js?v=20261101r"></script>
-  <script defer src="../js/suggest.js?v=20261101r"></script>
+  <script defer src="../js/offer-card.js?v=20261105o"></script>
+  <script defer src="../js/apply-wizard.js?v=20261106g"></script>
+  <script defer src="../js/apply-profile-gate.js?v=20261106f"></script>
+  <script defer src="../js/suggest.js?v=20261103g"></script>
   <script defer src="../js/match.js?v=20261101r"></script>
-  <script defer src="../js/candidate-home.js?v=20261102q"></script>
+  <script defer src="../js/candidate-home.js?v=20261103k"></script>
 </body>
 </html>
