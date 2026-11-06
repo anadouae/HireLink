@@ -11,7 +11,7 @@ Ce guide s’adresse à quelqu’un qui n’a jamais lancé le projet. Il expliq
 | JDK (Java) | 21 | Exécuter le serveur (backend) | java -version  → doit afficher 21 |
 | MySQL (ou MariaDB) | MySQL 8 / MariaDB 10.4+ | Base de données | mysql --version |
 | IntelliJ IDEA Community **ou** Maven 3.9 | récente / 3.9 | Compiler et lancer le backend | mvn -v |
-| Python | 3.9 ou plus | Servir le site (frontend) et calculer le code TOTP de l’administrateur | python --version |
+| Python | 3.9 ou plus | Servir le site (frontend) et, si besoin, calculer un code TOTP (§14.2) | python --version |
 | Google Chrome ou Edge | récente | Utiliser l’application | — |
 
 ### 1.1 Installer Java 21
@@ -122,7 +122,7 @@ Le fichier est lu à ces trois emplacements (le premier trouvé gagne) : `applic
 
 | E-mail | Mot de passe | Rôle |
 |---|---|---|
-| admin@hirelink.ma | Admin123!  (+ code TOTP, voir §14) | Administrateur |
+| admin@hirelink.ma | Admin123! | Administrateur |
 | n.bennani@atlasdigital.ma | Recruteur123! | Recruteur, **Owner** d’Atlas Digital |
 | k.benali@atlasdigital.ma | Recruteur123! | Recruteur (Atlas Digital) |
 | m.alaoui@atlasdigital.ma | Recruteur123! | **Hiring Manager** (Atlas Digital) |
@@ -402,7 +402,7 @@ Reprenez le candidat (`candidat@hirelink.ma`) après les actions du recruteur :
 
    ![c2-parametres-compte](guide-captures/89-c2-parametres-compte.png)
 
-10. Le fichier JSON téléchargé contient le profil, les candidatures et les consentements (sans mot de passe ni secret).
+10. Le fichier JSON téléchargé contient le profil (identité, compétences, recherches, expérience), les candidatures et une note RGPD — sans mot de passe ni secret.
 
    ![c2-export](guide-captures/90-c2-export.png)
 
@@ -484,7 +484,7 @@ Reprenez le candidat (`candidat@hirelink.ma`) après les actions du recruteur :
 
 ## 13. Scénarios — Administrateur
 
-Le détail de la connexion administrateur (mot de passe **et** code TOTP) est au §14. Une fois connecté :
+Le détail de la connexion administrateur (mot de passe seul en local, TOTP activable et durcissable) est au §14. Une fois connecté :
 
 1. Tableau de bord : indicateurs globaux.
 
@@ -521,42 +521,53 @@ Le détail de la connexion administrateur (mot de passe **et** code TOTP) est au
 
 ## 14. Se connecter en administrateur (professeur / correcteur)
 
-Pour l’administrateur, le mot de passe seul **ne suffit jamais** : la double authentification (TOTP) est obligatoire. Voici le chemin complet, testé.
+En démonstration locale, l’administrateur se connecte **avec son mot de passe seul** : rien à installer, aucun code à récupérer. La double authentification (TOTP) reste disponible pour tous les comptes et reste **imposée à l’administrateur en production** — voir §14.3 pour la montrer au correcteur.
 
-### Première connexion : activation du TOTP
+### 14.1 Connexion par défaut
 
 1. Allez sur http://localhost:5500/auth.html?mode=login, saisissez `admin@hirelink.ma` / `Admin123!`.
 
    ![a-connexion](guide-captures/101-a-connexion.png)
 
-2. Cliquez « Se connecter ». L’écran **« Activez la double authentification »** s’affiche avec un QR code **et** une clé manuelle (32 lettres/chiffres). **Recopiez cette clé.**
-
-   ![a-totp-activation](guide-captures/102-a-totp-activation.png)
-
-3. Deux possibilités pour obtenir le code à 6 chiffres : (a) scanner le QR code avec Google Authenticator / Microsoft Authenticator / Authy ; (b) sans téléphone, dans une invite de commandes : `python C:\HireLink\docs\outils\totp.py LA-CLE-RECOPIEE` — le script (bibliothèque standard Python, aucune installation) affiche le code et le temps restant. Saisissez le code.
-
-   ![a-totp-code](guide-captures/103-a-totp-code.png)
-
-4. Cliquez « Activer ». L’application affiche **10 codes de secours** à usage unique : **notez-les**, ils ne seront plus jamais réaffichés. Cliquez « J’ai noté mes codes ».
-
-   ![a-codes-secours](guide-captures/104-a-codes-secours.png)
-
-5. Vous êtes dans l’espace administrateur.
+2. Cliquez « Se connecter » : l’espace administrateur s’ouvre directement.
 
    ![a-tableau-de-bord](guide-captures/105-a-tableau-de-bord.png)
 
+### 14.2 Activer la double authentification sur un compte
 
-### Connexions suivantes
+N’importe quel compte peut l’activer depuis la page **Sécurité** de son espace.
 
-1. Même e-mail et même mot de passe : l’écran demande le **code à 6 chiffres** (celui de l’application, de `totp.py`, ou un code de secours).
+1. Sécurité → « Activer la double authentification ». L’écran affiche un QR code **et** une clé manuelle (32 lettres/chiffres). **Recopiez cette clé.**
+
+   ![a-totp-activation](guide-captures/102-a-totp-activation.png)
+
+2. Deux possibilités pour obtenir le code à 6 chiffres : (a) scanner le QR code avec Google Authenticator / Microsoft Authenticator / Authy ; (b) sans téléphone, dans une invite de commandes : `python C:\HireLink\docs\outils\totp.py LA-CLE-RECOPIEE` — le script (bibliothèque standard Python, aucune installation) affiche le code et le temps restant. Saisissez le code.
+
+   ![a-totp-code](guide-captures/103-a-totp-code.png)
+
+3. Validez. L’application affiche **10 codes de secours** à usage unique : **notez-les**, ils ne seront plus jamais réaffichés.
+
+   ![a-codes-secours](guide-captures/104-a-codes-secours.png)
+
+4. Aux connexions suivantes, l’écran demande le **code à 6 chiffres** (celui de l’application, de `totp.py`, ou un code de secours).
 
    ![s-admin-connexion-code](guide-captures/164-s-admin-connexion-code.png)
 
-2. Un code TOTP ne peut être utilisé **qu’une seule fois** : si vous obtenez « code invalide » alors que vous venez de vous connecter, attendez la prochaine période de 30 secondes.
+> Un code TOTP ne peut être utilisé **qu’une seule fois** : si vous obtenez « code invalide » alors que vous venez de vous connecter, attendez la prochaine période de 30 secondes.
 
-> Alternative sans mot de passe ni TOTP : l’administrateur peut enregistrer une **passkey** (page Sécurité) et s’y connecter ensuite avec le bouton « Se connecter avec une passkey ».
+### 14.3 Durcir le compte administrateur (réglage de production)
 
-> Si vous avez perdu la clé TOTP et les codes de secours en environnement de test : arrêtez le backend, supprimez la base (`DROP DATABASE hirelink;` puis recréez-la, §3) et relancez : l’administrateur de démonstration sera recréé et vous redemandera l’activation.
+Le profil `prod` impose la double authentification à l’administrateur. Pour le reproduire en local, relancez le backend avec :
+
+```bash
+HIRELINK_ADMIN_MFA_REQUIRED=true mvn -o spring-boot:run
+```
+
+À la connexion suivante, `admin@hirelink.ma` ne passe plus par le seul mot de passe : l’écran d’activation du TOTP (§14.2) s’affiche et l’accès n’est ouvert qu’après le code à 6 chiffres. Le contrôle correspondant est la ligne « A01 – ASVS V4.3 (administration) » de [`docs/SECURITE.md`](SECURITE.md).
+
+> Alternative sans mot de passe ni TOTP : enregistrer une **passkey** (page Sécurité) et se connecter avec le bouton « Se connecter avec une passkey ».
+
+> Si vous avez perdu la clé TOTP et les codes de secours en environnement de test : arrêtez le backend, supprimez la base (`DROP DATABASE hirelink;` puis recréez-la, §3) et relancez : l’administrateur de démonstration sera recréé. Tant que `HIRELINK_ADMIN_MFA_REQUIRED` reste faux, il se reconnecte au seul mot de passe.
 
 ## 15. Sécurité — scénarios à exécuter
 
@@ -730,7 +741,7 @@ try { Invoke-WebRequest -Uri http://localhost:8081/api/v1/applications/by-offer/
 ## 17. Récapitulatif de ce qui a été exécuté pour écrire ce guide
 
 - Base vide recréée avant chaque campagne, backend démarré depuis le jar compilé, frontend servi par `python -m http.server 5500`.
-- Parcours navigateur automatisés (Chrome) : candidat (§8), recruteur (§9), hiring manager (§10), parcours croisés (§11), nouveau recruteur + vérification admin (§12), administrateur avec activation TOTP (§13–14), sécurité (§15, avec une passkey virtuelle). Chaque capture est issue de ces exécutions.
+- Parcours navigateur automatisés (Chrome) : candidat (§8), recruteur (§9), hiring manager (§10), parcours croisés (§11), nouveau recruteur + vérification admin (§12), administrateur — connexion au mot de passe puis double authentification activée (§13–14), sécurité (§15, avec une passkey virtuelle). Chaque capture est issue de ces exécutions.
 - Tests d’API automatisés (plus de 250 vérifications) : authentification, sessions, MFA, passkeys, contrôles d’accès, téléversements, audit, profil `prod`, expiration des sessions et des liens — voir `docs/SECURITE.md`.
 - Version intégrée (§18) : 23 tests unitaires Maven (`mvn package`), balayage de 43 pages (publiques et de chaque rôle), page d’accueil vérifiée sur ordinateur, mobile, avec animations réduites et sans JavaScript, parcours navigateur et API pour les trois rôles (recruteur, candidat, administrateur), deux navigateurs simultanés pour les notifications en temps réel, balayage de toutes les pages sans erreur JavaScript ni violation de la politique de sécurité (CSP), envoi d’e-mails vers un récepteur SMTP local, mise à jour automatique d’une base de l’ancienne version.
 - Non exécuté : installation sur un vrai Windows, MySQL 8 (testé avec MariaDB 10.11), envoi d’e-mails vers un vrai compte Gmail (testé avec un récepteur SMTP local), connexion Google avec un identifiant client autorisé, passkey avec un vrai authentificateur matériel.

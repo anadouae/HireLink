@@ -24,22 +24,22 @@
     const s = document.createElement("style");
     s.id = "hl-apply-css";
     s.textContent =
-      ".hl-apply-overlay{position:fixed;inset:0;z-index:9200;background:rgba(18,12,14,.55);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;transition:opacity .28s ease}" +
-      ".hl-apply-overlay.is-open{opacity:1;pointer-events:auto}" +
+      ".hl-apply-overlay{position:fixed;inset:0;z-index:9200;background:rgba(18,12,14,.55);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center;padding:1rem;opacity:0;pointer-events:none;visibility:hidden;transition:opacity .28s ease,visibility 0s .28s}" +
+      ".hl-apply-overlay.is-open{opacity:1;pointer-events:auto;visibility:visible;transition:opacity .28s ease,visibility 0s 0s}" +
       ".hl-apply-card{background:#fff;border-radius:20px;width:min(760px,100%);max-height:min(92vh,900px);display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.32);border:1px solid rgba(122,32,50,.16);overflow:hidden;transform:translateY(16px) scale(.98);transition:transform .35s cubic-bezier(.22,1,.36,1)}" +
       ".hl-apply-overlay.is-open .hl-apply-card{transform:none}" +
       ".hl-apply-top{padding:1.2rem 1.4rem .9rem;border-bottom:1px solid rgba(26,18,20,.08);flex-shrink:0;background:linear-gradient(180deg,#fffaf7,#fff)}" +
-      ".hl-apply-top h2{font-family:var(--font-display);margin:0 0 .2rem;font-size:1.4rem;color:#1a1214}" +
-      ".hl-apply-top .sub{margin:0;color:#5e5558;font-size:.9rem}" +
+      ".hl-apply-top h2{font-family:var(--font-display);margin:0 0 .2rem;font-size: var(--text-xl);color:#1a1214}" +
+      ".hl-apply-top .sub{margin:0;color:#5e5558;font-size: var(--text-base)}" +
       ".hl-apply-steps{display:flex;gap:.35rem;flex-wrap:wrap;margin-top:.9rem}" +
-      ".hl-apply-step{flex:1;min-width:56px;text-align:center;font-size:.66rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a8285;padding:.4rem .2rem;border-radius:999px;background:#f4f0ec;transition:all .25s ease}" +
+      ".hl-apply-step{flex:1;min-width:56px;text-align:center;font-size: var(--text-2xs);font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#8a8285;padding:.4rem .2rem;border-radius:999px;background:#f4f0ec;transition:all .25s ease}" +
       ".hl-apply-step.is-done{background:rgba(122,32,50,.12);color:#7a2032}" +
       ".hl-apply-step.is-current{background:linear-gradient(135deg,#7a2032,#e87030);color:#fff;box-shadow:0 6px 16px rgba(122,32,50,.28)}" +
       ".hl-apply-body{padding:1.2rem 1.4rem;overflow:auto;flex:1;min-height:0}" +
       ".hl-apply-foot{padding:1rem 1.4rem;border-top:1px solid rgba(26,18,20,.08);display:flex;justify-content:space-between;gap:.65rem;flex-wrap:wrap;background:#faf8f6;flex-shrink:0}" +
-      ".hl-offer-detail h3{margin:0 0 .5rem;font-size:1.2rem}" +
+      ".hl-offer-detail h3{margin:0 0 .5rem;font-size: var(--text-lg)}" +
       ".hl-offer-detail .chips{display:flex;flex-wrap:wrap;gap:.4rem;margin:.75rem 0}" +
-      ".hl-offer-detail .desc{white-space:pre-wrap;line-height:1.55;color:#3a3335;font-size:.95rem;background:#f7f4f1;border-radius:12px;padding:1rem;border:1px solid rgba(26,18,20,.06);max-height:200px;overflow:auto}" +
+      ".hl-offer-detail .desc{white-space:pre-wrap;line-height:1.55;color:#3a3335;font-size: var(--text-md);background:#f7f4f1;border-radius:12px;padding:1rem;border:1px solid rgba(26,18,20,.06);max-height:200px;overflow:auto}" +
       ".hl-cv-choice{display:grid;gap:.65rem}" +
       ".hl-cv-opt{display:flex;gap:.85rem;align-items:flex-start;padding:1rem;border-radius:14px;border:1.5px solid rgba(26,18,20,.1);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}" +
       ".hl-cv-opt:hover{border-color:rgba(122,32,50,.35);transform:translateY(-1px)}" +
@@ -48,16 +48,16 @@
       ".hl-cv-opt.is-disabled:hover{transform:none;border-color:rgba(26,18,20,.1)}" +
       ".hl-cv-opt input{margin-top:.2rem}" +
       ".hl-cv-opt strong{display:block;margin-bottom:.2rem}" +
-      ".hl-cv-opt span{font-size:.88rem;color:#5e5558}" +
+      ".hl-cv-opt span{font-size: var(--text-base);color:#5e5558}" +
       ".hl-file-row{margin-top:.75rem;padding:.85rem;border-radius:12px;background:#f7f4f1;border:1px dashed rgba(122,32,50,.3)}" +
       ".hl-review-list{display:grid;gap:.55rem}" +
-      ".hl-review-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem .75rem;border-radius:10px;background:#f7f4f1;font-size:.9rem}" +
+      ".hl-review-list div{display:flex;justify-content:space-between;gap:1rem;padding:.65rem .75rem;border-radius:10px;background:#f7f4f1;font-size: var(--text-base)}" +
       ".hl-review-list strong{color:#5e5558;font-weight:600}" +
-      ".hl-optional{font-size:.78rem;font-weight:700;color:#e87030;text-transform:uppercase;letter-spacing:.05em}" +
+      ".hl-optional{font-size: var(--text-xs);font-weight:700;color:#e87030;text-transform:uppercase;letter-spacing:.05em}" +
       ".hl-progress{height:3px;background:rgba(122,32,50,.1);border-radius:99px;margin-top:.85rem;overflow:hidden}" +
-      ".hl-av-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}.hl-av-full{grid-column:1/-1}.hl-av-grid fieldset{border:0;margin:0;padding:0}.hl-av-grid legend,.hl-av-f>span{display:block;font-weight:600;font-size:.86rem;margin-bottom:.35rem}.hl-av-f small{font-weight:400;color:#8a8285}.hl-av-f .input,.hl-av-f select{width:100%}.hl-av-f input[type=number]{box-sizing:border-box;height:2.6rem;padding:0 .85rem;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);color:var(--ink);font:inherit;-moz-appearance:textfield}.hl-av-f input[type=number]:focus{outline:none;border-color:var(--hl-wine);box-shadow:0 0 0 3px rgba(122,32,50,.15)}" +
-      ".hl-seg{display:inline-flex;gap:.3rem;padding:.25rem;border-radius:999px;background:#f4f0ec}.hl-seg input{position:absolute;opacity:0;pointer-events:none}.hl-seg span{display:block;padding:.45rem .95rem;border-radius:999px;font-size:.86rem;cursor:pointer;transition:all .2s}.hl-seg input:checked+span{background:#7a2032;color:#fff;box-shadow:0 4px 12px rgba(122,32,50,.25)}.hl-seg input:focus-visible+span{outline:2px solid #c9a66b}" +
-      ".hl-av-check{display:flex;gap:.6rem;align-items:center;font-size:.9rem;padding:.7rem .85rem;border-radius:12px;background:#f7f4f1;cursor:pointer}" +
+      ".hl-av-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem}.hl-av-full{grid-column:1/-1}.hl-av-grid fieldset{border:0;margin:0;padding:0}.hl-av-grid legend,.hl-av-f>span{display:block;font-weight:600;font-size: var(--text-base);margin-bottom:.35rem}.hl-av-f small{font-weight:400;color:#8a8285}.hl-av-f .input,.hl-av-f select{width:100%}.hl-av-f input[type=number]{box-sizing:border-box;height:2.6rem;padding:0 .85rem;border:1px solid var(--line);border-radius:12px;background:var(--surface,#fff);color:var(--ink);font:inherit;-moz-appearance:textfield}.hl-av-f input[type=number]:focus{outline:none;border-color:var(--hl-wine);box-shadow:0 0 0 3px rgba(122,32,50,.15)}" +
+      ".hl-seg{display:inline-flex;gap:.3rem;padding:.25rem;border-radius:999px;background:#f4f0ec}.hl-seg input{position:absolute;opacity:0;pointer-events:none}.hl-seg span{display:block;padding:.45rem .95rem;border-radius:999px;font-size: var(--text-base);cursor:pointer;transition:all .2s}.hl-seg input:checked+span{background:#7a2032;color:#fff;box-shadow:0 4px 12px rgba(122,32,50,.25)}.hl-seg input:focus-visible+span{outline:2px solid #c9a66b}" +
+      ".hl-av-check{display:flex;gap:.6rem;align-items:center;font-size: var(--text-base);padding:.7rem .85rem;border-radius:12px;background:#f7f4f1;cursor:pointer}" +
       "@media(max-width:600px){.hl-av-grid{grid-template-columns:1fr}}" +
       "html[data-theme=dark] .hl-seg,html[data-theme=dark] .hl-av-check{background:rgba(255,255,255,.06)}" +
       ".hl-progress>span{display:block;height:100%;background:linear-gradient(90deg,#7a2032,#e87030);border-radius:99px;transition:width .35s cubic-bezier(.22,1,.36,1)}";
@@ -126,6 +126,15 @@
 
     function close() {
       overlay.classList.remove("is-open");
+      if (overlay._hlRelease) {
+        overlay._hlRelease();
+        overlay._hlRelease = null;
+      }
+    }
+
+    // Le voile est peint à chaque étape : le piège clavier se pose sur le conteneur, qui survit aux redessins.
+    if (global.HireLink && HireLink.trapDialog) {
+      overlay._hlRelease = HireLink.trapDialog(overlay, close);
     }
 
     function renderSteps() {
@@ -148,6 +157,7 @@
           .slice(0, 12);
         const match =
           o.matchScore != null ? Math.round(o.matchScore) + "% match" : "Matching à calculer";
+        const pace = HireLinkOffer.paceOf(o);
         return (
           '<div class="' +
           anim +
@@ -157,7 +167,7 @@
           '<p class="muted" style="margin:0 0 .5rem">' +
           esc(o.recruiterName || "Entreprise") +
           " · " +
-          esc(o.location || "—") +
+          esc(HireLinkPlaces.cityOf(o.location, o.companyCity) || "—") +
           " · " +
           esc(o.contractType || "—") +
           "</p>" +
@@ -165,12 +175,10 @@
           '<span class="badge badge-rose">' +
           esc(match) +
           "</span>" +
-          '<span class="badge badge-chrome">SLA ' +
-          esc(o.responseSlaDays) +
-          " j</span>" +
+          (pace.badge ? '<span class="badge badge-brass badge-pop" title="' + esc(pace.title) + '">' + esc(pace.badge) + "</span>" : "") +
           skills.map((sk) => '<span class="badge badge-chrome">' + esc(sk) + "</span>").join("") +
           "</div>" +
-          '<p class="muted" style="margin:.5rem 0 .35rem;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em">Description</p>' +
+          '<p class="muted" style="margin:.5rem 0 .35rem;font-size: var(--text-sm);font-weight:700;text-transform:uppercase;letter-spacing:.06em">Description</p>' +
           '<div class="desc">' +
           esc(o.description || "Aucune description.") +
           "</div></div>"
@@ -227,7 +235,7 @@
           '<div class="' +
           anim +
           '"><p class="muted" style="margin-top:0"><span class="hl-optional">Optionnel</span> — Lettre de motivation : rédigez-la ou importez un fichier (PDF, TXT, MD)</p>' +
-          '<textarea id="hl-letter-text" class="input" rows="7" maxlength="8000" placeholder="Pourquoi ce poste, pourquoi vous ?" style="width:100%">' +
+          '<textarea id="hl-letter-text" class="input" rows="7" maxlength="5000" placeholder="Pourquoi ce poste, pourquoi vous ?" style="width:100%">' +
           esc(state.coverLetter) +
           "</textarea>" +
           '<div class="hl-file-row" style="margin-top:.75rem">' +
@@ -257,16 +265,16 @@
           '<label class="hl-av-f"><span>Mode de travail souhaité</span><select id="hl-av-mode" class="input">' + opts(MODES, d.workMode) + "</select></label>" +
           '<label class="hl-av-f"><span>Comment avez-vous connu l’offre ?</span><select id="hl-av-source" class="input">' + opts(SOURCES, d.source) + "</select></label>" +
           '<label class="hl-av-check hl-av-full"><input type="checkbox" id="hl-av-reloc"' + (d.relocation ? " checked" : "") + "/><span>Je suis prêt(e) à déménager pour ce poste" +
-          (o.location ? " (" + esc(String(o.location).split(/[·,]/)[0].trim()) + ")" : "") + "</span></label>" +
+          (o.location ? " (" + esc(HireLinkPlaces.cityOf(o.location, o.companyCity)) + ")" : "") + "</span></label>" +
           "</div></div>";
       }
       const dd = state.details;
       return (
         '<div class="' +
         anim +
-        '"><p class="muted" style="margin-top:0">Dernière vérif — réponse attendue sous <strong>' +
-        esc(o.responseSlaDays) +
-        " jours</strong>.</p>" +
+        '"><p class="muted" style="margin-top:0">Dernière vérif — la réponse de l’entreprise arrive dans votre espace candidat. ' +
+        esc(HireLinkOffer.paceOf(o).sentence) +
+        "</p>" +
         '<div class="hl-review-list">' +
         "<div><strong>Poste</strong><span>" +
         esc(o.title) +
@@ -279,7 +287,7 @@
         "</span></div>" +
         "<div><strong>Lettre</strong><span>" +
         (state.coverLetter
-          ? "Oui (" + state.coverLetter.length + " car." + (state.letterFileName ? " · " + state.letterFileName : "") + ")"
+          ? "Oui (" + state.coverLetter.length + " / 5000 car." + (state.letterFileName ? " · " + state.letterFileName : "") + ")"
           : "Non jointe") +
         "</span></div>" +
         "<div><strong>Disponibilité</strong><span>" + esc(availText(dd)) + (dd.notice && dd.notice !== "Aucun" ? " · préavis " + esc(dd.notice) : "") + "</span></div>" +
@@ -401,7 +409,7 @@
       const isText = /\.(txt|md)$/i.test(f.name) || (f.type || "").indexOf("text") >= 0;
       if (isText) {
         const text = await f.text();
-        state.coverLetter = String(text || "").trim().slice(0, 8000);
+        state.coverLetter = String(text || "").trim().slice(0, 5000);
         HireLink.toast("Lettre", "Texte importé depuis " + f.name, "ok");
         paint();
         return;
@@ -414,7 +422,7 @@
         if (!res.ok) throw new Error(data.message || "Lecture impossible");
         const text = String(data.text || data.textPreview || "").replace(/…$/, "").trim();
         if (!text) throw new Error("Aucun texte extrait");
-        state.coverLetter = text.slice(0, 8000);
+        state.coverLetter = text.slice(0, 5000);
         HireLink.toast("Lettre", "Texte extrait de " + f.name, "ok");
       } catch (err) {
         HireLink.toast(

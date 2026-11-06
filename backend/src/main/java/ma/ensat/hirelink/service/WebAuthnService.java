@@ -103,12 +103,40 @@ public class WebAuthnService implements CredentialRepository {
         }
     }
 
-    // ---------- connexion par passkey (sans identifiant : « usernameless ») ----------
+    // ---------- connexion par passkey (sans identifiant ou par email) ----------
+
+    public Map<String, Object> checkPasskey(String email) {
+        if (email == null || email.isBlank()) {
+            return Map.of("hasPasskey", false, "registered", false);
+        }
+        String clean = email.trim().toLowerCase();
+        Optional<User> opt = users.findByEmailIgnoreCase(clean);
+        if (opt.isEmpty()) {
+            return Map.of("hasPasskey", false, "registered", false, "email", clean);
+        }
+        User u = opt.get();
+        List<WebAuthnCredential> creds = repo.findByUserIdOrderByCreatedAtDesc(u.getId());
+        return Map.of(
+                "hasPasskey", !creds.isEmpty(),
+                "count", creds.size(),
+                "registered", true,
+                "email", u.getEmail(),
+                "fullName", u.getFullName() != null ? u.getFullName() : u.getEmail()
+        );
+    }
 
     public Map<String, Object> startLogin() {
+        return startLogin(null);
+    }
+
+    public Map<String, Object> startLogin(String email) {
         purge();
-        AssertionRequest request = rp.startAssertion(StartAssertionOptions.builder()
-                .userVerification(UserVerificationRequirement.REQUIRED).build());
+        StartAssertionOptions.StartAssertionOptionsBuilder builder = StartAssertionOptions.builder()
+                .userVerification(UserVerificationRequirement.REQUIRED);
+        if (email != null && !email.isBlank()) {
+            builder.username(email.trim().toLowerCase());
+        }
+        AssertionRequest request = rp.startAssertion(builder.build());
         String id = newId();
         assertions.put(id, new Pending<>(request, null, Instant.now().plusSeconds(300)));
         try {

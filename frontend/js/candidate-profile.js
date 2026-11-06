@@ -20,20 +20,28 @@
 
   async function showAi(endpoint, body) {
     const box = document.getElementById("ai-result");
+    if (!box) return;
     box.hidden = false;
     box.innerHTML = Mascotte.waiting("Génération en cours…");
     try {
-      const data = await HireLinkAPI.api(endpoint, {
-        method: "POST",
-        body,
-      });
-      box.textContent = (data.title ? data.title + "\n\n" : "") + (data.content || "");
+      const data = await HireLinkCredits.run(endpoint, body);
+      const row = document.createElement("article");
+      row.className = "coach-msg";
+      const title = document.createElement("strong");
+      title.textContent = data.title || "Suggestions de l’IA";
+      const content = document.createElement("div");
+      content.textContent = data.content || "";
+      row.append(title, content);
       if (data.tips && data.tips.length) {
-        box.textContent += "\n\n— Tips —\n• " + data.tips.join("\n• ");
+        const tips = document.createElement("p");
+        tips.className = "muted";
+        tips.textContent = data.tips.join(" · ");
+        row.appendChild(tips);
       }
+      box.replaceChildren(row);
     } catch (err) {
-      box.textContent = err.message;
-      HireLink.toast("IA", err.message, "danger");
+      box.hidden = true;
+      if (!err.handled) HireLink.toast("IA", err.message, "danger");
     }
   }
 
@@ -64,9 +72,6 @@
 
   function photoKey() {
     return "hirelink.photo." + meId;
-  }
-  function cvKey() {
-    return "hirelink.cv." + meId;
   }
 
   function initials(name) {
@@ -281,7 +286,15 @@
       document.getElementById("pf-roles").value = p.soughtRoles || "";
       document.getElementById("pf-loc").value = p.preferredLocations || "";
       document.getElementById("pf-contracts").value = p.preferredContracts || "";
-      document.getElementById("pf-level").value = p.experienceLevel || "";
+      const lvlSel = document.getElementById("pf-level");
+      const lvl = p.experienceLevel || "";
+      if (lvl && ![].some.call(lvlSel.options, (o) => o.value === lvl)) {
+        const opt = document.createElement("option");
+        opt.value = lvl;
+        opt.textContent = lvl;
+        lvlSel.appendChild(opt);
+      }
+      lvlSel.value = lvl;
       await HireLinkPlaces.ready();
       const contracts = await HireLinkAPI.api("/catalog/suggest?kind=contract&q=").catch(() => []);
       if (!pickers.roles) {
@@ -292,10 +305,6 @@
       Object.values(pickers).forEach((x) => x.refresh());
       paintFacts(p);
       showPhoto(localStorage.getItem(photoKey()), p.fullName);
-      if (location.hash === "#photo-upload") {
-        const node = document.getElementById("photo-upload");
-        if (node) node.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
       await showSavedCv(p);
       setDirty(false);
     } catch (err) {
@@ -435,10 +444,10 @@
     }).filter(Boolean);
     return parts.join("\n") || (document.getElementById("pf-skills") || {}).value || "";
   }
-  function pushCoach(who, text) {
+  function pushCoach(who, text, keep) {
     if (!coachLog) return;
     coachLog.hidden = false;
-    coachLog.innerHTML = "";
+    if (!keep) coachLog.innerHTML = "";
     const row = document.createElement("article");
     row.className = "coach-msg";
     const title = document.createElement("strong");
@@ -609,21 +618,34 @@
   async function askCoach(message) {
     const text = cvText();
     if (!text.trim()) {
+      HireLink.toast("Coach", "Déposez d’abord un CV et confirmez les sections.", "info");
+      return;
+    }
+    const send = document.querySelector("#coach-form button[type=submit]");
+    if (send) send.disabled = true;
+    pushCoach("Vous", message, true);
+    try {
+      const data = await HireLinkCredits.run("/ai/coach", { message: message, cvText: text });
+      pushCoach("Coach", data.content || "Pas de réponse.", true);
+    } catch (err) {
+      if (!err.handled) HireLink.toast("Coach", err.message, "danger");
+    } finally {
+      if (send) send.disabled = false;
+    }
+  }
+  async function summarizeCv() {
+    const text = cvText();
+    if (!text.trim()) {
       HireLink.toast("Synthèse", "Déposez d’abord un CV et confirmez les sections.", "info");
       return;
     }
     const send = document.getElementById("coach-analyze");
     if (send) send.disabled = true;
     try {
-      const data = await HireLinkAPI.api("/ai/cv-summary", {
-        method: "POST",
-        body: {
-          cvText: text,
-        },
-      });
+      const data = await HireLinkCredits.run("/ai/cv-summary", { cvText: text });
       pushCoach("Synthèse", data.content || "Pas de synthèse.");
     } catch (err) {
-      HireLink.toast(err.status === 402 ? "Crédits épuisés" : "Synthèse", err.message, err.status === 402 ? "warn" : "danger");
+      if (!err.handled) HireLink.toast("Synthèse", err.message, "danger");
     } finally {
       if (send) send.disabled = false;
     }
@@ -640,11 +662,22 @@
     });
   }
   const analyze = document.getElementById("coach-analyze");
-  if (analyze) {
-    analyze.addEventListener("click", () => askCoach("Quelles améliorations concrètes apporter à ce CV ?"));
+  if (analyze) analyze.addEventListener("click", summarizeCv);
+
+  const rewrite = document.getElementById("profile-rewrite");
+  if (rewrite) {
+    rewrite.addEventListener("click", () => {
+      rewrite.disabled = true;
+      showAi("/ai/profile-rewrite", {
+        skills: document.getElementById("pf-skills").value,
+        roles: document.getElementById("pf-roles").value,
+        level: document.getElementById("pf-level").value,
+      }).finally(() => { rewrite.disabled = false; });
+    });
   }
 
   bindDirty();
   setDirty(false);
   load();
+  HireLinkCredits.paintCosts();
 })();

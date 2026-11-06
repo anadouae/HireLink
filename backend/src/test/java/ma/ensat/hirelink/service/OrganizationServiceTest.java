@@ -10,10 +10,12 @@ import ma.ensat.hirelink.repository.OrganizationRepository;
 import ma.ensat.hirelink.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -29,15 +31,17 @@ class OrganizationServiceTest {
     private OrganizationService service;
     private User owner;
     private Organization org;
+    private UserRepository users;
 
     @BeforeEach
     void setUp() {
         OrganizationRepository orgs = mock(OrganizationRepository.class);
         MembershipRepository memberships = mock(MembershipRepository.class);
-        UserRepository users = mock(UserRepository.class);
+        users = mock(UserRepository.class);
         verification = mock(CompanyVerificationService.class);
         service = new OrganizationService(orgs, memberships, users, verification, mock(JobOfferRepository.class),
-                mock(BillingCatalogService.class), mock(NotificationService.class));
+                mock(BillingCatalogService.class), mock(NotificationService.class),
+                mock(ma.ensat.hirelink.repository.OrganizationInvitationRepository.class), mock(AuditService.class));
 
         owner = new User();
         owner.setId(7L);
@@ -83,5 +87,20 @@ class OrganizationServiceTest {
         service.updateMine(owner, "Atlas Digital", "002100000000099", null, null, null, null, null);
 
         verify(verification).verify("002100000000099", "Atlas Digital", 7L, "rh@atlas.ma");
+    }
+
+    @Test
+    void inviterUnCandidatNeChangePasSonRole() {
+        User candidate = new User();
+        candidate.setId(12L);
+        candidate.setEmail("candidate@example.com");
+        candidate.setRole(ma.ensat.hirelink.model.Role.CANDIDAT);
+        when(users.findByEmailIgnoreCase("candidate@example.com")).thenReturn(java.util.Optional.of(candidate));
+
+        assertThrows(ResponseStatusException.class,
+                () -> service.invite(owner, "candidate@example.com", OrgRole.RECRUTEUR, false));
+
+        assertEquals(ma.ensat.hirelink.model.Role.CANDIDAT, candidate.getRole());
+        verify(users, never()).save(any(User.class));
     }
 }

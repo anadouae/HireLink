@@ -5,6 +5,8 @@
 (function (global) {
   const KEY = "hirelink.places.v1";
   let byName = null;
+  let countryByCity = null;
+  let countryNames = null;
   let loading = null;
 
   function base() {
@@ -17,9 +19,13 @@
 
   function index(rows) {
     byName = new Map();
+    countryByCity = new Map();
+    countryNames = new Set();
     rows.forEach(function (p) {
       byName.set(fold(p.city || p.country), p.flag);
       if (!byName.has(fold(p.country))) byName.set(fold(p.country), p.flag);
+      if (p.city) countryByCity.set(fold(p.city), p.country);
+      countryNames.add(fold(p.country));
     });
   }
 
@@ -52,5 +58,44 @@
     return "";
   }
 
-  global.HireLinkPlaces = { ready: ready, flagOf: flagOf };
+  /** Le pays déduit d'une ville (« Tétouan » -> « Maroc »), ou chaîne vide si le catalogue ne la connaît pas. */
+  function countryOf(city) {
+    if (!countryByCity) return "";
+    return countryByCity.get(fold(String(city || "").split(/[·,|/]/)[0].trim())) || "";
+  }
+
+  /** Vrai pour « Maroc », « France »… : un pays ne doit jamais tenir la place d'une ville. */
+  function isCountry(text) {
+    if (!countryNames) return false;
+    return countryNames.has(fold(String(text || "").trim()));
+  }
+
+  /** Segments d'un lieu qui décrivent l'organisation du travail et non une ville. */
+  const MODE_SEGMENT = /t[ée]l[ée]travail|remote|hybride|sur site|pr[ée]sentiel|[àa] distance|onsite|full[- ]?remote/i;
+
+  /**
+   * La ville d'un lieu saisi librement. Un segment qui nomme un mode de travail (« Remote Maroc »)
+   * ou un pays n'est pas une ville : on se rabat sur `fallback`, la ville de l'entreprise.
+   */
+  function cityOf(text, fallback) {
+    const parts = String(text || "").split(/[,·|/]/).map(function (s) { return s.trim(); }).filter(Boolean);
+    for (let i = 0; i < parts.length; i++) {
+      if (MODE_SEGMENT.test(parts[i]) || isCountry(parts[i])) continue;
+      return parts[i];
+    }
+    return String(fallback || "").trim();
+  }
+
+  /** « Tétouan » ou « Montréal · Canada » : le pays se déduit de la ville et ne alourdit pas une adresse marocaine. */
+  function placeLabel(text, fallback) {
+    const city = cityOf(text, fallback);
+    if (!city) return "";
+    const country = countryOf(city);
+    if (!country || fold(country) === fold(city) || /maroc/i.test(country)) return city;
+    return city + " · " + country;
+  }
+
+  global.HireLinkPlaces = {
+    ready: ready, flagOf: flagOf, countryOf: countryOf, isCountry: isCountry, cityOf: cityOf, placeLabel: placeLabel
+  };
 })(window);

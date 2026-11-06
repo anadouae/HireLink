@@ -29,6 +29,11 @@
     var s = readSession();
     return (s && TENUE_BY_ROLE[s.role]) || "neutre";
   }
+  /** La couronne s'ajoute au costume du rôle, elle ne le remplace pas : plan payé = couronne. */
+  function crownOn() {
+    var s = readSession();
+    return !!s && (s.planTier === "PREMIUM" || s.planTier === "PERFORMANCE" || s.premium === true);
+  }
   function firstName(fullName) {
     var clean = String(fullName || "").replace(/\s*\([^)]*\)\s*/g, " ").trim();
     return clean.split(/\s+/)[0] || "";
@@ -114,6 +119,11 @@
       '<path class="m-col" d="M91 138q9 8 18 0"/>' + badge("m-badge-bouclier", "m-badge-serrure"),
   };
 
+  /** Trois pointes, base posée sur le haut de l'écran : dessinée dans le groupe de la tête pour rester visible. */
+  var COURONNE = '<path class="m-couronne" d="M76 34L80 15l12 11 8-15 8 15 12-11 4 19z"/>' +
+    '<circle class="m-couronne-perle" cx="80" cy="13" r="2.1"/><circle class="m-couronne-perle" cx="100" cy="9" r="2.4"/>' +
+    '<circle class="m-couronne-perle" cx="120" cy="13" r="2.1"/>';
+
   function badge(cardClass, markClass) {
     var card = cardClass === "m-badge-bouclier"
       ? '<path class="' + cardClass + '" d="M100 160l10 3.6v8.6c0 6-4.4 9.4-10 12-5.6-2.6-10-6-10-12v-8.6z"/><circle class="' + markClass + '" cx="100" cy="171" r="2.7"/><rect class="' + markClass + '" x="99" y="171" width="2" height="6"/>'
@@ -146,15 +156,18 @@
    * SVG de la mascotte.
    * opts.pose    repos | bienvenue | succes | celebration | reflexion | erreur | avertissement | aurevoir | vide | notification
    * opts.tenue   neutre | candidat | recruteur | admin (défaut : selon le rôle connecté)
+   * opts.couronne false = jamais, true = toujours (défaut : plan payé de la session)
    * opts.variante  a | b | c — teinte du blazer (équipe recruteur) ; opts.extra : classe CSS supplémentaire
    */
   function markup(opts) {
     opts = opts || {};
     var pose = opts.pose || "repos";
     var tenue = opts.tenue || currentTenue();
+    var couronne = opts.couronne === undefined ? crownOn() : !!opts.couronne;
     var variante = opts.variante || "a";
     if (document.body) ensureDefs();
-    return '<svg class="mascotte mascotte--pose-' + pose + " mascotte--tenue-" + tenue + " mascotte--variante-" + variante + (opts.extra ? " " + opts.extra : "") +
+    return '<svg class="mascotte mascotte--pose-' + pose + " mascotte--tenue-" + tenue + " mascotte--variante-" + variante +
+      (couronne ? " mascotte--couronne" : "") + (opts.extra ? " " + opts.extra : "") +
       '" viewBox="0 0 200 244" aria-hidden="true" focusable="false">' +
       '<ellipse class="m-ombre" cx="100" cy="236" rx="40" ry="4"/>' +
       '<g class="m-saut"><g class="m-respire">' +
@@ -167,7 +180,8 @@
       '<g class="m-paupieres">' + eyelids(82, "g") + eyelids(118, "d") + "</g>" +
       '<g class="m-bouche"><path class="m-b-sourire" d="M90 98q10 8 20 0"/><path class="m-b-ouvert" d="M89 96q11 16 22 0z"/>' +
       '<ellipse class="m-b-o" cx="100" cy="101" rx="4.6" ry="5.6"/><path class="m-b-plat" d="M92 101h16"/><path class="m-b-triste" d="M91 104q9-8 18 0"/></g>' +
-      '<rect class="m-reflet" x="55" y="31" width="90" height="90" rx="14"/>' + (HEAD_ACCESSORIES[tenue] || "") + "</g>" +
+      '<rect class="m-reflet" x="55" y="31" width="90" height="90" rx="14"/>' + (HEAD_ACCESSORIES[tenue] || "") +
+      (couronne ? COURONNE : "") + "</g>" +
       '<g class="m-bras">' + arm("g") + arm("d") + "</g>" +
       (BAGGAGE[tenue] || "") + PROPS + "</g></g></svg>";
   }
@@ -449,7 +463,22 @@
       { pose: "aurevoir", tenue: TENUE_BY_ROLE[farewell.role] || "neutre" });
   }
 
-  document.addEventListener("DOMContentLoaded", showPendingFarewell);
+  /** Emplacements marqués data-mascotte dans les fiches de formulaire : la pose est un attribut, pas du JS. */
+  function mountSlots() {
+    document.querySelectorAll("[data-mascotte]").forEach(function (slot) {
+      if (slot.dataset.mascotteFait) return;
+      slot.dataset.mascotteFait = "1";
+      slot.classList.add("form-mascotte");
+      slot.innerHTML = markup({
+        pose: slot.dataset.mascottePose || "repos",
+        couronne: slot.dataset.mascotteCouronne === "1" ? true :
+          (slot.dataset.mascotteCouronne === "0" ? false : undefined)
+      });
+    });
+  }
 
-  global.Mascotte = { markup: markup, team: team, toast: toast, waiting: waiting, confirm: confirm, celebrate: celebrate, welcome: welcome, goodbye: goodbye };
+  document.addEventListener("DOMContentLoaded", showPendingFarewell);
+  document.addEventListener("DOMContentLoaded", mountSlots);
+
+  global.Mascotte = { markup: markup, team: team, toast: toast, waiting: waiting, confirm: confirm, celebrate: celebrate, welcome: welcome, goodbye: goodbye, mount: mountSlots };
 })(window);

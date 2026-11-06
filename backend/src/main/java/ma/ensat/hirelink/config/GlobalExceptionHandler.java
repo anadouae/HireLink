@@ -1,5 +1,6 @@
 package ma.ensat.hirelink.config;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import ma.ensat.hirelink.security.TooManyRequestsException;
 import ma.ensat.hirelink.service.AuditService;
@@ -51,13 +52,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(status).body(m);
     }
 
+    /** Refus exprimé par le contrôleur (ResponseStatusException 403 ou AccessDeniedException). */
+    private void deny(String reason, HttpServletRequest request) {
+        audit.denied(reason, request);
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<Map<String, Object>> status(ResponseStatusException e) {
+    public ResponseEntity<Map<String, Object>> status(ResponseStatusException e, HttpServletRequest request) {
         HttpStatus st = HttpStatus.resolve(e.getStatusCode().value());
         if (st == null) st = HttpStatus.INTERNAL_SERVER_ERROR;
         if (st.is5xxServerError()) return unexpected(e);
         if (st == HttpStatus.FORBIDDEN) {
-            audit.record("ACCESS_DENIED", null, null, null, null, false, e.getReason());
+            deny(e.getReason(), request);
         }
         return body(st, e.getReason() == null ? st.getReasonPhrase() : e.getReason(), null);
     }
@@ -103,8 +109,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<Map<String, Object>> denied(AccessDeniedException e) {
-        audit.record("ACCESS_DENIED", null, null, null, null, false, "Rôle insuffisant");
+    public ResponseEntity<Map<String, Object>> denied(AccessDeniedException e, HttpServletRequest request) {
+        deny("Rôle insuffisant", request);
         return body(HttpStatus.FORBIDDEN, "Accès refusé.", null);
     }
 

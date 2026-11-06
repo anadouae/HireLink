@@ -25,6 +25,10 @@
 }
 .mascotte * { transform-box: view-box; }
 
+/* Emplacement « data-mascotte » au-dessus d'une fiche de formulaire */
+.form-mascotte { display: flex; justify-content: center; margin: 0 0 .9rem; }
+.form-mascotte .mascotte { width: 88px; max-width: 88px; }
+
 /* Tenues : couleurs du corps et des manches */
 .mascotte--tenue-candidat { --manche: #f5f1ec; --manche-bord: #cfc4b6; --torse: #f5f1ec; }
 .mascotte--tenue-recruteur { --manche: var(--blazer); --manche-bord: var(--blazer-revers); --torse: var(--blazer); }
@@ -71,6 +75,8 @@
 .m-cravate, .m-cravate-noeud { fill: #7a2032; stroke: #4f1421; stroke-width: 1; }
 .m-chemise { fill: #fffdfb; }
 .m-revers { fill: var(--blazer-revers); }
+.m-couronne { fill: #e9b95f; stroke: #9b6b16; stroke-width: 1.4; stroke-linejoin: round; }
+.m-couronne-perle { fill: #f7d99a; stroke: #9b6b16; stroke-width: 1; }
 .m-bouton { fill: var(--champagne); }
 .m-cordon { fill: none; stroke: var(--champagne); stroke-width: 2.2; stroke-linecap: round; }
 .m-badge-carte { fill: #fffdfb; stroke: var(--champagne); stroke-width: 1.4; }
@@ -185,11 +191,11 @@ body:has(.overlay--drawer.is-open) .mascotte-toasts { right: calc(min(560px, 100
 .mascotte-toast-visuel { flex: 0 0 68px; width: 68px; }
 .mascotte-toast--equipe .mascotte-toast-visuel { flex-basis: 150px; width: 150px; }
 .mascotte-toast-texte { display: flex; flex-direction: column; gap: 0.1rem; min-width: 0; }
-.mascotte-toast-texte strong { font-size: 0.93rem; line-height: 1.25; }
-.mascotte-toast-texte span { font-size: 0.82rem; line-height: 1.35; color: var(--ink-soft, #5e5558); overflow-wrap: anywhere; }
+.mascotte-toast-texte strong { font-size: var(--text-sm); line-height: 1.25; }
+.mascotte-toast-texte span { font-size: var(--text-xs); line-height: 1.35; color: var(--ink-soft, #5e5558); overflow-wrap: anywhere; }
 .mascotte-fermer {
   position: absolute; top: 0.4rem; right: 0.4rem; width: 1.6rem; height: 1.6rem;
-  border: 0; border-radius: 50%; background: transparent; color: var(--ink-soft, #5e5558); font-size: 0.8rem; cursor: pointer;
+  border: 0; border-radius: 50%; background: transparent; color: var(--ink-soft, #5e5558); font-size: var(--text-xs); cursor: pointer;
 }
 .mascotte-fermer:hover { background: rgba(122, 32, 50, 0.1); color: #7a2032; }
 .mascotte-sortant { animation: mascotte-sortie 0.26s ease forwards !important; }
@@ -215,8 +221,8 @@ body:has(.overlay--drawer.is-open) .mascotte-toasts { right: calc(min(560px, 100
 .mascotte-dialogue.is-danger { border-top-color: #9b2c2c; }
 .mascotte-dialogue-visuel { flex: 0 0 104px; width: 104px; }
 .mascotte-dialogue-corps { flex: 1; min-width: 0; }
-.mascotte-dialogue h3 { margin: 0 0 0.3rem; font-size: 1.15rem; color: #7a2032; }
-.mascotte-dialogue p { margin: 0; font-size: 0.92rem; color: var(--ink-soft, #5e5558); }
+.mascotte-dialogue h3 { margin: 0 0 0.3rem; font-size: var(--text-md); color: #7a2032; }
+.mascotte-dialogue p { margin: 0; font-size: var(--text-sm); color: var(--ink-soft, #5e5558); }
 .mascotte-dialogue-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-end; margin-top: 1rem; }
 .mascotte-voile.mascotte-sortant { animation: mascotte-sortie 0.2s ease forwards !important; }
 
@@ -232,8 +238,8 @@ body:has(.overlay--drawer.is-open) .mascotte-toasts { right: calc(min(560px, 100
 }
 .mascotte-celebration-visuel { flex: 0 0 200px; width: 200px; }
 .mascotte-celebration-texte { display: flex; flex-direction: column; gap: 0.2rem; }
-.mascotte-celebration-texte strong { font-size: 1.15rem; color: #7a2032; }
-.mascotte-celebration-texte span { font-size: 0.92rem; color: var(--ink-soft, #5e5558); }
+.mascotte-celebration-texte strong { font-size: var(--text-md); color: #7a2032; }
+.mascotte-celebration-texte span { font-size: var(--text-sm); color: var(--ink-soft, #5e5558); }
 .mascotte-celebration.mascotte-sortant { animation: mascotte-sortie 0.26s ease forwards !important; transform: translateX(-50%); }
 
 @keyframes mascotte-entree { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
@@ -242,7 +248,7 @@ body:has(.overlay--drawer.is-open) .mascotte-toasts { right: calc(min(560px, 100
 @keyframes mascotte-fondu { from { opacity: 0; } to { opacity: 1; } }
 
 /* Attente (IA, chargements longs) */
-.mascotte-attente { display: flex; align-items: center; gap: 0.8rem; color: var(--ink-soft, #5e5558); font-size: 0.9rem; }
+.mascotte-attente { display: flex; align-items: center; gap: 0.8rem; color: var(--ink-soft, #5e5558); font-size: var(--text-sm); }
 .mascotte-attente-visuel { flex: 0 0 64px; width: 64px; }
 
 /* États vides et erreurs de chargement (app-shell) */
@@ -261,6 +267,6 @@ body:has(.overlay--drawer.is-open) .mascotte-toasts { right: calc(min(560px, 100
   .mascotte-celebration { transform: translateX(-50%); }
 }
 
-.mascotte-champ { display: grid; gap: 0.35rem; margin: 0.6rem 0 0; font-size: 0.82rem; font-weight: 600; color: var(--ink-soft, #5e5558); }
+.mascotte-champ { display: grid; gap: 0.35rem; margin: 0.6rem 0 0; font-size: var(--text-xs); font-weight: 600; color: var(--ink-soft, #5e5558); }
 .mascotte-champ textarea { width: 100%; resize: vertical; font: inherit; font-weight: 400; color: var(--ink, #1a1214); padding: 0.55rem 0.7rem; border: 1px solid rgba(26, 18, 20, 0.18); border-radius: 10px; background: var(--surface, #fff); }
 .mascotte-champ textarea:focus-visible { outline: 2px solid var(--bordeaux, #7a2032); outline-offset: 1px; }

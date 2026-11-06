@@ -3,14 +3,14 @@
   const plan = params.get("plan") === "recruiter" ? "recruiter" : "candidate";
   const PLANS = {
     candidate: {
-      title: "Candidat Premium",
+      title: "Candidat Performance",
       month: 39,
-      points: ["Alertes de compatibilité", "Préparation d’entretien", "Profil mis en avant"],
+      points: ["40 usages IA par mois", "Préparation d’entretien", "Réécriture et contrôle de la langue"],
     },
     recruiter: {
       title: "Recruteur Premium",
       month: 299,
-      points: ["Alertes de délai de réponse", "Sièges d’équipe", "Offres mises en avant"],
+      points: ["200 usages IA par mois", "25 sièges d’équipe", "Alertes de délai de réponse"],
     },
   };
   const conf = PLANS[plan];
@@ -52,6 +52,7 @@
     document.getElementById("pay-tva").textContent = money(tva);
     document.getElementById("pay-ttc").textContent = money(ttc);
     document.getElementById("pay-submit").textContent = "Payer " + money(ttc);
+    document.getElementById("pay-demo").textContent = "Activer « " + conf.title + " » sans carte (démonstration)";
     document.querySelectorAll(".pay-cycle button").forEach((b) => {
       b.classList.toggle("is-on", b.getAttribute("data-cycle") === cycle);
       b.setAttribute("aria-pressed", b.getAttribute("data-cycle") === cycle ? "true" : "false");
@@ -170,7 +171,8 @@
 
   function receipt(method, invoice) {
     const ttc = totalTtc();
-    const id = invoice ? invoice.number : "HL-" + Date.now().toString().slice(-8);
+    // Aucun numéro inventé : le serveur n'émet une facture que si la formule change vraiment.
+    const id = invoice && invoice.number ? invoice.number : "Aucune facture émise";
     const when = new Date().toLocaleString("fr-FR");
     const esc = (s) =>
       String(s == null ? "" : s)
@@ -207,9 +209,16 @@
     return true;
   }
 
-  document.getElementById("pay-demo").addEventListener("click", () => {
+  document.getElementById("pay-demo").addEventListener("click", (e) => {
+    const btn = e.currentTarget;
+    // Même verrou que le paiement par carte : deux « Activer » simultanés factureront deux fois
+    // (le serveur ne compare la formule qu'avant de valider sa transaction).
+    if (btn.disabled) return;
     showError("");
     if (needLogin()) return;
+    const label = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "Activation…";
     const email = (document.getElementById("pay-email").value || (session && session.email) || "demo@hirelink.ma").trim();
     activate()
       .then((invoice) =>
@@ -225,7 +234,11 @@
           invoice
         )
       )
-      .catch((err) => showError(err.message || "Activation impossible"));
+      .catch((err) => {
+        showError(err.message || "Activation impossible");
+        btn.disabled = false;
+        btn.textContent = label;
+      });
   });
 
   document.getElementById("pay-form").addEventListener("submit", (e) => {

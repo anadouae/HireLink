@@ -42,7 +42,7 @@ public class SkillMatchingService {
         return explain(candidateSkillsCsv, requiredSkillsCsv).score();
     }
 
-    /** Détail vérifiable pour matching_analyses (F14) : compétences couvertes et manquantes, noms normalisés. */
+    /** Détail vérifiable affiché au recruteur : compétences couvertes et manquantes, noms normalisés. */
     public MatchDetail explain(String candidateSkillsCsv, String requiredSkillsCsv) {
         Set<String> candidate = new HashSet<>();
         for (String raw : split(candidateSkillsCsv)) candidate.add(catalog.key(raw));

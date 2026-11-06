@@ -61,9 +61,15 @@ html[data-theme="dark"] .price-card { background: rgba(30, 26, 34, 0.92); }
 html[data-theme="dark"] .footer-pulse::before,
 html[data-theme="dark"] .footer-pulse::after { background: var(--surface-2); }
 html[data-theme="dark"] .co-profile { background: var(--surface); border: 1px solid var(--line-strong); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.13); }
-html[data-theme="dark"] .co-about,
-html[data-theme="dark"] .co-layout > section { background: var(--surface); border: 1px solid var(--line-strong); }
-html[data-theme="dark"] .co-facts span { color: #f0b8c4; }
+html[data-theme="dark"] .co-card,
+html[data-theme="dark"] .co-main { background: var(--surface); border: 1px solid var(--line-strong); }
+html[data-theme="dark"] .co-skill,
+html[data-theme="dark"] .co-signal { color: #f0b8c4; background: rgba(224, 122, 142, 0.14); }
+html[data-theme="dark"] .co-signal--ok { color: #7fd1a4; background: rgba(29, 161, 92, 0.16); }
+html[data-theme="dark"] .co-keys div { border-bottom: 1px dashed rgba(255, 255, 255, 0.08); padding-bottom: 0.3rem; }
+html[data-theme="dark"] .co-stat + .co-stat { border-left-color: rgba(255, 255, 255, 0.1); }
+html[data-theme="dark"] .co-logo,
+html[data-theme="dark"] .co-logo img { border-color: var(--surface); background: var(--surface); }
 html[data-theme="dark"] .board-landing { background: var(--surface); }
 html[data-theme="dark"] .board-landing .site-header { background: var(--surface); border-bottom: 1px solid var(--line-strong); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.11); }
 html[data-theme="dark"] .board-landing .nav a.is-current { color: #f0b8c4; }
@@ -180,5 +186,4 @@ html[data-theme="dark"] body:has(.pay-wrap) {
 html[data-theme="dark"] .pay-cycle button.is-on { background: rgba(240, 184, 196, 0.12); }
 html[data-theme="dark"] .pay-error { color: #f5a3a3; }
 html[data-theme="dark"] .pay-submit, html[data-theme="dark"] button.pay-submit { color: #fff; }
-html[data-theme="dark"] .co-facts .co-site { color: #f0b8c4; }
 html[data-theme="dark"] .pipe-step.is-active span, html[data-theme="dark"] .pipe-step.is-done span { color: #f0b8c4; }

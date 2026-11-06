@@ -14,7 +14,10 @@
   const KIND_FR = { HR: "Entretien RH", TECHNICAL: "Entretien technique", MANAGER: "Avec le manager", CASE: "Étude de cas", TEAM: "Rencontre d’équipe", FINAL: "Entretien final" };
   let apps = [];
   let offers = [];
+  let pace = null;
+  let org = null;
   let ready = { apps: false, offers: false };
+  const PACE_FR = { REACTIF: "Réactif", ATTENTIF: "Attentif" };
 
   const first = String(session.fullName || "").replace(/\s*\(alias\)\s*/i, "").trim().split(/\s+/)[0] || "";
   $("hello").textContent = "Bonjour" + (first ? ", " + first : "");
@@ -40,7 +43,7 @@
     const toSort = apps.filter((a) => a.status === "SUBMITTED");
     const ivToday = apps.filter((a) => isLive(a) && sameDay(new Date(a.interviewAt), today));
     const urgent = apps.filter(isUrgent);
-    const expiring = offers.filter((o) => o.published && !o.suspended && o.deadline && daysTo(o.deadline) >= 0 && daysTo(o.deadline) <= 7)
+    const expiring = offers.filter((o) => RC.isLiveOffer(o) && o.deadline && daysTo(o.deadline) >= 0 && daysTo(o.deadline) <= 7)
       .sort((x, y) => String(x.deadline).localeCompare(String(y.deadline)));
     const nextIv = ivToday.slice().sort((x, y) => new Date(x.interviewAt) - new Date(y.interviewAt))[0];
     const tiles = [
@@ -123,7 +126,7 @@
       { t: "Délais de réponse tenus", v: slaPct + " %", s: watched.length - onTime ? (watched.length - onTime) + " en retard" : "Aucun retard", h: "recruiter-pipeline.html?view=breached" },
       { t: "Embauches (30 jours)", v: hired30, s: "Dossiers finalisés", h: "recruiter-candidates.html?view=hired" },
     ];
-    if (RC.canManage()) k.splice(1, 0, { t: "Offres publiées", v: offers.filter((o) => o.published).length, s: RC.plural(offers.length, "offre") + " au total", h: "recruiter-offers.html" });
+    if (RC.canManage()) k.splice(1, 0, { t: "Offres en ligne", v: offers.filter(RC.isLiveOffer).length, s: RC.plural(offers.length, "offre") + " au total", h: "recruiter-offers.html" });
     $("db-kpis").innerHTML = k.map((x) => '<a class="db-kpi" href="' + x.h + '"><small>' + esc(x.t) + "</small><b>" + esc(String(x.v)) + "</b><span>" + esc(x.s) + "</span></a>").join("");
   }
 
@@ -140,12 +143,12 @@
     const today = new Date();
     root.innerHTML = list.map((a) => {
       const d = new Date(a.interviewAt);
-      const visio = a.interviewType !== "ONSITE";
+      const t = RC.interviewTypeUi(a.interviewType);
       const soon = d.getTime() - now < 2 * 3600e3 && d.getTime() > now - 3600e3;
       const day = sameDay(d, today) ? "Aujourd’hui" : sameDay(d, new Date(now + 864e5)) ? "Demain" : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" });
-      return '<a class="db-ev ' + (visio ? "t-visio" : "t-onsite") + (soon ? " is-soon" : "") + '" href="recruiter-agenda.html?view=day&date=' + ymd(d) + "&focus=interview:" + a.id + '">' +
-        '<span class="db-ev-ico" aria-hidden="true">' + ico(visio ? "video" : "building") + "</span>" +
-        '<span class="db-ev-main"><strong>' + esc(a.candidateName || "Candidat") + "</strong><span>" + esc(KIND_FR[a.interviewKind] || "Entretien") + " · " + (visio ? "Visioconférence" : "Sur site") + " · " + esc(a.jobTitle || "") + "</span></span>" +
+      return '<a class="db-ev ' + t.cls + (soon ? " is-soon" : "") + '" href="recruiter-agenda.html?view=day&date=' + ymd(d) + "&focus=interview:" + a.id + '">' +
+        '<span class="db-ev-ico" aria-hidden="true">' + ico(t.icon) + "</span>" +
+        '<span class="db-ev-main"><strong>' + esc(a.candidateName || "Candidat") + "</strong><span>" + [KIND_FR[a.interviewKind] || "Entretien", t.label, esc(a.jobTitle || "")].filter((v, i, all) => v && all.indexOf(v) === i).join(" · ") + "</span></span>" +
         '<span class="db-ev-when"><b>' + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + "</b><small>" + esc(day) + "</small></span></a>";
     }).join("");
   }
@@ -157,15 +160,35 @@
 
   function verifyBanner(org) { $("verify-banner").hidden = !org || !!org.verified; }
 
+  /** Les deux seules distinctions du tableau de bord, calculées sur des délais déjà constatés. */
+  function renderSignals() {
+    const root = $("db-signals");
+    if (!root) return;
+    const bits = [];
+    const label = pace ? PACE_FR[pace.badge] : "";
+    if (label) {
+      const decided = RC.plural(pace.answered, "dossier") + " traité" + (pace.answered > 1 ? "s" : "");
+      const title = pace.medianDays != null && pace.medianDays <= 3
+        ? "Première réponse en " + (Math.round(Number(pace.medianDays) * 10) / 10).toLocaleString("fr-FR") +
+          " j en médiane sur vos " + decided + "."
+        : "Vous répondez à la majorité de vos dossiers en moins de 3 jours (" + decided + ").";
+      bits.push('<span class="badge badge-brass badge-pop" title="' + esc(title) + '">' + ico("hourglass") + esc(label) + "</span>");
+    }
+    if (org && org.verified) bits.push('<span class="badge badge-ok badge-pop" title="' + esc("Identité de l’entreprise confirmée par HireLink.") + '">' + ico("shield") + "Vérifiée</span>");
+    root.innerHTML = bits.length ? " " + bits.join(" ") : "";
+  }
+
   function load() {
     RC.skeleton($("inbox-list"), 4, 52);
     RC.data.pipeline((a) => { apps = a || []; ready.apps = true; renderAll(); },
       (err) => ["inbox-list", "upcoming"].forEach((id) => RC.errorState($(id), err.message, load)));
     RC.data.offers((o) => { offers = o || []; ready.offers = true; renderAll(); }, () => {});
+    RC.data.pace((p) => { pace = p; renderSignals(); }, () => {});
   }
 
-  document.addEventListener("rc:org", (e) => verifyBanner(e.detail));
-  verifyBanner(RC.getOrg());
+  document.addEventListener("rc:org", (e) => { org = e.detail; verifyBanner(org); renderSignals(); });
+  org = RC.getOrg();
+  verifyBanner(org);
   load();
   document.addEventListener("hirelink:push", () => { RC.data.invalidate(); load(); });
 })(window);

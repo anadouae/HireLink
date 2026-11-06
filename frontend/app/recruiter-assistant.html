@@ -10,15 +10,15 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
   <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -37,10 +37,10 @@
           <div class="rc-head-actions"></div>
         </div>
         <section class="rc-card"><div class="rc-card-body rc-credit-ring">
-          <div style="flex:1"><small class="rc-muted" style="font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size:.7rem">Crédits IA restants</small>
-            <div style="font-size:1.6rem;font-weight:800;letter-spacing:-.02em" id="ai-credits">—</div>
+          <div style="flex:1"><small class="rc-muted" style="font-weight:700;letter-spacing:.06em;text-transform:uppercase;font-size: var(--text-2xs)">Crédits IA restants</small>
+            <div style="font-size: var(--text-2xl);font-weight: 700;letter-spacing: var(--ls-ui)" id="ai-credits">—</div>
             <div class="rc-meter"><i id="ai-meter"></i></div>
-            <p class="rc-muted" style="margin:.5rem 0 0;font-size:.82rem" id="ai-plan">&nbsp;</p></div>
+            <p class="rc-muted" style="margin:.5rem 0 0;font-size: var(--text-sm)" id="ai-plan">&nbsp;</p></div>
           <a class="btn btn-ghost btn-sm" href="recruiter-settings.html#plans">Formules</a>
         </div></section>
         <div class="rc-tabs" role="tablist">
@@ -52,25 +52,26 @@
             <div class="rc-field is-full"><label for="kit-offer">Offre</label><select id="kit-offer"><option value="">— Saisie libre —</option></select></div>
             <div class="rc-field"><label for="kit-title">Intitulé du poste</label><input id="kit-title" placeholder="Développeur Full-Stack Java" /></div>
             <div class="rc-field"><label for="kit-skills">Compétences clés</label><input id="kit-skills" placeholder="Java, Spring Boot, MySQL" /></div>
-            <div class="is-full"><button type="button" class="btn btn-primary" id="kit-go">Générer la grille</button></div>
+            <div class="is-full"><button type="button" class="btn btn-primary" id="kit-go" data-ai-cost>Générer la grille</button></div>
             <div class="is-full rc-ai-out" id="kit-out" hidden></div></div></div></section>
         <section class="rc-card rc-panel" id="pane-cv" hidden><div class="rc-card-head"><div><h2>Synthèse de CV</h2><p>Résumé en quelques lignes d’un dossier reçu : métier probable, expériences, compétences, point d’attention.</p></div></div>
           <div class="rc-card-body"><div class="rc-form">
             <div class="rc-field is-full"><label for="cv-app">Dossier</label><select id="cv-app"><option value="">— Choisir un dossier —</option></select></div>
-            <div class="is-full"><button type="button" class="btn btn-primary" id="cv-go">Résumer le dossier</button></div>
+            <div class="is-full"><button type="button" class="btn btn-primary" id="cv-go" data-ai-cost>Résumer le dossier</button></div>
             <div class="is-full rc-ai-out" id="cv-out" hidden></div></div></div></section>
       </main>
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101r"></script>
-  <script defer src="../js/premium.js?v=20261102s"></script>
-  <script defer src="../js/ui.js?v=20261101r"></script>
-  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/mascotte.js?v=20261105i"></script>
+  <script defer src="../js/premium.js?v=20261106g"></script>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261106c"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261101r"></script>
-  <script defer src="../js/in-app-help.js?v=20261102q"></script>
-  <script defer src="../js/app-shell.js?v=20261102q"></script>
-  <script defer src="../js/recruiter-assistant.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261103h"></script>
+  <script defer src="../js/in-app-help.js?v=20261105s"></script>
+  <script defer src="../js/credits.js?v=20261105v"></script>
+  <script defer src="../js/app-shell.js?v=20261105y"></script>
+  <script defer src="../js/recruiter-assistant.js?v=20261105u"></script>
 </body>
 </html>

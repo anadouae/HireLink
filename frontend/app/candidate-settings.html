@@ -4,21 +4,21 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Paramètres Candidat — HireLink</title>
+  <title>Paramètres · Candidat — HireLink</title>
   <meta name="robots" content="noindex" />
   <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
   <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -87,7 +87,17 @@
                 <form id="settings-path">
                   <div class="card-body form-grid">
                     <label class="input-group">École<input id="set-school" class="form-control" data-suggest="school" placeholder="Rechercher une école" /></label>
-                    <label class="input-group">Niveau de formation<input id="set-level" class="form-control" data-suggest="study" placeholder="Bac+5, Master…" /></label>
+                    <label class="input-group">Niveau d'expérience
+                      <select id="set-level" class="form-control">
+                        <option value="">—</option>
+                        <option>Stagiaire</option>
+                        <option>Junior</option>
+                        <option>Confirmé</option>
+                        <option>Senior</option>
+                        <option>Lead</option>
+                        <option>Manager</option>
+                      </select>
+                    </label>
                     <label class="input-group">Domaine de formation<input id="set-domain" class="form-control" data-suggest="domain" placeholder="Informatique, Finance…" /></label>
                     <label class="input-group">Année d'obtention (ou prévue)<input id="set-grad-year" class="form-control" type="number" min="1950" max="2100" placeholder="2026" /></label>
                     <label class="input-group">Type de travail
@@ -148,13 +158,12 @@
                   <details class="plan-fold" id="fold-performance">
                     <summary><span>Performance</span><em data-plan-mark="performance">À activer</em></summary>
                     <ul>
-                      <li>Synthèses du CV sans plafond mensuel (Essentiel : 5)</li>
-                      <li>Alertes dès qu’une offre dépasse votre seuil de compatibilité</li>
-                      <li>Profil mis en avant dans les recherches recruteur</li>
-                      <li>Historique et tendances de vos candidatures</li>
+                      <li>40 usages de l’assistant IA par mois (Essentiel : 5)</li>
+                      <li>Synthèses du CV et réécriture du profil</li>
                       <li>Préparation d’entretien à partir du poste et de votre CV</li>
+                      <li>Contrôle de la langue sur le profil</li>
                     </ul>
-                    <p><strong>39 MAD / mois.</strong> Même logique qu’Essentiel : la synthèse lit votre CV et dit ce qui manque. Elle ne postule pas. Vous pouvez revenir à Essentiel à tout moment.</p>
+                    <p><strong>39 MAD / mois.</strong> Même logique qu’Essentiel : la synthèse lit votre CV et dit ce qui manque. Elle ne postule pas. Ces quatre usages sont déjà offerts en Essentiel, Performance relève seulement le compteur mensuel — votre profil n’est pas mieux classé ni mis en avant. Vous pouvez revenir à Essentiel à tout moment.</p>
                   </details>
                 </div>
                 <footer class="card-footer">
@@ -172,7 +181,7 @@
               <article class="settings-card">
                 <header class="card-header"><h2>E-mails</h2><p>Les e-mails de sécurité et de compte sont toujours envoyés.</p></header>
                 <div class="card-body">
-                  <label class="check-line"><input type="checkbox" id="set-mail" /> Recevoir aussi mes alertes par e-mail (rappels d’entretien, résumés, nouveautés)</label>
+                  <label class="check-line"><input type="checkbox" id="set-mail" /> Recevoir aussi mes alertes par e-mail (candidatures et entretiens)</label>
                 </div>
                 <footer class="card-footer"><button type="button" class="btn btn-primary" id="btn-save-mail">Enregistrer</button></footer>
               </article>
@@ -183,7 +192,7 @@
                 </div>
               </article>
               <article class="settings-card">
-                <header class="card-header"><h2>Sécurité du compte</h2><p>Mot de passe, passkeys, appareils connectés, désactivation ou suppression du compte : tout est regroupé sur la page Sécurité.</p></header>
+                <header class="card-header"><h2>Sécurité du compte</h2><p>Mot de passe, double authentification, passkeys, appareils connectés, désactivation ou suppression du compte : tout est regroupé sur la page Sécurité.</p></header>
                 <div class="card-body" style="display:flex;justify-content:flex-end">
                   <a class="btn btn-secondary" href="security.html">Ouvrir la page Sécurité</a>
                 </div>
@@ -196,16 +205,17 @@
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101r"></script>
-  <script defer src="../js/premium.js?v=20261102s"></script>
-  <script defer src="../js/ui.js?v=20261101r"></script>
-  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/mascotte.js?v=20261105i"></script>
+  <script defer src="../js/premium.js?v=20261106g"></script>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261106c"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261101r"></script>
-  <script defer src="../js/in-app-help.js?v=20261102q"></script>
-  <script defer src="../js/app-shell.js?v=20261102q"></script>
-  <script defer src="../js/growth.js?v=20261101r"></script>
-  <script defer src="../js/suggest.js?v=20261101r"></script>
-  <script defer src="../js/candidate-settings.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261103h"></script>
+  <script defer src="../js/in-app-help.js?v=20261105s"></script>
+  <script defer src="../js/credits.js?v=20261105v"></script>
+  <script defer src="../js/app-shell.js?v=20261105y"></script>
+  <script defer src="../js/growth.js?v=20261106g"></script>
+  <script defer src="../js/suggest.js?v=20261103g"></script>
+  <script defer src="../js/candidate-settings.js?v=20261105w"></script>
 </body>
 </html>

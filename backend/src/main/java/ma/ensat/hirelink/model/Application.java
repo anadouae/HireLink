@@ -60,7 +60,7 @@ public class Application {
     @Column(name = "cover_letter", columnDefinition = "TEXT")
     private String coverLetter;
 
-    /** PHONE | VISIO | ONSITE | ASYNC */
+    /** ONSITE | VISIO — seuls modes que le planning sait écrire ; PHONE et ASYNC viennent d'imports antérieurs, ils restent lisibles. */
     @Column(name = "interview_type", length = 32)
     private String interviewType;
 
@@ -87,9 +87,6 @@ public class Application {
     /** Lien de visioconférence (https). */
     @Column(name = "interview_video_url", length = 300)
     private String interviewVideoUrl;
-
-    @Column(name = "interview_phone", length = 30)
-    private String interviewPhone;
 
     /** Lien de plan (https) pour un entretien sur site. */
     @Column(name = "interview_map_url", length = 300)
@@ -213,9 +210,6 @@ public class Application {
 
     public String getInterviewVideoUrl() { return interviewVideoUrl; }
     public void setInterviewVideoUrl(String interviewVideoUrl) { this.interviewVideoUrl = interviewVideoUrl; }
-
-    public String getInterviewPhone() { return interviewPhone; }
-    public void setInterviewPhone(String interviewPhone) { this.interviewPhone = interviewPhone; }
 
     public String getInterviewMapUrl() { return interviewMapUrl; }
     public void setInterviewMapUrl(String interviewMapUrl) { this.interviewMapUrl = interviewMapUrl; }

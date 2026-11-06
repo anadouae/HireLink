@@ -13,6 +13,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +52,7 @@ public class AiAssistController {
     public Map<String, Object> credits(
             @AuthenticationPrincipal User user
     ) {
-        return creditMap(aiCreditService.status(user));
+        return creditMap(user, aiCreditService.status(user));
     }
 
     /** Quels providers cloud sont configurés (clés masquées). */
@@ -77,7 +78,7 @@ public class AiAssistController {
         String roles = body.roles() != null ? body.roles() : user.getSoughtRoles();
         String level = body.level() != null ? body.level() : user.getExperienceLevel();
         LlmProvider.LlmResult llm = llmProvider.complete(
-                "Tu es un assistant recrutement. Réponds en français. N'invente pas d'identité.",
+                "Tu es un assistant recrutement. Réponds en français. N'invente pas d'identité. Pas de markdown : aucun dièse, aucun astérisque.",
                 "Améliore ce profil (compétences uniquement) : skills=" + nullSafe(skills)
                         + " ; métiers=" + nullSafe(roles) + " ; niveau=" + nullSafe(level)
         );
@@ -122,7 +123,7 @@ public class AiAssistController {
         requireCredit(user);
         // La grille affichée est structurée (cartes). L’appel LLM reste pour le débit / audit provider.
         LlmProvider.LlmResult llm = llmProvider.complete(
-                "Génère une grille d'entretien structurée en français. Pas d'identité candidat.",
+                "Génère une grille d'entretien structurée en français. Pas d'identité candidat. Pas de markdown : aucun dièse, aucun astérisque.",
                 "Poste=" + nullSafe(body.jobTitle()) + " ; compétences=" + nullSafe(body.skills())
                         + ". 5 à 7 questions discriminantes."
         );
@@ -146,7 +147,7 @@ public class AiAssistController {
         requireCredit(user);
         // R15 : motif catalogue + intitulé poste uniquement
         LlmProvider.LlmResult llm = llmProvider.complete(
-                "Rédige un brouillon de message de refus professionnel en français. Pas de nom ni email.",
+                "Rédige un brouillon de message de refus professionnel en français. Pas de nom ni email. Pas de markdown : aucun dièse, aucun astérisque.",
                 "Motif catalogue=" + nullSafe(body.reasonCode()) + " (" + nullSafe(body.reasonLabel())
                         + ") ; poste=" + nullSafe(body.jobTitle())
                         + ". Message respectueux, court, sans promesse."
@@ -235,7 +236,7 @@ public class AiAssistController {
     ) {
         requireCredit(user);
         LlmProvider.LlmResult llm = llmProvider.complete(
-                "Explique un écart de matching en français clair. Pas d'identité.",
+                "Explique un écart de matching en français clair. Pas d'identité. Pas de markdown : aucun dièse, aucun astérisque.",
                 "Compétences candidat=" + nullSafe(body.skills())
                         + " ; compétences offre=" + nullSafe(body.requiredSkills())
                         + ". Explique les forces et manques, suggère améliorations."
@@ -269,7 +270,8 @@ public class AiAssistController {
         var st = aiCreditService.status(user);
         if (!st.allowed()) {
             throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
-                    "Crédits IA épuisés (" + st.used() + "/" + st.limit() + ")");
+                    "Crédits IA épuisés (" + st.used() + "/" + st.limit() + " ce mois). Le compteur repart dans "
+                            + st.daysToReset() + " jour" + (st.daysToReset() > 1 ? "s" : "") + ".");
         }
     }
 
@@ -277,6 +279,7 @@ public class AiAssistController {
     private Map<String, Object> debitIfSuccess(User user, String feature, LlmProvider.LlmResult llm) {
         AiUsageLog log = new AiUsageLog();
         log.setUserId(user.getId());
+        log.setOrganizationId(user.getAssignedOrgId());
         log.setFeature(feature);
         log.setProvider(llm.provider());
         log.setModel(llm.model());
@@ -286,21 +289,34 @@ public class AiAssistController {
         if (llm.success()) {
             log.setCreditsSpent(1);
             aiUsageLogRepository.save(log);
-            return creditMap(aiCreditService.status(user));
+            return creditMap(user, aiCreditService.status(user));
         }
         log.setCreditsSpent(0);
         aiUsageLogRepository.save(log);
-        return creditMap(aiCreditService.status(user));
+        return creditMap(user, aiCreditService.status(user));
     }
 
-    private Map<String, Object> creditMap(AiCreditService.CreditStatus s) {
+    private Map<String, Object> creditMap(User user, AiCreditService.CreditStatus s) {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("plan", s.plan());
+        m.put("planLabel", s.planLabel());
+        m.put("monthlyMad", s.monthlyMad());
         m.put("limit", s.limit());
         m.put("used", s.used());
         m.put("remaining", s.remaining());
+        m.put("costPerAction", s.costPerAction());
+        m.put("daysToReset", s.daysToReset());
         m.put("premium", s.premiumUnlimited());
         m.put("allowed", s.allowed());
+        List<Map<String, Object>> history = new ArrayList<>();
+        for (AiCreditService.FeatureUse use : aiCreditService.monthlyByFeature(user)) {
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("feature", use.feature());
+            row.put("actions", use.actions());
+            row.put("credits", use.credits());
+            history.add(row);
+        }
+        m.put("byFeature", history);
         return m;
     }
 

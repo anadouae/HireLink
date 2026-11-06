@@ -26,7 +26,14 @@
         if (!res.ok) return false;
         const auth = await res.json();
         if (!auth || !auth.accessToken) return false;
-        localStorage.setItem(TOKEN_KEY, auth.accessToken);
+        const avant = getSession();
+        setAuth(auth);
+        // Le cookie peut désigner un autre compte (connexion dans un autre onglet) : l'écran suit le serveur.
+        if (avant && (avant.userId !== auth.userId || avant.role !== auth.role)) {
+          const prefix = location.pathname.includes("/app/") ? "../" : "";
+          location.replace(prefix + redirectForRole(auth.role));
+          return new Promise(function () {});
+        }
         return true;
       })
       .catch(() => false)
@@ -39,7 +46,8 @@
   function goToLogin() {
     clearAuth();
     const prefix = location.pathname.includes("/app/") ? "../" : "";
-    const here = location.pathname.split("/").pop() + location.search;
+    // L'ancre fait partie de la destination : #co-ice ou #new-member ramènent le champ, pas seulement la page.
+    const here = location.pathname.split("/").pop() + location.search + location.hash;
     location.replace(prefix + "auth.html?mode=login&expired=1&next=" + encodeURIComponent(here));
     return new Promise(function () {});
   }
@@ -120,7 +128,8 @@
       return base + s;
     }
     if (s.startsWith("/")) return apiBase().replace(/\/api\/v1\/?$/, "") + s;
-    return s;
+    // Ni URL ni chemin absolu (vieille ligne saisie avant la validation serveur) : rien à charger, le repli initiales s'affiche.
+    return "";
   }
 
   // Les GET identiques lancés en même temps (ex. cloche + page) partagent une seule requête réseau.

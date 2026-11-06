@@ -30,8 +30,9 @@ Confirmé 2, Senior 3, Lead/Manager 4 ; de l'offre : Aucune 0, Débutant 1, Conf
    `min(60, couverture % + 20)`. Le lieu ou le contrat ne peuvent pas compenser l'absence du cœur du métier.
 4. Score = Σ (poids × ratio) / Σ poids applicables × 100, arrondi au dixième.
 5. Le filtre « Offres qui correspondent à mon profil » retient les offres dont le score est ≥ 50 %.
-6. Le score affiché est recalculé à chaque lecture sur le profil et l'offre actuels. L'instantané au moment de la
-   candidature reste dans `matching_analyses`.
+6. Le score affiché est recalculé à chaque lecture sur le profil et l'offre actuels. Seule la valeur figée au moment de la
+   candidature est conservée, dans `applications.match_score` ; le détail (compétences couvertes / manquantes) n'est pas
+   stocké, il est redérivé à la demande.
 
 ## Exemples réels (données de démo)
 

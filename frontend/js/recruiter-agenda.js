@@ -1,6 +1,6 @@
 /**
- * Agenda recruteur : vrai calendrier (Mois / Semaine / Jour / Liste) des entretiens de l'organisation.
- * Données : GET /applications/pipeline (mêmes dossiers que le pipeline, Hiring Manager = dossiers assignés).
+ * Agenda recruteur : calendrier des entretiens et des événements de l'organisation.
+ * Données : GET /applications/pipeline + GET /organizations/mine/events.
  * Actions (reporter, annuler, .ics) : carte d'entretien partagée (interview.js), mêmes API que la page Entretiens.
  */
 (function () {
@@ -19,11 +19,14 @@
   const mobile = () => window.matchMedia("(max-width: 720px)").matches;
   const reduce = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const TYPE_FR = { VISIO: "Visio", ONSITE: "Sur site", PHONE: "Téléphone", ASYNC: "Asynchrone" };
+  const TYPE_FR = { VISIO: "Visioconférence", ONSITE: "Sur site", PHONE: "Téléphone", EVENT: "Agenda" };
   const KIND_FR = { HR: "RH", TECHNICAL: "Technique", MANAGER: "Manager", CASE: "Étude de cas", TEAM: "Équipe", FINAL: "Final" };
+  const CATEGORY_FR = { MEETING: "Réunion", APPOINTMENT: "Rendez-vous", PERSONAL: "Personnel", PROFESSIONAL: "Professionnel", OTHER: "Autre" };
   const VIEWS = { month: "Mois", week: "Semaine", day: "Jour", list: "Liste" };
+  const typeCls = (a) => "t-" + String(a.interviewType || "async").toLowerCase();
 
   let apps = [];
+  let orgEvents = [];
   let loaded = false;
   let view = localStorage.getItem("hirelink.agenda.view") || (mobile() ? "list" : "week");
   if (!VIEWS[view]) view = "week";
@@ -34,6 +37,12 @@
   if (/^\d{4}-\d{2}-\d{2}$/.test(qp.get("date") || "")) { const p = qp.get("date").split("-"); cursor = new Date(+p[0], +p[1] - 1, +p[2]); }
   let lastDir = 0;
   let selectedId = null;
+  let workspace = "calendar";
+  let notes = [];
+  let editingId = null;
+  let openMenuId = null;
+  let justCreated = null;
+  const penIds = new Set();
   const filters = { type: "all", kind: "all", offer: "all", cancelled: false };
 
   /* ------------------------------------------------------------ dates */
@@ -47,7 +56,7 @@
 
   /* ------------------------------------------------------------ données */
   function eventsAll() {
-    return apps
+    const interviews = apps
       .filter((a) => a.interviewAt && !Number.isNaN(new Date(a.interviewAt).getTime()))
       .filter((a) => filters.cancelled || a.interviewStatus !== "CANCELLED")
       .filter((a) => filters.type === "all" || a.interviewType === filters.type)
@@ -59,6 +68,23 @@
         return { a, start, end, cancelled: a.interviewStatus === "CANCELLED", past: end.getTime() < Date.now() };
       })
       .sort((x, y) => x.start - y.start);
+    const otherEvents = orgEvents
+      .filter((e) => e.startsAt && !Number.isNaN(new Date(e.startsAt).getTime()))
+      .map((e) => {
+        const start = new Date(e.startsAt);
+        const end = new Date(start.getTime() + (e.durationMinutes || 60) * 60000);
+        return {
+          a: {
+            id: "event-" + e.id, eventId: e.id, isOrganizationEvent: true,
+            candidateName: e.title, jobTitle: e.description || "",
+            interviewKind: e.category || "OTHER", interviewType: "EVENT",
+            interviewLocation: e.location || "", interviewVideoUrl: e.videoUrl || "",
+            interviewConfirmation: "CONFIRMED",
+          },
+          source: e, start, end, cancelled: false, past: end.getTime() < Date.now(),
+        };
+      });
+    return interviews.concat(otherEvents).sort((x, y) => x.start - y.start);
   }
   function events() {
     const q = (($("rc-search") || {}).value || "").trim();
@@ -76,11 +102,11 @@
 
   /* ------------------------------------------------------------ rendu commun */
   function evClass(e) {
-    return "ag-ev t-" + (e.a.interviewType || "ASYNC").toLowerCase() + (e.cancelled ? " is-cancelled" : "") + (e.past ? " is-past" : "") +
+    return "ag-ev " + (e.a.isOrganizationEvent ? "t-event" : typeCls(e.a)) + (e.cancelled ? " is-cancelled" : "") + (e.past ? " is-past" : "") +
       (e.a.interviewConfirmation === "CONFIRMED" ? " is-confirmed" : "") + (String(e.a.id) === String(selectedId) ? " is-selected" : "");
   }
   function evAttrs(e) {
-    return ' data-ev="' + e.a.id + '" data-focus="interview:' + e.a.id + " application:" + e.a.id + '" tabindex="0" role="button" aria-label="' +
+    return ' data-ev="' + e.a.id + '" data-focus="' + (e.a.isOrganizationEvent ? "event:" + e.a.eventId : "interview:" + e.a.id + " application:" + e.a.id) + '" tabindex="0" role="button" aria-label="' +
       esc((e.a.candidateName || "Candidat") + ", " + fmt(e.start, { weekday: "long", day: "numeric", month: "long" }) + " " + hhmm(e.start) + (e.cancelled ? ", annulé" : "")) + '"';
   }
   function titleText() {
@@ -95,6 +121,7 @@
 
   function render() {
     if (!loaded) return;
+    if (workspace === "notes") { renderNotes(); return; }
     syncUrl();
     $("ag-title").textContent = titleText();
     $("ag-views").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === view)));
@@ -113,6 +140,364 @@
     else renderTimeGrid(stage, list, view === "day" ? [cursor] : Array.from({ length: 7 }, (_, i) => addDays(startOfWeek(cursor), i)));
     const q = (($("rc-search") || {}).value || "").trim();
     if (q) S.mark(stage, q);
+  }
+
+  /* ------------------------------------------------------------ Post-it */
+  const NOTE_PAPERS = [
+    { name: "Paille", bg: "#fdf0a8" }, { name: "Menthe", bg: "#d5f2df" }, { name: "Ciel", bg: "#d6e8fb" },
+    { name: "Rose", bg: "#fbdce8" }, { name: "Lavande", bg: "#e6ddf9" }, { name: "Sable", bg: "#f7e6cf" },
+  ];
+  const NOTE_INKS = [
+    { name: "Ardoise", fg: "#243044" }, { name: "Bordeaux", fg: "#7a2032" },
+    { name: "Forêt", fg: "#1f5136" }, { name: "Nuit", fg: "#1e3a5f" },
+  ];
+
+  // positionX porte l'ordre de dépôt sur le tableau ; à égalité, le plus récent d'abord.
+  function noteSorted() {
+    return notes.slice().sort((a, b) => (a.positionX - b.positionX) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  }
+  const tiltFor = (id) => (((Math.abs(Number(id) || 0) % 5) - 2) * 0.7).toFixed(2) + "deg";
+  function relTime(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "";
+    const days = Math.round((Date.now() - d.getTime()) / DAY);
+    if (days <= 0) return "modifié aujourd’hui";
+    if (days === 1) return "modifié hier";
+    return "modifié " + fmt(d, { day: "numeric", month: "short" });
+  }
+  const noteEl = (id) => document.querySelector('.ag-note[data-note="' + id + '"]');
+  async function postNote(body) { return HireLinkAPI.api("/organizations/mine/notes", { method: "POST", body }); }
+  function payload(note, patch) {
+    return Object.assign({
+      title: note.title, content: note.content, inkColor: note.inkColor, noteColor: note.noteColor,
+      drawingData: note.drawingData, positionX: note.positionX, positionY: note.positionY,
+    }, patch, { id: note.id });
+  }
+  async function patchNote(note, patch, silent) {
+    try {
+      const saved = await postNote(payload(note, patch));
+      notes = notes.map((n) => (n.id === saved.id ? saved : n));
+      if (!silent) renderNotes();
+      return saved;
+    } catch (err) {
+      RC.toast("Post-it", (err && err.message) || "Enregistrement impossible.", "danger");
+      return null;
+    }
+  }
+
+  function renderNotes() {
+    const root = $("ag-notes");
+    root.replaceChildren();
+    const bar = document.createElement("div");
+    bar.className = "ag-notes-toolbar";
+    bar.innerHTML = '<div class="ag-notes-heading">' + HLIcons.svg("note", "ag-notes-mark") +
+      "<div><h2>Mes Post-it</h2><p>Écrivez, dessinez, changez la couleur, glissez une note pour la ranger.</p></div></div>";
+    const add = document.createElement("button");
+    add.type = "button";
+    add.className = "btn btn-primary";
+    add.innerHTML = HLIcons.svg("plus") + "Nouveau Post-it";
+    add.addEventListener("click", createNote);
+    bar.appendChild(add);
+    root.appendChild(bar);
+
+    const board = document.createElement("div");
+    board.className = "ag-notes-board";
+    root.appendChild(board);
+    const list = noteSorted();
+    if (!list.length) {
+      board.innerHTML = '<div class="ag-notes-empty rc-fade"><div class="rc-state-mascotte">' + Mascotte.markup({ pose: "vide" }) +
+        "</div><h3>Aucun Post-it pour l’instant</h3><p>Votre tableau est vide — la première note est à un clic.</p></div>";
+      return;
+    }
+    list.forEach((note) => board.appendChild(noteCard(note)));
+    justCreated = null;
+  }
+
+  function noteCard(note) {
+    const editing = editingId === note.id;
+    const hasSketch = !!note.drawingData || penIds.has(note.id);
+    const card = document.createElement("article");
+    card.className = "ag-note" + (editing ? " is-editing" : "") + (justCreated === note.id ? " is-new" : "") + (hasSketch ? " has-sketch" : "");
+    card.dataset.note = String(note.id);
+    card.style.setProperty("--paper", note.noteColor || NOTE_PAPERS[0].bg);
+    card.style.setProperty("--ink", note.inkColor || NOTE_INKS[0].fg);
+    card.style.setProperty("--tilt", tiltFor(note.id));
+
+    const head = document.createElement("header");
+    head.className = "ag-note-head";
+    head.innerHTML = '<span class="ag-note-clip" aria-hidden="true">' + HLIcons.svg("paperclip") + "</span>" +
+      '<button type="button" class="ag-note-grip" aria-label="Déplacer la note">' + HLIcons.svg("grip") + "</button>" +
+      '<button type="button" class="ag-note-more" aria-label="Options de la note" aria-haspopup="true" aria-expanded="' + (openMenuId === note.id) + '">' + HLIcons.svg("dots") + "</button>";
+    card.appendChild(head);
+
+    const title = document.createElement(editing ? "input" : "h3");
+    title.className = "ag-note-title";
+    title.setAttribute("aria-label", "Titre");
+    if (editing) { title.type = "text"; title.value = note.title || ""; title.maxLength = 120; }
+    else title.textContent = note.title || "Sans titre";
+    card.appendChild(title);
+
+    const text = document.createElement(editing ? "textarea" : "p");
+    text.className = "ag-note-text";
+    text.setAttribute("aria-label", "Contenu");
+    if (editing) { text.value = note.content || ""; text.rows = 4; text.maxLength = 8000; }
+    else {
+      text.textContent = note.content || "Aucune note — cliquez sur le stylo pour écrire.";
+      if (!note.content) text.classList.add("is-void");
+    }
+    card.appendChild(text);
+
+    const sketch = document.createElement("div");
+    sketch.className = "ag-note-sketch";
+    sketch.innerHTML = '<div class="ag-note-sketch-head"><span class="ag-note-sketch-label">' + HLIcons.svg("pen") + "Crayon</span>" +
+      '<button type="button" class="btn btn-ghost btn-sm ag-note-clear">Effacer</button></div>' +
+      '<canvas class="ag-note-canvas" aria-label="Zone de dessin"></canvas>';
+    card.appendChild(sketch);
+
+    const foot = document.createElement("footer");
+    foot.className = "ag-note-foot";
+    foot.innerHTML = editing
+      ? '<button type="button" class="btn btn-primary btn-sm ag-note-save">' + HLIcons.svg("save") + "Enregistrer</button>" +
+        '<button type="button" class="btn btn-ghost btn-sm ag-note-cancel">Annuler</button>'
+      : '<span class="ag-note-when">' + relTime(note.updatedAt) + "</span>" +
+        '<button type="button" class="ag-note-edit" aria-label="Écrire sur ce Post-it">' + HLIcons.svg("pencil") + "</button>";
+    card.appendChild(foot);
+
+    if (openMenuId === note.id) card.appendChild(noteMenu(note));
+
+    head.querySelector(".ag-note-more").addEventListener("click", () => {
+      openMenuId = openMenuId === note.id ? null : note.id;
+      renderNotes();
+    });
+    const edit = foot.querySelector(".ag-note-edit");
+    if (edit) edit.addEventListener("click", () => {
+      editingId = note.id; openMenuId = null;
+      renderNotes();
+      const first = noteEl(note.id);
+      if (first) { const t = first.querySelector(".ag-note-title"); t.focus(); if (t.select) t.select(); }
+    });
+    const save = foot.querySelector(".ag-note-save");
+    if (save) save.addEventListener("click", async () => {
+      RC.busy(save, true);
+      // editingId part avant l'appel : le rendu déclenché par patchNote passe la carte en lecture.
+      editingId = null;
+      const saved = await patchNote(note, { title: title.value.trim() || "Sans titre", content: text.value });
+      RC.busy(save, false);
+      if (saved) RC.toast("Post-it", "Note enregistrée.", "ok");
+      else editingId = note.id;
+    });
+    const cancel = foot.querySelector(".ag-note-cancel");
+    if (cancel) cancel.addEventListener("click", () => { editingId = null; renderNotes(); });
+    sketch.querySelector(".ag-note-clear").addEventListener("click", () => {
+      const canvas = sketch.querySelector(".ag-note-canvas");
+      canvas.getContext("2d").clearRect(0, 0, canvas.width, canvas.height);
+      patchNote(note, { drawingData: null }, true);
+    });
+
+    if (hasSketch) setupNoteCanvas(sketch.querySelector(".ag-note-canvas"), note, card);
+    enableDrag(card);
+    return card;
+  }
+
+  function noteMenu(note) {
+    const menu = document.createElement("div");
+    menu.className = "ag-note-menu";
+    menu.innerHTML = '<p class="ag-note-menu-title">Couleur du Post-it</p><div class="ag-note-swatches">' +
+      NOTE_PAPERS.map((p) => '<button type="button" class="ag-note-swatch' + (p.bg === note.noteColor ? " is-on" : "") +
+        '" style="--sw:' + p.bg + '" data-paper="' + p.bg + '" title="' + esc(p.name) + '" aria-label="Fond ' + esc(p.name) + '"></button>').join("") +
+      '</div><p class="ag-note-menu-title">Couleur d’écriture</p><div class="ag-note-swatches">' +
+      NOTE_INKS.map((p) => '<button type="button" class="ag-note-swatch' + (p.fg === note.inkColor ? " is-on" : "") +
+        '" style="--sw:' + p.fg + '" data-ink="' + p.fg + '" title="' + esc(p.name) + '" aria-label="Encre ' + esc(p.name) + '"></button>').join("") +
+      '</div><div class="ag-note-menu-actions">' +
+      '<button type="button" class="btn btn-ghost btn-sm' + (penIds.has(note.id) ? " is-on" : "") + '" data-pen>' + HLIcons.svg("pen") + "Crayon</button>" +
+      '<button type="button" class="btn btn-danger btn-sm" data-del>' + HLIcons.svg("trash") + "Supprimer</button></div>";
+    menu.addEventListener("click", async (e) => {
+      const paper = e.target.closest("[data-paper]");
+      if (paper) { await patchNote(note, { noteColor: paper.dataset.paper }); return; }
+      const ink = e.target.closest("[data-ink]");
+      if (ink) { await patchNote(note, { inkColor: ink.dataset.ink }); return; }
+      if (e.target.closest("[data-pen]")) {
+        if (penIds.has(note.id)) penIds.delete(note.id); else penIds.add(note.id);
+        renderNotes();
+        const canvas = noteEl(note.id) && noteEl(note.id).querySelector(".ag-note-canvas");
+        if (canvas) fitCanvas(canvas);
+        return;
+      }
+      if (e.target.closest("[data-del]")) { openMenuId = null; await deleteNote(note); }
+    });
+    return menu;
+  }
+
+  async function createNote() {
+    const at = noteSorted().reduce((m, n) => Math.max(m, (n.positionX || 0) + 1), 0);
+    try {
+      const saved = await postNote({
+        title: "Nouvelle note", content: "", noteColor: NOTE_PAPERS[at % NOTE_PAPERS.length].bg,
+        inkColor: NOTE_INKS[0].fg, positionX: at, positionY: 0,
+      });
+      notes.push(saved);
+      editingId = saved.id; justCreated = saved.id; openMenuId = saved.id;
+      renderNotes();
+      const card = noteEl(saved.id);
+      if (card) card.scrollIntoView({ block: "nearest", behavior: reduce() ? "auto" : "smooth" });
+      const t = card && card.querySelector(".ag-note-title");
+      if (t) { t.focus(); if (t.select) t.select(); }
+    } catch (err) { RC.toast("Post-it", (err && err.message) || "Création impossible.", "danger"); }
+  }
+
+  async function deleteNote(note) {
+    if (!await Mascotte.confirm({ title: "Supprimer ce Post-it ?", description: "Cette action est définitive.", confirmLabel: "Supprimer", danger: true })) return;
+    const card = noteEl(note.id);
+    if (card && !reduce()) card.classList.add("is-leaving");
+    try {
+      await HireLinkAPI.api("/organizations/mine/notes/" + note.id, { method: "DELETE" });
+      notes = notes.filter((n) => n.id !== note.id);
+      penIds.delete(note.id);
+      if (editingId === note.id) editingId = null;
+      setTimeout(renderNotes, card && !reduce() ? 240 : 0);
+      RC.toast("Post-it", "Note supprimée.", "ok");
+    } catch (err) {
+      if (card) card.classList.remove("is-leaving");
+      RC.toast("Post-it", (err && err.message) || "Suppression impossible.", "danger");
+    }
+  }
+
+  /* ------------------------------------------------------------- crayon */
+  function fitCanvas(canvas) {
+    const w = Math.max(140, Math.round(canvas.clientWidth || 240));
+    const h = 132;
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 3;
+    return ctx;
+  }
+  const canvasData = (canvas) => { try { return canvas.toDataURL("image/png"); } catch (_) { return ""; } };
+  function setupNoteCanvas(canvas, note, card) {
+    const ctx = fitCanvas(canvas);
+    const ink = () => (card.style.getPropertyValue("--ink") || NOTE_INKS[0].fg).trim();
+    if (note.drawingData) {
+      const image = new Image();
+      image.onload = () => ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      image.src = note.drawingData;
+    }
+    let drawing = false, touched = false, timer = null;
+    const point = (event) => {
+      const rect = canvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * canvas.width / rect.width,
+        y: (event.clientY - rect.top) * canvas.height / rect.height,
+      };
+    };
+    canvas.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      drawing = true;
+      touched = true;
+      try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+      ctx.strokeStyle = ink();
+      const p = point(event);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + 0.01, p.y);
+      ctx.stroke();
+    });
+    canvas.addEventListener("pointermove", (event) => {
+      if (!drawing) return;
+      const p = point(event);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    });
+    const stop = () => {
+      if (!drawing) return;
+      drawing = false;
+      if (!touched) return;
+      touched = false;
+      clearTimeout(timer);
+      timer = setTimeout(() => patchNote(note, { drawingData: canvasData(canvas) }, true), 700);
+    };
+    canvas.addEventListener("pointerup", stop);
+    canvas.addEventListener("pointercancel", stop);
+  }
+
+  /* ---------------------------------------------------- déplacer (glisser) */
+  function dropTarget(board, dragged, x, y) {
+    let best = null, bestD = Infinity;
+    Array.from(board.children).forEach((c) => {
+      if (c === dragged) return;
+      const r = c.getBoundingClientRect();
+      const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+      if (d < bestD) { bestD = d; best = c; }
+    });
+    return best;
+  }
+  async function commitOrder(board, dragged, target, before) {
+    const cards = Array.from(board.children);
+    const from = cards.indexOf(dragged);
+    if (from < 0 || from === cards.indexOf(target)) return;
+    if (from < cards.indexOf(target)) board.insertBefore(dragged, target.nextSibling);
+    else board.insertBefore(dragged, target);
+    if (!reduce()) {
+      Array.from(board.children).forEach((c) => {
+        const b = before.get(c), a = c.getBoundingClientRect();
+        const dx = b.left - a.left, dy = b.top - a.top;
+        if (!dx && !dy) return;
+        c.style.transition = "none";
+        c.style.transform = "translate(" + dx + "px," + dy + "px)";
+        requestAnimationFrame(() => { c.style.transition = "transform .34s var(--ease)"; c.style.transform = ""; });
+      });
+    }
+    const byId = new Map(notes.map((n) => [String(n.id), n]));
+    for (let i = 0; i < board.children.length; i++) {
+      const n = byId.get(board.children[i].dataset.note);
+      if (n && (n.positionX || 0) !== i) await patchNote(n, { positionX: i }, true);
+    }
+  }
+  function enableDrag(card) {
+    const grip = card.querySelector(".ag-note-grip");
+    if (!grip) return;
+    grip.addEventListener("pointerdown", (event) => {
+      if (mobile()) return;
+      event.preventDefault();
+      const board = card.parentElement;
+      const start = card.getBoundingClientRect();
+      const offX = event.clientX - start.left, offY = event.clientY - start.top;
+      try { grip.setPointerCapture(event.pointerId); } catch (_) {}
+      card.classList.add("is-dragging");
+      let target = null;
+      const move = (e) => {
+        card.style.transform = "translate(" + (e.clientX - start.left - offX) + "px," + (e.clientY - start.top - offY) + "px) rotate(1.4deg) scale(1.03)";
+        target = dropTarget(board, card, e.clientX, e.clientY);
+        Array.from(board.children).forEach((c) => c.classList.toggle("is-drop-target", c !== card && c === target));
+      };
+      const up = async () => {
+        window.removeEventListener("pointermove", move);
+        window.removeEventListener("pointerup", up);
+        window.removeEventListener("pointercancel", up);
+        const before = new Map(Array.from(board.children).map((c) => [c, c.getBoundingClientRect()]));
+        card.classList.remove("is-dragging");
+        card.style.transform = "";
+        Array.from(board.children).forEach((c) => c.classList.remove("is-drop-target"));
+        if (target) await commitOrder(board, card, target, before);
+      };
+      // Écouter la fenêtre : le glisser-sortie hors de la poignée doit continuer à suivre le pointeur.
+      window.addEventListener("pointermove", move);
+      window.addEventListener("pointerup", up);
+      window.addEventListener("pointercancel", up);
+    });
+  }
+
+  async function loadNotes() {
+    RC.skeleton($("ag-notes"), 3, 200);
+    try {
+      notes = (await HireLinkAPI.api("/organizations/mine/notes")) || [];
+      return true;
+    } catch (err) {
+      notes = [];
+      RC.errorState($("ag-notes"), (err && err.message) || "Le serveur de notes est indisponible.", loadNotes);
+      return false;
+    }
   }
 
   function paintStats(list) {
@@ -146,9 +531,9 @@
         '" data-day="' + d.getTime() + '"><button type="button" class="ag-mnum" data-goday="' + d.getTime() + '" aria-label="' + esc(fmt(d, { weekday: "long", day: "numeric", month: "long" })) + '">' + d.getDate() + "</button>";
       const max = mobile() ? 0 : 3;
       dayEv.slice(0, max).forEach((e) => {
-        html += '<div class="' + evClass(e) + ' is-chip"' + evAttrs(e) + "><i></i><time>" + hhmm(e.start) + "</time><b>" + esc(e.a.candidateName || "Candidat") + "</b></div>";
+        html += '<div class="' + evClass(e) + ' is-chip"' + evAttrs(e) + '><i class="iv-light-green" aria-hidden="true"></i><time>' + hhmm(e.start) + "</time><b>" + esc(e.a.candidateName || "Événement") + "</b></div>";
       });
-      if (mobile() && dayEv.length) html += '<span class="ag-dots">' + dayEv.slice(0, 4).map((e) => '<i class="t-' + (e.a.interviewType || "ASYNC").toLowerCase() + '"></i>').join("") + "</span>";
+      if (mobile() && dayEv.length) html += '<span class="ag-dots">' + dayEv.slice(0, 4).map((e) => '<i class="' + (e.a.isOrganizationEvent ? "t-event" : typeCls(e.a)) + '"></i>').join("") + "</span>";
       else if (dayEv.length > max) html += '<button type="button" class="ag-more" data-goday="' + d.getTime() + '">+ ' + (dayEv.length - max) + " autre" + (dayEv.length - max > 1 ? "s" : "") + "</button>";
       html += "</div>";
     }
@@ -203,8 +588,8 @@
         const height = Math.max(24, ((e.end - e.start) / 3600e3) * HOUR_PX - 3);
         html += '<div class="' + evClass(e) + ' is-block' + (height < 44 ? " is-short" : "") + '"' + evAttrs(e) +
           ' style="top:' + top + "px;height:" + height + "px;left:calc(" + (col / cols) * 100 + "% + 3px);width:calc(" + 100 / cols + '% - 6px)">' +
-          "<b>" + esc(e.a.candidateName || "Candidat") + "</b><time>" + hhmm(e.start) + " – " + hhmm(e.end) + "</time>" +
-          '<span class="ag-ev-meta">' + esc([KIND_FR[e.a.interviewKind] || "", TYPE_FR[e.a.interviewType] || "", e.a.jobTitle || ""].filter(Boolean).join(" · ")) + "</span></div>";
+          "<b><i class=\"iv-light-green\" aria-hidden=\"true\"></i>" + esc(e.a.candidateName || "Événement") + "</b><time>" + hhmm(e.start) + " – " + hhmm(e.end) + "</time>" +
+          '<span class="ag-ev-meta">' + esc(e.a.isOrganizationEvent ? [CATEGORY_FR[e.a.interviewKind] || "Événement", e.a.interviewLocation].filter(Boolean).join(" · ") : [KIND_FR[e.a.interviewKind] || "", TYPE_FR[e.a.interviewType] || "", e.a.jobTitle || ""].filter(Boolean).join(" · ")) + "</span></div>";
       });
       if (sameDay(d, today)) {
         const mins = (today.getHours() - h0) * 60 + today.getMinutes();
@@ -244,7 +629,7 @@
       html += '<section class="ag-lday"><h2><span class="ag-lnum' + (rel.startsWith("Aujourd") ? " is-today" : "") + '">' + d.getDate() + "</span>" + esc(rel + cap(fmt(d, { weekday: "long", month: "long", year: "numeric" }))) + "</h2>";
       items.forEach((e) => {
         html += '<div class="' + evClass(e) + ' is-row"' + evAttrs(e) + '><time>' + hhmm(e.start) + "<small>" + hhmm(e.end) + "</small></time><i></i>" +
-          "<div><b>" + esc(e.a.candidateName || "Candidat") + "</b><span>" + esc([e.a.jobTitle, KIND_FR[e.a.interviewKind], TYPE_FR[e.a.interviewType], e.a.interviewLocation].filter(Boolean).join(" · ")) + "</span></div>" +
+          "<div><b><i class=\"iv-light-green\" aria-hidden=\"true\"></i>" + esc(e.a.candidateName || "Événement") + "</b><span>" + esc(e.a.isOrganizationEvent ? [CATEGORY_FR[e.a.interviewKind] || "Événement", e.a.interviewLocation].filter(Boolean).join(" · ") : [e.a.jobTitle, KIND_FR[e.a.interviewKind], TYPE_FR[e.a.interviewType], e.a.interviewLocation].filter(Boolean).join(" · ")) + "</span></div>" +
           badge(e) + "</div>";
       });
       html += "</section>";
@@ -252,6 +637,7 @@
     stage.innerHTML = html + "</div>";
   }
   function badge(e) {
+    if (e.a.isOrganizationEvent) return '<span class="badge badge-info">Événement</span>';
     if (e.cancelled) return '<span class="badge badge-danger">Annulé</span>';
     if (e.past) return '<span class="badge badge-chrome">Passé</span>';
     if (e.a.interviewConfirmation === "CONFIRMED") return '<span class="badge badge-ok">Confirmé</span>';
@@ -269,7 +655,11 @@
   /* ------------------------------------------------------------ panneau détail */
   function openDetail(id) {
     const a = apps.find((x) => String(x.id) === String(id));
-    if (!a) return;
+    if (!a) {
+      const event = orgEvents.find((x) => "event-" + x.id === String(id));
+      if (event) return openOrganizationEvent(event);
+      return;
+    }
     selectedId = a.id;
     document.querySelectorAll(".ag-ev.is-selected").forEach((n) => n.classList.remove("is-selected"));
     document.querySelectorAll('[data-ev="' + a.id + '"]').forEach((n) => n.classList.add("is-selected"));
@@ -279,7 +669,7 @@
     const past = start.getTime() + (a.interviewDurationMinutes || 45) * 60000 < Date.now();
     $("ag-sheet-title").textContent = a.candidateName || "Candidat";
     $("ag-sheet-sub").textContent = [a.jobTitle, KIND_FR[a.interviewKind] && "Entretien " + KIND_FR[a.interviewKind]].filter(Boolean).join(" · ");
-    sheet.className = "ag-sheet t-" + (a.interviewType || "ASYNC").toLowerCase();
+    sheet.className = "ag-sheet " + typeCls(a);
     body.replaceChildren(
       HireLinkInterview.card(a, { role: past || a.status !== "INTERVIEW" ? "readonly" : "recruiter", onChange: () => { closeDetail(); load(); } })
     );
@@ -293,6 +683,100 @@
     $("ag-sheet-scrim").hidden = false;
     requestAnimationFrame(() => { sheet.classList.add("is-open"); $("ag-sheet-scrim").classList.add("is-open"); });
     $("ag-sheet-close").focus({ preventScroll: true });
+  }
+  function openOrganizationEvent(event) {
+    selectedId = "event-" + event.id;
+    const start = new Date(event.startsAt);
+    const end = new Date(start.getTime() + (event.durationMinutes || 60) * 60000);
+    const sheet = $("ag-sheet");
+    $("ag-sheet-title").textContent = event.title;
+    $("ag-sheet-sub").textContent = [fmt(start, { weekday: "long", day: "numeric", month: "long" }), hhmm(start) + " – " + hhmm(end)].join(" · ");
+    sheet.className = "ag-sheet t-event";
+    $("ag-sheet-body").innerHTML =
+      '<div class="ag-event-note"><strong>Notes</strong><p>' + esc(event.description || "Aucune note.") + "</p></div>" +
+      (event.location ? "<p><strong>Lieu :</strong> " + esc(event.location) + "</p>" : "") +
+      (event.videoUrl ? '<p><a class="btn btn-soft btn-sm" href="' + esc(event.videoUrl) + '" target="_blank" rel="noopener">Ouvrir le lien</a></p>' : "") +
+      // Le serveur refuse un événement passé (« doit commencer dans le futur ») : proposer la modification uniquement quand elle peut aboutir.
+      (!RC.isHM() && new Date(event.startsAt) > new Date() ? '<button type="button" class="btn btn-soft btn-sm" id="ag-edit-event">Modifier</button> ' : "") +
+      (RC.isHM() ? "" : '<button type="button" class="btn btn-danger btn-sm" id="ag-delete-event">Supprimer l’événement</button>');
+    const editEventBtn = $("ag-edit-event");
+    if (editEventBtn) editEventBtn.addEventListener("click", () => { closeDetail(); createOrganizationEvent(event); });
+    const delEventBtn = $("ag-delete-event");
+    if (delEventBtn) delEventBtn.addEventListener("click", async () => {
+      if (!await Mascotte.confirm({ title: "Supprimer cet événement ?", description: "Cette action est définitive.", confirmLabel: "Supprimer", danger: true })) return;
+      try {
+        await HireLinkAPI.api("/organizations/mine/events/" + event.id, { method: "DELETE" });
+        closeDetail(); load();
+        RC.toast("Agenda", "Événement supprimé.", "ok");
+      } catch (err) { RC.toast("Agenda", err.message, "danger"); }
+    });
+    sheet.hidden = false; $("ag-sheet-scrim").hidden = false;
+    requestAnimationFrame(() => { sheet.classList.add("is-open"); $("ag-sheet-scrim").classList.add("is-open"); });
+    $("ag-sheet-close").focus({ preventScroll: true });
+  }
+  /** Le pipeline décide de l'étape, l'Agenda pose le créneau : ici atterrissent les dossiers passés en entretien. */
+  async function planInterview() {
+    const pool = apps
+      .filter((a) => a.status === "INTERVIEW" && a.interviewStatus !== "CANCELLED")
+      .sort((x, y) => (x.interviewAt ? 1 : 0) - (y.interviewAt ? 1 : 0));
+    if (!pool.length) {
+      RC.toast("Agenda", "Aucun dossier à l’étape Entretien : avancez d’abord un dossier du pipeline.", "info");
+      return;
+    }
+    const ok = await HireLink.openDrawer({
+      title: "Planifier un entretien",
+      description: "Choisissez le dossier — les sans-créneau sont proposés en premier.",
+      bodyHtml: '<div class="form-grid"><label class="form-grid-wide">Dossier<select id="ag-plan-app" class="rc-select"></select></label></div>',
+      confirmLabel: "Choisir un créneau",
+      wide: true,
+      onReady: (api) => {
+        const sel = api.root.querySelector("#ag-plan-app");
+        pool.forEach((a) => {
+          const opt = document.createElement("option");
+          opt.value = a.id;
+          opt.textContent = (a.candidateName || "Candidat") + " — " + (a.jobTitle || "Offre") +
+            (a.interviewAt ? " (déjà un créneau)" : " (sans créneau)");
+          sel.appendChild(opt);
+        });
+      },
+    });
+    if (!ok) return;
+    const chosen = pool.find((a) => String(a.id) === String($("ag-plan-app").value)) || pool[0];
+    HireLinkInterview.plan(chosen, { onDone: () => load() });
+  }
+
+  async function createOrganizationEvent(existing) {
+    const base = existing ? new Date(existing.startsAt) : new Date(Date.now() + 3600000);
+    base.setSeconds(0, 0);
+    const value = new Date(base.getTime() - base.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const ok = await HireLink.openModal({
+      title: existing ? "Modifier l’événement" : "Nouvel événement",
+      description: existing
+        ? "Les participants voient immédiatement le nouvel horaire sur leur agenda."
+        : "Réunion, rendez-vous, événement personnel ou autre activité professionnelle.",
+      bodyHtml: '<div class="form-grid"><label>Titre<input id="ag-event-title" required maxlength="180" placeholder="Réunion d’équipe" value="' + esc(existing ? existing.title || "" : "") + '"></label>' +
+        '<label>Type<input id="ag-event-category" list="ag-event-types" value="' + esc(existing ? existing.category || "MEETING" : "MEETING") + '" maxlength="32" placeholder="Réunion, rendez-vous…"><datalist id="ag-event-types"><option value="MEETING">Réunion</option><option value="APPOINTMENT">Rendez-vous</option><option value="PERSONAL">Personnel</option><option value="PROFESSIONAL">Professionnel</option><option value="OTHER">Autre</option></datalist></label>' +
+        '<label>Date et heure<input id="ag-event-start" type="datetime-local" value="' + value + '" required></label>' +
+        '<label>Durée (minutes)<input id="ag-event-duration" type="number" min="5" max="1440" value="' + (existing && existing.durationMinutes ? existing.durationMinutes : 60) + '" required></label>' +
+        '<label class="form-grid-wide">Lieu<input id="ag-event-location" maxlength="120" placeholder="Bureau, salle…" value="' + esc(existing ? existing.location || "" : "") + '"></label>' +
+        '<label class="form-grid-wide">Lien de visioconférence<input id="ag-event-video" type="url" maxlength="500" placeholder="https://meet… (facultatif)" value="' + esc(existing ? existing.videoUrl || "" : "") + '"></label>' +
+        '<label class="form-grid-wide">Notes<textarea id="ag-event-description" maxlength="2000" rows="4">' + esc(existing ? existing.description || "" : "") + "</textarea></label></div>",
+      confirmLabel: existing ? "Enregistrer les modifications" : "Créer l’événement",
+      large: true
+    });
+    if (!ok) return;
+    const local = $("ag-event-start").value;
+    try {
+      await HireLinkAPI.api(existing ? "/organizations/mine/events/" + existing.id : "/organizations/mine/events",
+        { method: existing ? "PUT" : "POST", body: {
+        title: $("ag-event-title").value, category: $("ag-event-category").value,
+        startsAt: new Date(local).toISOString(), durationMinutes: Number($("ag-event-duration").value),
+        location: $("ag-event-location").value, videoUrl: $("ag-event-video").value,
+        description: $("ag-event-description").value
+      }});
+      await load();
+      RC.toast("Agenda", existing ? "Événement modifié." : "Événement créé.", "ok");
+    } catch (err) { RC.toast("Agenda", err.message, "danger"); }
   }
   function closeDetail() {
     const sheet = $("ag-sheet");
@@ -339,10 +823,38 @@
   });
   $("ag-sheet-close").addEventListener("click", closeDetail);
   $("ag-sheet-scrim").addEventListener("click", closeDetail);
+  $("ag-add-event").addEventListener("click", () => createOrganizationEvent());
+  $("ag-plan-interview").addEventListener("click", planInterview);
+  const WORKSPACE_COPY = {
+    calendar: "Tous les entretiens de l’équipe dans un calendrier : mois, semaine, jour ou liste.",
+    notes: "Vos notes personnelles : couleur, crayon, déplacement — rien n’est partagé avec l’équipe.",
+  };
+  async function setWorkspace(next) {
+    workspace = next;
+    const isNotes = next === "notes";
+    document.querySelectorAll("[data-ag-workspace]").forEach((t) => {
+      const active = t.dataset.agWorkspace === next;
+      t.classList.toggle("is-active", active);
+      t.setAttribute("aria-selected", String(active));
+    });
+    // Rien du calendrier ne doit rester visible au-dessus du tableau de notes.
+    document.querySelector(".ag-bar").hidden = isNotes;
+    document.querySelector(".ag-filters").hidden = isNotes;
+    $("ag-cal").hidden = isNotes;
+    $("ag-stats").hidden = isNotes;
+    $("ag-add-event").hidden = isNotes || RC.isHM();
+    $("ag-plan-interview").hidden = isNotes;
+    $("ag-head-sub").textContent = WORKSPACE_COPY[next];
+    $("ag-notes").hidden = !isNotes;
+    if (isNotes) { if (await loadNotes()) renderNotes(); }
+    else render();
+  }
+  document.querySelectorAll("[data-ag-workspace]").forEach((tab) => tab.addEventListener("click", () => setWorkspace(tab.dataset.agWorkspace)));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") return closeDetail();
     if (e.target.closest("input, select, textarea, [contenteditable]") || e.metaKey || e.ctrlKey || e.altKey) return;
     if (document.querySelector("#hl-overlay.is-open")) return;
+    if (workspace === "notes") return;
     const k = e.key.toLowerCase();
     if (k === "t") goToday();
     else if (k === "arrowleft" || k === "j") step(-1);
@@ -410,18 +922,19 @@
   function load() {
     if (!loaded) RC.skeleton($("ag-cal"), 4, 96);
     RC.data.invalidate();
-    RC.data.pipeline(
-      (a) => {
+    Promise.all([
+      new Promise((resolve, reject) => RC.data.pipeline(resolve, reject)),
+      HireLinkAPI.api("/organizations/mine/events")
+    ]).then(([a, events]) => {
         apps = a || [];
+        orgEvents = events || [];
         const first = !loaded;
         loaded = true;
         rebuildOfferFilter();
         if (first && pendingFocus) { const k = pendingFocus; pendingFocus = null; if (!prepareFocus(k)) render(); }
         else render();
         if (selectedId && !$("ag-sheet").hidden) openDetail(selectedId);
-      },
-      (err) => RC.errorState($("ag-cal"), err.message, load)
-    );
+      }).catch((err) => RC.errorState($("ag-cal"), err.message, load));
   }
   load();
   document.addEventListener("hirelink:push", load);

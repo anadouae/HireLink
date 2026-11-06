@@ -36,12 +36,20 @@ public class BillingInvoice {
     @Column(name = "amount_ttc", nullable = false)
     private double amountTtc;
 
-    /** EMISE au moment du changement de plan. */
+    /** EMISE au moment du changement de plan, REGLEE quand l'encaissement est confirmé, AVOIR pour une annulation. */
     @Column(nullable = false, length = 16)
     private String status = "EMISE";
 
     @Column(name = "issued_at", nullable = false)
     private Instant issuedAt = Instant.now();
+
+    /** Motif libre, lu à l'écran : le motif de l'avoir, la raison d'un changement de statut. */
+    @Column(length = 255)
+    private String note;
+
+    /** Une facture d'avoir annule une facture d'origine : le lien rend les deux lisibles ensemble. */
+    @Column(name = "cancels_invoice_id")
+    private Long cancelsInvoiceId;
 
     public Long getId() { return id; }
     public String getNumber() { return number; }
@@ -64,4 +72,8 @@ public class BillingInvoice {
     public void setStatus(String status) { this.status = status; }
     public Instant getIssuedAt() { return issuedAt; }
     public void setIssuedAt(Instant issuedAt) { this.issuedAt = issuedAt; }
+    public String getNote() { return note; }
+    public void setNote(String note) { this.note = note; }
+    public Long getCancelsInvoiceId() { return cancelsInvoiceId; }
+    public void setCancelsInvoiceId(Long cancelsInvoiceId) { this.cancelsInvoiceId = cancelsInvoiceId; }
 }

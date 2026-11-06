@@ -19,6 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -53,6 +55,9 @@ public class JobOfferService {
     private final SkillCatalogService skillCatalog;
     private final OfferTermsService offerTerms;
     private final TextMatcher textMatcher;
+    private final ResponsivenessService responsiveness;
+    private final PlaceCatalogService placeCatalog;
+    private final AuditService audit;
 
     public JobOfferService(
             JobOfferRepository jobOfferRepository,
@@ -67,12 +72,17 @@ public class JobOfferService {
             TagRepository tagRepository,
             SkillCatalogService skillCatalog,
             OfferTermsService offerTerms,
-            TextMatcher textMatcher
+            TextMatcher textMatcher,
+            PlaceCatalogService placeCatalog,
+            ResponsivenessService responsiveness,
+            AuditService audit
     ) {
         this.tagRepository = tagRepository;
         this.skillCatalog = skillCatalog;
         this.offerTerms = offerTerms;
         this.textMatcher = textMatcher;
+        this.placeCatalog = placeCatalog;
+        this.responsiveness = responsiveness;
         this.organizationService = organizationService;
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
@@ -82,6 +92,7 @@ public class JobOfferService {
         this.offerReportRepository = offerReportRepository;
         this.notificationService = notificationService;
         this.membershipRepository = membershipRepository;
+        this.audit = audit;
     }
 
     @Transactional(readOnly = true)
@@ -89,7 +100,7 @@ public class JobOfferService {
         Stream<ApiDtos.JobOfferResponse> stream = jobOfferRepository
                 .findByPublishedTrueAndSuspendedFalse()
                 .stream()
-                .filter(o -> !isExpired(o))
+                .filter(o -> !isExpired(o) && !isHiddenFromCandidates(o))
                 .map(o -> toDto(o, viewer));
         if (viewer != null && viewer.getRole() == Role.CANDIDAT) {
             return stream
@@ -119,7 +130,7 @@ public class JobOfferService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
         boolean owner = viewer != null && organizationService.canManageOffer(viewer, o);
         boolean admin = viewer != null && viewer.getRole() == Role.ADMINISTRATEUR;
-        if ((!o.isPublished() || o.isSuspended()) && !owner && !admin) {
+        if (!isOpenToCandidates(o) && !owner && !admin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Offre non publique");
         }
         return toDto(o, viewer);
@@ -136,6 +147,7 @@ public class JobOfferService {
         o.setRecruiter(recruiter);
         applyWithFraudGate(o, req, wantPublish);
         jobOfferRepository.save(o);
+        audit.ok(wantPublish ? "OFFER_PUBLISHED" : "OFFER_CREATED", recruiter, "OFFER", o.getId(), o.getTitle());
         return toDto(o, null);
     }
 
@@ -156,22 +168,260 @@ public class JobOfferService {
         }
         applyWithFraudGate(o, req, wantPublish);
         jobOfferRepository.save(o);
+        audit.ok("OFFER_UPDATED", recruiter, "OFFER", o.getId(), o.getTitle());
         return toDto(o, null);
     }
 
     @Transactional
     public void delete(User recruiter, Long id) {
-        JobOffer o = jobOfferRepository.findById(id)
+        JobOffer o = requireManaged(recruiter, id);
+        // Cohérence recruteur ↔ candidat : on ne supprime jamais l'historique d'un candidat.
+        if (!applicationRepository.findByJobOfferId(id).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cette offre a déjà des candidatures : archivez-la pour la retirer de votre espace sans effacer l'historique des candidats.");
+        }
+        String titre = o.getTitle();
+        jobOfferRepository.delete(o);
+        audit.ok("OFFER_DELETED", recruiter, "OFFER", id, titre);
+    }
+
+    /** Publier ne veut pas dire « enregistrer de nouveau » : on ne rejoue pas tout le formulaire pour un interrupteur. */
+    @Transactional
+    public ApiDtos.JobOfferResponse publish(User recruiter, Long id) {
+        JobOffer o = requireManaged(recruiter, id);
+        if (o.getArchivedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette offre est archivée : commencez par la restaurer.");
+        }
+        if (o.getClosedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette offre est clôturée : rouvrez les candidatures avant de la publier.");
+        }
+        if (o.isSuspended() && recruiter.getRole() != Role.ADMINISTRATEUR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Offre suspendue après signalements — contactez un administrateur");
+        }
+        if (o.isPublished()) return toDto(o, null);
+        if (recruiter.getRole() != Role.ADMINISTRATEUR) assertCanPublish(recruiter);
+        var scan = fraudOfferScanService.scan(o.getTitle(), o.getDescription());
+        if (scan.blockPublish()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, scan.message());
+        }
+        if (scan.softFlag()) {
+            o.setQuarantineReason(scan.reasonCode() + ": " + String.join(", ", scan.hits()));
+            jobOfferRepository.save(o);
+            return toDto(o, null);
+        }
+        o.setPublished(true);
+        o.setQuarantineReason(null);
+        jobOfferRepository.save(o);
+        audit.ok("OFFER_PUBLISHED", recruiter, "OFFER", o.getId(), o.getTitle());
+        return toDto(o, null);
+    }
+
+    @Transactional
+    public ApiDtos.JobOfferResponse unpublish(User recruiter, Long id) {
+        JobOffer o = requireManaged(recruiter, id);
+        boolean etaitPubliee = o.isPublished();
+        o.setPublished(false);
+        jobOfferRepository.save(o);
+        if (etaitPubliee) {
+            audit.ok("OFFER_UNPUBLISHED", recruiter, "OFFER", o.getId(), o.getTitle());
+        }
+        return toDto(o, null);
+    }
+
+    /**
+     * Clôturer arrête la collecte de candidatures sans rien effacer : l'offre garde ses dossiers,
+     * le recruteur garde la preuve du recrutement réalisé.
+     */
+    @Transactional
+    public ApiDtos.JobOfferResponse close(User recruiter, Long id) {
+        JobOffer o = requireManaged(recruiter, id);
+        boolean etaitOuverte = o.getClosedAt() == null;
+        if (etaitOuverte) o.setClosedAt(Instant.now());
+        jobOfferRepository.save(o);
+        if (etaitOuverte) {
+            audit.ok("OFFER_CLOSED", recruiter, "OFFER", o.getId(), o.getTitle());
+        }
+        return toDto(o, null);
+    }
+
+    @Transactional
+    public ApiDtos.JobOfferResponse reopen(User recruiter, Long id) {
+        JobOffer o = requireManaged(recruiter, id);
+        if (o.getArchivedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette offre est archivée : commencez par la restaurer.");
+        }
+        o.setClosedAt(null);
+        jobOfferRepository.save(o);
+        audit.ok("OFFER_REOPENED", recruiter, "OFFER", o.getId(), o.getTitle());
+        return toDto(o, null);
+    }
+
+    @Transactional
+    public ApiDtos.JobOfferResponse archive(User recruiter, Long id) {
+        JobOffer o = requireManaged(recruiter, id);
+        boolean etaitActive = o.getArchivedAt() == null;
+        if (etaitActive) o.setArchivedAt(Instant.now());
+        jobOfferRepository.save(o);
+        if (etaitActive) {
+            audit.ok("OFFER_ARCHIVED", recruiter, "OFFER", o.getId(), o.getTitle());
+        }
+        return toDto(o, null);
+    }
+
+    @Transactional
+    public ApiDtos.JobOfferResponse unarchive(User recruiter, Long id) {
+        JobOffer o = requireManaged(recruiter, id);
+        o.setArchivedAt(null);
+        jobOfferRepository.save(o);
+        audit.ok("OFFER_UNARCHIVED", recruiter, "OFFER", o.getId(), o.getTitle());
+        return toDto(o, null);
+    }
+
+    /** Relancer une recherche : on repart du texte et des conditions, jamais du compteur de candidatures. */
+    @Transactional
+    public ApiDtos.JobOfferResponse duplicate(User recruiter, Long id) {
+        JobOffer src = requireManaged(recruiter, id);
+        JobOffer copy = new JobOffer();
+        copy.setRecruiter(recruiter);
+        copy.setTitle(src.getTitle());
+        copy.setDescription(src.getDescription());
+        copy.setRequiredSkills(src.getRequiredSkills());
+        copy.setNiceToHaveSkills(src.getNiceToHaveSkills());
+        copy.setTags(new LinkedHashSet<>(src.getTags()));
+        copy.setLocation(src.getLocation());
+        copy.setContractType(src.getContractType());
+        copy.setResponseSlaDays(src.getResponseSlaDays());
+        copy.setCompensationType(src.getCompensationType());
+        copy.setSalaryMin(src.getSalaryMin());
+        copy.setSalaryMax(src.getSalaryMax());
+        copy.setSalaryPeriod(src.getSalaryPeriod());
+        copy.setSalaryBasis(src.getSalaryBasis());
+        copy.setCurrency(src.getCurrency());
+        copy.setDurationMonths(src.getDurationMonths());
+        copy.setStartDate(src.getStartDate());
+        copy.setStartAsap(src.getStartAsap());
+        copy.setAgreementRequired(src.getAgreementRequired());
+        copy.setHiringPossible(src.getHiringPossible());
+        copy.setProbationMonths(src.getProbationMonths());
+        copy.setSchedule(src.getSchedule());
+        copy.setWorkMode(src.getWorkMode());
+        copy.setExperienceLevel(src.getExperienceLevel());
+        copy.setEducationLevel(src.getEducationLevel());
+        copy.setPositions(src.getPositions());
+        copy.setBenefits(src.getBenefits());
+        // une copie ne renaît pas avec une date limite déjà dépassée
+        copy.setDeadline(src.getDeadline() != null && src.getDeadline().isAfter(BusinessTime.today()) ? src.getDeadline() : null);
+        copy.setPublished(false);
+        jobOfferRepository.save(copy);
+        audit.ok("OFFER_DUPLICATED", recruiter, "OFFER", copy.getId(), "copie de l'offre " + id + " — " + copy.getTitle());
+        return toDto(copy, null);
+    }
+
+    /** Prolonger depuis la date en cours : sinon « +7 jours » sur une offre expirée repartirait de hier. */
+    @Transactional
+    public ApiDtos.JobOfferResponse extendDeadline(User recruiter, Long id, Integer days) {
+        JobOffer o = requireManaged(recruiter, id);
+        int add = days == null ? 0 : days;
+        if (add < 1 || add > 180) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indiquez une prolongation entre 1 et 180 jours.");
+        }
+        LocalDate base = o.getDeadline() != null && o.getDeadline().isAfter(BusinessTime.today()) ? o.getDeadline() : BusinessTime.today();
+        o.setDeadline(base.plusDays(add));
+        jobOfferRepository.save(o);
+        audit.ok("OFFER_DEADLINE_EXTENDED", recruiter, "OFFER", o.getId(), "+" + add + " j → " + o.getDeadline());
+        return toDto(o, null);
+    }
+
+    /* --------------------------------------------------------------- modération */
+
+    /** Suspendre après signalement confirmé : la vitrine s'éteint et le recruteur connaît le motif. */
+    @Transactional
+    public ApiDtos.JobOfferResponse adminSuspend(User admin, Long id, String reason) {
+        JobOffer o = requireModeration(admin, id);
+        if (o.isSuspended()) return toDto(o, null);
+        String why = reason == null || reason.isBlank() ? "Signalement confirmé par la modération" : reason.trim();
+        o.setSuspended(true);
+        o.setPublished(false);
+        o.setQuarantineReason("MODERATION: " + why);
+        jobOfferRepository.save(o);
+        resolveReports(o.getId(), "FONDE", admin.getEmail());
+        notificationService.push("offer:" + o.getId(), o.getRecruiter().getId(), "Offre suspendue",
+                "« " + o.getTitle() + " » a été suspendue par la modération : " + why, "MODERATION");
+        return toDto(o, null);
+    }
+
+    /** Rétablir est la seule sortie de suspension : sans elle, une offre arrêtée par erreur l'est pour toujours. */
+    @Transactional
+    public ApiDtos.JobOfferResponse adminRestore(User admin, Long id) {
+        JobOffer o = requireModeration(admin, id);
+        o.setSuspended(false);
+        o.setQuarantineReason(null);
+        jobOfferRepository.save(o);
+        resolveReports(o.getId(), "ECARTE", admin.getEmail());
+        notificationService.push("offer:" + o.getId(), o.getRecruiter().getId(), "Offre rétablie",
+                "« " + o.getTitle() + " » n'est plus suspendue. Publiez-la de nouveau pour la remettre en vitrine.", "MODERATION");
+        return toDto(o, null);
+    }
+
+    /** Retirer une offre de la vitrine sans la sanctionner : le signalement n'est pas confirmé, mais le doute suffit. */
+    @Transactional
+    public ApiDtos.JobOfferResponse adminUnpublish(User admin, Long id) {
+        JobOffer o = requireModeration(admin, id);
+        o.setPublished(false);
+        jobOfferRepository.save(o);
+        notificationService.push("offer:" + o.getId(), o.getRecruiter().getId(), "Offre retirée de la vitrine",
+                "« " + o.getTitle() + " » n'apparaît plus dans la recherche. Vous pouvez la publier à nouveau.", "MODERATION");
+        return toDto(o, null);
+    }
+
+    /** Écarter les signalements d'une offre : rien n'est touché, la file se vide — c'est la réponse « hors sujet ». */
+    @Transactional
+    public int adminDismissReports(User admin, Long id) {
+        JobOffer o = requireModeration(admin, id);
+        return resolveReports(o.getId(), "ECARTE", admin.getEmail());
+    }
+
+    private JobOffer requireModeration(User admin, Long id) {
+        if (admin == null || admin.getRole() != Role.ADMINISTRATEUR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Modération réservée aux administrateurs");
+        }
+        return jobOfferRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
+    }
+
+    /**
+     * Les signalements d'une même offre se traitent ensemble : le sujet de la file est l'offre, pas l'alerte.
+     * Une décision déjà prise n'est jamais réécrite — suspendre puis rétablier laisse les deux traces.
+     */
+    private int resolveReports(Long offerId, String decision, String handlerEmail) {
+        int handled = 0;
+        for (OfferReport r : offerReportRepository.findByJobOfferIdOrderByCreatedAtAsc(offerId)) {
+            if (r.getResolvedAt() != null) continue;
+            r.setStatus(decision);
+            r.setResolvedAt(Instant.now());
+            r.setHandledByEmail(handlerEmail);
+            offerReportRepository.save(r);
+            handled++;
+        }
+        return handled;
+    }
+
+    private JobOffer requireManaged(User recruiter, Long id) {        JobOffer o = jobOfferRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
         if (!organizationService.canManageOffer(recruiter, o)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Pas propriétaire");
         }
-        // Cohérence recruteur ↔ candidat : on ne supprime jamais l'historique d'un candidat.
-        if (!applicationRepository.findByJobOfferId(id).isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Cette offre a déjà des candidatures : dépubliez-la plutôt que de la supprimer (les candidats gardent leur historique).");
-        }
-        jobOfferRepository.delete(o);
+        return o;
+    }
+
+    /** Une offre close ou rangée n'est plus une vitrine, même si elle reste publiée côté entreprise. */
+    private static boolean isHiddenFromCandidates(JobOffer o) {
+        return o.getClosedAt() != null || o.getArchivedAt() != null;
+    }
+
+    private static boolean isOpenToCandidates(JobOffer o) {
+        return o.isPublished() && !o.isSuspended() && !isHiddenFromCandidates(o);
     }
 
     /** Signalement communautaire — 3 alertes → suspension auto. */
@@ -245,17 +495,16 @@ public class JobOfferService {
     }
 
     private void applyWithFraudGate(JobOffer o, ApiDtos.JobOfferRequest req, boolean wantPublish) {
-        if (req.responseSlaDays() < 1) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "SLA ≥ 1 jour requis");
-        }
         o.setTitle(req.title().trim());
         o.setDescription(req.description().trim());
         o.setRequiredSkills(skillCatalog.normaliseList(req.requiredSkills(), 500));
         o.setNiceToHaveSkills(req.niceToHaveSkills() == null || req.niceToHaveSkills().isBlank()
                 ? null : skillCatalog.normaliseList(req.niceToHaveSkills(), 500));
         o.setTags(resolveTags(o.getRequiredSkills()));
-        o.setLocation(req.location());
-        o.setResponseSlaDays(req.responseSlaDays());
+        o.setLocation(normalizeLocation(req.location(), o));
+        if (req.responseSlaDays() != null && req.responseSlaDays() >= 1) {
+            o.setResponseSlaDays(req.responseSlaDays());
+        }
         offerTerms.apply(o, req);
 
         var scan = fraudOfferScanService.scan(req.title(), req.description());
@@ -290,6 +539,7 @@ public class JobOfferService {
             matched = breakdown.covered();
             missing = breakdown.missing();
         }
+        ResponsivenessService.Signal pace = responsiveness.signalOf(o.getRecruiter().getAssignedOrgId());
         return new ApiDtos.JobOfferResponse(
                 o.getId(),
                 o.getTitle(),
@@ -307,10 +557,13 @@ public class JobOfferService {
                 o.getCreatedAt(),
                 match,
                 companyName(o),
+                companyCity(o),
                 companyVerified(o),
                 companyLogo(o),
                 companyWebsite(o),
                 companySector(o),
+                pace.labelled() ? pace.medianDays() : null,
+                pace.badge(),
                 o.getCompensationType(),
                 o.getSalaryMin(),
                 o.getSalaryMax(),
@@ -334,12 +587,14 @@ public class JobOfferService {
                 missing,
                 match != null && match >= PROFILE_MATCH_THRESHOLD,
                 o.getNiceToHaveSkills(),
-                breakdown
+                breakdown,
+                o.getClosedAt(),
+                o.getArchivedAt()
         );
     }
 
     private static boolean isExpired(JobOffer o) {
-        return o.getDeadline() != null && o.getDeadline().isBefore(java.time.LocalDate.now());
+        return o.getDeadline() != null && o.getDeadline().isBefore(BusinessTime.today());
     }
 
     private Organization orgOf(JobOffer o) {
@@ -351,6 +606,48 @@ public class JobOfferService {
 
     private String companyName(JobOffer o) {
         return organizationService.companyNameOf(o);
+    }
+
+    /** Ville de l'entreprise : sert de repli quand l'offre n'a pas de ville exploitable (lieu vide, mode de travail ou pays). */
+    private String companyCity(JobOffer o) {
+        Organization org = orgOf(o);
+        if (org != null && org.getCity() != null && !org.getCity().isBlank()) return org.getCity().trim();
+        String own = o.getRecruiter().getCity();
+        return own == null ? "" : own.trim();
+    }
+
+    private static final java.util.regex.Pattern MODE_WORD =
+            java.util.regex.Pattern.compile(
+                    "t[ée]l[ée]travail|remote|hybride|sur site|pr[ée]sentiel|[àa] distance|onsite|full[- ]?remote",
+                    java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern MODE_HYBRID =
+            java.util.regex.Pattern.compile("hybride", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern MODE_ONSITE =
+            java.util.regex.Pattern.compile("sur site|pr[ée]sentiel|onsite", java.util.regex.Pattern.CASE_INSENSITIVE);
+
+    private static String canonicalMode(String segment) {
+        if (MODE_HYBRID.matcher(segment).find()) return "Hybride";
+        if (MODE_ONSITE.matcher(segment).find()) return "Sur site";
+        return "Télétravail";
+    }
+
+    /**
+     * « Maroc » n'est pas une ville. Un pays saisi comme lieu est écarté au profit de la ville de
+     * l'entreprise ; le pays se déduit de cette ville à l'affichage, il n'est jamais stocké à sa place.
+     */
+    private String normalizeLocation(String raw, JobOffer o) {
+        String value = raw == null ? "" : raw.trim();
+        String city = "";
+        String mode = "";
+        for (String segment : value.split("[·|,/]")) {
+            String s = segment.trim();
+            if (s.isEmpty()) continue;
+            if (MODE_WORD.matcher(s).find()) mode = canonicalMode(s);
+            else if (!placeCatalog.isCountry(s)) city = s;
+        }
+        if (city.isEmpty()) city = companyCity(o);
+        if (city.isEmpty()) return value;
+        return mode.isEmpty() ? city : city + " · " + mode;
     }
 
     private boolean companyVerified(JobOffer o) {

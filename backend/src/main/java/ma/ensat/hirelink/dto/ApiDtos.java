@@ -87,12 +87,13 @@ public class ApiDtos {
     ) {}
 
     public record JobOfferRequest(
-            @NotBlank @Size(max = 160) String title,
+            @NotBlank @Size(min = 3, max = 160) String title,
             @NotBlank @Size(max = 10000) String description,
             @Size(max = 500) String requiredSkills,
             @Size(max = 120) String location,
             @NotBlank @Size(max = 40) String contractType,
-            @Min(1) int responseSlaDays,
+            /** Suivi interne uniquement : le candidat ne voit plus de délai promis. Absent = valeur en place. */
+            Integer responseSlaDays,
             boolean published,
             CompensationType compensationType,
             @Min(0) @Max(10_000_000) Integer salaryMin,
@@ -133,10 +134,14 @@ public class ApiDtos {
             Instant createdAt,
             Double matchScore,
             String companyName,
+            String companyCity,
             boolean companyVerified,
             String companyLogo,
             String companyWebsite,
             String companySector,
+            /** Vélocité mesurée de l'entreprise (jamais une promesse) : médiane en jours et distinction. */
+            Double responseMedianDays,
+            String responsiveness,
             CompensationType compensationType,
             Integer salaryMin,
             Integer salaryMax,
@@ -162,7 +167,10 @@ public class ApiDtos {
             boolean matchesProfile,
             String niceToHaveSkills,
             /** Détail du score par critère (lecteur candidat uniquement), sinon {@code null}. */
-            ma.ensat.hirelink.service.SkillMatchingService.Compatibility matchBreakdown
+            ma.ensat.hirelink.service.SkillMatchingService.Compatibility matchBreakdown,
+            /** Cycle de vie côté entreprise : {@code null} tant que l'offre n'est ni clôturée ni archivée. */
+            Instant closedAt,
+            Instant archivedAt
     ) {}
 
     public record ApplyRequest(
@@ -198,7 +206,6 @@ public class ApiDtos {
             Integer interviewDurationMinutes,
             String interviewTimeZone,
             String interviewVideoUrl,
-            String interviewPhone,
             String interviewMapUrl,
             String interviewParticipants,
             String interviewStatus,
@@ -213,6 +220,9 @@ public class ApiDtos {
             Integer slaDays,
             Long slaRemainingDays,
             boolean slaBreached,
+            /** Vélocité mesurée de l'entreprise — ce que le candidat voit, à la place du délai promis. */
+            Double responseMedianDays,
+            String responsiveness,
             String cvSections,
             boolean hasCvFile,
             /** Détail du score par critère, recalculé sur le profil et l'offre actuels. */
@@ -220,6 +230,9 @@ public class ApiDtos {
             /** Réponses du candidat au moment de postuler (JSON) ; {@code null} pour les anciennes candidatures. */
             String applicationDetails
     ) {}
+
+    /** Vélocité mesurée du recruteur sur ses propres offres ; {@code badge} vide sous l'échantillon minimum. */
+    public record PaceSignal(int answered, double medianDays, String badge) {}
 
     /** Planification ou report d'un entretien. {@code startsAt} est l'heure locale du fuseau {@code timeZone}. */
     public record InterviewRequest(
@@ -231,7 +244,6 @@ public class ApiDtos {
             @Size(max = 255) String location,
             @Size(max = 300) @Pattern(regexp = "^$|https?://\\S+") String mapUrl,
             @Size(max = 300) @Pattern(regexp = "^$|https?://\\S+") String videoUrl,
-            @Size(max = 30) @Pattern(regexp = "^$|[0-9+() .-]{6,30}") String phone,
             @Size(max = 300) String participants,
             @Size(max = 1000) String instructions
     ) {}
@@ -245,7 +257,6 @@ public class ApiDtos {
             @Size(max = 600) String rejectionReason,
             /** Note d’étape, ou message de refus envoyé au candidat (refus). */
             @Size(max = 4000) String advanceNote,
-            @Valid InterviewRequest interview,
             Boolean confirmIdentity,
             Boolean confirmCvReviewed,
             Boolean confirmSlaAware

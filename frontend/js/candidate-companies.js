@@ -120,7 +120,7 @@
     const jobs = (selected.offers || []).map(function (o) {
       const score = o.matchScore == null ? "" : '<span class="rc-pill">' + Math.round(o.matchScore) + " %</span>";
       return '<div class="rc-item co-job"><div class="rc-item-main"><strong>' +
-        esc(o.title) + "</strong><span>" + esc(o.location || "") +
+        esc(o.title) + "</strong><span>" + esc(HireLinkPlaces.cityOf(o.location, o.companyCity)) +
         (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div>" + score +
         '<a class="btn btn-soft btn-sm" href="candidate.html?offer=' + encodeURIComponent(o.id) + '">Voir</a>' +
         '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler</a></div>';
@@ -134,6 +134,7 @@
       (selected.employees ? " · " + esc(selected.employees) : "") +
       (selected.verified ? " · Identité vérifiée" : "") +
       "</p></div>" +
+      '<a class="btn btn-soft btn-sm" href="../company.html?name=' + encodeURIComponent(selected.name) + '" target="_blank" rel="noopener">Page publique</a>' +
       '<button type="button" class="btn btn-sm ' + (on ? "btn-soft" : "btn-primary") + ' co-follow" aria-pressed="' + on + '">' + (on ? "✓ Suivie" : "+ Suivre") + "</button></div>" +
       "<p>" + esc(selected.presentation || "") + "</p>" +
       (selected.website ? '<p><a href="' + esc(selected.website) + '" target="_blank" rel="noopener">Site web</a></p>' : "") +

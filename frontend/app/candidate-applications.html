@@ -10,17 +10,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/interview.css?v=20261102p" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/match.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/interview.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/match.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
   <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -64,10 +64,11 @@
             <span class="badge badge-info" id="d-status">—</span>
           </div>
           <div id="d-interview" hidden></div>
+          <div id="d-details" hidden style="margin:1rem 0;padding:.85rem 1rem;border:1px solid var(--line);border-radius:14px;background:var(--surface-2, #faf7f3)"></div>
           <h3 class="timeline-title">Avancement du dossier</h3>
           <div class="hl-timeline hl-timeline--airy" id="d-timeline"></div>
           <div style="margin:1rem 0 .3rem">
-            <div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:0.3rem">
+            <div style="display:flex;justify-content:space-between;font-size: var(--text-sm);margin-bottom:0.3rem">
               <span class="muted">Compatibilité profil × offre</span>
               <strong id="d-match-pct">—</strong>
             </div>
@@ -75,7 +76,7 @@
             <details class="hm-toggle" id="d-match-why-wrap"><summary>Voir le détail du score</summary><div id="d-match-why" hidden></div></details>
           </div>
           <div class="cand-detail-actions">
-            <button type="button" class="btn btn-secondary btn-sm" id="d-ai-prep">Synthèse de mon CV</button>
+            <button type="button" class="btn btn-secondary btn-sm" id="d-ai-prep" data-ai-cost>Synthèse de mon CV</button>
             <span id="d-actions" style="display:contents"></span>
           </div>
           <div id="d-prep" hidden style="margin-top:0.8rem"></div>
@@ -86,18 +87,20 @@
     </div>
   </div>
   <div class="rc-scrim" id="rc-scrim"></div>
-  <script defer src="../js/mascotte.js?v=20261101r"></script>
-  <script defer src="../js/premium.js?v=20261102s"></script>
-  <script defer src="../js/ui.js?v=20261101r"></script>
-  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/mascotte.js?v=20261105i"></script>
+  <script defer src="../js/premium.js?v=20261106g"></script>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261106c"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261103h"></script>
   <script defer src="../js/skills.js?v=20261101r"></script>
-  <script defer src="../js/interview.js?v=20261101r"></script>
-  <script defer src="../js/in-app-help.js?v=20261102q"></script>
-  <script defer src="../js/app-shell.js?v=20261102q"></script>
-  <script defer src="../js/growth.js?v=20261101r"></script>
+  <script defer src="../js/offer-card.js?v=20261105o"></script>
+  <script defer src="../js/interview.js?v=20261105y"></script>
+  <script defer src="../js/in-app-help.js?v=20261105s"></script>
+  <script defer src="../js/credits.js?v=20261105v"></script>
+  <script defer src="../js/app-shell.js?v=20261105y"></script>
+  <script defer src="../js/growth.js?v=20261106g"></script>
   <script defer src="../js/match.js?v=20261101r"></script>
-  <script defer src="../js/candidate-applications.js?v=20261101r"></script>
+  <script defer src="../js/candidate-applications.js?v=20261105n"></script>
 </body>
 </html>

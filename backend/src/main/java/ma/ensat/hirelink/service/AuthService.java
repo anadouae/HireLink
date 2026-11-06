@@ -3,6 +3,7 @@ package ma.ensat.hirelink.service;
 import ma.ensat.hirelink.dto.AuthDtos;
 import ma.ensat.hirelink.dto.AuthResponse;
 import ma.ensat.hirelink.dto.AuthResult;
+import org.springframework.beans.factory.annotation.Value;
 import ma.ensat.hirelink.security.AuthThrottle;
 import ma.ensat.hirelink.security.ClientInfo;
 import ma.ensat.hirelink.security.PasswordPolicy;
@@ -32,6 +33,7 @@ public class AuthService {
     static final String LOCKED = "Trop de tentatives. Pour votre sécurité, réessayez dans quelques minutes.";
     private static final int ACCOUNT_MAX_FAILS = 5;
     private static final int IP_MAX_FAILS = 30;
+    private static final int CAPTCHA_AFTER_FAILS = 2;
     private static final long LOCK_WINDOW_SECONDS = 900;
 
     private final UserRepository userRepository;
@@ -45,11 +47,16 @@ public class AuthService {
     private final AuditService audit;
     private final AuthThrottle throttle;
     private final TotpService totp;
+    private final CaptchaService captcha;
     private final NotificationService notifications;
     private final MailService mail;
     private final WebAuthnService webAuthn;
     private final EventNotifier notifier;
     private final String dummyHash;
+
+    /** Le profil de démonstration ne doit pas exiger d'application d'authentification ; true durcit le compte admin. */
+    @Value("${hirelink.security.admin-mfa-required:false}")
+    private boolean adminMfaRequired;
 
     public AuthService(
             UserRepository userRepository,
@@ -63,6 +70,7 @@ public class AuthService {
             AuditService audit,
             AuthThrottle throttle,
             TotpService totp,
+            CaptchaService captcha,
             NotificationService notifications,
             MailService mail,
             WebAuthnService webAuthn,
@@ -79,6 +87,7 @@ public class AuthService {
         this.audit = audit;
         this.throttle = throttle;
         this.totp = totp;
+        this.captcha = captcha;
         this.notifications = notifications;
         this.mail = mail;
         this.webAuthn = webAuthn;
@@ -174,6 +183,10 @@ public class AuthService {
             throw e;
         }
         User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
+        if (Math.max(throttle.count(acctKey, LOCK_WINDOW_SECONDS), throttle.count(ipKey, LOCK_WINDOW_SECONDS)) >= CAPTCHA_AFTER_FAILS) {
+            // Le premier essai et le second restent instantanés : le CAPTCHA n'arrive que sous tentatives répétées.
+            captcha.assertValid(req.captchaToken(), req.captchaAnswer());
+        }
         String hash = user != null && user.getPasswordHash() != null && !user.getPasswordHash().isBlank() ? user.getPasswordHash() : null;
         boolean ok = passwordEncoder.matches(req.password(), hash != null ? hash : dummyHash) && hash != null;
         if (!ok) {
@@ -183,6 +196,7 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, GENERIC_LOGIN_ERROR);
         }
         throttle.reset(acctKey);
+        throttle.reset(ipKey);
         if (passwordEncoder.upgradeEncoding(hash)) {
             user.setPasswordHash(passwordEncoder.encode(req.password())); // coût BCrypt relevé : on ré-empreinte à la volée
             userRepository.save(user);
@@ -288,9 +302,38 @@ public class AuthService {
 
     // ------------------------------------------------------------------ passkeys
 
+    public java.util.Map<String, Object> passkeyCheck(String email) {
+        return webAuthn.checkPasskey(email);
+    }
+
     public java.util.Map<String, Object> passkeyLoginOptions(ClientInfo ci) {
+        return passkeyLoginOptions(null, ci);
+    }
+
+    public java.util.Map<String, Object> passkeyLoginOptions(String email, ClientInfo ci) {
         throttle.hit("passkey:ip:" + ci.ip(), 60, 600, LOCKED);
-        return webAuthn.startLogin();
+        return webAuthn.startLogin(email);
+    }
+
+    public java.util.Map<String, Object> passkeyEnrollStart(String email, String password, ClientInfo ci) {
+        throttle.hit("passkey-enroll:ip:" + ci.ip(), 30, 600, LOCKED);
+        if (email == null || password == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email et mot de passe requis");
+        User user = userRepository.findByEmailIgnoreCase(email.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Identifiants incorrects"));
+        String hash = user.getPasswordHash();
+        if (hash == null || !passwordEncoder.matches(password, hash)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Mot de passe incorrect");
+        }
+        return webAuthn.startRegistration(user);
+    }
+
+    @Transactional
+    public AuthResult passkeyEnrollFinish(String email, String requestId, String credentialJson, String name, ClientInfo ci) {
+        User user = userRepository.findByEmailIgnoreCase(email.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur introuvable"));
+        webAuthn.finishRegistration(user, requestId, credentialJson, name);
+        audit.ok("PASSKEY_ENROLL", user, "USER", user.getId(), "Passkey créée depuis le formulaire de connexion");
+        return complete(user, "passkey-enroll", ci);
     }
 
     @Transactional
@@ -332,8 +375,7 @@ public class AuthService {
             if (user.isMfaEnabled()) {
                 return AuthResult.withoutSession(AuthResponse.mfaChallenge(jwtService.generateFlowToken(user.getId(), "mfa", 300)));
             }
-            if (user.getRole() == Role.ADMINISTRATEUR) {
-                // L'administrateur ne se connecte JAMAIS avec le seul mot de passe : TOTP obligatoire (ou passkey).
+            if (adminMfaRequired && user.getRole() == Role.ADMINISTRATEUR) {
                 return AuthResult.withoutSession(AuthResponse.mfaEnroll(jwtService.generateFlowToken(user.getId(), "mfa-enroll", 600)));
             }
         }
@@ -483,7 +525,7 @@ public class AuthService {
         } catch (DateTimeParseException ex) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date de naissance invalide");
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = BusinessTime.today();
         if (date.isAfter(today.minusYears(16)) || date.isBefore(today.minusYears(80))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Date de naissance hors plage (16 à 80 ans)");
         }

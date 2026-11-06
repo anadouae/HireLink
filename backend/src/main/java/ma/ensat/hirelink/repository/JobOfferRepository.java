@@ -11,4 +11,5 @@ public interface JobOfferRepository extends JpaRepository<JobOffer, Long> {
 
     List<JobOffer> findByRecruiterIdIn(java.util.Collection<Long> recruiterIds);
     long countByPublishedTrue();
+    List<JobOffer> findTop10ByTitleContainingIgnoreCaseOrLocationContainingIgnoreCase(String title, String location);
 }

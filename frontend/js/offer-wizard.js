@@ -21,13 +21,12 @@
   const NO_DURATION = ["CDI", "Temps partiel"];
   const RHYTHMS = ["1 semaine école / 1 semaine entreprise", "2 semaines école / 2 semaines entreprise", "2 jours école / 3 jours entreprise", "1 mois école / 3 mois entreprise"];
   const BENEFITS = ["Transport", "Tickets restaurant", "Assurance santé", "Primes", "Télétravail partiel", "Formation", "Matériel fourni", "Mutuelle"];
-  const SLA_DAYS = [3, 5, 7, 10, 14];
 
   const isInternship = (s) => INTERNSHIPS.indexOf(s.contractType) >= 0;
   const hasDuration = (s) => NO_DURATION.indexOf(s.contractType) < 0;
   const hasProbation = (s) => s.contractType === "CDI" || s.contractType === "CDD";
 
-  const today = () => new Date().toISOString().slice(0, 10);
+  const today = () => global.HireLinkApp.localDate();
 
   function h(tag, attrs, children) {
     const e = document.createElement(tag);
@@ -90,7 +89,7 @@
     if (step === 0) {
       if (s.title.trim().length < 3) e.title = "Donnez un intitulé clair (3 caractères minimum).";
       if (s.description.trim().length < 20) e.description = "Décrivez les missions en quelques phrases (20 caractères minimum).";
-      if (!s.location.trim() && s.workMode !== "REMOTE") e.location = "Indiquez la ville ou le pays du poste.";
+      if (!s.location.trim() && s.workMode !== "REMOTE") e.location = "Indiquez la ville du poste, pas le pays.";
     }
     if (step === 1) {
       if (s.compensationType === "PAID") {
@@ -168,20 +167,31 @@
     const ui = { step: 0, touched: new Set(), submitting: false, error: "", skills: null };
 
     const overlay = h("div", { class: "ow-overlay" });
-    const previouslyFocused = document.activeElement;
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add("is-open"));
 
+    let releaseTrap = function () {};
     function close() {
-      document.removeEventListener("keydown", onKey);
+      releaseTrap();
       overlay.remove();
-      if (previouslyFocused && previouslyFocused.focus) previouslyFocused.focus();
     }
 
-    function onKey(e) {
-      if (e.key === "Escape" && !document.querySelector(".hl-combo-menu:not([hidden])")) close();
+    // Le contrat clavier (Escape, Tab, retour du focus) vient de ui.js ; le menu combo ouvert garde la main sur Escape.
+    // Le piège se pose sur le conteneur : render() remplace la carte à chaque étape, l'overlay survit.
+    if (global.HireLink && HireLink.trapDialog) {
+      releaseTrap = HireLink.trapDialog(overlay, function (e) {
+        if (document.querySelector(".hl-combo-menu:not([hidden])")) return false;
+        close(e);
+      });
+    } else {
+      function onKey(e) {
+        if (e.key === "Escape" && !document.querySelector(".hl-combo-menu:not([hidden])")) close();
+      }
+      document.addEventListener("keydown", onKey);
+      releaseTrap = function () {
+        document.removeEventListener("keydown", onKey);
+      };
     }
-    document.addEventListener("keydown", onKey);
 
     // ----- champs -----------------------------------------------------------
 
@@ -259,7 +269,7 @@
       const jobs = text("title", { maxlength: 160, placeholder: "Ex. Développeur Full-Stack Java", "data-suggest": "job", autocomplete: "off" });
       const desc = bind(h("textarea", { rows: 6, maxlength: 10000, placeholder: "Missions, contexte de l’équipe, environnement technique, ce que vous offrez…" }), "description");
       const contract = choice("contractType", CONTRACTS, () => { applyContractDefaults(); render(`#ow-contractType-${state.contractType.replace(/\W+/g, "_")}`); });
-      const place = text("location", { maxlength: 120, placeholder: "Ville ou pays : Tétouan, Casablanca, Paris…", "data-suggest": "place", autocomplete: "off" });
+      const place = text("location", { maxlength: 120, placeholder: "Ville du poste : Tétouan, Casablanca, Paris…", "data-suggest": "city", autocomplete: "off" });
       const mode = choice("workMode", Object.keys(O.LABELS.workMode).map((k) => ({ value: k, label: O.LABELS.workMode[k] })), refreshErrors);
       return [
         section("Le poste", null, [field("title", "Intitulé du poste", jobs, { required: true, wide: true }), field("description", "Description", desc, { required: true, wide: true })]),
@@ -269,7 +279,7 @@
           contract,
         ]),
         section("Lieu et organisation", null, [
-          field("location", "Lieu", place, { required: state.workMode !== "REMOTE", hint: "Les villes du Maroc sont proposées en premier, avec le drapeau du pays." }),
+          field("location", "Ville du poste", place, { required: state.workMode !== "REMOTE", hint: "Une ville, jamais un pays : le drapeau et le pays sont déduits de cette ville. En télétravail, indiquez la ville de rattachement de l’équipe." }),
           field("workMode", "Mode de travail", mode),
         ]),
       ];
@@ -426,13 +436,15 @@
     }
 
     function previewOffer() {
-      return Object.assign({ id: editId || 0, companyName: existing && existing.companyName || "Votre entreprise", companyLogo: existing && existing.companyLogo, companyVerified: true }, toRequest(state));
+      // Le bouclier de l'aperçu doit refléter l'état réel : la fiche publique ne l'affiche que si le serveur a vérifié l'entreprise.
+      const org = window.HireLinkApp && HireLinkApp.getOrg ? HireLinkApp.getOrg() : null;
+      const verified = existing && typeof existing.companyVerified === "boolean"
+        ? existing.companyVerified
+        : !org || org.verified !== false;
+      return Object.assign({ id: editId || 0, companyName: existing && existing.companyName || "Votre entreprise", companyLogo: existing && existing.companyLogo, companyVerified: verified }, toRequest(state));
     }
 
     function stepPublication() {
-      const sla = select("responseSlaDays", SLA_DAYS.map((d) => [String(d), d + " jours" + (d === 7 ? " (recommandé)" : "")]));
-      sla.addEventListener("change", () => { state.responseSlaDays = Number(sla.value); });
-      sla.value = String(state.responseSlaDays);
       const pub = h("input", { type: "checkbox", id: "ow-published" });
       pub.checked = state.published;
       pub.addEventListener("change", () => { state.published = pub.checked; });
@@ -445,11 +457,11 @@
           O.facts(offer),
         ]),
         section("Publication", null, [
-          field("responseSlaDays", "Délai de première réponse", sla, { hint: "Engagement affiché au candidat : « nous vous répondons sous X jours »." }),
           h("div", { class: "ow-field is-wide" }, [
             h("label", { for: "ow-published", class: "ow-switch" }, [pub, h("span", { text: "Publier immédiatement" })]),
-            h("p", { class: "ow-hint", text: "Une entreprise vérifiée est nécessaire pour publier. Sinon, l’offre reste en brouillon." }),
+            h("p", { class: "ow-hint", text: "Réservé aux entreprises vérifiées (raison sociale + ICE). Sans vérification, l’enregistrement avec publication est refusé : complétez la vérification dans Équipe → Paramètres." }),
           ]),
+          h("p", { class: "ow-hint", text: "Aucun délai n’est promis au candidat. HireLink observe vos premières réponses réelles et affiche un badge quand elles sont rapides." }),
         ]),
       ];
     }
@@ -537,7 +549,7 @@
     }
 
     render();
-    const first = overlay.querySelector("#ow-title");
+    const first = overlay.querySelector(".ow-card input, .ow-card textarea, .ow-card select");
     if (first) first.focus();
   }
 

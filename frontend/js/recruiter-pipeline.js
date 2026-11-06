@@ -22,12 +22,15 @@
   const STEP_HINT = {
     SCREENING: "Présélection : CV et compétences vs fiche de poste.",
     SHORTLISTED: "Shortlist : candidat retenu pour un échange humain.",
-    INTERVIEW: "Planifiez l’entretien : mode, date, lieu ou lien. Le candidat reçoit une invitation.",
+    INTERVIEW: "Phase entretien : le créneau se pose depuis le dossier du candidat.",
   };
 
   let allApps = [];
   let refusalCatalog = [];
+  let ownedOffers = [];
+  let ownedOffersReady = false;
   const ACTIVE = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"]);
+  const RENDERED = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"]);
 
   function selectedOfferId() {
     const v = (document.getElementById("pipe-offer") || {}).value || "all";
@@ -51,6 +54,13 @@
       if (a.jobTitle) cur.title = a.jobTitle;
       map.set(id, cur);
     });
+    // Une offre sans dossier doit quand même être filtrable : les pages Offres et Équipe lient
+    // chacune de leurs lignes au pipeline, y compris une offre qui vient d'être publiée.
+    ownedOffers.forEach((o) => {
+      const id = Number(o.id);
+      if (!id || o.archivedAt || map.has(id)) return;
+      map.set(id, { id, title: o.title || "Offre #" + id, count: 0, active: 0 });
+    });
     return Array.from(map.values()).sort((a, b) => {
       if (b.active !== a.active) return b.active - a.active;
       return String(a.title).localeCompare(String(b.title), "fr");
@@ -62,7 +72,6 @@
     if (!sel) return;
     const pending = sel.dataset.pending;
     const prev = pending || sel.value || "all";
-    if (pending) delete sel.dataset.pending;
     const offers = offerCatalog();
     const totalActive = allApps.filter((a) => ACTIVE.has(a.status)).length;
     sel.innerHTML =
@@ -83,8 +92,13 @@
         .join("");
     const still =
       prev === "all" || offers.some((o) => String(o.id) === String(prev));
+    // Un lien profond vers une offre sans dossier ne peut être jugé que si /offers/mine a répondu :
+    // sinon la demande reste en attente du catalogue, au lieu de retomber en silence sur « toutes ».
+    if (pending && (still || ownedOffersReady)) delete sel.dataset.pending;
     sel.value = still ? prev : "all";
     sel.classList.toggle("is-filtered", sel.value !== "all");
+    if (pending && !still && ownedOffersReady)
+      RC.toast("Offre hors pipeline", "Aucun dossier ne correspond à cette offre dans votre périmètre.", "warn");
   }
 
   function renderFunnelFromApps(scopeApps, scopeLabel) {
@@ -232,28 +246,16 @@
       '<select id="reject-reason"><option value="">— Choisir —</option>' +
       FIXED_REASONS.map((r) => '<option value="' + r[0] + '">' + esc(r[1]) + "</option>").join("") +
       "</select></div>" +
-      '<div class="field" id="reject-other-wrap" hidden><label>Précision</label>' +
+      '<div class="field" id="reject-other-wrap" hidden><label for="reject-other">Précision</label>' +
       '<textarea id="reject-other" rows="3" placeholder="Ce que le candidat doit lire"></textarea></div></div>' +
       '<div class="hl-dossier-section"><h5>Message au candidat</h5>' +
       '<p class="muted" style="margin:0 0 .55rem">Rédigez-le vous-même, ou demandez une aide IA puis modifiez librement. Ce texte part en e-mail.</p>' +
       '<div class="rc-row" style="gap:.4rem;flex-wrap:wrap;margin-bottom:.55rem">' +
-      '<button type="button" class="btn btn-soft btn-sm" id="reject-ai">Aide IA — proposer un brouillon</button>' +
+      '<button type="button" class="btn btn-soft btn-sm" id="reject-ai">Aide IA — proposer un brouillon' + HireLinkCredits.costNote().outerHTML + "</button>" +
       '<button type="button" class="btn btn-ghost btn-sm" id="reject-clear">Vider</button></div>' +
       '<div class="field"><label for="reject-message">Message</label>' +
       '<textarea id="reject-message" rows="7" maxlength="4000" placeholder="Bonjour,…&#10;&#10;Nous vous remercions pour votre candidature…"></textarea></div>' +
-      '<p class="muted" id="reject-ai-hint" style="margin:.35rem 0 0;font-size:.78rem">Choisissez d’abord un motif pour activer l’aide IA.</p></div>'
-    );
-  }
-
-  function metric(label, val, tone) {
-    return (
-      '<div class="kpi-card' +
-      (tone ? " kpi-card--" + tone : "") +
-      '"><div class="kpi-card-label">' +
-      esc(label) +
-      '</div><div class="kpi-card-value">' +
-      esc(String(val == null ? "—" : val)) +
-      "</div></div>"
+      '<p class="muted" id="reject-ai-hint" style="margin:.35rem 0 0;font-size: var(--text-xs)">Choisissez d’abord un motif pour activer l’aide IA.</p></div>'
     );
   }
 
@@ -288,14 +290,14 @@
   }
 
   function scoreSummaryHtml(criteria, entries) {
-    if (!entries.length) return '<p class="muted" style="margin:.2rem 0 .8rem">Aucune évaluation enregistrée pour ce dossier.</p>';
+    if (!entries || !entries.length) return "";
     const rows = criteria.map((cr) => {
       const list = entries.filter((e) => e.criterionId === cr.id);
       if (!list.length) return "";
       const avg = list.reduce((t, e) => t + e.score, 0) / list.length;
       return '<div class="hl-fact"><span class="k">' + esc(cr.label) + '</span><span class="v">' + avg.toFixed(1) + " / 5 · " + RC.plural(list.length, "avis", "avis") + "</span></div>";
     }).join("");
-    return '<div class="hl-dossier-section"><h5>Synthèse des évaluateurs</h5><div class="hl-fact-grid">' + rows + "</div></div>";
+    return rows ? '<div class="hl-dossier-section"><h5>Synthèse des évaluateurs</h5><div class="hl-fact-grid">' + rows + "</div></div>" : "";
   }
 
   async function rateScorecard(c) {
@@ -400,22 +402,39 @@
     return res.blob();
   }
 
+  let currentDossierCandidate = null;
+
   function showBlobPreview(title, blob, fileName) {
     const type = (blob.type || "").toLowerCase();
     const name = fileName || "fichier";
     const url = URL.createObjectURL(blob);
     const done = () => setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const cand = currentDossierCandidate;
+    const opts = {
+      title,
+      url,
+      downloadName: name,
+      onClose: () => {
+        if (cand) {
+          const overlay = document.getElementById("hl-overlay");
+          if (!overlay || !overlay.classList.contains("is-open")) {
+            openDossier(cand);
+          }
+        }
+      }
+    };
     if (type.indexOf("pdf") >= 0 || /\.pdf$/i.test(name)) {
-      return HireLink.openPreview({ title, url, downloadName: name, bodyHtml: '<iframe src="' + url + '" title="Aperçu du document" class="hl-preview-frame"></iframe>' }).then(done);
+      opts.bodyHtml = '<iframe src="' + url + '" title="Aperçu du document" class="hl-preview-frame"></iframe>';
+      return HireLink.openPreview(opts).then(done);
     }
     if (type.indexOf("text") >= 0 || /\.(txt|md)$/i.test(name)) {
-      return blob.text().then((text) =>
-        HireLink.openPreview({ title, url, downloadName: name, bodyHtml: '<pre class="hl-preview-text">' + esc(String(text || "").slice(0, 12000)) + "</pre>" }).then(done));
+      return blob.text().then((text) => {
+        opts.bodyHtml = '<pre class="hl-preview-text">' + esc(String(text || "").slice(0, 12000)) + "</pre>";
+        return HireLink.openPreview(opts).then(done);
+      });
     }
-    return HireLink.openPreview({
-      title, url, downloadName: name,
-      bodyHtml: "<p><strong>" + esc(name) + "</strong> (" + Math.round(blob.size / 1024) + " Ko)</p><p class='muted'>L’aperçu intégré est disponible pour les PDF et les textes. Utilisez Télécharger pour ouvrir ce fichier.</p>",
-    }).then(done);
+    opts.bodyHtml = "<p><strong>" + esc(name) + "</strong> (" + Math.round(blob.size / 1024) + " Ko)</p><p class='muted'>L’aperçu intégré est disponible pour les PDF et les textes. Utilisez Télécharger pour ouvrir ce fichier.</p>";
+    return HireLink.openPreview(opts).then(done);
   }
 
   function downloadBlob(blob, fileName) {
@@ -624,6 +643,24 @@
     };
   }
 
+  const CHECK_IDS = ["chk-id", "chk-cv", "chk-sla"];
+  function checkedCount() {
+    return CHECK_IDS.filter((id) => { const b = document.getElementById(id); return b && b.checked; }).length;
+  }
+  function checkOn(id) {
+    const b = document.getElementById(id);
+    return !!(b && b.checked);
+  }
+  /** Le badge « n / 3 » et le bouton suivre suivent les cases réellement cochées ; rien n'est pré-affirmé au serveur. */
+  function syncChecks(api) {
+    const n = checkedCount();
+    const badge = document.getElementById("chk-count");
+    if (badge) badge.textContent = n + " / " + CHECK_IDS.length;
+    const ok = n === CHECK_IDS.length;
+    if (api && api.setConfirmEnabled) api.setConfirmEnabled(ok);
+    return ok;
+  }
+
   function checksHtml(c, mode) {
     const pre = checksState(c || {});
     const count = (pre.id ? 1 : 0) + (pre.cv ? 1 : 0) + (pre.sla ? 1 : 0);
@@ -678,86 +715,73 @@
     );
   }
 
-  function readChecks() {
-    return {
-      confirmIdentity: !!(document.getElementById("chk-id") || {}).checked,
-      confirmCvReviewed: !!(document.getElementById("chk-cv") || {}).checked,
-      confirmSlaAware: !!(document.getElementById("chk-sla") || {}).checked,
-    };
-  }
-
-  function updateCheckCount(root) {
-    const n =
-      (!!(document.getElementById("chk-id") || {}).checked ? 1 : 0) +
-      (!!(document.getElementById("chk-cv") || {}).checked ? 1 : 0) +
-      (!!(document.getElementById("chk-sla") || {}).checked ? 1 : 0);
-    const el = (root || document).querySelector("#chk-count");
-    if (el) el.textContent = n + " / 3";
-    return n;
-  }
-
-  function advanceValid(needInterview, interviewForm) {
-    return !needInterview || interviewForm.isValid();
-  }
-
   async function advance(c) {
     const next = NEXT[c.status];
     if (!next) {
       HireLink.toast("Dossier clôturé", "Cette candidature n’a plus d’étape suivante.", "info");
       return;
     }
-    const needInterview = next === "INTERVIEW";
     const leavingInterview = c.status === "INTERVIEW";
-    const interviewForm = needInterview ? HireLinkInterview.form() : null;
     const body =
       '<div class="hl-step-banner"><div><strong>' +
       esc(RC.STATUS_FR[c.status] || c.status) + " → " + esc(RC.STATUS_FR[next] || next) +
       "</strong>" + esc(STEP_HINT[next] || "") + "</div></div>" +
       dossierHtml(c, { hideLetter: true, showNote: false, compact: true }) +
-      (needInterview ? '<div class="hl-interview-block"><h5>Organisation de l’entretien</h5><div id="adv-interview"></div></div>' : "") +
+      checksHtml(c, "advance") +
+      (next === "INTERVIEW"
+        ? '<p class="hl-step-where">' +
+          (c.interviewAt
+            ? "Créneau déjà posé : " + esc(HireLinkInterview.summary(c)) + " — le candidat reçoit la convocation."
+            : "Aucun créneau pour l’instant : le bouton « Planifier l’entretien » du dossier enverra la convocation.") +
+          "</p>"
+        : "") +
       (leavingInterview
         ? '<details class="hl-opt-block" open><summary>Retour d’entretien <small>facultatif</small></summary>' +
           '<div class="hl-feedback-pick" role="radiogroup" aria-label="Impression générale">' +
           [["++", "Très favorable"], ["+", "Favorable"], ["=", "Mitigé"], ["-", "Réservé"]]
-            .map((x, i) => '<label><input type="radio" name="adv-feel" value="' + esc(x[1]) + '"' + (i === 1 ? "" : "") + "/><span>" + x[1] + "</span></label>").join("") +
+            .map((x) => '<label><input type="radio" name="adv-feel" value="' + esc(x[1]) + '"/><span>' + x[1] + "</span></label>").join("") +
           "</div>" +
-          '<textarea id="adv-note" rows="3" placeholder="Ce qui a convaincu, points à vérifier, suite proposée…"></textarea></details>'
+          '<textarea id="adv-note" rows="3" aria-label="Retour d’entretien écrit" placeholder="Ce qui a convaincu, points à vérifier, suite proposée…"></textarea></details>'
         : '<details class="hl-opt-block"><summary>Ajouter une note interne <small>facultatif</small></summary>' +
-          '<textarea id="adv-note" rows="2" placeholder="Visible uniquement par votre équipe"></textarea></details>');
+          '<textarea id="adv-note" rows="2" aria-label="Note interne" placeholder="Visible uniquement par votre équipe"></textarea></details>');
 
     const ok = await HireLink.openDrawer({
       title: "Avancer · " + c.candidateName,
-      description: needInterview ? "Planifiez l’entretien puis confirmez" : "Confirmez le passage à l’étape suivante",
+      description: "Confirmez le passage à l’étape suivante",
       bodyHtml: body,
-      confirmLabel: needInterview ? "Planifier et confirmer" : "Confirmer l’étape",
-      confirmDisabled: needInterview,
+      confirmLabel: "Confirmer l’étape",
+      confirmDisabled: true,
       wide: true,
       onReady: (api) => {
-        if (needInterview) api.root.querySelector("#adv-interview").appendChild(interviewForm.el);
-        const refresh = () => api.setConfirmEnabled(advanceValid(needInterview, interviewForm));
-        api.root.addEventListener("change", refresh);
-        api.root.addEventListener("input", refresh);
-        refresh();
+        syncChecks(api);
+        api.root.addEventListener("change", () => syncChecks(api));
       },
     });
     if (!ok) return;
 
-    if (!advanceValid(needInterview, interviewForm)) {
-      HireLink.toast("Entretien incomplet", "Complétez la date, l’heure et le lieu ou le lien.", "warn");
-      return;
-    }
-    const payload = { status: next, advanceNote: null, confirmIdentity: true, confirmCvReviewed: true, confirmSlaAware: true };
+    const payload = {
+      status: next,
+      advanceNote: null,
+      confirmIdentity: checkOn("chk-id"),
+      confirmCvReviewed: checkOn("chk-cv"),
+      confirmSlaAware: checkOn("chk-sla"),
+    };
     const parts = [];
     const feel = document.querySelector('input[name="adv-feel"]:checked');
     if (feel) parts.push("Retour d’entretien : " + feel.value);
     const rawNote = ((document.getElementById("adv-note") || {}).value || "").trim();
     if (rawNote) parts.push(rawNote);
     if (parts.length) payload.advanceNote = parts.join("\n");
-    if (needInterview) payload.interview = interviewForm.values();
 
     try {
       await HireLinkAPI.api("/applications/" + c.id + "/status", { method: "PATCH", body: payload });
-      HireLink.toast("Étape validée", c.candidateName + " → " + (RC.STATUS_FR[next] || next), "ok");
+      HireLink.toast(
+        "Étape validée",
+        next === "INTERVIEW" && !c.interviewAt
+          ? c.candidateName + " → Entretien. Planifiez le créneau dans l’Agenda."
+          : c.candidateName + " → " + (RC.STATUS_FR[next] || next),
+        "ok"
+      );
       load(true);
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
@@ -767,7 +791,8 @@
   async function rejectFlow(c) {
     const body =
       dossierHtml(c, { refuse: true, hideLetter: true, showNote: false }) +
-      refusalSelectHtml();
+      refusalSelectHtml() +
+      checksHtml(c, "reject");
 
     const ok = await HireLink.openDrawer({
       title: "Refuser · " + c.candidateName,
@@ -786,7 +811,8 @@
           const otherWrap = document.getElementById("reject-other-wrap");
           if (otherWrap) otherWrap.hidden = reason !== "OTHER_CATALOG";
           const other = ((document.getElementById("reject-other") || {}).value || "").trim();
-          api.setConfirmEnabled(!!reason && (reason !== "OTHER_CATALOG" || other.length > 2));
+          const motifOk = !!reason && (reason !== "OTHER_CATALOG" || other.length > 2);
+          api.setConfirmEnabled(motifOk && syncChecks());
           if (hint) {
             hint.textContent = reason
               ? "Vous pouvez rédiger le message ou cliquer « Aide IA », puis modifier le texte."
@@ -815,6 +841,7 @@
               code === "OTHER_CATALOG"
                 ? ((document.getElementById("reject-other") || {}).value || "").trim() || "Autre"
                 : (FIXED_REASONS.find((r) => r[0] === code) || [, code])[1];
+            if (!HireLinkCredits.preflight()) return;
             RC.busy(aiBtn, true);
             try {
               const data = await HireLinkAPI.api("/ai/refusal-draft", {
@@ -832,12 +859,9 @@
                 ta.focus();
               }
               HireLink.toast("Brouillon prêt", "Modifiez le texte avant de confirmer.", "ok");
+              HireLinkCredits.spend();
             } catch (err) {
-              HireLink.toast(
-                err.status === 402 ? "Crédits IA épuisés" : "Aide IA",
-                err.message,
-                err.status === 402 ? "warn" : "danger"
-              );
+              if (!HireLinkCredits.guard(err)) HireLink.toast("Aide IA", err.message, "danger");
             } finally {
               RC.busy(aiBtn, false);
               refresh();
@@ -869,9 +893,9 @@
           status: "REJECTED",
           rejectionReason: reason,
           advanceNote: message || null,
-          confirmIdentity: true,
-          confirmCvReviewed: true,
-          confirmSlaAware: true,
+          confirmIdentity: checkOn("chk-id"),
+          confirmCvReviewed: checkOn("chk-cv"),
+          confirmSlaAware: checkOn("chk-sla"),
         },
       });
       HireLink.toast(
@@ -892,12 +916,12 @@
       const eligible = (members || []).filter((m) => m.orgRole === "HIRING_MANAGER" || m.orgRole === "RECRUTEUR");
       if (!eligible.length || !document.getElementById("hm-slot")) return;
       slot.innerHTML =
-        "<h5>Hiring Manager assigné</h5>" +
+        "<h5>Responsable du poste assigné</h5>" +
         '<div class="rc-row"><select id="hm-select" class="rc-select" style="flex:1"><option value="">— Aucun —</option>' +
         eligible.map((m) => '<option value="' + m.userId + '"' + (Number(c.assignedHmUserId) === Number(m.userId) ? " selected" : "") + ">" +
           esc(m.fullName || m.email) + " · " + esc(RC.ROLE_FR[m.orgRole] || m.orgRole) + "</option>").join("") +
         '</select><button type="button" class="btn btn-soft btn-sm" id="hm-save">Assigner</button></div>' +
-        '<p class="muted" style="margin:.4rem 0 0;font-size:.78rem">Le Hiring Manager se connecte au même espace recruteur (dossiers filtrés), avec notification in-app et e-mail — pas besoin d’un espace séparé.</p>';
+        '<p class="muted" style="margin:.4rem 0 0;font-size: var(--text-xs)">Le Responsable du poste se connecte au même espace recruteur (dossiers filtrés), avec notification in-app et e-mail pour les entretiens — pas besoin d’un espace séparé.</p>';
       document.getElementById("hm-save").onclick = async (e) => {
         const v = document.getElementById("hm-select").value;
         RC.busy(e.currentTarget, true);
@@ -905,7 +929,7 @@
           const updated = await HireLinkAPI.api("/applications/" + c.id + "/assign-hm", { method: "PATCH", body: { hmUserId: v ? Number(v) : null } });
           c.assignedHmUserId = updated.assignedHmUserId;
           RC.data.invalidate();
-          RC.toast("Assignation", v ? "Hiring Manager assigné" : "Assignation retirée", "ok");
+          RC.toast("Assignation", v ? "Responsable du poste assigné" : "Assignation retirée", "ok");
         } catch (err) {
           RC.toast("Assignation", err.message, "danger");
         } finally {
@@ -916,6 +940,7 @@
   }
 
   async function openDossier(c) {
+    currentDossierCandidate = c;
     const canAdvance = !!NEXT[c.status];
     await HireLink.openDrawer({
       title: "Dossier · " + c.candidateName,
@@ -926,6 +951,9 @@
         '<button type="button" class="btn btn-soft btn-sm" id="btn-tl">Historique</button>' +
         (canAdvance
           ? '<button type="button" class="btn btn-primary btn-sm" id="btn-adv-from">Avancer</button>'
+          : "") +
+        (c.status === "INTERVIEW" && !c.interviewAt
+          ? '<button type="button" class="btn btn-secondary btn-sm" id="btn-plan-from">Planifier l’entretien</button>'
           : "") +
         '<button type="button" class="btn btn-ghost btn-sm" id="btn-rej-from">Refuser</button>' +
         "</div>" +
@@ -944,13 +972,21 @@
         }
         const ivSlot = document.querySelector("[data-iv-slot]");
         if (ivSlot) {
-          ivSlot.appendChild(HireLinkInterview.card(c, { role: "recruiter", onChange: () => { HireLink.closeModal(false); load(true); } }));
+          // Le créneau se gère dans l'Agenda : le pipeline affiche, il ne planifie pas.
+          ivSlot.appendChild(HireLinkInterview.card(c, { role: "readonly" }));
+          ivSlot.insertAdjacentHTML("beforeend", '<a class="btn btn-secondary btn-sm" href="recruiter-agenda.html">Ouvrir dans l’Agenda</a>');
         }
         const tl = document.getElementById("btn-tl");
         if (tl)
           tl.onclick = () => {
             HireLink.closeModal(false);
             setTimeout(() => showTimeline(c.id), 120);
+          };
+        const planBtn = document.getElementById("btn-plan-from");
+        if (planBtn)
+          planBtn.onclick = () => {
+            HireLink.closeModal(false);
+            setTimeout(() => HireLinkInterview.plan(c, { onDone: () => load(true) }), 120);
           };
         const adv = document.getElementById("btn-adv-from");
         if (adv)
@@ -969,10 +1005,12 @@
   }
 
   function paint() {
-    if (allApps.length) { syncPipeUrl(); paintCtxChip(); }
+    // « loaded » et non « allApps.length » : un recruteur sans aucun dossier doit quand même
+    // voir l'offre qu'il a filtrée dans l'URL et dans la puce de contexte.
+    if (loaded || allApps.length) { syncPipeUrl(); paintCtxChip(); }
     const root = document.getElementById("kanban");
     const filter = (document.getElementById("pipe-filter") || {}).value || "all";
-    const scope = appsForScope();
+    const scope = appsForScope().filter((a) => RENDERED.has(a.status));
     const chipCounts = {
       all: scope.length,
       urgent: scope.filter((a) => a.slaRemainingDays != null && a.slaRemainingDays <= 2 && !a.slaBreached).length,
@@ -1055,7 +1093,7 @@
           "<div class='rc-card-meta'><span class='badge'></span><span class='rc-pill js-sla'></span></div>" +
           "<div class='rc-card-act'>" +
           "<button type='button' class='btn btn-sm btn-soft js-view'>Dossier</button>" +
-          (canAdvance ? "<button type='button' class='btn btn-sm btn-primary js-adv'>Avancer →</button>" : "") +
+          (canAdvance ? "<button type='button' class='btn btn-sm btn-primary js-adv'>Avancer →</button><button type='button' class='btn btn-sm btn-soft js-rate'>Évaluer</button>" : "") +
           "<button type='button' class='btn btn-sm btn-ghost rc-ico-only js-rej' title='Refuser' aria-label='Refuser'>✕</button></div>";
         card.querySelector("h3").textContent = c.candidateName || "Candidat";
         const scoped = selectedOfferId() != null;
@@ -1064,6 +1102,8 @@
           sub += (sub ? " · " : "") + (HireLinkInterview.TYPE_FR[c.interviewType] || c.interviewType) +
             (c.interviewAt ? " " + new Date(c.interviewAt).toLocaleDateString("fr-FR") : "") +
             (c.interviewStatus === "CANCELLED" ? " (annulé)" : "");
+        } else if (c.status === "INTERVIEW") {
+          sub += (sub ? " · " : "") + "Entretien à planifier";
         }
         card.querySelector("p").textContent = sub || (scoped ? "Dossier sur ce poste" : "");
         card.querySelector(".rc-bar > i").style.width = Math.min(100, c.matchScore || 0) + "%";
@@ -1082,6 +1122,8 @@
         card.querySelector(".js-view").onclick = (e) => { e.stopPropagation(); openDossier(c); };
         const advBtn = card.querySelector(".js-adv");
         if (advBtn) advBtn.onclick = (e) => { e.stopPropagation(); advance(c); };
+        const rateBtn = card.querySelector(".js-rate");
+        if (rateBtn) rateBtn.onclick = (e) => { e.stopPropagation(); rateScorecard(c); };
         card.querySelector(".js-rej").onclick = (e) => { e.stopPropagation(); rejectFlow(c); };
         body.appendChild(card);
       });
@@ -1135,23 +1177,48 @@
   document.addEventListener("hirelink:focus-request", (e) => {
     const k = String((e.detail && e.detail.key) || "");
     if (!/^application:/.test(k)) return;
-    const a = allApps.find((x) => String(x.id) === k.split(":")[1]);
-    const oid = selectedOfferId();
+    const appId = k.split(":")[1];
+    const a = allApps.find((x) => String(x.id) === appId);
     const sel = document.getElementById("pipe-offer");
-    if (a && sel && oid != null && Number(a.jobOfferId) !== oid) { sel.value = "all"; paint(); }
+    let needRepaint = false;
+    if (sel && sel.value !== "all") { sel.value = "all"; needRepaint = true; }
+    const qInput = document.getElementById("rc-search");
+    if (qInput && qInput.value) { qInput.value = ""; needRepaint = true; }
+    const fInput = document.getElementById("pipe-filter");
+    if (fInput && fInput.value !== "all") { fInput.value = "all"; needRepaint = true; }
+    if (needRepaint) paint();
+    if (a) {
+      setTimeout(() => {
+        const card = document.querySelector('[data-focus~="application:' + a.id + '"]');
+        if (card && card.getClientRects().length) {
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+          RC.spotlight(card, 5500);
+        } else {
+          openDossier(a);
+          document.dispatchEvent(new CustomEvent("hirelink:focus-handled", { detail: { key: k } }));
+        }
+      }, 150);
+    }
   });
 
   function onData(apps) {
     allApps = apps || [];
+    loaded = true;
     rebuildOfferSelect();
     paint();
-    loaded = true;
     if (pendingApp) {
       const found = allApps.find((a) => String(a.id) === String(pendingApp));
       pendingApp = null;
       const u = new URL(location.href); u.searchParams.delete("app");
       history.replaceState(history.state, "", u.pathname + u.search + u.hash);
-      if (found) setTimeout(() => openDossier(found), hadFocus ? 1300 : 0);
+      if (found) {
+        const card = document.querySelector('[data-focus="application:' + found.id + '"]');
+        if (card) {
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+          RC.spotlight(card, 5500);
+        }
+        setTimeout(() => openDossier(found), hadFocus ? 800 : 0);
+      }
       else RC.toast("Dossier introuvable", "Ce dossier n’existe plus ou n’est pas dans votre périmètre.", "warn");
     }
   }
@@ -1164,6 +1231,20 @@
     }
     if (!refusalCatalog.length) {
       HireLinkAPI.api("/refusal-reasons").then((r) => { refusalCatalog = r || []; }).catch(() => {});
+    }
+    if (force || !ownedOffersReady) {
+      RC.data.offers(
+        (rows) => {
+          ownedOffers = rows || [];
+          ownedOffersReady = true;
+          if (!loaded) return;
+          const sel = document.getElementById("pipe-offer");
+          const before = sel ? sel.value : "all";
+          rebuildOfferSelect();
+          if (sel && sel.value !== before) paint();
+        },
+        () => { ownedOffersReady = true; }
+      );
     }
     return RC.data.pipeline(onData, (err) => {
       document.getElementById("funnel-strip").innerHTML = "";

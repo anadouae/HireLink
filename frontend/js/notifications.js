@@ -24,6 +24,9 @@
     MODERATION: "Modération",
     SYSTEM: "Équipe",
     HIRED: "Embauche",
+    DECISION: "Décision",
+    PIPELINE: "Pipeline",
+    INFO: "Information",
   };
 
   function notifTime(n) {

@@ -33,6 +33,16 @@ public class AuthThrottle {
         }
     }
 
+    /** Évènements de la fenêtre courante : décide si un contrôle anti-robot doit être exigé. */
+    public int count(String key, long windowSeconds) {
+        Deque<Long> q = events.get(key);
+        if (q == null) return 0;
+        synchronized (q) {
+            prune(q, System.currentTimeMillis(), windowSeconds);
+            return q.size();
+        }
+    }
+
     public void record(String key, long windowSeconds) {
         long now = System.currentTimeMillis();
         if (events.size() > 50_000) events.entrySet().removeIf(e -> e.getValue().isEmpty());

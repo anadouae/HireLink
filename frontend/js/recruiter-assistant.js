@@ -10,11 +10,12 @@
 
   function paintCredits(c) {
     if (!c) return;
-    const used = c.used != null ? c.used : c.limit - c.remaining;
     $("ai-credits").textContent = c.remaining + " / " + c.limit;
-    $("ai-plan").textContent = "Formule " + (c.plan === "PREMIUM" ? "Premium" : "Accès") + " · crédits partagés par l’organisation";
+    $("ai-plan").textContent =
+      "Formule " + (c.planLabel || (c.plan === "PREMIUM" ? "Premium" : "Accès")) +
+      (c.monthlyMad ? " · " + c.monthlyMad + " MAD / mois" : " · incluse dans votre formule") +
+      " · " + c.costPerAction + " crédit par action réussie";
     $("ai-meter").style.width = Math.max(0, Math.min(100, Math.round((c.remaining / Math.max(1, c.limit)) * 100))) + "%";
-    void used;
   }
   function loadCredits() {
     return HireLinkAPI.api("/ai/credits").then(paintCredits).catch(() => {
@@ -107,7 +108,7 @@
       "</div>" +
       '<div class="hl-kit-foot">' +
       '<button type="button" class="btn btn-ghost btn-sm" id="kit-copy">Copier la grille</button>' +
-      '<span class="rc-muted" style="font-size:.78rem">' +
+      '<span class="rc-muted" style="font-size: var(--text-xs)">' +
       esc(data.note || "Cliquez une carte pour afficher le guide. À relire avant l’entretien.") +
       (data.provider ? " · " + esc(data.provider) : "") +
       "</span></div>";
@@ -142,7 +143,7 @@
     const copy = document.createElement("div");
     copy.className = "hl-kit-foot";
     copy.innerHTML =
-      '<button type="button" class="btn btn-ghost btn-sm">Copier le texte</button> <span class="rc-muted" style="font-size:.78rem">' +
+      '<button type="button" class="btn btn-ghost btn-sm">Copier le texte</button> <span class="rc-muted" style="font-size: var(--text-xs)">' +
       esc(data.note || "À relire avant utilisation — la décision reste humaine.") +
       (data.provider ? " · source : " + esc(data.provider) : "") +
       "</span>";
@@ -163,6 +164,7 @@
   }
 
   async function run(btn, outId, path, body) {
+    if (!HireLinkCredits.preflight()) return;
     RC.busy(btn, true);
     const out = $(outId);
     out.hidden = false;
@@ -171,9 +173,10 @@
       const data = await HireLinkAPI.api(path, { method: "POST", body, timeoutMs: 60000 });
       show(outId, data);
       loadCredits();
+      HireLinkCredits.spend();
     } catch (err) {
       out.hidden = true;
-      RC.toast(err.status === 402 ? "Crédits IA épuisés" : "Assistant IA", err.message, err.status === 402 ? "warn" : "danger");
+      if (!HireLinkCredits.guard(err)) RC.toast("Assistant IA", err.message, "danger");
     } finally {
       RC.busy(btn, false);
     }
@@ -222,15 +225,22 @@
     }
   }
 
+  /** swr() ne prévient personne sans second callback : sans option, le select doit dire pourquoi. */
+  function selectUnavailable(id, err) {
+    const s = document.getElementById(id);
+    if (s) s.innerHTML = '<option value="">Indisponible — ' + esc(err.message) + "</option>";
+  }
+
   RC.data.offers((o) => {
     offers = o || [];
     fillSelects();
-  });
+  }, (err) => selectUnavailable("kit-offer", err));
   RC.data.pipeline((a) => {
     apps = a || [];
     fillSelects();
-  });
+  }, (err) => selectUnavailable("cv-app", err));
   loadCredits();
+  HireLinkCredits.paintCosts();
   const h = location.hash.slice(1);
   if (TABS.includes(h)) openTab(h);
 })();

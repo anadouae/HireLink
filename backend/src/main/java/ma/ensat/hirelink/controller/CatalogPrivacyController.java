@@ -74,18 +74,4 @@ public class CatalogPrivacyController {
         audit.ok("DATA_EXPORT", user, "USER", user.getId(), "export RGPD");
         return privacyService.exportFor(user);
     }
-
-    @PostMapping("/me/consents")
-    public Map<String, Object> consent(
-            @AuthenticationPrincipal User user,
-            @RequestBody Map<String, Object> body
-    ) {
-        String purpose = String.valueOf(body.getOrDefault("purpose", "recruitment"));
-        if (!purpose.matches("[a-z_]{3,40}")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Finalité invalide");
-        }
-        boolean granted = !Boolean.FALSE.equals(body.get("granted"));
-        var c = privacyService.recordConsent(user, purpose, granted);
-        return Map.of("purpose", c.getPurpose(), "granted", c.isGranted(), "at", c.getCreatedAt().toString());
-    }
 }

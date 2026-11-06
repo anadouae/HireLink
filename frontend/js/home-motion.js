@@ -251,19 +251,18 @@
       if (isNaN(target)) return;
       const counter = { value: 0 };
       el.textContent = "0";
-      ScrollTrigger.create({
-        trigger: el,
-        start: "top 92%",
-        once: true,
-        onEnter: function () {
-          gsap.to(counter, {
-            value: target,
-            duration: 1.8,
-            ease: "power3.out",
-            onUpdate: function () { el.textContent = String(Math.round(counter.value)); }
-          });
-        }
-      });
+      const run = function () {
+        gsap.to(counter, {
+          value: target,
+          duration: 1.8,
+          ease: "power3.out",
+          onUpdate: function () { el.textContent = String(Math.round(counter.value)); }
+        });
+      };
+      const box = el.getBoundingClientRect();
+      // un compteur déjà visible à l'arrivée ne déclenchera jamais onEnter : il démarre tout de suite
+      if (box.top < window.innerHeight * 0.92 && box.bottom > 0) { run(); return; }
+      ScrollTrigger.create({ trigger: el, start: "top 92%", once: true, onEnter: run });
     });
   });
 

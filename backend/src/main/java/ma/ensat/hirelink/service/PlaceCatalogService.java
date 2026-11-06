@@ -102,6 +102,40 @@ public class PlaceCatalogService {
                 .toList();
     }
 
+    /**
+     * Villes seules, sans les entrées-pays : le lieu d'une offre doit rester une ville.
+     * Le pays se déduit ensuite, il n'est jamais saisi à la place.
+     */
+    public List<Place> searchCities(String query, int limit) {
+        List<Place> cities = PLACES.stream().filter(p -> !p.city().isEmpty()).toList();
+        if (TextMatcher.fold(query).isEmpty()) return cities.stream().limit(limit).toList();
+        record Hit(Place place, double score) {}
+        return cities.stream()
+                .map(p -> new Hit(p, matcher.score(query, p.city())))
+                .filter(h -> h.score() > 0)
+                .sorted(Comparator.comparingDouble(Hit::score).reversed()
+                        .thenComparing(h -> !"MA".equals(h.place().code())))
+                .limit(limit)
+                .map(Hit::place)
+                .toList();
+    }
+
+    /** Le pays d'un lieu connu ; vide si le catalogue ne le reconnaît pas. */
+    public String countryOf(String label) {
+        String needle = TextMatcher.fold(label == null ? "" : label.trim());
+        if (needle.isEmpty()) return "";
+        for (Place p : PLACES) {
+            if (!p.city().isEmpty() && TextMatcher.fold(p.city()).equals(needle)) return p.country();
+        }
+        return "";
+    }
+
+    public boolean isCountry(String label) {
+        String needle = TextMatcher.fold(label == null ? "" : label.trim());
+        if (needle.isEmpty()) return false;
+        return COUNTRIES.values().stream().anyMatch(c -> TextMatcher.fold(c).equals(needle));
+    }
+
     public List<Nationality> nationalities(String query, int limit) {
         if (TextMatcher.fold(query).isEmpty()) return NATIONALITIES.stream().limit(limit).toList();
         record Hit(Nationality item, double score) {}

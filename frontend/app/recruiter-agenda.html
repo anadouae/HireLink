@@ -10,17 +10,17 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="../css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/design-system.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/app.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/components.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/search.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/interview.css?v=20261102p" />
-  <link rel="stylesheet" href="../css/agenda.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/shell.css?v=20261102q" />
-  <link rel="stylesheet" href="../css/mascotte.css?v=20261101r" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/search.css?v=20261103d" />
+  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/interview.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/agenda.css?v=20261104s" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
   <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -34,15 +34,20 @@
           <div>
             <p class="rc-eyebrow">Recrutement</p>
             <h1>Agenda</h1>
-            <p>Tous les entretiens de l’équipe dans un calendrier : mois, semaine, jour ou liste.</p>
+            <p id="ag-head-sub">Tous les entretiens de l’équipe dans un calendrier : mois, semaine, jour ou liste.</p>
           </div>
           <div class="rc-head-actions">
-            <a class="btn btn-ghost" href="recruiter-interviews.html">Gérer les entretiens</a>
-            <a class="btn btn-secondary" href="recruiter-pipeline.html">Planifier depuis le pipeline</a>
+            <button type="button" class="btn btn-secondary" id="ag-plan-interview">Planifier un entretien</button>
+            <button type="button" class="btn btn-primary" id="ag-add-event"><svg class="hl-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>Nouvel événement</button>
           </div>
         </div>
         <div class="ag-stats" id="ag-stats" aria-live="polite"></div>
         <section class="rc-card is-flush ag-shell">
+          <div class="ag-workspace-tabs" role="tablist" aria-label="Espace de travail">
+            <button type="button" class="is-active" data-ag-workspace="calendar" role="tab" aria-selected="true"><svg class="hl-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda</button>
+            <button type="button" data-ag-workspace="notes" role="tab" aria-selected="false"><svg class="hl-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.5 14.5V5.2A1.2 1.2 0 0 0 17.3 4H6.7A1.2 1.2 0 0 0 5.5 5.2v13.6A1.2 1.2 0 0 0 6.7 20h7.8z"/><path d="M18.5 14.5h-3.2a1.8 1.8 0 0 0-1.8 1.8v3.7"/><path d="M9 9h6M9 12.5h4"/></svg>Post-it</button>
+          </div>
+          <div id="ag-notes" class="ag-notes" hidden></div>
           <div class="ag-bar">
             <div class="ag-bar-left">
               <div class="ag-nav" id="ag-nav">
@@ -65,7 +70,7 @@
               <option value="VISIO">Visioconférence</option>
               <option value="ONSITE">Sur site</option>
             </select>
-            <select id="ag-f-kind" class="rc-select" aria-label="Type d’entretien">
+            <select id="ag-f-kind" class="rc-select" aria-label="Type d’événement">
               <option value="all">Tous les types</option>
               <option value="HR">Entretien RH</option>
               <option value="TECHNICAL">Technique</option>
@@ -78,7 +83,7 @@
             <label class="ag-check"><input type="checkbox" id="ag-f-cancelled" /> Afficher les annulés</label>
             <button type="button" class="btn btn-ghost btn-sm" id="ag-f-reset">Réinitialiser</button>
             <div class="ag-legend" aria-label="Légende">
-              <span><i class="t-visio"></i>Visio</span><span><i class="t-onsite"></i>Sur site</span>
+              <span><i class="t-visio"></i>Visio</span><span><i class="t-onsite"></i>Sur site</span><span><i class="t-phone"></i>Téléphone</span><span><i class="t-event"></i>Événement</span>
             </div>
           </div>
           <div id="ag-cal" class="ag-cal"></div>
@@ -95,16 +100,17 @@
     </header>
     <div class="ag-sheet-body" id="ag-sheet-body"></div>
   </aside>
-  <script defer src="../js/mascotte.js?v=20261101r"></script>
-  <script defer src="../js/premium.js?v=20261102s"></script>
-  <script defer src="../js/ui.js?v=20261101r"></script>
-  <script defer src="../js/api.js?v=20261101r"></script>
+  <script defer src="../js/mascotte.js?v=20261105i"></script>
+  <script defer src="../js/premium.js?v=20261106g"></script>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261106c"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261101r"></script>
+  <script defer src="../js/places.js?v=20261103h"></script>
   <script defer src="../js/skills.js?v=20261101r"></script>
-  <script defer src="../js/interview.js?v=20261101r"></script>
-  <script defer src="../js/in-app-help.js?v=20261102q"></script>
-  <script defer src="../js/app-shell.js?v=20261102q"></script>
-  <script defer src="../js/recruiter-agenda.js?v=20261101r"></script>
+  <script defer src="../js/interview.js?v=20261105y"></script>
+  <script defer src="../js/in-app-help.js?v=20261105s"></script>
+  <script defer src="../js/credits.js?v=20261105v"></script>
+  <script defer src="../js/app-shell.js?v=20261105y"></script>
+  <script defer src="../js/recruiter-agenda.js?v=20261105n"></script>
 </body>
 </html>

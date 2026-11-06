@@ -28,7 +28,7 @@ Objectif : Comprendre l’architecture globale d’une application Web et mettre
 ## Preuves de fonctionnement
 
 1. `GET http://localhost:8081/api/v1/health` → `status: UP` + MySQL `connected: true`
-2. `GET http://localhost:8081/api/v1/meta` → acteurs + contraintes
+2. `GET http://localhost:8081/api/v1/offers/public` → offres publiées (la page Frontend consomme la même API)
 3. Page Frontend : badges Backend / MySQL au vert
 
 

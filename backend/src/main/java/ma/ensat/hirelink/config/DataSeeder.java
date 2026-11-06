@@ -58,9 +58,7 @@ public class DataSeeder {
             OrganizationRepository organizations,
             MembershipRepository memberships,
             ApplicationStatusHistoryRepository history,
-            MatchingAnalysisRepository matchings,
             InAppNotificationRepository notifications,
-            ConsentRecordRepository consents,
             ScorecardCriterionRepository criteria,
             ScorecardEntryRepository scoreEntries,
             AiUsageLogRepository aiLogs,
@@ -84,8 +82,6 @@ public class DataSeeder {
                 criteria.deleteAll();
                 aiLogs.deleteAll();
                 notifications.deleteAll();
-                consents.deleteAll();
-                matchings.deleteAll();
                 history.deleteAll();
                 applications.deleteAll();
                 memberships.deleteAll();
@@ -97,7 +93,7 @@ public class DataSeeder {
             if (users.count() == 0) {
                 seedOperational(
                         users, offers, applications, organizationService,
-                        history, matchings, notifications, consents,
+                        history, notifications,
                         criteria, scoreEntries, aiLogs, encoder, matching
                 );
             } else {
@@ -107,6 +103,7 @@ public class DataSeeder {
             ensureOrgs(users, organizationService);
             ensureAtlasProfile(users, organizationService, organizations, orgLogoStorage);
             ensureMarketplace(users, offers, organizationService, encoder);
+            backfillOfferTerms(offers);
             enrichCompanies(organizations, companyVerificationService);
             logAccounts();
         };
@@ -212,9 +209,7 @@ public class DataSeeder {
             ApplicationRepository applications,
             OrganizationService organizationService,
             ApplicationStatusHistoryRepository history,
-            MatchingAnalysisRepository matchings,
             InAppNotificationRepository notifications,
-            ConsentRecordRepository consents,
             ScorecardCriterionRepository criteria,
             ScorecardEntryRepository scoreEntries,
             AiUsageLogRepository aiLogs,
@@ -292,24 +287,8 @@ public class DataSeeder {
                 "Casablanca,Hybride", "CDI", "Junior", PlanTier.ESSENTIEL);
 
         // rétrocompat : alias emails historiques pointent aussi (comptes miroir pour le guide)
-        mirrorAlias(users, encoder, "candidat@hirelink.ma", sara);
-        mirrorAlias(users, encoder, "recruteur@hirelink.ma", nadia);
-        users.findByEmailIgnoreCase("recruteur@hirelink.ma").ifPresent(r -> {
-            if (r.getFullName().contains("(alias)")) { r.setFullName(DEMO_RECRUITER_NAME); users.save(r); }
-        });
-
-        for (User c : List.of(sara, youssef, amina, omar, imane)) {
-            ConsentRecord gdpr = new ConsentRecord();
-            gdpr.setUserId(c.getId());
-            gdpr.setPurpose("TRAITEMENT_CANDIDATURE");
-            gdpr.setGranted(true);
-            consents.save(gdpr);
-            ConsentRecord market = new ConsentRecord();
-            market.setUserId(c.getId());
-            market.setPurpose("ALERTES_OFFRES");
-            market.setGranted(true);
-            consents.save(market);
-        }
+        mirrorAlias(users, encoder, "candidat@hirelink.ma", sara.getFullName(), sara);
+        mirrorAlias(users, encoder, "recruteur@hirelink.ma", DEMO_RECRUITER_NAME, nadia);
 
         // —— Offres ——
         JobOffer oJava = offer(offers, nadia,
@@ -345,7 +324,7 @@ public class DataSeeder {
                 et sécurisez les non-régressions API avant chaque mise en production.
                 """.stripIndent().replace("\n", " ").trim(),
                 "Selenium,JUnit,Postman,Cypress,API testing",
-                "Remote Maroc", "CDI", 4, true, now.minus(9, ChronoUnit.DAYS));
+                "Tétouan", "CDI", 4, true, now.minus(9, ChronoUnit.DAYS));
         terms(offers, oQa, WorkMode.REMOTE, ExperienceLevel.JUNIOR, EducationLevel.BAC_5, 1, "Matériel fourni, Horaires flexibles");
         negotiable(offers, oQa);
 
@@ -405,7 +384,7 @@ public class DataSeeder {
                 (Spring Boot, tests d'intégration, documentation).
                 """.stripIndent().replace("\n", " ").trim(),
                 "Java,Spring Boot,REST,Git,Français (Natif)",
-                "Remote Maroc", "Freelance", 4, true, now.minus(2, ChronoUnit.DAYS));
+                "Tétouan", "Freelance", 4, true, now.minus(2, ChronoUnit.DAYS));
         paid(offers, oFree, 2500, 3200, PayPeriod.DAY, PayBasis.GROSS);
         terms(offers, oFree, WorkMode.REMOTE, ExperienceLevel.SENIOR, null, 1, "Horaires flexibles");
         oFree.setDurationMonths(2);
@@ -536,12 +515,6 @@ public class DataSeeder {
         hist(history, a7.getId(), null, "SUBMITTED", amina.getId(), now.minus(14, ChronoUnit.DAYS), null);
         hist(history, a7.getId(), "SUBMITTED", "REJECTED", nadia.getId(), now.minus(11, ChronoUnit.DAYS),
                 "{\"code\":\"PROFILE_MISMATCH\"}");
-
-        // Matching analyses
-        matchRow(matchings, matching, a1, sara, oJava);
-        matchRow(matchings, matching, a4, youssef, oData);
-        matchRow(matchings, matching, a6, amina, oQa);
-        matchRow(matchings, matching, a7, amina, oJava);
 
         // Scorecards sur entretien Sara
         score(scoreEntries, a1.getId(), cTech.getId(), hm.getId(), 4, "Solide sur Spring Boot et REST");
@@ -677,7 +650,36 @@ public class DataSeeder {
         log.info("Catalogue entreprises chargé — {} offres au total", offers.count());
     }
 
+    /**
+     * Le catalogue a été semé avant l'apparition des conditions d'offre : rémunération, mode de travail,
+     * date limite et avantages sont restés vides, alors que la carte publique les affiche. On les comble
+     * une fois pour les offres du catalogue qui n'ont rien ; une offre saisie par un recruteur passe
+     * toujours par {@code OfferTermsService} et n'a donc jamais ce marqueur.
+     */
+    private void backfillOfferTerms(JobOfferRepository offers) {
+        List<JobOffer> bare = offers.findAll().stream()
+                .filter(o -> o.getCompensationType() == null)
+                .toList();
+        if (bare.isEmpty()) return;
+        int i = 0;
+        for (JobOffer o : bare) {
+            marketplaceTerms(offers, o, modeLabelOf(o.getLocation()), i++);
+        }
+        log.info("Conditions comblées sur {} offre(s) du catalogue", bare.size());
+    }
+
+    /** Le lieu du catalogue porte déjà le mode (« Tétouan · Hybride ») : on le relit au lieu de l'inventer. */
+    private static String modeLabelOf(String location) {
+        if (location == null) return "Sur site";
+        int dot = location.lastIndexOf('·');
+        String tail = (dot < 0 ? location : location.substring(dot + 1)).trim();
+        if (tail.startsWith("Hybride")) return "Hybride";
+        if (tail.startsWith("Remote") || tail.startsWith("Télétravail")) return "Remote";
+        return "Sur site";
+    }
+
     private static String foldSlug(String value) {
+
         String n = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{M}", "")
                 .toLowerCase(java.util.Locale.ROOT)
@@ -689,13 +691,13 @@ public class DataSeeder {
     private static final String DEMO_RECRUITER_NAME = "Salma Berrada";
 
     /** Compte miroir pour ne pas casser le guide (mêmes MDP, profil lié). */
-    private void mirrorAlias(UserRepository users, PasswordEncoder encoder, String email, User source) {
+    private void mirrorAlias(UserRepository users, PasswordEncoder encoder, String email, String displayName, User source) {
         if (users.findByEmailIgnoreCase(email).isPresent()) {
             return;
         }
         User u = new User();
         u.setEmail(email);
-        u.setFullName(source.getFullName() + " (alias)");
+        u.setFullName(displayName);
         u.setRole(source.getRole());
         u.setPasswordHash(source.getPasswordHash());
         u.setEmailVerified(true);
@@ -856,19 +858,6 @@ public class DataSeeder {
         repo.save(h);
     }
 
-    private static void matchRow(
-            MatchingAnalysisRepository repo, SkillMatchingService matching,
-            Application app, User candidate, JobOffer offer
-    ) {
-        MatchingAnalysis m = new MatchingAnalysis();
-        m.setApplicationId(app.getId());
-        var compat = matching.evaluate(candidate, offer);
-        m.setScore(compat.score());
-        m.setCoveredSkills(String.join(", ", compat.covered()));
-        m.setMissingSkills(String.join(", ", compat.missing()));
-        repo.save(m);
-    }
-
     private static ScorecardCriterion criterion(
             ScorecardCriterionRepository repo, Long offerId, String label, int weight, boolean veto
     ) {
@@ -922,8 +911,8 @@ public class DataSeeder {
     private void logAccounts() {
         log.info("══════════════════════════════════════════════════");
         log.info(" HireLink — comptes de démonstration (mots de passe : voir docs/GUIDE_INSTALLATION_ET_TEST.md)");
-        log.info("  admin@hirelink.ma · n.bennani@atlasdigital.ma (Owner) · k.benali@atlasdigital.ma");
-        log.info("  m.alaoui@atlasdigital.ma (Hiring Manager) · candidat@hirelink.ma · recruteur@hirelink.ma (Salma Berrada, Recruteur)");
+        log.info("  admin@hirelink.ma · n.bennani@atlasdigital.ma (Créateur) · k.benali@atlasdigital.ma");
+        log.info("  m.alaoui@atlasdigital.ma (Responsable du poste) · candidat@hirelink.ma · recruteur@hirelink.ma (Salma Berrada, Recruteur)");
         log.info("══════════════════════════════════════════════════");
     }
 }

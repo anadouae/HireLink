@@ -13,8 +13,15 @@
     REJECTED: "Refusée", WITHDRAWN: "Retirée",
   };
   var ACTIVE = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
-  var INTERVIEW_TYPE_FR = { PHONE: "Téléphone", VISIO: "Visioconférence", ONSITE: "Sur site" };
-  var ROLE_FR = { OWNER: "Owner", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Hiring Manager" };
+  var INTERVIEW_TYPE_UI = {
+    VISIO: { label: "Visioconférence", icon: "video", cls: "t-visio" },
+    ONSITE: { label: "Sur site", icon: "building", cls: "t-onsite" },
+    PHONE: { label: "Téléphone", icon: "phone", cls: "t-phone" },
+  };
+  // ASYNC et les modes venus d'un ancien import n'ont ni lien ni numéro utilisables : l'étiquette reste sobre, le détail porte l'instruction saisie.
+  var INTERVIEW_TYPE_AUTRE = { label: "Entretien", icon: "calendar", cls: "t-unknown" };
+  var interviewTypeUi = function (type) { return INTERVIEW_TYPE_UI[type] || INTERVIEW_TYPE_AUTRE; };
+  var ROLE_FR = { OWNER: "Créateur", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Responsable du poste" };
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -33,6 +40,12 @@
     if (!v) return "—";
     var d = new Date(v);
     return isNaN(d) ? "—" : d.toLocaleString("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  }
+  /** Date du jour dans le fuseau du poste, au format attendu par les champs type="date". */
+  function localDate(v) {
+    var d = v ? new Date(v) : new Date();
+    if (isNaN(d)) return "";
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
   function ago(v) {
     if (!v) return "";
@@ -128,7 +141,8 @@
     pipeline: function (cb, err) { return swr("pipeline", "/applications/pipeline", cb, err); },
     offers: function (cb, err) { return swr("offers", "/offers/mine", cb, err); },
     org: function (cb, err) { return swr("org", "/organizations/mine", cb, err); },
-    invalidate: function () { cacheClear("pipeline"); cacheClear("offers"); },
+    pace: function (cb, err) { return swr("pace", "/applications/pace", cb, err); },
+    invalidate: function () { cacheClear("pipeline"); cacheClear("offers"); cacheClear("pace"); },
   };
 
   /* ---------------------------------------------------------------- états */
@@ -159,7 +173,25 @@
   function role() { return orgInfo && orgInfo.myRole; }
   function isHM() { return role() === "HIRING_MANAGER"; }
   function isOwner() { return role() === "OWNER"; }
+  /** Le créateur est le seul compte à gouverner l'espace : équipe, fiche et formule. */
+  function isCreator() { return role() === "OWNER"; }
   function canManage() { return !isHM(); }
+
+  /** Offre réellement ouverte aux candidatures : publiée, non suspendue, ni clôturée ni archivée. */
+  function isLiveOffer(o) { return !!(o && o.published && !o.suspended && !o.closedAt && !o.archivedAt); }
+
+  /**
+   * Les trois faits du cycle de vie, plus la suspension de modération, réduits en un seul état lisible.
+   * Le recruteur et l'admin voient le même mot pour la même offre.
+   */
+  function offerState(o) {
+    if (!o) return { key: "draft", label: "Hors ligne" };
+    if (o.suspended) return { key: "suspended", label: "Suspendue" };
+    if (o.archivedAt) return { key: "archived", label: "Archivée" };
+    if (o.closedAt) return { key: "closed", label: "Clôturée" };
+    if (o.published) return { key: "online", label: "En ligne" };
+    return { key: "draft", label: "Hors ligne" };
+  }
 
   /* ------------------------------------------------------------------- nav */
   var ROLES = {
@@ -204,6 +236,8 @@
         { id: "dash", href: "admin.html#dash", label: "Tableau de bord", icon: "chart" },
         { id: "orgs", href: "admin.html#orgs", label: "Entreprises", icon: "building" },
         { id: "users", href: "admin.html#users", label: "Comptes", icon: "users" },
+        { id: "moderation", href: "admin.html#moderation", label: "Modération", icon: "flag" },
+        { id: "offers", href: "admin.html#offers", label: "Offres", icon: "briefcase" },
         { section: "Référentiel" },
         { id: "plans", href: "admin.html#plans", label: "Plans & factures", icon: "card" },
         { id: "refusals", href: "admin.html#refusals", label: "Motifs de refus", icon: "ban" },
@@ -294,6 +328,18 @@
       mark.firstChild.onerror = function () { mark.textContent = initials(o.name).charAt(0); };
     } else mark.textContent = initials(o.name).charAt(0);
     document.querySelectorAll("[data-manage]").forEach(function (a) { a.hidden = !canManage(); });
+    document.querySelectorAll("[data-creator]").forEach(function (a) { a.hidden = !isCreator(); });
+  }
+
+  /** swr() reste muet sans second callback : la carte entreprise ne doit pas rester figée sur son libellé de chargement. */
+  function paintOrgUnavailable(err) {
+    var name = document.getElementById("rc-orgname");
+    if (name) name.textContent = "Indisponible";
+    var role = document.getElementById("rc-orgrole");
+    if (role) role.textContent = "Chargement impossible";
+    var mark = document.getElementById("rc-orgmark");
+    if (mark) mark.textContent = "?";
+    toast("Entreprise", "Fiche entreprise injoignable : " + err.message, "warn");
   }
 
   /* --------------------------------------------------------------- topbar */
@@ -320,6 +366,7 @@
       '<button type="button" class="rc-iconbtn" id="rc-theme" aria-label="Changer de thème">' + svg(dark ? "sun" : "moon") + "</button>" +
       (CFG.noBell ? "" : '<button type="button" class="rc-iconbtn" id="rc-bell" aria-label="Notifications" aria-haspopup="true">' + svg("bell") + '<span class="rc-dot" id="rc-bell-dot" hidden>0</span></button>') +
       '<button type="button" class="rc-profile" id="rc-profile" aria-label="Menu du compte" aria-haspopup="true"></button></div>';
+    if (CFG.plans && global.HireLinkCredits) global.HireLinkCredits.mountMeter(bar.querySelector(".rc-actions"));
     paintProfile();
 
     var side = document.getElementById("rc-sidebar");
@@ -551,18 +598,26 @@
     var started = Date.now();
     var done = false;
     var mo;
+    function stop() {
+      done = true;
+      if (mo) mo.disconnect();
+      document.removeEventListener("hirelink:focus-handled", onHandled);
+    }
+    /** Une page peut prendre la cible en charge sans élément visible (dossier ouvert en panneau) : elle prévient ici. */
+    function onHandled(e) {
+      if (!done && e.detail && e.detail.key === key) stop();
+    }
+    document.addEventListener("hirelink:focus-handled", onHandled);
     function attempt() {
       if (done) return;
       var el = findFocus(key);
       if (el) {
-        done = true;
-        if (mo) mo.disconnect();
+        stop();
         el.scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "center", inline: "center" });
         setTimeout(function () { spotlight(el); }, reduceMotion() ? 30 : 420);
         document.dispatchEvent(new CustomEvent("hirelink:focused", { detail: { key: key, el: el } }));
       } else if (Date.now() - started > 9000) {
-        done = true;
-        if (mo) mo.disconnect();
+        stop();
         toast("Élément introuvable", "Il a peut-être été supprimé, ou il n’est pas dans votre périmètre.", "warn");
       }
     }
@@ -609,7 +664,12 @@
       '<button type="button" data-logout>' + svg("logout") + "Déconnexion</button>";
     prof.addEventListener("click", function (e) { e.stopPropagation(); togglePop(mp, prof); });
     var helpBtn = mp.querySelector("[data-help]");
-    if (helpBtn) helpBtn.addEventListener("click", function () { togglePop(mp, prof, false); HireLinkHelp.openHelp(session.role); });
+    if (helpBtn) helpBtn.addEventListener("click", function (event) {
+      event.preventDefault();
+      event.stopPropagation();
+      togglePop(mp, prof, false);
+      if (global.HireLinkHelp && global.HireLinkHelp.openHelp) global.HireLinkHelp.openHelp(session.role);
+    });
     mp.querySelector("[data-logout]").addEventListener("click", function () { togglePop(mp, prof, false); logout(); });
     Object.keys(pops).forEach(function (k) { pops[k].addEventListener("click", function (e) { e.stopPropagation(); }); });
     document.addEventListener("click", function () { Object.keys(pops).forEach(function (k) { pops[k].classList.remove("is-open"); }); });
@@ -622,7 +682,10 @@
       if (!ok) return;
       cacheClear("");
       Mascotte.goodbye(session);
-      HireLinkAPI.logout().then(function () { location.href = "../auth.html?mode=login"; });
+      HireLinkAPI.logout().then(function () {
+        var prefix = location.pathname.includes("/app/") ? "../" : "";
+        location.href = prefix + "auth.html?mode=login";
+      });
     });
   }
 
@@ -659,7 +722,7 @@
     document.documentElement.classList.remove("rc-pending");
     if (opts.title) document.title = opts.title + " — HireLink";
 
-    if (want === "RECRUTEUR") data.org(function (o) { orgInfo = o; paintOrg(); document.dispatchEvent(new CustomEvent("rc:org", { detail: o })); });
+    if (want === "RECRUTEUR") data.org(function (o) { orgInfo = o; paintOrg(); document.dispatchEvent(new CustomEvent("rc:org", { detail: o })); }, paintOrgUnavailable);
     if (!CFG.noBell) {
       pullNotifs();
       openStream();
@@ -676,11 +739,12 @@
 
   /** Charge une fonction page : exécute run(), capture toute erreur synchrone dans l'élément cible. */
   global.HireLinkApp = {
-    mount: mount, setActive: setActive, STATUS_FR: STATUS_FR, ACTIVE: ACTIVE, INTERVIEW_TYPE_FR: INTERVIEW_TYPE_FR, ROLE_FR: ROLE_FR,
-    esc: esc, initials: initials, fmtDate: fmtDate, fmtDateTime: fmtDateTime, ago: ago, plural: plural, debounce: debounce,
+    mount: mount, setActive: setActive, STATUS_FR: STATUS_FR, ACTIVE: ACTIVE,
+    interviewTypeUi: interviewTypeUi, ROLE_FR: ROLE_FR,
+    esc: esc, initials: initials, fmtDate: fmtDate, fmtDateTime: fmtDateTime, localDate: localDate, ago: ago, plural: plural, debounce: debounce,
     svg: svg, data: data, swr: swr, cacheGet: cacheGet, cacheSet: cacheSet, cacheClear: cacheClear,
     skeleton: skeleton, empty: empty, errorState: errorState, toast: toast, busy: busy,
-    isHM: isHM, isOwner: isOwner, canManage: canManage, getOrg: function () { return orgInfo; }, getSession: function () { return session; },
+    isHM: isHM, isOwner: isOwner, isCreator: isCreator, canManage: canManage, isLiveOffer: isLiveOffer, offerState: offerState, getOrg: function () { return orgInfo; }, getSession: function () { return session; },
     focus: spotlightKey, spotlight: spotlight,
     notifications: { target: notifTarget, open: openNotif, all: function () { return notifRows; }, markRead: markRead, markAllRead: markAllRead, refresh: pullNotifs },
     paintProfile: paintProfile, logout: logout,

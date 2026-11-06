@@ -55,9 +55,9 @@
       ".hl-pgate-card{background:#fff;border-radius:20px;width:min(640px,100%);max-height:min(92vh,860px);display:flex;flex-direction:column;box-shadow:0 32px 80px rgba(0,0,0,.32);border:1px solid rgba(122,32,50,.16);overflow:hidden;transform:translateY(14px) scale(.98);transition:transform .35s cubic-bezier(.22,1,.36,1)}" +
       ".hl-pgate-overlay.is-open .hl-pgate-card{transform:none}" +
       ".hl-pgate-top{padding:1.25rem 1.4rem 1rem;border-bottom:1px solid rgba(26,18,20,.08);flex-shrink:0;position:relative}" +
-      ".hl-pgate-top h2{font-family:var(--font-display,Inter,sans-serif);margin:0 0 .35rem;font-size:1.35rem;color:#1a1214}" +
-      ".hl-pgate-top .sub{margin:0;color:#5e5558;font-size:.92rem;line-height:1.45}" +
-      ".hl-pgate-close{position:absolute;top:.85rem;right:.85rem;border:0;background:transparent;font-size:1.35rem;line-height:1;cursor:pointer;color:#8a8285;padding:.25rem .45rem;border-radius:8px}" +
+      ".hl-pgate-top h2{font-family:var(--font-display,Inter,sans-serif);margin:0 0 .35rem;font-size: var(--text-xl);color:#1a1214}" +
+      ".hl-pgate-top .sub{margin:0;color:#5e5558;font-size: var(--text-base);line-height:1.45}" +
+      ".hl-pgate-close{position:absolute;top:.85rem;right:.85rem;border:0;background:transparent;font-size: var(--text-xl);line-height:1;cursor:pointer;color:#8a8285;padding:.25rem .45rem;border-radius:8px}" +
       ".hl-pgate-close:hover{background:#f4f0ec;color:#1a1214}" +
       ".hl-pgate-progress{display:flex;gap:.35rem;margin-top:.95rem}" +
       ".hl-pgate-progress>span{flex:1;height:4px;border-radius:99px;background:rgba(122,32,50,.12)}" +
@@ -68,15 +68,15 @@
       ".hl-pgate-item{display:flex;align-items:center;gap:.85rem;padding:1rem 1.05rem;border-radius:14px;border:1.5px solid rgba(26,18,20,.1);background:#fff}" +
       ".hl-pgate-item.is-ok{border-color:rgba(45,106,79,.35);background:rgba(45,106,79,.04)}" +
       ".hl-pgate-item .ic{width:2.4rem;height:2.4rem;border-radius:12px;display:grid;place-items:center;background:rgba(122,32,50,.08);color:#7a2032;flex-shrink:0}" +
-      ".hl-pgate-item strong{display:block;font-size:.98rem;color:#1a1214}" +
-      ".hl-pgate-item span{font-size:.86rem;color:#5e5558}" +
+      ".hl-pgate-item strong{display:block;font-size: var(--text-md);color:#1a1214}" +
+      ".hl-pgate-item span{font-size: var(--text-base);color:#5e5558}" +
       ".hl-pgate-item .mark{margin-left:auto;width:1.5rem;height:1.5rem;border-radius:50%;border:1.5px solid rgba(26,18,20,.18);display:grid;place-items:center;color:transparent}" +
       ".hl-pgate-item.is-ok .mark{background:#2d6a4f;border-color:#2d6a4f;color:#fff}" +
-      ".hl-pgate-tip{margin-top:1rem;padding:.85rem 1rem;border-radius:12px;background:rgba(122,32,50,.07);color:#7a2032;font-size:.9rem;display:flex;gap:.55rem;align-items:center}" +
-      ".hl-pgate-offer{margin:0 0 1rem;padding:.85rem 1rem;border-radius:12px;background:#f7f4f1;border:1px solid rgba(26,18,20,.08);font-size:.9rem;color:#3a3335}" +
+      ".hl-pgate-tip{margin-top:1rem;padding:.85rem 1rem;border-radius:12px;background:rgba(122,32,50,.07);color:#7a2032;font-size: var(--text-base);display:flex;gap:.55rem;align-items:center}" +
+      ".hl-pgate-offer{margin:0 0 1rem;padding:.85rem 1rem;border-radius:12px;background:#f7f4f1;border:1px solid rgba(26,18,20,.08);font-size: var(--text-base);color:#3a3335}" +
       ".hl-pgate-offer strong{color:#7a2032}" +
       ".hl-pgate-form{display:grid;gap:.85rem}" +
-      ".hl-pgate-form label{display:grid;gap:.35rem;font-size:.86rem;font-weight:600;color:#3a3335}" +
+      ".hl-pgate-form label{display:grid;gap:.35rem;font-size: var(--text-base);font-weight:600;color:#3a3335}" +
       ".hl-pgate-form .form-control{width:100%;padding:.7rem .85rem;border-radius:12px;border:1.5px solid rgba(26,18,20,.12);font:inherit;background:#fff}" +
       ".hl-pgate-form .form-control:focus{outline:none;border-color:#7a2032;box-shadow:0 0 0 3px rgba(122,32,50,.12)}" +
       ".hl-pgate-avail{display:grid;gap:.65rem}" +
@@ -84,11 +84,11 @@
       ".hl-pgate-aopt.is-on{border-color:#7a2032;background:rgba(122,32,50,.06)}" +
       ".hl-pgate-aopt .ic{width:2.2rem;height:2.2rem;border-radius:10px;display:grid;place-items:center;background:rgba(122,32,50,.08);color:#7a2032;flex-shrink:0}" +
       ".hl-pgate-aopt strong{display:block;color:#1a1214}" +
-      ".hl-pgate-aopt span{font-size:.86rem;color:#5e5558}" +
+      ".hl-pgate-aopt span{font-size: var(--text-base);color:#5e5558}" +
       ".hl-pgate-aopt .tick{margin-left:auto;width:1.4rem;height:1.4rem;border-radius:50%;border:1.5px solid rgba(26,18,20,.18);flex-shrink:0}" +
-      ".hl-pgate-aopt.is-on .tick{background:#7a2032;border-color:#7a2032;color:#fff;display:grid;place-items:center;font-size:.75rem}" +
+      ".hl-pgate-aopt.is-on .tick{background:#7a2032;border-color:#7a2032;color:#fff;display:grid;place-items:center;font-size: var(--text-xs)}" +
       ".hl-pgate-aopt.is-on .tick::after{content:'\\2713'}" +
-      ".hl-pgate-err{color:#a11;font-size:.88rem;margin:0}";
+      ".hl-pgate-err{color:#a11;font-size: var(--text-base);margin:0}";
     document.head.appendChild(s);
   }
 
@@ -146,6 +146,10 @@
     });
 
     var card = overlay.querySelector(".hl-pgate-card");
+    // Voile hors de ui.js : Escape, Tab et retour du focus viennent de la primitive partagée.
+    if (window.HireLink && HireLink.trapDialog) {
+      overlay._hlRelease = HireLink.trapDialog(card, close);
+    }
     var state = {
       profile: Object.assign({}, profile),
       step: "overview",
@@ -163,6 +167,10 @@
 
     function close() {
       overlay.classList.remove("is-open");
+      if (overlay._hlRelease) {
+        overlay._hlRelease();
+        overlay._hlRelease = null;
+      }
       setTimeout(function () {
         overlay.remove();
       }, 280);
@@ -221,7 +229,7 @@
           (fOk ? " is-ok" : "") +
           '"><div class="ic">' +
           svg("book") +
-          '</div><div><strong>Vos formations</strong><span>École, niveau, diplôme et domaines d\'études</span></div><div class="mark">' +
+          '</div><div><strong>Formation et expérience</strong><span>École, domaine, année et niveau d\'expérience</span></div><div class="mark">' +
           (fOk ? "?" : "") +
           "</div></div>" +
           '<div class="hl-pgate-item' +
@@ -236,21 +244,30 @@
           svg("bolt") +
           " Cela ne vous prendra que quelques minutes !</p>";
       } else if (state.step === "formation") {
-        title = "Votre dernière formation";
+        title = "Votre formation et votre expérience";
         sub =
-          "Sélectionnez votre niveau d'étude actuel ainsi que les informations relatives à votre dernière formation.";
+          "Votre niveau d'expérience sert au calcul de compatibilité ; le reste décrit votre dernière formation.";
         primary = "Valider";
         showPrev = true;
         var y = state.profile.graduationYear != null ? String(state.profile.graduationYear) : "";
+        var lvlNow = state.profile.experienceLevel || "";
+        var LVL = ["Stagiaire", "Junior", "Confirmé", "Senior", "Lead", "Manager"];
+        var lvlOpts = ['<option value="">—</option>'];
+        LVL.forEach(function (v) {
+          lvlOpts.push("<option" + (v === lvlNow ? " selected" : "") + ">" + v + "</option>");
+        });
+        if (lvlNow && LVL.indexOf(lvlNow) < 0) {
+          lvlOpts.push('<option value="' + esc(lvlNow) + '" selected>' + esc(lvlNow) + "</option>");
+        }
         body =
           offerHint +
           '<div class="hl-pgate-form" id="hl-pgate-form-edu">' +
           '<label>1. Nom de l\'école<input class="form-control" id="pg-school" data-suggest="school" placeholder="Recherchez votre école" value="' +
           esc(state.profile.school || "") +
           '" autocomplete="off" /></label>' +
-          '<label>2. Niveau d\'étude actuel<input class="form-control" id="pg-level" data-suggest="study" placeholder="Choisissez un niveau d\'étude actuel" value="' +
-          esc(state.profile.experienceLevel || "") +
-          '" autocomplete="off" /></label>' +
+          '<label>2. Votre niveau d\'expérience<select class="form-control" id="pg-level">' +
+          lvlOpts.join("") +
+          "</select></label>" +
           '<label>3. Votre domaine de formation<input class="form-control" id="pg-domain" data-suggest="domain" placeholder="Choisissez un domaine de formation" value="' +
           esc(state.profile.educationDomain || "") +
           '" autocomplete="off" /></label>' +
@@ -280,7 +297,7 @@
           svg("cal") +
           '</div><div><strong>À partir d\'une date</strong><span>Choisissez la date à partir de laquelle vous serez disponible</span></div><div class="tick"></div></button>' +
           (state.availMode === "date"
-            ? '<label style="display:grid;gap:.35rem;font-size:.86rem;font-weight:600">Date de disponibilité<input class="form-control" id="pg-avail-date" type="date" value="' +
+            ? '<label style="display:grid;gap:.35rem;font-size: var(--text-base);font-weight:600">Date de disponibilité<input class="form-control" id="pg-avail-date" type="date" value="' +
               esc(state.availDate || "") +
               '" /></label>'
             : "") +

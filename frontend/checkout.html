@@ -8,10 +8,11 @@
   <title>Paiement — HireLink</title>
   <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/tokens.css?v=20261101r" />
-  <link rel="stylesheet" href="css/checkout.css?v=20261101r" />
-  <link rel="stylesheet" href="css/public-dark.css?v=20261101s" />
-  <link rel="stylesheet" href="css/premium.css?v=20261102t" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="css/checkout.css?v=20261103a" />
+  <link rel="stylesheet" href="css/public-dark.css?v=20261104l" />
+  <link rel="stylesheet" href="css/premium.css?v=20261106g" />
+  <link rel="stylesheet" href="css/mascotte.css?v=20261105i" />
 </head>
 <body>
   <header class="pay-top">
@@ -39,6 +40,7 @@
     </section>
 
     <section class="pay-form-card" id="pay-panel">
+      <div data-mascotte data-mascotte-pose="succes" data-mascotte-couronne="1"></div>
       <h2>Informations de paiement</h2>
 
       <div id="pay-saved" hidden>
@@ -92,7 +94,7 @@
         </div>
         <p class="pay-error" id="pay-error" hidden></p>
         <button type="submit" class="pay-submit" id="pay-submit">Payer</button>
-        <button type="button" class="pay-secondary" id="pay-demo">Activer Premium sans carte (démonstration)</button>
+        <button type="button" class="pay-secondary" id="pay-demo">Activer la formule sans carte (démonstration)</button>
         <p class="pay-hint">Carte de démonstration : 4242 4242 4242 4242 · une date future · CVC 123.</p>
         <p class="pay-brands"><span>Visa</span><span>Mastercard</span><span>CMI</span></p>
       </form>
@@ -108,8 +110,9 @@
       </div>
     </section>
   </main>
-  <script src="js/api.js?v=20261101r"></script>
-  <script src="js/checkout.js?v=20261101s"></script>
-<script defer src="js/premium.js?v=20261102s"></script>
+  <script src="js/api.js?v=20261106c"></script>
+  <script src="js/mascotte.js?v=20261105i"></script>
+  <script src="js/checkout.js?v=20261106a"></script>
+<script defer src="js/premium.js?v=20261106g"></script>
 </body>
 </html>

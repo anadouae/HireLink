@@ -11,6 +11,7 @@ import ma.ensat.hirelink.security.ClientInfo;
 import ma.ensat.hirelink.security.RefreshCookies;
 import ma.ensat.hirelink.service.AuditService;
 import ma.ensat.hirelink.service.AuthService;
+import ma.ensat.hirelink.service.CaptchaService;
 import ma.ensat.hirelink.service.GoogleTokenService;
 import ma.ensat.hirelink.service.PasswordResetService;
 import ma.ensat.hirelink.service.SessionService;
@@ -34,18 +35,20 @@ public class AuthController {
     private final RefreshCookies cookies;
     private final SessionService sessions;
     private final AuditService audit;
+    private final CaptchaService captcha;
 
     @Value("${hirelink.google.client-id:}")
     private String googleClientId;
 
     public AuthController(AuthService authService, GoogleTokenService googleTokenService, PasswordResetService passwordReset,
-                          RefreshCookies cookies, SessionService sessions, AuditService audit) {
+                          RefreshCookies cookies, SessionService sessions, AuditService audit, CaptchaService captcha) {
         this.authService = authService;
         this.googleTokenService = googleTokenService;
         this.passwordReset = passwordReset;
         this.cookies = cookies;
         this.sessions = sessions;
         this.audit = audit;
+        this.captcha = captcha;
     }
 
     private ResponseEntity<AuthResponse> respond(AuthResult r, HttpServletRequest req, HttpServletResponse res) {
@@ -64,8 +67,15 @@ public class AuthController {
         return m;
     }
 
+    /** Épreuve anti-robot fabriquée par le serveur : pas de service externe, donc utilisable hors ligne. */
+    @PostMapping("/captcha")
+    public CaptchaService.Challenge captchaChallenge() {
+        return captcha.issue();
+    }
+
     @PostMapping("/request-otp")
     public AuthDtos.Message requestOtp(@Valid @RequestBody AuthDtos.RequestOtp body, HttpServletRequest req) {
+        captcha.assertValid(body.captchaToken(), body.captchaAnswer());
         authService.requestOtp(body.email(), body.purpose(), ClientInfo.from(req));
         return new AuthDtos.Message("Si l'adresse est valide, un code vient d'être envoyé (en démo locale : voir la console du serveur).");
     }
@@ -113,11 +123,18 @@ public class AuthController {
         return respond(authService.enrollFinish(body, ClientInfo.from(req)), req, res);
     }
 
-    // ---- passkeys (connexion) ----
+    // ---- passkeys (connexion & inscription guidée) ----
+
+    @PostMapping("/passkey/status")
+    public Map<String, Object> passkeyStatus(@RequestBody(required = false) AuthDtos.PasskeyStatusRequest body) {
+        String email = body != null ? body.email() : null;
+        return authService.passkeyCheck(email);
+    }
 
     @PostMapping("/passkey/login/options")
-    public Map<String, Object> passkeyOptions(HttpServletRequest req) {
-        return authService.passkeyLoginOptions(ClientInfo.from(req));
+    public Map<String, Object> passkeyOptions(@RequestBody(required = false) AuthDtos.PasskeyLoginOptionsRequest body, HttpServletRequest req) {
+        String email = body != null ? body.email() : null;
+        return authService.passkeyLoginOptions(email, ClientInfo.from(req));
     }
 
     @PostMapping("/passkey/login/finish")
@@ -125,6 +142,18 @@ public class AuthController {
                                                       HttpServletRequest req, HttpServletResponse res) {
         if (body.credential() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passkey manquante");
         return respond(authService.passkeyLoginFinish(body.requestId(), body.credential().toString(), ClientInfo.from(req)), req, res);
+    }
+
+    @PostMapping("/passkey/enroll/options")
+    public Map<String, Object> passkeyEnrollOptions(@Valid @RequestBody AuthDtos.PasskeyEnrollStart body, HttpServletRequest req) {
+        return authService.passkeyEnrollStart(body.email(), body.password(), ClientInfo.from(req));
+    }
+
+    @PostMapping("/passkey/enroll/finish")
+    public ResponseEntity<AuthResponse> passkeyEnrollFinish(@Valid @RequestBody AuthDtos.PasskeyEnrollFinish body,
+                                                            HttpServletRequest req, HttpServletResponse res) {
+        if (body.credential() == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passkey manquante");
+        return respond(authService.passkeyEnrollFinish(body.email(), body.requestId(), body.credential().toString(), body.name(), ClientInfo.from(req)), req, res);
     }
 
     // ---- session ----
@@ -158,6 +187,7 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public AuthDtos.Message forgot(@Valid @RequestBody AuthDtos.ForgotPassword body, HttpServletRequest req) {
+        captcha.assertValid(body.captchaToken(), body.captchaAnswer());
         passwordReset.request(body.email(), ClientInfo.from(req));
         return new AuthDtos.Message(PasswordResetService.GENERIC);
     }

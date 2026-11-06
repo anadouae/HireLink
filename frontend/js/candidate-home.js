@@ -7,7 +7,7 @@
   const S = HireLinkSearch;
   const offerList = document.getElementById("offer-list");
   const matchToggle = document.getElementById("match-only");
-  const FILTERS = ["f-city", "f-company", "f-skill", "f-contract", "f-mode", "f-sla", "f-sent", "f-match"];
+  const FILTERS = ["f-city", "f-company", "f-skill", "f-contract", "f-mode", "f-pace", "f-sent", "f-match"];
   const MATCH_KEY = "hirelink.matchOnly." + (session.userId || session.id || "me");
 
   let cached = [];
@@ -70,7 +70,7 @@
   function filtered(query) {
     const city = val("f-city"), company = val("f-company"), skill = val("f-skill"), contract = val("f-contract");
     const mode = val("f-mode"), sentFilter = val("f-sent");
-    const slaMax = Number(val("f-sla") || 0), minMatch = Number(val("f-match") || 0);
+    const pace = val("f-pace"), minMatch = Number(val("f-match") || 0);
     const kept = cached.filter((o) => {
       const score = o.matchScore == null ? 0 : o.matchScore;
       const st = appState(o.id);
@@ -81,7 +81,8 @@
       if (skill && !tokenize(o.requiredSkills).some((s) => s.toLowerCase() === skill.toLowerCase())) return false;
       if (contract && (o.contractType || "") !== contract) return false;
       if (mode && modeKey(o) !== mode) return false;
-      if (slaMax && (o.responseSlaDays == null || o.responseSlaDays > slaMax)) return false;
+      if (pace === "answers" && !o.responsiveness) return false;
+      if (pace === "fast" && o.responsiveness !== "REACTIF") return false;
       if (sentFilter === "open" && st && st.status !== "WITHDRAWN") return false;
       if (sentFilter === "sent" && (!st || st.status === "WITHDRAWN")) return false;
       if (sentFilter === "withdrawn" && (!st || st.status !== "WITHDRAWN")) return false;
@@ -210,10 +211,10 @@
     company.href = "candidate-companies.html?name=" + encodeURIComponent(companyOf(o));
     company.title = "Voir la page de l’entreprise";
     company.textContent = companyOf(o);
-    const place = O.placeOf(o);
+    const place = O.placeWithCountry(o);
     const where = document.createElement("p");
     where.className = "muted";
-    where.textContent = [(HireLinkPlaces.flagOf(place) + " " + place).trim(), o.contractType, o.responseSlaDays != null ? "Réponse sous " + o.responseSlaDays + " jours" : ""].filter(Boolean).join(" · ");
+    where.textContent = [(HireLinkPlaces.flagOf(place) + " " + place).trim(), o.contractType, O.paceOf(o).label].filter(Boolean).join(" · ");
     titles.append(h2, company, where);
     head.appendChild(titles);
     if (o.matchScore != null) {
