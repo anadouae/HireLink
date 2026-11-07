@@ -1,0 +1,42 @@
+@startuml cas_utilisation_recruteur_v5
+left to right direction
+title HireLink — cas d'utilisation du recruteur
+actor Recruteur as R
+actor SYS as "Système de planification
+(rappels, SLA, purges)"
+rectangle "Espace recruteur" {
+  usecase UC_new as "Créer, modifier, publier une offre"
+  usecase UC_close as "Clôturer ou archiver une offre"
+  usecase UC_pipeline as "Trier les candidatures
+dans le pipeline"
+  usecase UC_refuser as "Refuser avec un motif"
+  usecase UC_scorecard as "Shortlist et scorecard"
+  usecase UC_planifier as "Planifier un entretien
+(sur site ou visio)"
+  usecase UC_reporter as "Reporter ou annuler un entretien"
+  usecase UC_agenda as "Consulter l'agenda de l'équipe"
+  usecase UC_equipe as "Inviter un membre, promouvoir,
+transférer la propriété"
+  usecase UC_notes as "Note interne et événements
+de l'organisation"
+  usecase UC_sla as "Vérifier le rythme de réponse promis"
+  usecase UC_credits as "Suivre la consommation des crédits IA"
+  usecase UC_recherche as "Rechercher un candidat
+dans son organisation"
+}
+R --> UC_new
+R --> UC_close
+R --> UC_pipeline
+R --> UC_planifier
+R --> UC_reporter
+R --> UC_agenda
+R --> UC_equipe
+R --> UC_notes
+R --> UC_sla
+R --> UC_credits
+R --> UC_recherche
+UC_pipeline ..> UC_refuser : <<extend>>
+UC_pipeline ..> UC_scorecard : <<extend>>
+SYS --> UC_planifier : relance
+SYS --> UC_sla : mesure
+@enduml

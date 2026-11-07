@@ -1,0 +1,443 @@
+[
+ {
+  "nom": "GET /health — app + MySQL",
+  "methode": "GET",
+  "route": "/api/v1/health",
+  "statut": 200,
+  "ms": 143,
+  "octets": 112,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /auth/config — methodes d'auth disponibles",
+  "methode": "GET",
+  "route": "/api/v1/auth/config",
+  "statut": 200,
+  "ms": 12,
+  "octets": 222,
+  "attendu": 200
+ },
+ {
+  "nom": "POST /auth/login — candidat",
+  "methode": "POST",
+  "route": "/api/v1/auth/login",
+  "statut": 200,
+  "ms": 919,
+  "octets": 715,
+  "attendu": 200
+ },
+ {
+  "nom": "POST /auth/login — recruteur",
+  "methode": "POST",
+  "route": "/api/v1/auth/login",
+  "statut": 200,
+  "ms": 944,
+  "octets": 713,
+  "attendu": 200
+ },
+ {
+  "nom": "POST /auth/login — administrateur",
+  "methode": "POST",
+  "route": "/api/v1/auth/login",
+  "statut": 200,
+  "ms": 961,
+  "octets": 704,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /me — profil complet du candidat",
+  "methode": "GET",
+  "route": "/api/v1/me",
+  "statut": 200,
+  "ms": 26,
+  "octets": 1880,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /me/export — export RGPD",
+  "methode": "GET",
+  "route": "/api/v1/me/export",
+  "statut": 200,
+  "ms": 52,
+  "octets": 2192,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /auth/me — route supprimee (404 attendu)",
+  "methode": "GET",
+  "route": "/api/v1/auth/me",
+  "statut": 404,
+  "ms": 19,
+  "octets": 111,
+  "attendu": 404
+ },
+ {
+  "nom": "GET /ai/status — route supprimee (404 attendu)",
+  "methode": "GET",
+  "route": "/api/v1/ai/status",
+  "statut": 404,
+  "ms": 21,
+  "octets": 114,
+  "attendu": 404
+ },
+ {
+  "nom": "GET /me sans jeton (401 attendu)",
+  "methode": "GET",
+  "route": "/api/v1/me",
+  "statut": 401,
+  "ms": 7,
+  "octets": 72,
+  "attendu": 401
+ },
+ {
+  "nom": "GET /offers/public — offres publiees",
+  "methode": "GET",
+  "route": "/api/v1/offers/public",
+  "statut": 200,
+  "ms": 1503,
+  "octets": 169723,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /organizations/public — annuaire entreprises",
+  "methode": "GET",
+  "route": "/api/v1/organizations/public",
+  "statut": 200,
+  "ms": 296,
+  "octets": 17889,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /organizations/public/company — vitrine Atlas Digital",
+  "methode": "GET",
+  "route": "/api/v1/organizations/public/company?name=Atlas%20Digital",
+  "statut": 200,
+  "ms": 1733,
+  "octets": 8049,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /catalog/suggest?kind=contract — types de contrat",
+  "methode": "GET",
+  "route": "/api/v1/catalog/suggest?kind=contract&q=CD",
+  "statut": 200,
+  "ms": 9,
+  "octets": 99,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /catalog/suggest?kind=city — villes",
+  "methode": "GET",
+  "route": "/api/v1/catalog/suggest?kind=city&q=Tet",
+  "statut": 200,
+  "ms": 12,
+  "octets": 84,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /catalog/suggest?kind=level — type retire (repli metier)",
+  "methode": "GET",
+  "route": "/api/v1/catalog/suggest?kind=level&q=Bac",
+  "statut": 200,
+  "ms": 1198,
+  "octets": 668,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /skills/suggest sans jeton — route authentifiee (401)",
+  "methode": "GET",
+  "route": "/api/v1/skills/suggest?q=Spring",
+  "statut": 401,
+  "ms": 7,
+  "octets": 72,
+  "attendu": 401
+ },
+ {
+  "nom": "GET /catalog/places — tous les lieux",
+  "methode": "GET",
+  "route": "/api/v1/catalog/places",
+  "statut": 200,
+  "ms": 7,
+  "octets": 7515,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /skills/suggest — competences proches (authentifie)",
+  "methode": "GET",
+  "route": "/api/v1/skills/suggest?q=Spring",
+  "statut": 200,
+  "ms": 69,
+  "octets": 359,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /offers/mine — mes offres",
+  "methode": "GET",
+  "route": "/api/v1/offers/mine",
+  "statut": 200,
+  "ms": 174,
+  "octets": 8568,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /applications/pipeline — dossiers du recruteur",
+  "methode": "GET",
+  "route": "/api/v1/applications/pipeline",
+  "statut": 200,
+  "ms": 68,
+  "octets": 101092,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /applications/pace — signal de rythme de reponse",
+  "methode": "GET",
+  "route": "/api/v1/applications/pace",
+  "statut": 200,
+  "ms": 16,
+  "octets": 42,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /applications/mine — candidatures du candidat",
+  "methode": "GET",
+  "route": "/api/v1/applications/mine",
+  "statut": 200,
+  "ms": 84,
+  "octets": 47371,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /applications/{id}/timeline — frise du dossier 11",
+  "methode": "GET",
+  "route": "/api/v1/applications/11/timeline",
+  "statut": 200,
+  "ms": 16,
+  "octets": 160,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /refusal-reasons — motifs actifs",
+  "methode": "GET",
+  "route": "/api/v1/refusal-reasons",
+  "statut": 200,
+  "ms": 16,
+  "octets": 683,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /offers/{id} — detail d'une offre publiee",
+  "methode": "GET",
+  "route": "/api/v1/offers/1",
+  "statut": 200,
+  "ms": 30,
+  "octets": 2835,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /applications/{id}/interview.ics — 404: aucun entretien planifie en base de demo",
+  "methode": "GET",
+  "route": "/api/v1/applications/11/interview.ics",
+  "statut": 404,
+  "ms": 18,
+  "octets": 117,
+  "attendu": 404
+ },
+ {
+  "nom": "GET /applications/999999/interview.ics — candidature inexistante (404)",
+  "methode": "GET",
+  "route": "/api/v1/applications/999999/interview.ics",
+  "statut": 404,
+  "ms": 13,
+  "octets": 112,
+  "attendu": 404
+ },
+ {
+  "nom": "GET /organizations/mine — espace entreprise",
+  "methode": "GET",
+  "route": "/api/v1/organizations/mine",
+  "statut": 200,
+  "ms": 27,
+  "octets": 1026,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /organizations/mine/members — equipe",
+  "methode": "GET",
+  "route": "/api/v1/organizations/mine/members",
+  "statut": 200,
+  "ms": 21,
+  "octets": 756,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /organizations/mine/events — evenements",
+  "methode": "GET",
+  "route": "/api/v1/organizations/mine/events",
+  "statut": 200,
+  "ms": 24,
+  "octets": 2,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /organizations/mine/notes — post-it partages",
+  "methode": "GET",
+  "route": "/api/v1/organizations/mine/notes",
+  "statut": 200,
+  "ms": 22,
+  "octets": 650,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /notifications — mon fil",
+  "methode": "GET",
+  "route": "/api/v1/notifications",
+  "statut": 200,
+  "ms": 23,
+  "octets": 5366,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /ai/credits — solde du mois",
+  "methode": "GET",
+  "route": "/api/v1/ai/credits",
+  "statut": 200,
+  "ms": 22,
+  "octets": 221,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /billing/plans — catalogue selon audience",
+  "methode": "GET",
+  "route": "/api/v1/billing/plans",
+  "statut": 200,
+  "ms": 16,
+  "octets": 578,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/stats — compteurs globaux",
+  "methode": "GET",
+  "route": "/api/v1/admin/stats",
+  "statut": 200,
+  "ms": 27,
+  "octets": 99,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/charts — candidatures par statut",
+  "methode": "GET",
+  "route": "/api/v1/admin/charts",
+  "statut": 200,
+  "ms": 38,
+  "octets": 136,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/organizations — entreprises",
+  "methode": "GET",
+  "route": "/api/v1/admin/organizations",
+  "statut": 200,
+  "ms": 328,
+  "octets": 21338,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/offers — toutes les offres",
+  "methode": "GET",
+  "route": "/api/v1/admin/offers",
+  "statut": 200,
+  "ms": 54,
+  "octets": 46541,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/reports — file de moderation",
+  "methode": "GET",
+  "route": "/api/v1/admin/reports",
+  "statut": 200,
+  "ms": 59,
+  "octets": 1568,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/users — comptes",
+  "methode": "GET",
+  "route": "/api/v1/admin/users",
+  "statut": 200,
+  "ms": 44,
+  "octets": 27026,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/audit — journal de securite",
+  "methode": "GET",
+  "route": "/api/v1/admin/audit",
+  "statut": 200,
+  "ms": 24,
+  "octets": 42089,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/search?q=Sara — recherche transversale",
+  "methode": "GET",
+  "route": "/api/v1/admin/search?q=Sara",
+  "statut": 200,
+  "ms": 77,
+  "octets": 2570,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/ai-usage — consommation IA du mois",
+  "methode": "GET",
+  "route": "/api/v1/admin/ai-usage",
+  "statut": 200,
+  "ms": 99,
+  "octets": 584,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /admin/stats avec un jeton candidat (403 attendu)",
+  "methode": "GET",
+  "route": "/api/v1/admin/stats",
+  "statut": 403,
+  "ms": 41,
+  "octets": 42,
+  "attendu": 403
+ },
+ {
+  "nom": "GET /account/security — sessions, MFA, passkeys",
+  "methode": "GET",
+  "route": "/api/v1/account/security",
+  "statut": 200,
+  "ms": 17,
+  "octets": 294,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /account/sessions — liste des sessions",
+  "methode": "GET",
+  "route": "/api/v1/account/sessions",
+  "statut": 200,
+  "ms": 22,
+  "octets": 2727,
+  "attendu": 200
+ },
+ {
+  "nom": "GET /applications/by-offer/{id} — offre d'une autre organisation (403)",
+  "methode": "GET",
+  "route": "/api/v1/applications/by-offer/15",
+  "statut": 403,
+  "ms": 37,
+  "octets": 115,
+  "attendu": 403
+ },
+ {
+  "nom": "GET /applications/by-offer/{id} — offre de sa propre organisation (200)",
+  "methode": "GET",
+  "route": "/api/v1/applications/by-offer/1",
+  "statut": 200,
+  "ms": 54,
+  "octets": 25392,
+  "attendu": 200
+ }
+]

@@ -1,0 +1,70 @@
+@startuml paquets_hirelink_v5
+skinparam packageStyle rectangle
+title Architecture logique — HireLink (ma.ensat.hirelink)
+
+package "frontend/ (statique, servi sur :5500)" {
+  [pages HTML\nindex, auth, company, checkout,\nset-password, invitation, help] as HTMLRacine
+  [app/*.html\ncandidat (7) · recruteur (8) ·\nadmin (1) · sécurité/notifications] as HTMLApp
+  [js/ api.js · ui.js ·\npage-par-page] as JS
+  [css/ · assets/ logos locaux] as CSS
+}
+
+package "backend/ src/main/java/ma/ensat/hirelink" {
+  package "controller (20)" {
+    [AuthController, MeController,\nAccountController] as CAuth
+    [JobOfferController,\nApplicationController,\nOfferReportController,\nScorecardController] as CRecruteur
+    [OrganizationController,\nBillingController] as COrg
+    [AiAssistController, OcrController,\nSkillController, MediaController] as CAi
+    [AdminController,\nAdminEmailController,\nCatalogSuggestController,\nCatalogPrivacyController,\nRefusalReasonController,\nNotificationController,\nHealthController] as CAdmin
+  }
+  package "service (51)" {
+    [AuthService, SessionService,\nOtpService, PasswordResetService,\nCaptchaService, TotpService,\nWebAuthnService, GoogleTokenService] as SAuth
+    [JobOfferService, ApplicationService,\nInterviewService, ScorecardService,\nRefusalReasonService, ResponsivenessService] as SRecruteur
+    [OrganizationService,\nOrganizationInvitationService,\nCompanyVerificationService (ICE),\nBillingCatalogService,\nRetentionService] as SOrg
+    [HttpLlmProvider, LocalLlmProvider,\nAiCreditService, LanguageCheckService,\nSkillMatchingService, OcrService] as SAi
+    [NotificationService, EventNotifier,\nMailService, EmailTemplates,\nInterviewReminderService,\nSlaMonitorService, AuditService] as STransverse
+  }
+  package "repository (24 Spring Data JPA)" as Repo
+  package "model (24 entités + 11 enums)" as Model
+  package "security" {
+    [JwtService, JwtAuthFilter,\nAuthThrottle, RateLimitFilter,\nPasswordPolicy, ClientInfo] as Sec
+  }
+  package "config" {
+    [SecurityConfig, DataSeeder,\nGlobalExceptionHandler,\nSecurityHeadersFilter] as Conf
+  }
+  package "dto (records ApiDtos / AuthDtos)" as DTO
+}
+
+database "MariaDB `hirelink`\n3306 · 25 tables" as DB
+storage "backend/data/\ncvs · org-logos · jwt.key" as FS
+cloud "API LLM\nGemini · Groq · Mistral" as LLM
+cloud "SMTP (désactivé en local\npar --spring.mail.host=)" as SMTP
+
+HTMLApp --> JS
+JS --> CAuth : REST /api/v1 + Bearer JWT
+JS --> CRecruteur
+JS --> CAi
+JS --> CAdmin
+CRecruteur --> SRecruteur
+CAuth --> SAuth
+CAi --> SAi
+CAdmin --> SOrg
+CRecruteur --> STransverse
+SAuth --> Repo
+SRecruteur --> Repo
+SOrg --> Repo
+SAi --> Repo
+SAi --> LLM : clés depuis application-local.properties
+STransverse --> SMTP
+STransverse --> FS
+Repo --> Model
+Repo --> DB
+Sec --> CRecruteur : filtre la requête
+Conf --> Sec
+DTO --> CRecruteur
+note right of Conf
+  GlobalExceptionHandler transforme chaque
+  ResponseStatusException en
+  {"message": "texte français"} + statut HTTP.
+end note
+@enduml

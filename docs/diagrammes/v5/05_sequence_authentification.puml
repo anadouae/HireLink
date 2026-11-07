@@ -1,0 +1,44 @@
+@startuml sequence_auth_v5
+autonumber
+actor "Utilisateur" as U
+box "Frontend :5500" #EFF6FF
+  participant "auth.html" as F
+endbox
+box "Backend :8081" #FEF3C7
+  participant "AuthController" as A
+  participant "AuthService" as S
+  participant "CaptchaService" as CAP
+  participant "SessionService" as SS
+  participant "TotpService" as TOTP
+endbox
+database "MariaDB hirelink" as DB
+participant "Google OAuth" as G
+
+U -> F : e-mail + mot de passe
+F -> A : POST /auth/login
+A -> S : login(request, ClientInfo)
+S -> DB : SELECT user + comparaison bcrypt
+alt deux échecs ou plus pour cet IP + compte
+  S -> CAP : générer une épreuve (image SVG + question)
+  CAP --> F : captcha à résoudre
+  U -> F : réponse
+  F -> A : POST /auth/login {captchaId, captchaSolution}
+  A -> CAP : vérifier
+end
+alt mot de passe erroné
+  S --> A : ResponseStatusException(UNAUTHORIZED)
+  A --> F : 401 « E-mail ou mot de passe incorrect »
+else compte Google / code par e-mail
+  S -> G : vérifier id_token
+  S -> DB : SELECT email_otp (purpose, code, expires_at)
+else MFA actif
+  S --> F : 200 {mfaRequired: true}
+  U -> F : code à 6 chiffres
+  F -> A : POST /auth/login/totp
+  A -> TOTP : vérifier TOTP ou code de secours
+end
+S -> SS : créer user_session (tokenHash, idle et absolute expiration, ip, deviceLabel)
+SS -> DB : INSERT user_session
+S --> F : AuthResponse {accessToken (JWT), expiresIn}
+F -> F : conserve le JWT en mémoire,\ncookie httpOnly pour le refresh
+@enduml

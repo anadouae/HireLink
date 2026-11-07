@@ -1,0 +1,260 @@
+@startuml classes_hirelink_v5
+skinparam packageStyle rectangle
+skinparam classAttributeIconSize 0
+hide circle
+
+package "Identité et accès" {
+  class User {
+    id: Long
+    email: String
+    passwordHash: String
+    fullName: String
+    role: Role
+    skills: String
+    experienceLevel: String
+    birthDate: LocalDate
+    availability: String
+    cvFileName: String
+    cvSections: String
+    assignedOrgId: Long
+    planTier: PlanTier
+    verificationStatus: String
+    mfaEnabled: Boolean
+    mustSetPassword: Boolean
+    emailVerified: Boolean
+  }
+  class Membership {
+    id: Long
+    orgRole: OrgRole
+    suspendedAt: Instant
+  }
+  class Organization {
+    id: Long
+    name: String
+    ice: String
+    iceFormatValid: Boolean
+    iceLegalName: String
+    iceCheckedAt: Instant
+    logoUrl: String
+    sector: String
+    city: String
+    website: String
+    presentation: String
+  }
+  class OrganizationEvent {
+    id: Long
+    title: String
+    createdBy: User
+  }
+  class OrganizationNote {
+    id: Long
+    owner: User
+  }
+  class OrganizationInvitation {
+    id: Long
+    email: String
+    user: User
+  }
+  class UserSession {
+    id: Long
+    tokenHash: String
+    idleExpiresAt: Instant
+    absoluteExpiresAt: Instant
+    revokedAt: Instant
+    ip: String
+    deviceLabel: String
+  }
+  class WebAuthnCredential {
+    id: Long
+    credentialId: String
+    publicKeyCose: String
+    lastUsedAt: Instant
+  }
+  class EmailOtp {
+    id: Long
+    email: String
+    purpose: String
+    code: String
+    expiresAt: Instant
+  }
+  class PasswordResetToken {
+    id: Long
+    tokenHash: String
+    expiresAt: Instant
+    usedAt: Instant
+  }
+}
+
+package "Recrutement" {
+  class JobOffer {
+    id: Long
+    title: String
+    description: String
+    location: String
+    contractType: ContractType
+    workMode: WorkMode
+    experienceLevel: ExperienceLevel
+    educationLevel: EducationLevel
+    compensationType: CompensationType
+    salaryMin: Integer
+    salaryMax: Integer
+    salaryPeriod: PayPeriod
+    salaryBasis: PayBasis
+    currency: String
+    deadline: LocalDate
+    responseSlaDays: Integer
+    published: Boolean
+    suspended: Boolean
+    archivedAt: Instant
+    closedAt: Instant
+    quarantineReason: String
+    reportCount: Integer
+  }
+  class Application {
+    id: Long
+    status: ApplicationStatus
+    matchScore: Double
+    coverLetter: String
+    cvSource: String
+    cvFileName: String
+    submittedAt: Instant
+    firstDecisionAt: Instant
+    responseDeadline: Instant
+    interviewType: String
+    interviewKind: String
+    interviewAt: Instant
+    interviewTimeZone: String
+    interviewStatus: String
+    interviewLocation: String
+    interviewVideoUrl: String
+    interviewMapUrl: String
+    interviewParticipants: String
+    interviewNotes: String
+    interviewReminderSent: Boolean
+    rejectionReason: String
+    refusalReasonCode: String
+  }
+  class ApplicationStatusHistory {
+    id: Long
+    applicationId: Long
+    fromStatus: ApplicationStatus
+    toStatus: ApplicationStatus
+    actorUserId: Long
+    payloadJson: String
+  }
+  class ScorecardCriterion {
+    id: Long
+    jobOfferId: Long
+    label: String
+  }
+  class ScorecardEntry {
+    id: Long
+    applicationId: Long
+    criterionId: Long
+    evaluatorUserId: Long
+    comment: String
+  }
+  class RefusalReason {
+    id: Long
+    code: String
+    label: String
+  }
+  class Tag {
+    id: Long
+    name: String
+  }
+  class OfferReport {
+    id: Long
+    jobOfferId: Long
+    reporterUserId: Long
+    reason: String
+    resolvedAt: Instant
+  }
+}
+
+package "Transverse" {
+  class InAppNotification {
+    id: Long
+    userId: Long
+    title: String
+    body: String
+    link: String
+  }
+  class SentEmail {
+    id: Long
+    recipient: String
+    subject: String
+    kind: String
+    status: String
+    error: String
+  }
+  class AuditLog {
+    id: Long
+    actorUserId: Long
+    action: String
+    targetType: String
+    targetId: Long
+    ip: String
+  }
+  class AiUsageLog {
+    id: Long
+    userId: Long
+    organizationId: Long
+    feature: String
+    provider: String
+    model: String
+  }
+  class CommercialPlan {
+    id: Long
+    code: String
+    label: String
+    audience: String
+    features: String
+  }
+  class BillingInvoice {
+    id: Long
+    planCode: String
+    amount: Integer
+    status: String
+  }
+}
+
+User "1" --o "0..*" JobOffer : publie
+User "1" -- "0..*" Application : postule
+JobOffer "1" *-- "0..*" Application
+Application "1" *-- "0..*" ApplicationStatusHistory
+JobOffer "1" o-- "0..*" ScorecardCriterion
+Application "1" o-- "0..*" ScorecardEntry
+Organization "1" *-- "0..*" Membership
+User "1" -- "0..*" Membership : adhère
+Organization "1" -- "0..*" OrganizationEvent
+Organization "1" -- "0..*" OrganizationNote
+Organization "1" -- "0..*" OrganizationInvitation
+Organization "1" -- "0..*" BillingInvoice
+User "1" *-- "0..*" UserSession
+User "1" *-- "0..*" WebAuthnCredential
+JobOffer "0..*" o-- "0..*" Tag
+User "1" -- "0..*" InAppNotification
+JobOffer "1" -- "0..*" OfferReport : signalée
+Application "1" -- "0..*" AiUsageLog
+
+note bottom of User
+  `role` : Role = CANDIDAT | RECRUTEUR | ADMINISTRATEUR
+  `experienceLevel` : vocabulaire du profil
+  Stagiaire, Junior, Confirmé, Senior, Lead, Manager
+  (vérifié côté serveur dans MeController)
+end note
+
+note right of Application
+  `status` : SUBMITTED → SCREENING → SHORTLISTED → INTERVIEW,
+  REJECTED et WITHDRAWN terminaux.
+  OFFER / HIRED = uniquement données historiques.
+  Un seul et même pipeline candidat et recruteur.
+end note
+
+note bottom of JobOffer
+  24 tables d entités créées par Hibernate (ddl-auto=update),
+  plus la jointure job_offer_tags : 25 tables au total.
+  database/schema.sql ne crée que 4 tables (DDL hérité).
+end note
+@enduml

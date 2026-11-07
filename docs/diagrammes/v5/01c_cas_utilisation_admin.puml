@@ -1,0 +1,31 @@
+@startuml cas_utilisation_admin_v5
+left to right direction
+title HireLink — cas d'utilisation de l'administrateur
+actor Administrateur as A
+rectangle "Espace administrateur" {
+  usecase UC_moderation as "Modérer les offres en quarantaine"
+  usecase UC_ice as "Vérifier l'ICE d'une entreprise"
+  usecase UC_comptes as "Gérer les comptes : activer,
+suspendre, inviter"
+  usecase UC_orgs as "Gérer les organisations
+et leurs logos"
+  usecase UC_billing as "Gérer les plans commerciaux
+et la facturation"
+  usecase UC_motifs as "Gérer les motifs de refus"
+  usecase UC_stats as "Statistiques et consommation IA"
+  usecase UC_emails as "Consulter les e-mails réellement envoyés"
+  usecase UC_search as "Rechercher transversalement
+(candidats, offres, entreprises)"
+  usecase UC_retention as "Purger les données mortes (rétention)"
+}
+A --> UC_moderation
+A --> UC_ice
+A --> UC_comptes
+A --> UC_orgs
+A --> UC_billing
+A --> UC_motifs
+A --> UC_stats
+A --> UC_emails
+A --> UC_search
+A --> UC_retention
+@enduml
