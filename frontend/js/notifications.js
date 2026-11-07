@@ -21,6 +21,7 @@
     SLA: "Délai",
     ASSIGN: "Assignation",
     APPLICATION: "Nouvelle candidature",
+    FOLLOW: "Offre d’une entreprise suivie",
     MODERATION: "Modération",
     SYSTEM: "Équipe",
     HIRED: "Embauche",
@@ -177,6 +178,10 @@
   document.addEventListener("rc:notifications", (e) => sync(e.detail));
   RC.skeleton($("n-list"), 4, 56);
   RC.notifications.refresh().then(() => {
-    if (!loaded) sync(RC.notifications.all());
+    if (loaded) return;
+    const err = RC.notifications.error();
+    // Un appel qui échoue n'est pas une liste vide : le dire plutôt que promettre « Aucune notification ».
+    if (err) RC.errorState($("n-list"), err.message || "Le serveur n'a pas répondu.", () => window.location.reload());
+    else sync(RC.notifications.all());
   });
 })();

@@ -459,9 +459,10 @@
         section("Publication", null, [
           h("div", { class: "ow-field is-wide" }, [
             h("label", { for: "ow-published", class: "ow-switch" }, [pub, h("span", { text: "Publier immédiatement" })]),
-            h("p", { class: "ow-hint", text: "Réservé aux entreprises vérifiées (raison sociale + ICE). Sans vérification, l’enregistrement avec publication est refusé : complétez la vérification dans Équipe → Paramètres." }),
+            h("p", { class: "ow-hint", text: "Seules les entreprises vérifiées publient : la raison sociale et le ICE doivent être validés. Cette vérification se termine dans Équipe → Paramètres." }),
+            h("p", { class: "ow-hint", text: "Sans vérification, l’enregistrement avec publication est refusé : décochez « Publier immédiatement » pour garder un brouillon." }),
           ]),
-          h("p", { class: "ow-hint", text: "Aucun délai n’est promis au candidat. HireLink observe vos premières réponses réelles et affiche un badge quand elles sont rapides." }),
+          h("p", { class: "ow-hint", text: "Publier ne promet aucun délai de réponse au candidat. HireLink observe vos premières réponses réelles et affiche un badge lorsqu’elles sont rapides." }),
         ]),
       ];
     }

@@ -1643,11 +1643,6 @@
 .co-signal--ok:hover { background: rgba(22, 101, 52, 0.18); }
 @media (prefers-reduced-motion: reduce) { .co-signal { transition: none; } }
 .co-actions { align-self: end; }
-.co-stats { display: flex; gap: 0.5rem; padding: 0.75rem 1.25rem 1rem; border-top: 1px solid rgba(26, 18, 20, 0.07); }
-.co-stat { display: flex; flex-direction: column; gap: 0.1rem; flex: 1 1 0; min-width: 0; }
-.co-stat + .co-stat { padding-left: 0.9rem; border-left: 1px solid rgba(26, 18, 20, 0.07); }
-.co-stat strong { font-size: 1.15rem; }
-.co-stat span { font-size: 0.78rem; color: var(--ink-soft); }
 .co-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1.1rem; margin-top: 1.1rem; align-items: start; }
 .co-side { display: grid; gap: 0.9rem; }
 .co-card, .co-main {
@@ -1655,15 +1650,6 @@
 }
 .co-card h2, .co-main-head h2 { margin: 0 0 0.55rem; font-size: 0.95rem; }
 .co-card p { margin: 0; color: var(--ink-soft); line-height: 1.5; }
-.co-keys { margin: 0; display: grid; gap: 0.45rem; }
-.co-keys div { display: flex; justify-content: space-between; gap: 0.8rem; font-size: 0.85rem; }
-.co-keys dt { color: var(--ink-soft); font-weight: 500; }
-.co-keys dd { margin: 0; font-weight: 600; text-align: right; }
-.co-facts { display: flex; flex-wrap: wrap; gap: 0.35rem; }
-.co-skill {
-  font-size: 0.76rem; font-weight: 600; padding: 0.26rem 0.55rem; border-radius: 999px;
-  background: rgba(122, 32, 50, 0.08); color: #7a2032;
-}
 .co-main-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; margin-bottom: 0.2rem; }
 .co-count { font-size: 0.8rem; color: var(--ink-soft); }
 .co-empty { color: var(--ink-soft); font-size: 0.9rem; margin: 0; }
@@ -1671,8 +1657,6 @@
   .co-layout { grid-template-columns: 1fr; }
   .co-id { grid-template-columns: auto 1fr; }
   .co-actions { grid-column: 1 / -1; justify-self: start; }
-  .co-stats { flex-wrap: wrap; }
-  .co-stat { flex: 1 1 40%; }
 }
 
 /* Accueil — même ossature qu’une place de marché, palette HireLink */

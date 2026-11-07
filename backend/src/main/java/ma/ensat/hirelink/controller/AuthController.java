@@ -211,22 +211,4 @@ public class AuthController {
         if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié");
         return authService.setPassword(user, body.password());
     }
-
-    @GetMapping("/me")
-    public ResponseEntity<?> me(@AuthenticationPrincipal User user) {
-        if (user == null) {
-            return ResponseEntity.status(401).body(Map.of("message", "Non authentifié"));
-        }
-        return ResponseEntity.ok(Map.of(
-                "id", user.getId(),
-                "email", user.getEmail(),
-                "fullName", user.getFullName(),
-                "role", user.getRole().name(),
-                "mustSetPassword", user.isMustSetPassword(),
-                "emailVerified", user.isEmailVerified(),
-                "mfaEnabled", user.isMfaEnabled(),
-                "skills", user.getSkills() == null ? "" : user.getSkills(),
-                "company", user.getCompany() == null ? "" : user.getCompany()
-        ));
-    }
 }

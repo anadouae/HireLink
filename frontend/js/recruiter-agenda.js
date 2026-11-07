@@ -22,6 +22,8 @@
   const TYPE_FR = { VISIO: "Visioconférence", ONSITE: "Sur site", PHONE: "Téléphone", EVENT: "Agenda" };
   const KIND_FR = { HR: "RH", TECHNICAL: "Technique", MANAGER: "Manager", CASE: "Étude de cas", TEAM: "Équipe", FINAL: "Final" };
   const CATEGORY_FR = { MEETING: "Réunion", APPOINTMENT: "Rendez-vous", PERSONAL: "Personnel", PROFESSIONAL: "Professionnel", OTHER: "Autre" };
+  const CATEGORY_CODES = Object.keys(CATEGORY_FR);
+  const DURATION_PRESETS = [15, 30, 45, 60, 90, 120];
   const VIEWS = { month: "Mois", week: "Semaine", day: "Jour", list: "Liste" };
   const typeCls = (a) => "t-" + String(a.interviewType || "async").toLowerCase();
 
@@ -745,31 +747,102 @@
     HireLinkInterview.plan(chosen, { onDone: () => load() });
   }
 
+  /** « 45 min », « 1 h », « 1 h 30 » : le libellé court d'une durée, aligné sur ce que saisit le champ. */
+  function durationLabel(m) {
+    const h = Math.floor(m / 60);
+    const rest = m % 60;
+    if (!h) return m + " min";
+    return rest ? h + " h " + rest : h + " h";
+  }
+
+  /** Le créneau réellement créé : date locale, heure de début, heure de fin. */
+  function slotLabel(startValue, minutes) {
+    const from = new Date(startValue);
+    if (!startValue || isNaN(from.getTime())) return "";
+    const to = new Date(from.getTime() + Math.max(0, minutes) * 60000);
+    const day = new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(from);
+    const hour = (d) => new Intl.DateTimeFormat("fr-FR", { hour: "2-digit", minute: "2-digit" }).format(d);
+    return day.charAt(0).toUpperCase() + day.slice(1) + " · " + hour(from) + " – " + hour(to);
+  }
+
+  function eventCategory() {
+    const picked = document.querySelector('input[name="ag-event-type"]:checked');
+    if (!picked || picked.value !== "OTHER") return picked ? picked.value : CATEGORY_CODES[0];
+    const custom = ($("ag-event-category") || {}).value || "";
+    return custom.trim() || "OTHER";
+  }
+
   async function createOrganizationEvent(existing) {
     const base = existing ? new Date(existing.startsAt) : new Date(Date.now() + 3600000);
     base.setSeconds(0, 0);
     const value = new Date(base.getTime() - base.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    const minutes = existing && existing.durationMinutes ? Number(existing.durationMinutes) : 60;
+    const stored = existing && existing.category ? String(existing.category).toUpperCase() : "MEETING";
+    const known = CATEGORY_CODES.indexOf(stored) >= 0;
+    const picked = known ? stored : "OTHER";
+    const typeChips = CATEGORY_CODES.map((code) =>
+      '<label><input type="radio" name="ag-event-type" value="' + code + '"' + (code === picked ? " checked" : "") + ">" +
+      "<span>" + esc(CATEGORY_FR[code]) + "</span></label>").join("");
+    const durChips = DURATION_PRESETS.map((m) =>
+      '<button type="button" class="rc-chip' + (m === minutes ? " is-on" : "") + '" data-min="' + m + '">' + durationLabel(m) + "</button>").join("");
     const ok = await HireLink.openModal({
       title: existing ? "Modifier l’événement" : "Nouvel événement",
       description: existing
         ? "Les participants voient immédiatement le nouvel horaire sur leur agenda."
         : "Réunion, rendez-vous, événement personnel ou autre activité professionnelle.",
-      bodyHtml: '<div class="form-grid"><label>Titre<input id="ag-event-title" required maxlength="180" placeholder="Réunion d’équipe" value="' + esc(existing ? existing.title || "" : "") + '"></label>' +
-        '<label>Type<input id="ag-event-category" list="ag-event-types" value="' + esc(existing ? existing.category || "MEETING" : "MEETING") + '" maxlength="32" placeholder="Réunion, rendez-vous…"><datalist id="ag-event-types"><option value="MEETING">Réunion</option><option value="APPOINTMENT">Rendez-vous</option><option value="PERSONAL">Personnel</option><option value="PROFESSIONAL">Professionnel</option><option value="OTHER">Autre</option></datalist></label>' +
-        '<label>Date et heure<input id="ag-event-start" type="datetime-local" value="' + value + '" required></label>' +
-        '<label>Durée (minutes)<input id="ag-event-duration" type="number" min="5" max="1440" value="' + (existing && existing.durationMinutes ? existing.durationMinutes : 60) + '" required></label>' +
-        '<label class="form-grid-wide">Lieu<input id="ag-event-location" maxlength="120" placeholder="Bureau, salle…" value="' + esc(existing ? existing.location || "" : "") + '"></label>' +
-        '<label class="form-grid-wide">Lien de visioconférence<input id="ag-event-video" type="url" maxlength="500" placeholder="https://meet… (facultatif)" value="' + esc(existing ? existing.videoUrl || "" : "") + '"></label>' +
-        '<label class="form-grid-wide">Notes<textarea id="ag-event-description" maxlength="2000" rows="4">' + esc(existing ? existing.description || "" : "") + "</textarea></label></div>",
+      bodyHtml:
+        '<div class="agx">' +
+        '<label class="agx-title">Titre<input id="ag-event-title" required maxlength="180" placeholder="Réunion d’équipe" value="' + esc(existing ? existing.title || "" : "") + '"></label>' +
+        '<div class="agx-block"><span class="agx-cap">Type</span><div class="agx-types">' + typeChips + "</div></div>" +
+        '<label class="agx-custom" id="ag-event-custom-wrap"' + (picked === "OTHER" ? "" : " hidden") + ">Nom du type personnalisé" +
+        '<input id="ag-event-category" maxlength="32" placeholder="Ex. point produit, revue de code…" value="' + esc(known ? "" : stored) + '"></label>' +
+        '<div class="agx-row">' +
+        '<label>Commence<input id="ag-event-start" type="datetime-local" value="' + value + '" required></label>' +
+        '<label>Durée (minutes)<input id="ag-event-duration" type="number" min="5" max="1440" value="' + minutes + '" required></label>' +
+        "</div>" +
+        '<div class="rc-chips agx-durs" role="group" aria-label="Durées courtes">' + durChips + "</div>" +
+        '<p class="agx-slot" id="ag-event-slot" aria-live="polite"></p>' +
+        '<div class="agx-row">' +
+        '<label>Lieu<input id="ag-event-location" maxlength="120" placeholder="Bureau, salle…" value="' + esc(existing ? existing.location || "" : "") + '"></label>' +
+        '<label>Lien de visioconférence<input id="ag-event-video" type="url" maxlength="500" placeholder="https://meet… (facultatif)" value="' + esc(existing ? existing.videoUrl || "" : "") + '"></label>' +
+        "</div>" +
+        '<label>Notes<textarea id="ag-event-description" maxlength="2000" rows="4" placeholder="Ordre du jour, participants, préparation…">' +
+        esc(existing ? existing.description || "" : "") + "</textarea></label>" +
+        "</div>",
       confirmLabel: existing ? "Enregistrer les modifications" : "Créer l’événement",
-      large: true
+      large: true,
+      onReady: ({ root }) => {
+        const start = root.querySelector("#ag-event-start");
+        const dur = root.querySelector("#ag-event-duration");
+        const slot = root.querySelector("#ag-event-slot");
+        const custom = root.querySelector("#ag-event-custom-wrap");
+        const paintSlot = () => {
+          const m = Math.max(0, Number(dur.value) || 0);
+          slot.textContent = slotLabel(start.value, m) || "Choisissez une date pour voir le créneau.";
+          root.querySelectorAll(".agx-durs .rc-chip").forEach((chip) => {
+            chip.classList.toggle("is-on", Number(chip.dataset.min) === m);
+          });
+        };
+        const paintType = () => {
+          const pickedChip = root.querySelector('input[name="ag-event-type"]:checked');
+          custom.hidden = !pickedChip || pickedChip.value !== "OTHER";
+        };
+        start.addEventListener("input", paintSlot);
+        dur.addEventListener("input", paintSlot);
+        root.querySelectorAll('.agx-types input').forEach((r) => r.addEventListener("change", paintType));
+        root.querySelectorAll(".agx-durs .rc-chip").forEach((chip) => {
+          chip.addEventListener("click", () => { dur.value = chip.dataset.min; paintSlot(); });
+        });
+        paintSlot();
+        paintType();
+      },
     });
     if (!ok) return;
     const local = $("ag-event-start").value;
     try {
       await HireLinkAPI.api(existing ? "/organizations/mine/events/" + existing.id : "/organizations/mine/events",
         { method: existing ? "PUT" : "POST", body: {
-        title: $("ag-event-title").value, category: $("ag-event-category").value,
+        title: $("ag-event-title").value, category: eventCategory(),
         startsAt: new Date(local).toISOString(), durationMinutes: Number($("ag-event-duration").value),
         location: $("ag-event-location").value, videoUrl: $("ag-event-video").value,
         description: $("ag-event-description").value

@@ -208,7 +208,8 @@
       RC.toast("Candidat requis", "Choisissez un dossier.", "warn");
       return;
     }
-    const cvText = [a.candidateName, a.candidateSkills, a.coverLetter, a.cvFileName].filter(Boolean).join("\n");
+    // Ni le nom ni l'e-mail du candidat ne partent au fournisseur : uniquement ses compétences et sa lettre.
+    const cvText = [a.candidateSkills, a.coverLetter, a.cvFileName].filter(Boolean).join("\n");
     run(e.currentTarget, "cv-out", "/ai/cv-summary", { cvText });
   });
 

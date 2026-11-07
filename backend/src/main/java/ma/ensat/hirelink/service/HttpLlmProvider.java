@@ -85,31 +85,6 @@ public class HttpLlmProvider implements LlmProvider {
         );
     }
 
-    /** Statut masqué pour /ai/status — jamais la clé en clair. */
-    public Map<String, Object> statusMap() {
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("primary", primaryProvider);
-        m.put("fallbackChain", buildChain());
-        m.put("gemini", Map.of(
-                "configured", hasKey(resolveGeminiKey()),
-                "model", geminiModel,
-                "hint", mask(resolveGeminiKey())
-        ));
-        m.put("groq", Map.of(
-                "configured", hasKey(resolveGroqKey()),
-                "model", groqModel,
-                "hint", mask(resolveGroqKey())
-        ));
-        m.put("mistral", Map.of(
-                "configured", hasKey(resolveMistralKey()),
-                "model", mistralModel,
-                "hint", mask(resolveMistralKey())
-        ));
-        m.put("mode", buildChain().isEmpty() ? "LOCAL_FALLBACK" : "CLOUD");
-        m.put("howTo", "Colle tes clés dans application-local.properties (gitignored) ou dis-les en chat.");
-        return m;
-    }
-
     private List<String> buildChain() {
         LinkedHashSet<String> ordered = new LinkedHashSet<>();
         String primary = primaryProvider == null ? "gemini" : primaryProvider.trim().toLowerCase();

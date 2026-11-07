@@ -29,6 +29,7 @@ public class OrganizationController {
     private final ma.ensat.hirelink.service.OrganizationNoteService organizationNoteService;
     private final ma.ensat.hirelink.service.OrganizationInvitationService organizationInvitationService;
     private final ma.ensat.hirelink.service.JobOfferService jobOfferService;
+    private final ma.ensat.hirelink.service.CompanyFollowService companyFollowService;
 
     public OrganizationController(
             OrganizationService organizationService,
@@ -37,7 +38,8 @@ public class OrganizationController {
             OrganizationEventService organizationEventService,
             ma.ensat.hirelink.service.OrganizationNoteService organizationNoteService,
             ma.ensat.hirelink.service.OrganizationInvitationService organizationInvitationService,
-            ma.ensat.hirelink.service.JobOfferService jobOfferService
+            ma.ensat.hirelink.service.JobOfferService jobOfferService,
+            ma.ensat.hirelink.service.CompanyFollowService companyFollowService
     ) {
         this.organizationService = organizationService;
         this.companyVerificationService = companyVerificationService;
@@ -46,6 +48,7 @@ public class OrganizationController {
         this.organizationNoteService = organizationNoteService;
         this.organizationInvitationService = organizationInvitationService;
         this.jobOfferService = jobOfferService;
+        this.companyFollowService = companyFollowService;
     }
 
     public record InviteRequest(@jakarta.validation.constraints.Size(max = 254) String email, @jakarta.validation.constraints.Size(max = 30) String orgRole) {}
@@ -356,6 +359,8 @@ public class OrganizationController {
         m.put("maxMembers", maxMembers);
         m.put("memberCount", memberCount);
         m.put("seatsRemaining", Math.max(0, maxMembers - memberCount));
+        // Un total, jamais des identités : les abonnés d'une entreprise restent anonymes.
+        m.put("followerCount", companyFollowService.count(org.getId()));
         m.put("myRole", me.getOrgRole().name());
         m.put("website", org.getWebsite() == null ? "" : org.getWebsite());
         m.put("logoUrl", org.getLogoUrl() == null ? "" : org.getLogoUrl());

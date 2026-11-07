@@ -239,6 +239,24 @@ textarea.ag-note-text { width: 100%; border: 1px dashed rgba(20, 14, 20, .25); b
 .ag-note-menu-actions .btn { justify-content: flex-start; width: 100%; }
 .ag-note-menu-actions .btn.is-on { background: var(--burgundy-soft); color: var(--burgundy); }
 
+/* Fenêtre « Nouvel événement » : titres de groupe discrets, type en pastilles, créneau relu à chaque frappe. */
+.agx { display: grid; gap: .95rem; }
+.agx > label, .agx-row > label { display: grid; gap: .35rem; font-size: var(--text-sm); font-weight: 600; color: var(--ink-soft); }
+.agx input, .agx textarea { width: 100%; font-weight: 400; color: var(--ink); }
+.agx-title input { font-size: var(--text-lg); font-weight: 700; letter-spacing: -.01em; }
+.agx-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; }
+.agx-block { display: grid; gap: .45rem; }
+.agx-cap { font-size: var(--text-2xs); font-weight: 700; letter-spacing: var(--ls-label); text-transform: uppercase; color: var(--ink-faint); }
+.agx-types { display: flex; flex-wrap: wrap; gap: .4rem; }
+.agx-types label { position: relative; display: inline-flex; align-items:center; padding: .45rem .85rem; border: 1px solid var(--line); border-radius: 999px; font-size: var(--text-sm); font-weight: 600; color: var(--ink-soft); cursor: pointer; transition: background .18s, border-color .18s, color .18s; }
+.agx-types label:hover { border-color: var(--burgundy); color: var(--burgundy); }
+.agx-types input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.agx-types label:has(input:checked) { background: var(--burgundy); border-color: var(--burgundy); color: #fff; }
+.agx-types label:has(input:focus-visible) { outline: 2px solid var(--burgundy); outline-offset: 2px; }
+.agx-custom input { font-weight: 400; }
+.agx-durs { margin-top: -.25rem; }
+.agx-slot { margin: 0; padding: .6rem .85rem; border-radius: 12px; background: var(--burgundy-soft); color: var(--burgundy); font-size: var(--text-sm); font-weight: 700; }
+
 @media (max-width: 720px) {
   .ag-notes { padding: 1rem .85rem; }
   .ag-notes-toolbar { align-items: flex-start; flex-direction: column; }
@@ -246,6 +264,7 @@ textarea.ag-note-text { width: 100%; border: 1px dashed rgba(20, 14, 20, .25); b
   .ag-note { min-height: 190px; }
   .ag-note-grip { display: none; }
   .ag-note-menu { left: .6rem; right: .6rem; width: auto; }
+  .agx-row { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   .ag-note, .ag-note-menu, .ag-note.has-sketch .ag-note-sketch { animation: none !important; }

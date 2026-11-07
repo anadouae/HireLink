@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
   <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
-  <link rel="stylesheet" href="../css/premium.css?v=20261106g" />
+  <link rel="stylesheet" href="../css/premium.css?v=20261107b" />
   <script data-role="RECRUTEUR" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -61,10 +61,16 @@
                     <div class="hq-overview">
               <div class="rc-card"><div class="rc-card-head"><div><h2>Fiche publique</h2><p>Ce que voient les candidats. L’aperçu suit vos modifications dans Paramètres.</p></div></div><div class="rc-card-body"><div id="co-preview"></div></div></div>
               <div class="rc-card"><div class="rc-card-head"><div><h2>Rôles de l’équipe</h2><p>Qui fait quoi dans HireLink. Un seul compte gouverne l’espace : celui qui l’a créé.</p></div></div><div class="rc-card-body hq-roles">
-                <p><span class="hq-role r-owner">Créateur</span> invite, met en pause, retire et change les rôles ; modifie la fiche entreprise et choisit la formule. Il peut transférer son rôle, mais reste le seul à pouvoir le faire.</p>
-                <p><span class="hq-role r-rec">Recruteur</span> crée et gère les offres, le pipeline, les entretiens et l’agenda. Il ne peut pas inviter ni retirer un membre.</p>
-                <p><span class="hq-role r-hm">Responsable du poste</span> voit uniquement les dossiers qu’on lui assigne, et les évalue avec la grille de notes. Il ne publie pas d’offre, n’invite personne et n’accède pas aux dossiers des autres.</p>
-                <p class="rc-muted" style="font-size: var(--text-sm)">Trois états d’accès : <b>actif</b> (il occupe un siège), <b>en pause</b> (il garde son siège et son rôle, sans accès, réversible), et <b>invitation en attente</b> (le siège est réservé tant que la personne n’a pas répondu).</p>
+                <ul class="hq-role-list">
+                  <li><span class="hq-role r-owner">Créateur</span><p>invite, met en pause, retire et change les rôles ; modifie la fiche entreprise et choisit la formule. Il peut transférer son rôle, mais reste le seul à pouvoir le faire.</p></li>
+                  <li><span class="hq-role r-rec">Recruteur</span><p>crée et gère les offres, le pipeline, les entretiens et l’agenda. Il ne peut pas inviter ni retirer un membre.</p></li>
+                  <li><span class="hq-role r-hm">Responsable du poste</span><p>voit uniquement les dossiers qu’on lui assigne, et les évalue avec la grille de notes. Il ne publie pas d’offre, n’invite personne et n’accède pas aux dossiers des autres.</p></li>
+                </ul>
+                <p class="hq-role-states">
+                  <span class="st-on"><i></i>Actif : il occupe un siège</span>
+                  <span class="st-pause"><i></i>En pause : siège et rôle conservés, accès coupé, réversible</span>
+                  <span class="st-wait"><i></i>Invitation en attente : siège réservé tant que la personne n’a pas répondu</span>
+                </p>
               </div></div>
             </div>
           </section>
@@ -141,7 +147,7 @@
   <script defer src="../js/places.js?v=20261103h"></script>
   <script defer src="../js/in-app-help.js?v=20261105s"></script>
   <script defer src="../js/credits.js?v=20261105v"></script>
-  <script defer src="../js/app-shell.js?v=20261105y"></script>
-  <script defer src="../js/recruiter-team.js?v=20261106g"></script>
+  <script defer src="../js/app-shell.js?v=20261107d"></script>
+  <script defer src="../js/recruiter-team.js?v=20261107c"></script>
 </body>
 </html>

@@ -421,6 +421,7 @@
   }
 
   var notifRows = [];
+  var notifError = null;
   function paintBell(unread) {
     var dot = document.getElementById("rc-bell-dot");
     if (dot) { dot.hidden = !unread; dot.textContent = unread > 9 ? "9+" : String(unread); }
@@ -439,16 +440,24 @@
     lastUnread = unread;
     if (fresh) announce(fresh);
   }
-  function pullNotifs() {
-    if (document.hidden) return Promise.resolve();
+  /**
+   * « force » : une page qui affiche la liste doit vraiment interroger le serveur, même si l'onglet est
+   * considéré caché (webview, onglet ouvert en arrière-plan). Sans cela, elle montrerait « Aucune notification ».
+   */
+  function pullNotifs(force) {
+    if (document.hidden && !force) return Promise.resolve();
     return HireLinkAPI.api("/notifications").then(function (rows) {
+      notifError = null;
       notifRows = rows || [];
       var unread = notifRows.filter(function (n) { return !n.read; }).length;
       paintBell(unread);
       announceNewNotification(unread);
       if (pops["rc-pop-notif"] && pops["rc-pop-notif"].classList.contains("is-open")) renderNotifPop();
       document.dispatchEvent(new CustomEvent("rc:notifications", { detail: notifRows }));
-    }).catch(function () {});
+    }).catch(function (e) {
+      // L'échec est mémorisé : la page l'affiche au lieu de laisser croire à une liste vide.
+      notifError = e;
+    });
   }
   /**
    * Temps réel : flux SSE ouvert avec un ticket à usage unique (le jeton d'accès ne passe pas dans l'URL).
@@ -523,6 +532,8 @@
     if (type === "security") return f("security.html", "security");
     if (session.role === "CANDIDAT") {
       if ((type === "application" || type === "interview") && id) return f("candidate-applications.html?id=" + encodeURIComponent(id), "application:" + id);
+      // Une offre signalée a un candidat (nouvelle offre d'une entreprise suivie) : la fiche de l'offre, pas sa candidature.
+      if (type === "offer" && id) return "candidate.html?offer=" + encodeURIComponent(id);
       return "candidate-applications.html";
     }
     if (session.role === "ADMINISTRATEUR") return "admin.html";
@@ -653,7 +664,7 @@
     var bell = document.getElementById("rc-bell");
     if (bell) {
       var np = makePop("rc-pop-notif");
-      bell.addEventListener("click", function (e) { e.stopPropagation(); renderNotifPop(); togglePop(np, bell); pullNotifs(); });
+      bell.addEventListener("click", function (e) { e.stopPropagation(); renderNotifPop(); togglePop(np, bell); pullNotifs(true); });
     }
     var mp = makePop("rc-pop-menu", "rc-menu");
     var prof = document.getElementById("rc-profile");
@@ -724,7 +735,9 @@
 
     if (want === "RECRUTEUR") data.org(function (o) { orgInfo = o; paintOrg(); document.dispatchEvent(new CustomEvent("rc:org", { detail: o })); }, paintOrgUnavailable);
     if (!CFG.noBell) {
-      pullNotifs();
+      // Le premier appel n'est jamais ignoré : sans lui la cloche afficherait « rien à voir » alors que la
+      // page n'a pas interrogé le serveur (onglet ouvert en arrière-plan, webview considérée cachée).
+      pullNotifs(true);
       openStream();
       setInterval(function () { if (!live) pullNotifs(); }, 45000);
       setInterval(pullNotifs, 300000);
@@ -746,7 +759,7 @@
     skeleton: skeleton, empty: empty, errorState: errorState, toast: toast, busy: busy,
     isHM: isHM, isOwner: isOwner, isCreator: isCreator, canManage: canManage, isLiveOffer: isLiveOffer, offerState: offerState, getOrg: function () { return orgInfo; }, getSession: function () { return session; },
     focus: spotlightKey, spotlight: spotlight,
-    notifications: { target: notifTarget, open: openNotif, all: function () { return notifRows; }, markRead: markRead, markAllRead: markAllRead, refresh: pullNotifs },
+    notifications: { target: notifTarget, open: openNotif, all: function () { return notifRows; }, error: function () { return notifError; }, markRead: markRead, markAllRead: markAllRead, refresh: function () { return pullNotifs(true); } },
     paintProfile: paintProfile, logout: logout,
   };
 })(window);
