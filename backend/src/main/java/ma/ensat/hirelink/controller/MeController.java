@@ -32,6 +32,10 @@ public class MeController {
     private final SkillCatalogService skillCatalog;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    /** Seul vocabulaire admis pour users.experience_level : celui du select « pf-level » du profil candidat. */
+    private static final java.util.List<String> EXPERIENCE_LEVELS =
+            java.util.List.of("Stagiaire", "Junior", "Confirmé", "Senior", "Lead", "Manager");
+
     public MeController(
             UserRepository userRepository,
             CompanyVerificationService companyVerificationService,
@@ -134,7 +138,12 @@ public class MeController {
             user.setPreferredContracts(ContractType.cleanPreferences(body.preferredContracts()));
         }
         if (body.experienceLevel() != null) {
-            user.setExperienceLevel(body.experienceLevel().trim());
+            String level = body.experienceLevel().trim();
+            if (!level.isEmpty() && !EXPERIENCE_LEVELS.contains(level)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Niveau d'expérience hors liste : " + String.join(", ", EXPERIENCE_LEVELS));
+            }
+            user.setExperienceLevel(level.isEmpty() ? null : level);
         }
         if (body.companyPresentation() != null) {
             String bio = body.companyPresentation().trim();

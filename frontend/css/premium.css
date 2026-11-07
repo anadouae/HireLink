@@ -256,6 +256,11 @@ p.oc-co-link:hover{color:var(--hl-wine);text-decoration:underline;text-underline
 .co-detail-anim .co-mark-lg{box-shadow:0 0 0 4px var(--surface,#fff),0 8px 20px rgba(0,0,0,.12);background:var(--surface,#fff)}
 .co-follow{margin-top:2rem;white-space:nowrap}
 .co-follow-dot{display:inline-block;margin-left:.4rem;padding:.05rem .45rem;border-radius:99px;font-size: var(--text-2xs);font-weight: 600;background:rgba(122,32,50,.1);color:var(--hl-wine);vertical-align:middle}
+.co-detail-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;margin:.2rem .4rem 1rem}
+.co-detail-stat{min-width:0;padding:.7rem .85rem;border:1px solid var(--line);border-radius:12px;background:var(--surface-2,#faf7f4)}
+.co-detail-stat strong{display:block;font-size: var(--text-xl);font-weight:800;line-height:1.15;color:var(--ink);overflow-wrap:anywhere}
+.co-detail-stat strong.is-date{color:var(--hl-wine)}
+.co-detail-stat span{display:block;margin-top:.1rem;font-size: var(--text-xs);color:var(--ink-soft)}
 .co-jobs-title{font-size: var(--text-md);margin:1.1rem 0 .5rem}
 .co-job{display:flex;align-items:center;gap:.5rem}
 .co-job .rc-item-main{flex:1;min-width:0}
@@ -302,6 +307,41 @@ html[data-theme="dark"] .co-follow-dot{background:rgba(224,122,142,.16);color:#e
 .hq-stats{display:flex;flex-wrap:wrap;gap:.5rem}
 .hq-stats span{padding:.35rem .7rem;border-radius:12px;background:var(--surface,#fff);border:1px solid var(--line);font-size: var(--text-sm);color:var(--ink-soft)}
 .hq-stats b{color:var(--ink);font-size: var(--text-md);margin-right:.15rem}
+/* Fiche publique (aperçu) : la carte doit reprendre la structure de company.html — bandeau, logo débordant,
+   signaux, présentation, compteurs — sinon l'aperçu ne ressemble à rien de ce que voit le candidat. */
+.hq-overview{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:1.15rem;align-items:start;margin-top:1.15rem}
+.hq-preview{position:relative;border:1px solid var(--line);border-radius:18px;overflow:hidden;background:var(--surface,#fff);box-shadow:var(--shadow-sm)}
+.hq-preview-cover{height:76px;background:linear-gradient(120deg,#7a2032,#c45a3a 55%,#e2c98a)}
+.hq-preview-id{display:flex;align-items:flex-end;gap:.9rem;padding:0 1.1rem;margin-top:-30px}
+.hq-preview-logo{position:relative;flex:none;display:grid;place-items:center;width:60px;height:60px;border-radius:15px;background:var(--surface,#fff);border:1px solid var(--line);box-shadow:0 6px 16px rgba(0,0,0,.14);overflow:hidden;color:var(--brand,#7a2032);font-weight:800}
+.hq-preview-logo img{width:100%;height:100%;object-fit:contain;padding:7px;background:#fff;box-sizing:border-box}
+.hq-preview-name{flex:1;min-width:0;padding-bottom:.2rem}
+.hq-preview-name h3{margin:0;font-size:var(--text-lg);font-weight:800;letter-spacing:-.015em;line-height:1.2;overflow-wrap:anywhere}
+.hq-preview-name p{margin:.2rem 0 0;font-size:var(--text-sm);color:var(--ink-soft)}
+.hq-preview-signals{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem}
+.hq-preview-signal{display:inline-flex;align-items:center;gap:.3rem;font-size:var(--text-xs);font-weight:700;padding:.22rem .6rem;border-radius:99px;background:var(--paper-2,#f1ece9);color:var(--ink-soft)}
+.hq-preview-signal--ok{background:rgba(31,140,90,.12);color:#1f8c5a}
+.hq-preview-signal--todo{background:rgba(201,166,107,.18);color:#8a6420}
+.hq-preview-bio{margin:.9rem 1.1rem 0;font-size:var(--text-sm);line-height:1.55;color:var(--ink-soft);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.hq-preview-cta{align-self:center;flex:none;margin-bottom:.55rem}
+.hq-preview-follow{display:flex;flex-wrap:wrap;align-items:baseline;gap:.45rem;margin:.85rem 1.1rem 1.05rem;padding:.6rem .8rem;border:1px dashed var(--line);border-radius:11px;background:var(--surface-2,#faf7f4);font-size:var(--text-sm);color:var(--ink)}
+.hq-preview-follow b{font-weight:800}
+.hq-preview-follow span{font-size:var(--text-xs);color:var(--ink-soft)}
+/* Rôles : trois cartes marquées de la couleur du rôle, plus une légende des états d'accès. */
+.hq-roles{display:flex;flex-direction:column;gap:.75rem}
+.hq-role-list{display:grid;gap:.5rem;margin:0;padding:0;list-style:none}
+.hq-role-list li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:.45rem .8rem;align-items:start;padding:.75rem .9rem;border:1px solid var(--line);border-left:3px solid var(--rc,var(--hl-wine));border-radius:14px;background:var(--surface-2,#faf7f4)}
+.hq-role-list p{margin:.15rem 0 0;font-size:var(--text-sm);line-height:1.5;color:var(--ink-soft)}
+.hq-role{display:inline-flex;align-items:center;font-size:var(--text-xs);font-weight:700;padding:.24rem .62rem;border-radius:99px;white-space:nowrap;color:var(--rc,var(--hl-wine));background:color-mix(in srgb,var(--rc,var(--hl-wine)) 13%,transparent)}
+.hq-role.r-owner{--rc:#7a2032}
+.hq-role.r-rec{--rc:#2f7fe0}
+.hq-role.r-hm{--rc:#d48a1c}
+.hq-role-states{display:flex;flex-wrap:wrap;gap:.4rem 1.1rem;margin:0;padding:.7rem .9rem;border:1px dashed var(--line-strong,#ccc);border-radius:14px;font-size:var(--text-xs);color:var(--ink-soft)}
+.hq-role-states span{display:inline-flex;align-items:center;gap:.4rem}
+.hq-role-states i{flex:none;width:9px;height:9px;border-radius:50%;background:var(--ink-faint)}
+.hq-role-states .st-on i{background:#10b981}
+.hq-role-states .st-pause i{background:#b8a89a}
+.hq-role-states .st-wait i{background:#c9a227}
 /* onglets */
 .hq-tabs{position:relative;display:flex;gap:.25rem;border-bottom:1px solid var(--line);margin-bottom:1.1rem;overflow-x:auto;scrollbar-width:none}
 .hq-tab{position:relative;border:0;background:none;padding:.7rem .95rem;font:inherit;font-weight: 600;color:var(--ink-soft);cursor:pointer;border-radius:10px 10px 0 0;white-space:nowrap;transition:color .2s}
@@ -377,7 +417,7 @@ html[data-theme="dark"] .hq-drawer-card{box-shadow:-20px 0 40px rgba(0,0,0,.5)}
 @media (max-width:700px){.hq{grid-template-columns:1fr;padding:1rem 1rem 0;text-align:left}.hq-building{max-width:260px;margin:0 auto}.hq-id{padding-bottom:1rem}}
 @media (prefers-reduced-motion:reduce){.hq,.hq *,.hq-panel.is-in,.hq-floor,.hq-desk,.hq-offer,.hq-drawer,.hq-drawer-card,.hq-tab-ink,.hq-presence::after{animation:none!important;transition:none!important}}
 .hq-desk{align-items:flex-start}
-.hq-desk .hq-role{display:inline-block;margin-top:.4rem}
+.hq-desk .hq-role{display:inline-block;margin-top:.4rem;color:var(--rc,var(--hl-wine))}
 .hq-remove{position:absolute;top:.45rem;right:.45rem;width:26px;height:26px;border:0;border-radius:50%;background:transparent;color:var(--ink-faint);font-size: var(--text-lg);cursor:pointer;opacity:.55;transition:opacity .2s,background .2s,color .2s}
 .hq-desk:hover .hq-remove,.hq-remove:focus-visible{opacity:1}
 .hq-remove:hover{background:rgba(196,48,72,.1);color:#c43048}

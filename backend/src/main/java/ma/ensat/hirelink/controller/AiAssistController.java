@@ -55,18 +55,6 @@ public class AiAssistController {
         return creditMap(user, aiCreditService.status(user));
     }
 
-    /** Quels providers cloud sont configurés (clés masquées). */
-    @GetMapping("/status")
-    public Map<String, Object> status(@AuthenticationPrincipal User user) {
-        Map<String, Object> m = new LinkedHashMap<>(llmProvider.statusMap());
-        m.put("user", user.getEmail());
-        m.put("features", List.of(
-                "profile-rewrite", "interview-prep", "interview-kit",
-                "refusal-draft", "match-explain", "language-check", "coach"
-        ));
-        return m;
-    }
-
     @PostMapping("/profile-rewrite")
     public Map<String, Object> profileRewrite(
             @AuthenticationPrincipal User user,

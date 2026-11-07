@@ -59,7 +59,11 @@
       sub: expiring[0] ? (expiring[0].title + " · " + (daysTo(expiring[0].deadline) === 0 ? "aujourd’hui" : "dans " + RC.plural(daysTo(expiring[0].deadline), "jour"))) : "",
       calm: "Aucune clôture cette semaine", href: expiring[0] ? "recruiter-offers.html?focus=offer:" + expiring[0].id : "recruiter-offers.html" });
     $("db-actions").innerHTML = tiles.map(tile).join("");
-    const total = toSort.length + ivToday.length + urgent.length + (RC.canManage() ? expiring.length : 0);
+    // Les tuiles se recouvrent : un dossier soumis déjà en retard est à la fois « à trier » et « à risque ».
+    // Le titre compte des dossiers distincts, pas la somme des tuiles.
+    const todo = new Set();
+    [toSort, ivToday, urgent].forEach((list) => list.forEach((a) => todo.add(a.id)));
+    const total = todo.size + (RC.canManage() ? expiring.length : 0);
     $("wins-line").textContent = total
       ? new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }).replace(/^./, (c) => c.toUpperCase()) + " · " + RC.plural(total, "action") + " en attente"
       : "Rien d’urgent aujourd’hui. Bonne journée !";
@@ -101,11 +105,14 @@
     const labels = ["Reçues", "Présélection", "Shortlist", "Entretien", "Offre", "Embauchés"];
     const counts = keys.map((k) => apps.filter((a) => a.status === k).length);
     const max = Math.max(1, ...counts);
+    const total = counts.reduce((a, b) => a + b, 0);
     $("chart-bars").innerHTML = keys.map((k, i) => {
       const reached = counts.slice(i).reduce((a, b) => a + b, 0), prev = i ? counts.slice(i - 1).reduce((a, b) => a + b, 0) : 0;
       return '<a class="db-stage" href="' + (k === "HIRED" ? "recruiter-candidates.html?view=hired" : "recruiter-pipeline.html?focus=stage:" + (k === "OFFER" || k === "HIRED" ? "INTERVIEW" : k)) + '">' +
         "<small>" + labels[i] + "</small><b>" + counts[i] + '</b><span class="db-stage-bar"><i style="--w:' + Math.max(4, Math.round((counts[i] / max) * 100)) + '%"></i></span>' +
-        (i && prev ? "<em>" + Math.round((reached / prev) * 100) + " % ont atteint cette étape</em>" : "<em>&nbsp;</em>") + "</a>";
+        // Le pourcentage porte sur TOUS les dossiers, sinon « 55 % » se lirait comme une part du total alors
+        // qu'il ne s'agit que de l'étape précédente.
+        (i && prev ? "<em>" + Math.round((reached / total) * 100) + " % des dossiers en cours vont au moins jusque-là</em>" : "<em>&nbsp;</em>") + "</a>";
     }).join("");
     const open = counts.slice(0, 5).reduce((a, b) => a + b, 0);
     $("conversion").textContent = open ? RC.plural(open, "dossier") + " ouvert" + (open > 1 ? "s" : "") + " · cliquez une étape pour l’ouvrir dans le pipeline" : "Aucun dossier ouvert pour l’instant";

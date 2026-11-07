@@ -610,6 +610,8 @@
       bio: $("co-bio").value || o.presentation || "", logo: logoSrc(o), verified: !!o.verified, color: brand() };
   }
   function flag(city) { return window.HireLinkPlaces && city ? HireLinkPlaces.flagOf(city) : ""; }
+  /** « 11 à 50 salariés » : la tranche effectue la même reformulation que la fiche publique. */
+  function staffLabel(v) { return v ? String(v).replace("-", " à ") + " salariés" : ""; }
   /** « 🇲🇦 Tétouan » : la ville de l'offre, jamais un pays ou un mode de travail. */
   function placeOf(o) {
     const p = HireLinkPlaces.placeLabel(o.location, o.companyCity);
@@ -652,18 +654,46 @@
       '<div class="hq-sign">' + logoMark(d, "hq-sign-logo") + "</div></div>" +
       '<div class="hq-id"><small>Siège</small><h2>' + esc(d.name) + (d.verified ? ' <span class="hq-verified">' + (window.HLIcons ? HLIcons.svg("shield", 14) : "") + "Vérifiée</span>" : "") + "</h2>" +
       "<p>" + [d.sector ? esc(d.sector) : "", d.city ? (flag(d.city) + " " + esc(d.city)).trim() : ""].filter(Boolean).join(" · ") + "</p>" +
-      '<div class="hq-stats"><span><b>' + n + "</b> membre" + (n > 1 ? "s" : "") + "</span><span><b>" + (roles.RECRUTEUR || 0) + "</b> recruteur" + ((roles.RECRUTEUR || 0) > 1 ? "s" : "") + "</span><span><b>" + (roles.HIRING_MANAGER || 0) + "</b> responsable" + ((roles.HIRING_MANAGER || 0) > 1 ? "s" : "") + "</span><span><b>" + offersOpen + "</b> offre" + (offersOpen > 1 ? "s" : "") + " ouverte" + (offersOpen > 1 ? "s" : "") + "</span></div></div>";
+      '<div class="hq-stats"><span><b>' + n + "</b> membre" + (n > 1 ? "s" : "") + "</span><span><b>" + (roles.RECRUTEUR || 0) + "</b> recruteur" + ((roles.RECRUTEUR || 0) > 1 ? "s" : "") + "</span><span><b>" + (roles.HIRING_MANAGER || 0) + "</b> responsable" + ((roles.HIRING_MANAGER || 0) > 1 ? "s" : "") + "</span><span><b>" + offersOpen + "</b> offre" + (offersOpen > 1 ? "s" : "") + " ouverte" + (offersOpen > 1 ? "s" : "") + "</span><span><b>" + followers() + "</b> candidat" + (followers() > 1 ? "s suivent" : " suit") + "</span></div></div>";
     bindLogoFallback(box);
+  }
+
+  /** Combien de candidats suivent l'entreprise : un total, jamais leurs identités. */
+  function followers() {
+    const v = Number(org && org.followerCount);
+    return Number.isFinite(v) && v > 0 ? v : 0;
   }
   function paintPreview() {
     const box = $("co-preview");
     if (!box || !org) return;
     const d = live();
     box.style.setProperty("--brand", d.color);
-    box.innerHTML = '<article class="hq-preview"><div class="hq-preview-cover"></div><div class="hq-preview-head">' + logoMark(d, "hq-preview-logo") +
-      "<div><strong>" + esc(d.name) + "</strong><span>" + [d.sector, d.city ? (flag(d.city) + " " + d.city).trim() : ""].filter(Boolean).map(esc).join(" · ") + "</span></div>" +
-      '<a class="btn btn-soft btn-sm" href="../company.html?name=' + encodeURIComponent(org.name || "") + '" target="_blank" rel="noopener">Page publique</a></div>' +
-      "<p>" + (d.bio ? esc(d.bio) : '<span class="rc-muted">Ajoutez une présentation dans Paramètres : elle s’affichera ici.</span>') + "</p></article>";
+    const meta = [d.sector, d.city ? (flag(d.city) + " " + d.city).trim() : "", staffLabel(org.employees)]
+      .filter(Boolean)
+      .map(esc)
+      .join(" · ");
+    const signal = d.verified
+      ? '<span class="hq-preview-signal hq-preview-signal--ok">Identité vérifiée</span>'
+      : '<span class="hq-preview-signal hq-preview-signal--todo">Vérification à compléter</span>';
+    const bio = d.bio
+      ? esc(d.bio)
+      : '<span class="rc-muted">Aucune présentation : ajoutez-en une dans Paramètres, c’est le texte lu par les candidats.</span>';
+    const n = followers();
+    const suivi = n
+      ? "<b>" + n + "</b> candidat" + (n > 1 ? "s suivent" : " suit") + " votre entreprise"
+      : "Aucun candidat ne suit encore votre entreprise";
+    box.innerHTML =
+      '<article class="hq-preview">' +
+      '<div class="hq-preview-cover" aria-hidden="true"></div>' +
+      '<div class="hq-preview-id">' + logoMark(d, "hq-preview-logo") +
+      '<div class="hq-preview-name"><h3>' + esc(d.name) + "</h3>" +
+      (meta ? "<p>" + meta + "</p>" : "") +
+      '<div class="hq-preview-signals">' + signal + "</div></div>" +
+      '<a class="btn btn-soft btn-sm hq-preview-cta" href="../company.html?name=' + encodeURIComponent(org.name || "") + '">Voir la page publique</a></div>' +
+      '<p class="hq-preview-bio">' + bio + "</p>" +
+      '<p class="hq-preview-follow">' + suivi +
+      "<span>Chiffre anonyme, visible uniquement ici : la fiche publique ne l’affiche pas.</span></p>" +
+      "</article>";
     bindLogoFallback(box);
   }
   let liveTimer = null;
@@ -758,7 +788,7 @@
     offersOpen = list.filter(RC.isLiveOffer).length;
     $("offers-count").textContent = list.length;
     const box = $("hq-offers");
-    if (!list.length) { RC.empty(box, { title: "Aucune offre", text: "Publiez une première offre pour recevoir des candidatures.", action: { href: "recruiter-offers.html#new", label: "Nouvelle offre" } }); paintHq(); return; }
+    if (!list.length) { RC.empty(box, { title: "Aucune offre", text: "Publiez une première offre pour recevoir des candidatures.", action: { href: "recruiter-offers.html#new", label: "Nouvelle offre" } }); paintHq(); paintPreview(); return; }
     function renderOffers() {
       box.innerHTML = '<div class="rc-list">' + list.map((o, i) =>
         '<a class="rc-item hq-offer" style="--i:' + i + '" href="recruiter-pipeline.html?offer=' + o.id + '"><div class="rc-item-main"><strong>' + esc(o.title) + "</strong><span>" +
@@ -768,8 +798,10 @@
     }
     renderOffers();
     // le catalogue des lieux arrive en parallèle : sans cette seconde passe, les drapeaux manqueraient
-    HireLinkPlaces.ready().then(renderOffers);
+    HireLinkPlaces.ready().then(() => { renderOffers(); paintHq(); paintPreview(); });
     paintHq();
+    // le compteur d'offres de l'aperçu attend cette réponse : sans second rappel, il resterait à 0
+    paintPreview();
   }, (err) => {
     // swr() se tait sans second callback : le panneau « Offres » afficherait 0 au lieu d'un échec.
     const count = $("offers-count");

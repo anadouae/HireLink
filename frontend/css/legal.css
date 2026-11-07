@@ -13,7 +13,7 @@
 }
 
 .faq details {
-  background: #fff;
+  background: var(--surface, #fff);
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 1rem 1.15rem;
@@ -137,8 +137,174 @@
   display: none !important;
 }
 
+/* Centre d’aide : sommaire, sections numérotées, encadrés, tableau des formules. */
+.hp-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hp-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.42rem 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface, #fff);
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s, transform 0.2s;
+}
+
+.hp-nav a:hover {
+  border-color: var(--rose);
+  color: var(--rose);
+  transform: translateY(-1px);
+}
+
+.hp-section {
+  margin-top: 2.6rem;
+  scroll-margin-top: 90px;
+}
+
+.hp-section > h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  margin: 0 0 0.35rem;
+}
+
+.hp-section > h2 .hp-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--rose) 12%, transparent);
+  color: var(--rose);
+  font-family: var(--font-ui, inherit);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.hp-kicker {
+  margin: 0 0 1.1rem;
+  color: var(--ink-soft);
+  font-size: 0.93rem;
+}
+
+.hp-facts {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hp-facts li {
+  background: var(--surface, #fff);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.85rem 0.95rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.hp-facts strong {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.95rem;
+}
+
+.hp-facts span {
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.hp-note {
+  margin: 1.1rem 0 0;
+  padding: 0.95rem 1.1rem;
+  border-left: 3px solid var(--rose);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--paper-2);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.hp-note strong {
+  color: var(--ink);
+}
+
+.hp-plans {
+  width: 100%;
+  margin-top: 1rem;
+  border-collapse: collapse;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 0.89rem;
+  overflow: hidden;
+}
+
+.hp-plans caption {
+  caption-side: bottom;
+  padding: 0.7rem 0.85rem;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.hp-plans th,
+.hp-plans td {
+  padding: 0.7rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+.hp-plans thead th {
+  background: var(--surface-2, #faf7f4);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.hp-plans tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.hp-plans b {
+  color: var(--ink);
+}
+
+.hp-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 2.6rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+}
+
 @media (max-width: 700px) {
-  .sec-grid {
+  .sec-grid,
+  .hp-facts {
     grid-template-columns: 1fr;
+  }
+
+  .hp-plans {
+    font-size: 0.83rem;
   }
 }

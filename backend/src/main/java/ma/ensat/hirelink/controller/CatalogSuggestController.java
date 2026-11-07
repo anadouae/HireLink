@@ -60,12 +60,6 @@ public class CatalogSuggestController {
     );
     private static final List<String> CONTRACTS = ContractType.PREFERENCES;
     private static final List<String> MODES = List.of("Télétravail", "Sur site", "Hybride", "Indifférent");
-    private static final List<String> LEVELS = List.of(
-            "Bac", "Bac+2", "Bac+3", "Bac+4", "Bac+5", "Doctorat", "Stagiaire", "Junior", "Confirmé", "Senior"
-    );
-    private static final List<String> STUDY_LEVELS = List.of(
-            "Bac", "Bac+1", "Bac+2", "Bac+3", "Bac+4", "Bac+5", "Master", "Doctorat", "Autre"
-    );
     private static final List<String> DOMAINS = List.of(
             "Informatique", "Génie logiciel", "Réseaux et télécoms", "Cybersécurité", "Data / IA",
             "Génie civil", "Génie industriel", "Génie électrique", "Génie mécanique", "Génie des procédés",
@@ -139,8 +133,6 @@ public class CatalogSuggestController {
             case "school" -> rankSchools(query);
             case "contract" -> rank(CONTRACTS, query);
             case "mode" -> rank(MODES, query);
-            case "level" -> rank(LEVELS, query);
-            case "study" -> rank(STUDY_LEVELS, query);
             case "domain" -> rank(DOMAINS, query);
             default -> jobs(query);
         };

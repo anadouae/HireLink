@@ -57,6 +57,7 @@ public class JobOfferService {
     private final TextMatcher textMatcher;
     private final ResponsivenessService responsiveness;
     private final PlaceCatalogService placeCatalog;
+    private final CompanyFollowService companyFollowService;
     private final AuditService audit;
 
     public JobOfferService(
@@ -75,6 +76,7 @@ public class JobOfferService {
             TextMatcher textMatcher,
             PlaceCatalogService placeCatalog,
             ResponsivenessService responsiveness,
+            CompanyFollowService companyFollowService,
             AuditService audit
     ) {
         this.tagRepository = tagRepository;
@@ -83,6 +85,7 @@ public class JobOfferService {
         this.textMatcher = textMatcher;
         this.placeCatalog = placeCatalog;
         this.responsiveness = responsiveness;
+        this.companyFollowService = companyFollowService;
         this.organizationService = organizationService;
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
@@ -148,6 +151,7 @@ public class JobOfferService {
         applyWithFraudGate(o, req, wantPublish);
         jobOfferRepository.save(o);
         audit.ok(wantPublish ? "OFFER_PUBLISHED" : "OFFER_CREATED", recruiter, "OFFER", o.getId(), o.getTitle());
+        if (o.isPublished()) companyFollowService.announceNewOffer(o);
         return toDto(o, null);
     }
 
@@ -158,6 +162,7 @@ public class JobOfferService {
         if (!organizationService.canManageOffer(recruiter, o)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Pas propriétaire");
         }
+        boolean wasPublished = o.isPublished();
         boolean wantPublish = req.published();
         if (wantPublish && recruiter.getRole() != Role.ADMINISTRATEUR) {
             assertCanPublish(recruiter);
@@ -169,6 +174,7 @@ public class JobOfferService {
         applyWithFraudGate(o, req, wantPublish);
         jobOfferRepository.save(o);
         audit.ok("OFFER_UPDATED", recruiter, "OFFER", o.getId(), o.getTitle());
+        if (o.isPublished() && !wasPublished) companyFollowService.announceNewOffer(o);
         return toDto(o, null);
     }
 
@@ -214,6 +220,7 @@ public class JobOfferService {
         o.setQuarantineReason(null);
         jobOfferRepository.save(o);
         audit.ok("OFFER_PUBLISHED", recruiter, "OFFER", o.getId(), o.getTitle());
+        companyFollowService.announceNewOffer(o);
         return toDto(o, null);
     }
 

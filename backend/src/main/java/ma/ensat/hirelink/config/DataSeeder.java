@@ -65,7 +65,8 @@ public class DataSeeder {
             PasswordEncoder realEncoder,
             SkillMatchingService matching,
             CompanyVerificationService companyVerificationService,
-            ma.ensat.hirelink.service.OrgLogoStorage orgLogoStorage
+            ma.ensat.hirelink.service.OrgLogoStorage orgLogoStorage,
+            ma.ensat.hirelink.repository.CompanyFollowRepository follows
     ) {
         return args -> {
             PasswordEncoder encoder = memoizing(realEncoder);
@@ -84,6 +85,7 @@ public class DataSeeder {
                 notifications.deleteAll();
                 history.deleteAll();
                 applications.deleteAll();
+                follows.deleteAll();
                 memberships.deleteAll();
                 offers.deleteAll();
                 organizations.deleteAll();
@@ -105,8 +107,40 @@ public class DataSeeder {
             ensureMarketplace(users, offers, organizationService, encoder);
             backfillOfferTerms(offers);
             enrichCompanies(organizations, companyVerificationService);
+            ensureFollows(users, organizations, follows);
             logAccounts();
         };
+    }
+
+    /**
+     * Quelques abonnements de démonstration : sans eux, le compteur d'abonnés d'une entreprise reste à 0
+     * et la vitrine du suivi semble morte. Idempotent, une seule écriture au premier amorçage.
+     */
+    private void ensureFollows(UserRepository users, OrganizationRepository organizations,
+                               ma.ensat.hirelink.repository.CompanyFollowRepository follows) {
+        if (follows.count() > 0) return;
+        java.util.List<User> candidates = users.findAll().stream()
+                .filter(u -> u.getRole() == Role.CANDIDAT)
+                // Les comptes de presentation (@hirelink.ma) passent en premier : le jour ou le professeur
+                // ouvre candidat@hirelink.ma, l'onglet « Suivies » doit deja contenir quelque chose.
+                .sorted(java.util.Comparator
+                        .comparing((User u) -> u.getEmail() != null && u.getEmail().endsWith("@hirelink.ma") ? 0 : 1)
+                        .thenComparing(User::getId))
+                .limit(3)
+                .toList();
+        java.util.List<ma.ensat.hirelink.model.Organization> orgs = organizations.findAll().stream()
+                .filter(o -> o.getName() != null && !o.getName().isBlank())
+                .sorted(java.util.Comparator.comparing(ma.ensat.hirelink.model.Organization::getId))
+                .limit(candidates.isEmpty() ? 0 : 3)
+                .toList();
+        for (int i = 0; i < orgs.size(); i++) {
+            User candidate = candidates.get(i % candidates.size());
+            ma.ensat.hirelink.model.CompanyFollow f = new ma.ensat.hirelink.model.CompanyFollow();
+            f.setCandidateUserId(candidate.getId());
+            f.setOrganizationId(orgs.get(i).getId());
+            follows.save(f);
+        }
+        if (!orgs.isEmpty()) log.info("Suivi d'entreprise : {} abonnement(s) de démonstration semé(s).", orgs.size());
     }
 
     private void seedRefusalCatalog(RefusalReasonRepository repo) {

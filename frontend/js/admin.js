@@ -90,10 +90,11 @@
     const byStatus = state.charts.applicationsByStatus || {};
     const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"];
     const max = Math.max(1, ...keys.map((k) => byStatus[k] || 0));
+    const all = keys.reduce((a, k) => a + (byStatus[k] || 0), 0);
     $("chart-apps").innerHTML = keys.map((k, i) => {
       const v = byStatus[k] || 0, sumFrom = (j) => keys.slice(j).reduce((a, x) => a + (byStatus[x] || 0), 0), reached = sumFrom(i), prev = i ? sumFrom(i - 1) : 0;
       return '<div class="db-stage"><small>' + esc(STATUS_FR[k] || k) + "</small><b>" + v + '</b><span class="db-stage-bar"><i style="--w:' + Math.max(4, Math.round((v / max) * 100)) + '%"></i></span><em>' +
-        (i && prev ? Math.round((reached / prev) * 100) + " % ont atteint cette étape" : "&nbsp;") + "</em></div>";
+        (i && prev ? Math.round((reached / all) * 100) + " % des dossiers en cours vont au moins jusque-là" : "&nbsp;") + "</em></div>";
     }).join("");
 
     const box = $("dash-pending");
