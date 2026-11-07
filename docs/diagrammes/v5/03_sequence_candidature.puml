@@ -1,0 +1,39 @@
+@startuml sequence_candidature_v5
+autonumber
+skinparam ParticipantPadding 12
+box "Navigateur" #EFF6FF
+  actor "Candidat" as C
+  participant "candidate-applications.html\n+ app/api.js" as F
+endbox
+box "Backend Spring Boot :8081" #FEF3C7
+  participant "JwtAuthFilter" as J
+  participant "ApplicationController" as AC
+  participant "ApplicationService" as AS
+  participant "SkillMatchingService" as SM
+  participant "NotificationService" as NS
+endbox
+database "MariaDB hirelink (25 tables)" as DB
+
+C -> F : saisit lettre + compétences, clique « Postuler »
+F -> J : POST /api/v1/applications\nAuthorization: Bearer <jwt>
+J -> J : vérifie signature, session active,\nexpiration idle/absolue
+J -> AC : utilisateur injecté
+AC -> AS : create(candidate, request)
+AS -> DB : SELECT applications WHERE candidate_id = ? AND job_offer_id = ?
+alt déjà candidat
+  AS --> AC : ResponseStatusException(CONFLICT)
+  AC --> F : 409 « Candidature déjà existante (RM01) »
+  F --> C : message en français, formulaire conservé
+else première candidature
+  AS -> DB : INSERT applications (status = SUBMITTED)
+  AS -> SM : score(candidate.skills, offer.requiredSkills)
+  SM --> AS : matchScore (0..1)
+  AS -> DB : UPDATE applications SET match_score = ?
+  AS -> NS : notifie le recruteur + événement organisation
+  NS -> DB : INSERT in_app_notification / organization_event
+  AS -> DB : INSERT application_status_history (null -> SUBMITTED)
+  AS --> AC : ApplicationResponse
+  AC --> F : 201 + id, statut, score
+  F --> C : « Candidature envoyée »,\ncompteur et frise rafraîchis
+end
+@enduml

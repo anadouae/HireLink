@@ -1,0 +1,51 @@
+@startuml activite_pipeline_v5
+skinparam ActivityDiamondBackgroundColor #FFFFFF
+title Cycle de vie d'une candidature (table `applications.status`)
+
+start
+:Le candidat postule\nSUBMITTED;
+:Historique : application_status_history\n(actor = candidat);
+if (Le recruteur ouvre le dossier ?) then (tri)
+  :SCREENING;
+  if (Présélection ?) then (retenue)
+    :SHORTLISTED;
+    note right
+      Scorecard possible à cette étape :
+      scorecard_criterion / scorecard_entry
+    end note
+    if (Entretien ?) then (oui)
+      :INTERVIEW;
+      :Le recruteur planifie (sur site ou visio)\ninterview_status = SCHEDULED;
+      if (Réponse du candidat avant échéance ?) then (accepte)
+        :interview_status = CONFIRMED;
+        :Rappel J-1 envoyé une seule fois;
+        :L'entretien a lieu\n(hors plateforme : la décision finale\nappartient à l'entreprise);
+        stop
+      elseif (refuse ou propose un créneau) then (reprogrammation)
+        :Report : interview_status = SCHEDULED\navec une nouvelle date;
+        detach
+      else (silence)
+        :Relance, puis dépassement de SLA ;\nla décision reste au recruteur;
+        stop
+      endif
+    else (refus ici)
+      :REJECTED + motif (refusal_reason)\nfirst_decision_at = maintenant;
+      detach
+    endif
+  else (refus)
+    :REJECTED + motif\nmatchScore conservé;
+    detach
+  endif
+else (candidat se retire)
+  :WITHDRAWN;
+  detach
+endif
+note right
+  Transition interdites côté serveur :
+  - statut terminal (REJECTED, WITHDRAWN) non rejouable ;
+  - OFFER et HIRED conservés pour les données
+    historiques mais aucune nouvelle transition ;
+  - chaque déplacement écrit une ligne
+    application_status_history + un audit_log.
+end note
+@enduml

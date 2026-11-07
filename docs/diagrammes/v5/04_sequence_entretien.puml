@@ -1,0 +1,45 @@
+@startuml sequence_entretien_v5
+autonumber
+skinparam ParticipantPadding 12
+box "Backend" #FEF3C7
+  participant "InterviewService" as IV
+  participant "ApplicationController" as AC
+  participant "InterviewReminderService" as RM
+  participant "EventNotifier / MailService" as MAIL
+endbox
+actor "Recruteur" as R
+actor "Candidat" as C
+database "MariaDB hirelink" as DB
+participant "Calendrier du candidat\n(Outlook, Google Agenda)" as CAL
+
+== planification ==
+R -> AC : PUT /applications/{id}/interview\n{type: ONSITE|VISIO, kind, startsAt, timeZone, lieu ou lien}
+AC -> IV : schedule(app, request)
+IV -> IV : type dans {ONSITE, VISIO}, kind connu,\nfuseau dans Africa/Casablanca|Europe/Paris|Europe/London|UTC
+IV -> IV : créneau dans le futur, adresse ou lien obligatoire
+IV -> IV : recalcule l'instant avec le fuseau choisi
+IV -> DB : UPDATE applications SET interview_* ,\ninterview_status = SCHEDULED,\ninterview_candidate_note = null
+IV -> MAIL : notification + e-mail au candidat
+MAIL -> DB : INSERT sent_email (statut réel de l'envoi)
+IV --> R : 200, échéance de réponse affichée
+
+== réponse du candidat ==
+C -> AC : POST /applications/{id}/interview/answer\n{accept | decline | nouvelle date}
+AC -> IV : answer(user, app, request)
+IV -> IV : vérifie que l'acteur est le candidat concerné
+IV -> DB : UPDATE applications SET interview_status = CONFIRMED\nou CANCELLED / reschedule
+IV -> MAIL : notifie l'équipe de recrutement
+
+== rappel et calendrier ==
+RM -> DB : SELECT applications WHERE interview_reminder_sent = false\nAND interview_at dans la fenêtre
+RM -> MAIL : rappel J-1 (une seule fois)
+RM -> DB : UPDATE interview_reminder_sent = true
+C -> AC : GET /applications/{id}/interview.ics
+AC -> IV : interviewCalendar(user, id)
+alt aucun entretien planifié
+  IV --> C : 404 « Aucun entretien planifié »
+else entretien actif
+  IV --> C : 200 text/calendar (DTSTART en UTC, fuseau d'origine en commentaire)
+  C -> CAL : importation du fichier .ics
+end
+@enduml

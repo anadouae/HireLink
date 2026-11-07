@@ -1,0 +1,45 @@
+@startuml bpmn_processus_recrutement_v5
+|-Candidat-|
+start
+:Consulte les offres publiées\n(filtres ville, contrat, expérience);
+:Prépare son profil\n(import CV, compétences, disponibilité);
+:Postule (lettre + CV);
+note right : écriture : applications (SUBMITTED)
+|-HireLink (système)-|
+:Contrôle anti-doublon\nune seule candidature par offre;
+:Calcule le score de compétences\net crée la notification recruteur;
+|-Recruteur-|
+:Trie le dossier\n(SCREENING);
+if (Présélection) then (oui)
+  :Met en shortlist\n(SHORTLISTED);
+  if (Entretien) then (oui)
+    :Planifie l'entretien\n(sur site ou visio, fuseau, lieu ou lien);
+    |-Candidat-|
+    :Reçoit l'invitation\n(confirme, refuse, propose un créneau);
+    if (Réponse avant échéance) then (acceptée)
+      |-HireLink (système)-|
+      :Rappel J-1 envoyé une seule fois\n(interview_reminder_sent = true);
+      |-Recruteur-|
+      :Mène l'entretien et saisit la scorecard;
+      :Décide embauche ou refus\n(la décision finale vit dans l'entreprise);
+      |-Candidat-|
+      :Ajoute l'entretien au calendrier (.ics)\net suit l'avancement;
+      stop
+    else (aucune réponse)
+      |-Recruteur-|
+      :Constate le dépassement de SLA\n(sla_breach_notified);
+      stop
+    endif
+  else (refus motivé)
+    :Refuse avec un motif\n(REJECTED, first_decision_at);
+    |-Candidat-|
+    :Est notifié du refus;
+    stop
+  endif
+else (refus direct)
+  :Refuse avec un motif\n(REJECTED);
+  |-Candidat-|
+  :Est notifié du refus;
+  stop
+endif
+@enduml

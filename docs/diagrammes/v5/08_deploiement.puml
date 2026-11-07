@@ -1,0 +1,39 @@
+@startuml deploiement_hirelink_v5
+title Déploiement local de démonstration (poste de l'étudiant)
+
+node "Windows 11 — poste local" {
+  node "Navigateur" {
+    artifact "Site statique\nfrontend/ (27 pages)\nhttp://localhost:5500" as FRONT
+  }
+  node "JVM 23 — Spring Boot 3.3.13" {
+    artifact "hirelink-backend\nhttp://localhost:8081/api/v1\n(-Xmx512m, classpath par argfile)" as BACK
+    artifact "backend/data/\ncvs · org-logos · jwt.key" as DATA
+  }
+  node "MariaDB 10.4 (service `mysql`, XAMPP)" {
+    artifact "schéma `hirelink`\n25 tables · 3306\nroot@127.0.0.1" as SQL
+  }
+}
+
+node "Réseau (sorties)" {
+  artifact "api.openai.com / generativeai\ngroq.com / api.mistral.ai\n(clés : application-local.properties, gitignored)" as LLMS
+  artifact "compte de test SMTP\ninactif en local" as SMTPX
+}
+
+FRONT --> BACK : REST + JWT (Authorization)\nCORS : origine :5500 autorisée
+BACK --> SQL : JDBC HikariCP\nspring.jpa.hibernate.ddl-auto = update
+BACK --> DATA : écriture CV et logos
+BACK ..> LLMS : appel IA (optionnel,\nfallback LocalLlmProvider sin clé)
+BACK ..> SMTPX : e-mails transactionnels\n(statut réel dans sent_email)
+BACK ..> FRONT : jetons, erreurs en français\nenvelope {message}
+
+note bottom of BACK
+  Démarrage :
+  java @backend/hirelink.cp.argfile \
+    ma.ensat.hirelink.HireLinkApplication \
+    --spring.mail.host= \
+    --hirelink.otp.log-to-console=true
+  Données de départ : DataSeeder (comptes
+  candidat@ / recruteur@ / admin@hirelink.ma
+  + organisations et offres de démonstration).
+end note
+@enduml

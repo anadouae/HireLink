@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  id="Definitions_hirelink_v5" targetNamespace="http://hirelink.ma/bpmn"
+                  exporter="genere par docs/diagrammes/_gen_v5_bpmn_xml.py" exporterVersion="1.0">
+  <bpmn:process id="processus_recrutement_hirelink" name="Processus de recrutement HireLink" isExecutable="false">
+      <bpmn:startEvent id="start" name="Candidat consulte les offres"/>
+      <bpmn:task id="profil" name="Prépare son profil (CV, compétences)"/>
+      <bpmn:task id="postule" name="Postule (lettre + CV)"/>
+      <bpmn:task id="controle" name="Contrôle anti-doublon"/>
+      <bpmn:task id="score" name="Calcule le score et notifie le recruteur"/>
+      <bpmn:task id="screening" name="Trie le dossier (SCREENING)"/>
+      <bpmn:exclusiveGateway id="g1" name="Présélection ?"/>
+      <bpmn:task id="shortlist" name="Met en shortlist (SHORTLISTED)"/>
+      <bpmn:exclusiveGateway id="g2" name="Entretien ?"/>
+      <bpmn:task id="planifie" name="Planifie l'entretien (sur site ou visio)"/>
+      <bpmn:task id="repond" name="Reçoit l'invitation et répond"/>
+      <bpmn:exclusiveGateway id="g3" name="Réponse avant échéance ?"/>
+      <bpmn:task id="rappel" name="Rappel J-1 (une seule fois)"/>
+      <bpmn:task id="entretien" name="Mène l'entretien et saisit la scorecard"/>
+      <bpmn:task id="decision" name="Décide embauche ou refus"/>
+      <bpmn:task id="ics" name="Ajoute l'entretien au calendrier (.ics)"/>
+      <bpmn:endEvent id="endOk" name="Entretien réalisé"/>
+      <bpmn:task id="refus1" name="Refuse avec un motif (REJECTED)"/>
+      <bpmn:task id="notifRefus" name="Notifie le candidat du refus"/>
+      <bpmn:endEvent id="endRefus" name="Candidature refusée"/>
+      <bpmn:task id="sla" name="Constate le dépassement de SLA"/>
+      <bpmn:endEvent id="endSla" name="Sans réponse"/>
+      <bpmn:sequenceFlow id="f1" sourceRef="start" targetRef="profil"/>
+      <bpmn:sequenceFlow id="f2" sourceRef="profil" targetRef="postule"/>
+      <bpmn:sequenceFlow id="f3" sourceRef="postule" targetRef="controle"/>
+      <bpmn:sequenceFlow id="f4" sourceRef="controle" targetRef="score"/>
+      <bpmn:sequenceFlow id="f5" sourceRef="score" targetRef="screening"/>
+      <bpmn:sequenceFlow id="f6" sourceRef="screening" targetRef="g1"/>
+      <bpmn:sequenceFlow id="f7" sourceRef="g1" targetRef="shortlist" name="oui"/>
+      <bpmn:sequenceFlow id="f8" sourceRef="g1" targetRef="refus1" name="refus direct"/>
+      <bpmn:sequenceFlow id="f9" sourceRef="shortlist" targetRef="g2"/>
+      <bpmn:sequenceFlow id="f10" sourceRef="g2" targetRef="planifie" name="oui"/>
+      <bpmn:sequenceFlow id="f11" sourceRef="g2" targetRef="refus1" name="refus motivé"/>
+      <bpmn:sequenceFlow id="f12" sourceRef="planifie" targetRef="repond"/>
+      <bpmn:sequenceFlow id="f13" sourceRef="repond" targetRef="g3"/>
+      <bpmn:sequenceFlow id="f14" sourceRef="g3" targetRef="rappel" name="acceptée"/>
+      <bpmn:sequenceFlow id="f15" sourceRef="g3" targetRef="sla" name="aucune réponse"/>
+      <bpmn:sequenceFlow id="f16" sourceRef="rappel" targetRef="entretien"/>
+      <bpmn:sequenceFlow id="f17" sourceRef="entretien" targetRef="decision"/>
+      <bpmn:sequenceFlow id="f18" sourceRef="decision" targetRef="ics"/>
+      <bpmn:sequenceFlow id="f19" sourceRef="ics" targetRef="endOk"/>
+      <bpmn:sequenceFlow id="f20" sourceRef="refus1" targetRef="notifRefus"/>
+      <bpmn:sequenceFlow id="f21" sourceRef="notifRefus" targetRef="endRefus"/>
+      <bpmn:sequenceFlow id="f22" sourceRef="sla" targetRef="endSla"/>
+    <bpmn:laneSet>
+      <bpmn:lane id="lane_candidat" name="Candidat">
+        <bpmn:flowNodeRef>start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>profil</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>postule</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>repond</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>g3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ics</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>endOk</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>endRefus</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_systeme" name="HireLink (système)">
+        <bpmn:flowNodeRef>controle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>score</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>rappel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>notifRefus</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="lane_recruteur" name="Recruteur">
+        <bpmn:flowNodeRef>screening</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>shortlist</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>g2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>planifie</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>entretien</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>decision</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>refus1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>sla</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>endSla</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="processus_recrutement_hirelink">
+        <bpmndi:BPMNShape id="lane_candidat_di" bpmnElement="lane_candidat" isHorizontal="true">
+          <dc:Bounds x="60" y="40" width="1360" height="180"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="lane_systeme_di" bpmnElement="lane_systeme" isHorizontal="true">
+          <dc:Bounds x="60" y="220" width="1360" height="180"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="lane_recruteur_di" bpmnElement="lane_recruteur" isHorizontal="true">
+          <dc:Bounds x="60" y="400" width="1360" height="220"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="start_di" bpmnElement="start">
+          <dc:Bounds x="120" y="58" width="36" height="36"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="profil_di" bpmnElement="profil">
+          <dc:Bounds x="260" y="80" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="postule_di" bpmnElement="postule">
+          <dc:Bounds x="420" y="80" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="controle_di" bpmnElement="controle">
+          <dc:Bounds x="120" y="260" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="score_di" bpmnElement="score">
+          <dc:Bounds x="280" y="260" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="screening_di" bpmnElement="screening">
+          <dc:Bounds x="460" y="440" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="g1_di" bpmnElement="g1">
+          <dc:Bounds x="620" y="425" width="50" height="50"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="shortlist_di" bpmnElement="shortlist">
+          <dc:Bounds x="720" y="440" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="g2_di" bpmnElement="g2">
+          <dc:Bounds x="880" y="425" width="50" height="50"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="planifie_di" bpmnElement="planifie">
+          <dc:Bounds x="980" y="440" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="repond_di" bpmnElement="repond">
+          <dc:Bounds x="560" y="170" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="g3_di" bpmnElement="g3">
+          <dc:Bounds x="720" y="155" width="50" height="50"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="rappel_di" bpmnElement="rappel">
+          <dc:Bounds x="880" y="260" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="entretien_di" bpmnElement="entretien">
+          <dc:Bounds x="1080" y="440" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="decision_di" bpmnElement="decision">
+          <dc:Bounds x="1240" y="440" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="ics_di" bpmnElement="ics">
+          <dc:Bounds x="900" y="80" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="endOk_di" bpmnElement="endOk">
+          <dc:Bounds x="1060" y="58" width="36" height="36"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="refus1_di" bpmnElement="refus1">
+          <dc:Bounds x="720" y="560" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="notifRefus_di" bpmnElement="notifRefus">
+          <dc:Bounds x="440" y="340" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="endRefus_di" bpmnElement="endRefus">
+          <dc:Bounds x="300" y="148" width="36" height="36"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="sla_di" bpmnElement="sla">
+          <dc:Bounds x="1080" y="560" width="120" height="80"/>
+        </bpmndi:BPMNShape>
+        <bpmndi:BPMNShape id="endSla_di" bpmnElement="endSla">
+          <dc:Bounds x="1240" y="538" width="36" height="36"/>
+        </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

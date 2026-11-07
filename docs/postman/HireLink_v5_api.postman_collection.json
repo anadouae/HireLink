@@ -1,0 +1,2993 @@
+{
+  "info": {
+    "name": "HireLink v5 — parcours complet",
+    "description": "Collection generees le 2026-11-06 par docs/postman/gen_postman_v5.py. Lecture seule : aucune ecriture, jouable sur la base de demonstration sans risque. Le parcours complet cree puis supprime ses propres offres de sonde.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 Sante",
+      "item": [
+        {
+          "name": "GET /health — app + MySQL",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/config — methodes d'auth disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/auth/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "config"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/captcha — epreuve anti-robot",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/auth/captcha",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "captcha"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 Connexion",
+      "item": [
+        {
+          "name": "POST /auth/login — candidat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"candidat@hirelink.ma\", \"password\": \"Candidat123!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });",
+                  "var j = pm.response.json();",
+                  "if (j.accessToken) { pm.collectionVariables.set('candidateToken', j.accessToken); }",
+                  "pm.test('accessToken present', function () { pm.expect(j.accessToken).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login — recruteur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"recruteur@hirelink.ma\", \"password\": \"Recruteur123!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });",
+                  "var j = pm.response.json();",
+                  "if (j.accessToken) { pm.collectionVariables.set('recruiterToken', j.accessToken); }",
+                  "pm.test('accessToken present', function () { pm.expect(j.accessToken).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login — administrateur",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"admin@hirelink.ma\", \"password\": \"Admin123!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });",
+                  "var j = pm.response.json();",
+                  "if (j.accessToken) { pm.collectionVariables.set('adminToken', j.accessToken); }",
+                  "pm.test('accessToken present', function () { pm.expect(j.accessToken).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/login — mot de passe errone (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 401",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"candidat@hirelink.ma\", \"password\": \"MauvaisMdp!\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });",
+                  "var j = pm.response.json();",
+                  "if (j.accessToken) { pm.collectionVariables.set('candidateToken', j.accessToken); }",
+                  "pm.test('accessToken present', function () { pm.expect(j.accessToken).to.be.a('string'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Profil",
+      "item": [
+        {
+          "name": "GET /me — profil complet du candidat",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me — niveau d'experience valide (Junior)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"experienceLevel\": \"Junior\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /me — niveau hors liste refuse (400)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"experienceLevel\": \"Bac+3\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/export — export RGPD",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/me/export",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "export"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /auth/refresh — renouveler le jeton",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /auth/me — route supprimee (404 attendu)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 404"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /ai/status — route supprimee (404 attendu)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/ai/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai",
+                "status"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 404"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me sans jeton (401 attendu)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 401"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 Public",
+      "item": [
+        {
+          "name": "GET /offers/public — offres publiees",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/public",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "public"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/public — annuaire entreprises",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/organizations/public",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "public"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/public/company — vitrine Atlas Digital",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/organizations/public/company?name=Atlas%20Digital",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "public",
+                "company"
+              ],
+              "query": [
+                {
+                  "key": "name",
+                  "value": "Atlas Digital"
+                }
+              ]
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /catalog/suggest?kind=contract — types de contrat",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/catalog/suggest?kind=contract&q=CD",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "suggest"
+              ],
+              "query": [
+                {
+                  "key": "kind",
+                  "value": "contract"
+                },
+                {
+                  "key": "q",
+                  "value": "CD"
+                }
+              ]
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /catalog/suggest?kind=city — villes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/catalog/suggest?kind=city&q=Tet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "suggest"
+              ],
+              "query": [
+                {
+                  "key": "kind",
+                  "value": "city"
+                },
+                {
+                  "key": "q",
+                  "value": "Tet"
+                }
+              ]
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /catalog/suggest?kind=level — type retire (repli metier)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/catalog/suggest?kind=level&q=Bac",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "suggest"
+              ],
+              "query": [
+                {
+                  "key": "kind",
+                  "value": "level"
+                },
+                {
+                  "key": "q",
+                  "value": "Bac"
+                }
+              ]
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /skills/suggest sans jeton — route authentifiee (401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/skills/suggest?q=Spring",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "skills",
+                "suggest"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Spring"
+                }
+              ]
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 401"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 401', function () { pm.response.to.have.status(401); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /catalog/places — tous les lieux",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/catalog/places",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "catalog",
+                "places"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /skills/suggest — competences proches (authentifie)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/skills/suggest?q=Spring",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "skills",
+                "suggest"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Spring"
+                }
+              ]
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 Recruteur",
+      "item": [
+        {
+          "name": "GET /offers/mine — mes offres",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "mine"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers — creer une offre de test",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Offre sonde Postman a supprimer\", \"description\": \"Offre creee par la collection Postman. Elle sert a verifier le cycle de vie complet puis est supprimee a la fin du run.\", \"location\": \"Tetouan\", \"contractType\": \"CDD\", \"durationMonths\": 6, \"experienceLevel\": \"JUNIOR\", \"educationLevel\": \"BAC+5\", \"workMode\": \"SUR_SITE\", \"salaryMin\": 12000, \"salaryMax\": 16000, \"salaryPeriod\": \"MONTH\", \"currency\": \"MAD\", \"positions\": 1, \"deadline\": \"2026-12-31\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });",
+                  "var j = pm.response.json();",
+                  "if (j.id) { pm.collectionVariables.set('newOfferId', j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /offers/{id} — modifier l'offre creee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"Offre sonde Postman modifiee\", \"description\": \"Description modifiee par la collection, pour verifier que la mise a jour est bien persistee.\", \"location\": \"Tanger\", \"contractType\": \"CDD\", \"durationMonths\": 9, \"experienceLevel\": \"JUNIOR\", \"workMode\": \"HYBRIDE\", \"positions\": 2}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers/{id}/publish — publier",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}/publish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}",
+                "publish"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers/{id}/extend — prolonger de 7 jours",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}/extend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}",
+                "extend"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"days\": 7}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers/{id}/extend — 999 jours refuse (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}/extend",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}",
+                "extend"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"days\": 999}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers/{id}/unpublish — retirer de la vitrine",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}/unpublish",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}",
+                "unpublish"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers/{id}/close — cloturer la collecte",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}/close",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}",
+                "close"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers/{id}/archive — archiver",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}/archive",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}",
+                "archive"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers/{id}/reopen — reouverture refusee si archivee (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}/reopen",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}",
+                "reopen"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 400"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers/{id}/duplicate — relancer la recherche",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}/duplicate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}",
+                "duplicate"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });",
+                  "var j = pm.response.json();",
+                  "if (j.id) { pm.collectionVariables.set('dupOfferId', j.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /offers/{id} — supprimer la sonde",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{newOfferId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{newOfferId}}"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "DELETE /offers/{id} — supprimer la copie",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/{{dupOfferId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "{{dupOfferId}}"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /offers — titre trop court refuse (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\": \"AB\", \"description\": \"Titre de deux caracteres, sous la limite @Size(min=3).\", \"location\": \"Tetouan\", \"contractType\": \"CDI\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 Pipeline",
+      "item": [
+        {
+          "name": "GET /applications/pipeline — dossiers du recruteur",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/pipeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "pipeline"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /applications/pace — signal de rythme de reponse",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/pace",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "pace"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /applications/mine — candidatures du candidat",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "mine"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /applications/{id}/timeline — frise du dossier 11",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/11/timeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "11",
+                "timeline"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /refusal-reasons — motifs actifs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/refusal-reasons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "refusal-reasons"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /offers/{id} — detail d'une offre publiee",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/offers/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "offers",
+                "1"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 Entretiens",
+      "item": [
+        {
+          "name": "GET /applications/{id}/interview.ics — 404: aucun entretien planifie en base de demo",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/11/interview.ics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "11",
+                "interview.ics"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 404"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /applications/999999/interview.ics — candidature inexistante (404)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/999999/interview.ics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "999999",
+                "interview.ics"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 404"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 404', function () { pm.response.to.have.status(404); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "PUT /applications/{id}/interview — fuseau inconnu refuse (400)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/11/interview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "11",
+                "interview"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 400",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"type\": \"ONSITE\", \"kind\": \"TECHNIQUE\", \"startsAt\": \"2026-12-01T10:00:00\", \"timeZone\": \"Mars/Phobos\", \"location\": \"Immeuble test\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 400', function () { pm.response.to.have.status(400); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 Organisation",
+      "item": [
+        {
+          "name": "GET /organizations/mine — espace entreprise",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/organizations/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "mine"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/mine/members — equipe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/organizations/mine/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "mine",
+                "members"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/mine/events — evenements",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/organizations/mine/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "mine",
+                "events"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/mine/notes — post-it partages",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/organizations/mine/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "mine",
+                "notes"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /organizations/mine/invite — inviter un membre",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/organizations/mine/invite",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "mine",
+                "invite"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"email\": \"sonde.postman@hirelink.ma\", \"orgRole\": \"RECRUTEUR\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });",
+                  "var j = pm.response.json();",
+                  "if (j.token) { pm.collectionVariables.set('inviteToken', j.token); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/invitations/{token} — invitation sans compte",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/organizations/invitations/{{inviteToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "organizations",
+                "invitations",
+                "{{inviteToken}}"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 410"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 410', function () { pm.response.to.have.status(410); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 Notifications",
+      "item": [
+        {
+          "name": "GET /notifications — mon fil",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /notifications/stream-ticket — ticket SSE",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/notifications/stream-ticket",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "stream-ticket"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 IA",
+      "item": [
+        {
+          "name": "GET /ai/credits — solde du mois",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/ai/credits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai",
+                "credits"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /ai/match-explain — ecart de matching",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/ai/match-explain",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai",
+                "match-explain"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"skills\": \"Java, Spring Boot, MySQL\", \"requiredSkills\": \"Java, React, Docker\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /ai/interview-kit — reserve au recruteur (403 pour un candidat)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/ai/interview-kit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "ai",
+                "interview-kit"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 403",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"jobTitle\": \"Developpeur Java\", \"skills\": \"Java\"}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 403', function () { pm.response.to.have.status(403); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 Facturation",
+      "item": [
+        {
+          "name": "GET /billing/plans — catalogue selon audience",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/billing/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "billing",
+                "plans"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "11 Admin",
+      "item": [
+        {
+          "name": "GET /admin/stats — compteurs globaux",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "stats"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/charts — candidatures par statut",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/charts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "charts"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/organizations — entreprises",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/organizations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "organizations"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/offers — toutes les offres",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/offers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "offers"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/reports — file de moderation",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/reports",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "reports"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/users — comptes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/audit — journal de securite",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/audit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "audit"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/search?q=Sara — recherche transversale",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/search?q=Sara",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Sara"
+                }
+              ]
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/ai-usage — consommation IA du mois",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/ai-usage",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "ai-usage"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/stats avec un jeton candidat (403 attendu)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "stats"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 403"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 403', function () { pm.response.to.have.status(403); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "12 Securite",
+      "item": [
+        {
+          "name": "GET /account/security — sessions, MFA, passkeys",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/account/security",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "account",
+                "security"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /account/sessions — liste des sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/account/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "account",
+                "sessions"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "13 Isolation",
+      "item": [
+        {
+          "name": "GET /applications/by-offer/{id} — offre d'une autre organisation (403)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/by-offer/15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "by-offer",
+                "15"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 403"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 403', function () { pm.response.to.have.status(403); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /applications/by-offer/{id} — offre de sa propre organisation (200)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}"
+              }
+            ],
+            "url": {
+              "raw": "http://localhost:8081/api/v1/applications/by-offer/1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "applications",
+                "by-offer",
+                "1"
+              ],
+              "query": []
+            },
+            "description": "Genere par gen_postman_v5.py — attendu: 200"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('statut 200', function () { pm.response.to.have.status(200); });",
+                  "pm.test('reponse en moins de 4 s', function () { pm.expect(pm.response.responseTime).to.be.below(4000); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "candidateToken",
+      "value": ""
+    },
+    {
+      "key": "recruiterToken",
+      "value": ""
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "newOfferId",
+      "value": ""
+    },
+    {
+      "key": "dupOfferId",
+      "value": ""
+    },
+    {
+      "key": "inviteToken",
+      "value": ""
+    }
+  ]
+}
