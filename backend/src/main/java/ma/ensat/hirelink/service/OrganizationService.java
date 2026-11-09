@@ -142,11 +142,24 @@ public class OrganizationService {
         return membershipRepository.save(m);
     }
 
+    /** Verrou de ligne : deux invitations ou deux acceptations ne lisent pas le même nombre de sièges. */
+    @Transactional
+    public void lockOrganization(Long organizationId) {
+        organizationRepository.findByIdForUpdate(organizationId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation introuvable"));
+    }
+
     /** Change le plan de l'organisation, l'applique à ses recruteurs et émet la facture correspondante. */
     @Transactional
     public BillingInvoice changePlan(Organization org, PlanTier tier, String cycle) {
-        org.setPlanTier(tier);
-        organizationRepository.save(org);
+        Organization locked = organizationRepository.findByIdForUpdate(org.getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation introuvable"));
+        if (locked.getPlanTier() == tier) {
+            return null;
+        }
+        locked.setPlanTier(tier);
+        organizationRepository.save(locked);
+        org = locked;
         for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
             if (m.getUser().getRole() == Role.RECRUTEUR) {
                 m.getUser().setPlanTier(tier);
