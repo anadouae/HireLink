@@ -41,7 +41,7 @@ Ce guide s’adresse à quelqu’un qui n’a jamais lancé le projet. Il expliq
 ## 2. Récupérer le projet
 
 1. Option A — archive : dézippez `HireLink-final.zip` dans `C:\HireLink`. Vous devez avoir `C:\HireLink\backend`, `C:\HireLink\frontend`, `C:\HireLink\docs`.
-2. Option B — Git : `git clone <adresse du dépôt> C:\HireLink` puis `cd C:\HireLink` et `git checkout fix/espace-recruteur`.
+2. Option B — Git : `git clone <adresse du dépôt> C:\HireLink` puis `cd C:\HireLink`. Le clone se place sur la branche `main`, qui est celle à lancer. Il n’existe pas de branche `fix/espace-recruteur`.
 
 ## 3. Préparer la base de données
 
@@ -106,11 +106,39 @@ hirelink.mail.from=HireLink <votre.adresse@gmail.com>
 1. Redémarrez le backend. Dans la console, vous devez lire `E-mails : envoi SMTP via smtp.gmail.com:587 (expéditeur HireLink <votre.adresse@gmail.com>)`. Si vous lisez « aucun serveur SMTP configuré », le fichier n’a pas été trouvé.
 2. Testez : connectez-vous en candidat, ouvrez *Paramètres* et vérifiez que « E-mails de suivi » est activé ; puis demandez un lien « Mot de passe oublié » : le message arrive dans la boîte Gmail.
 
-Le fichier est lu à ces trois emplacements (le premier trouvé gagne) : `application-local.properties` dans le dossier de lancement, `backend/application-local.properties` si vous lancez depuis la racine du dépôt, ou `src/main/resources/application-local.properties` (placé dans le classpath). Chaque emplacement a été vérifié : la ligne de démarrage ci-dessus s’affiche. **Autre méthode, sans fichier** : variables d’environnement `HIRELINK_MAIL_HOST`, `HIRELINK_MAIL_PORT` (587 par défaut), `HIRELINK_MAIL_USERNAME`, `HIRELINK_MAIL_PASSWORD`, `HIRELINK_MAIL_FROM` (modèle : `.env.example`). Pour un serveur sans chiffrement ni authentification (outil de test local) : `HIRELINK_MAIL_AUTH=false` et `HIRELINK_MAIL_STARTTLS=false`.
+Le fichier est lu à ces deux emplacements (le dernier importé l'emporte) : `application-local.properties` dans le dossier depuis lequel vous lancez le backend, ou `backend/application-local.properties` si vous lancez depuis la racine du dépôt. **Il n'existe plus d'emplacement dans `src/main/resources`** : le build (`backend/pom.xml`) exclut expressément ce fichier de `target/classes` et du JAR, pour qu'aucun secret ne parte dans un artefact distribué. **Autre méthode, sans fichier** : variables d'environnement `HIRELINK_MAIL_HOST`, `HIRELINK_MAIL_PORT` (587 par défaut), `HIRELINK_MAIL_USERNAME`, `HIRELINK_MAIL_PASSWORD`, `HIRELINK_MAIL_FROM` (modèle : `.env.example`). Pour un serveur sans chiffrement ni authentification (outil de test local) : `HIRELINK_MAIL_AUTH=false` et `HIRELINK_MAIL_STARTTLS=false`.
 
 > Tester sans compte Gmail : lancez un récepteur local comme **Mailpit** (`mailpit` écoute en SMTP sur 1025 et affiche les messages sur http://localhost:8025), puis démarrez le backend avec `HIRELINK_MAIL_HOST=127.0.0.1 HIRELINK_MAIL_PORT=1025 HIRELINK_MAIL_AUTH=false HIRELINK_MAIL_STARTTLS=false`. C’est ainsi que les e-mails de ce guide ont été vérifiés (la connexion réelle à Gmail n’a pas été exécutée : elle exige vos identifiants).
 
 **Désinscription.** Les e-mails de suivi (candidatures, entretiens) respectent la préférence « E-mails de suivi » de *Paramètres* (candidat : *Confidentialité* ; recruteur : *Alertes*) ; chaque message contient le lien pour la modifier. Les e-mails de sécurité (codes, réinitialisation, alerte de connexion) sont toujours envoyés.
+
+### 5.2 Afficher les codes et liens de sécurité dans la console (démonstration sans SMTP)
+
+Par défaut, `hirelink.otp.log-to-console=false` : un code à 6 chiffres ou un lien de réinitialisation n'est écrit
+ni dans la console ni dans un fichier de journal, et le corps de ces messages n'est pas enregistré dans
+*Administration → E-mails envoyés* (seuls les messages non confidentiels y conservent leur corps). Une
+installation fraîche depuis GitHub est donc sûre telle quelle.
+
+Pour une démonstration **sans serveur SMTP** (inscription, « code reçu par e-mail », mot de passe oublié),
+l'affichage doit être décidé à chaque lancement, jamais par la configuration par défaut :
+
+```bat
+cd backend
+mvn -B spring-boot:run -Dspring-boot.run.jvmArguments="-Dspring.mail.host= -Dhirelink.otp.log-to-console=true"
+```
+
+Vous lisez alors, à la demande du code :
+
+```
+════════════════════════════════════════
+ HireLink OTP [REGISTER] pour rh@startup-demo.ma → 123456
+════════════════════════════════════════
+```
+
+`LANCER-HIRELINK-DEMO.bat` passe explicitement cette option à `false` (aucun secret dans les journaux) : avec ce
+script, une inscription ou une réinitialisation par e-mail ne peut aboutir **que** si un SMTP est configuré ; sinon
+utilisez la commande ci-dessus ou les comptes déjà semés (§7). Au démarrage sans SMTP et sans opt-in, le backend
+affiche l'avertissement `Codes et liens de sécurité : ni envoyés ni affichés…` pour signaler le choix à faire.
 
 ## 6. Démarrer le frontend
 
@@ -132,7 +160,7 @@ Le fichier est lu à ces trois emplacements (le premier trouvé gagne) : `applic
 | i.chraibi@gmail.com | Candidat123! | Candidat (utilisé pour le verrouillage) |
 | recrutement.ocpgroup@hirelink.ma | Recruteur123! | Recruteur d’une **autre** organisation (OCP Group) |
 
-> Ces mots de passe « faciles » ne servent qu’aux comptes de démonstration créés par l’amorçage. Tout mot de passe que **vous** créez doit respecter la politique : 12 à 64 caractères, pas de mot de passe courant, pas votre e-mail ni votre nom (ex. « Atlas-Vert-Soleil-2026 »). Le code TOTP ou OTP n’est jamais envoyé par e-mail en développement : il s’affiche dans la **console du backend**.
+> Ces mots de passe « faciles » ne servent qu’aux comptes de démonstration créés par l’amorçage. Tout mot de passe que **vous** créez doit respecter la politique : 12 à 64 caractères, pas de mot de passe courant, pas votre e-mail ni votre nom (ex. « Atlas-Vert-Soleil-2026 »). Le code TOTP ou OTP n’est **jamais** écrit dans les journaux par défaut : soit il part par e-mail (SMTP configuré, §5.1), soit vous l’autorisez explicitement dans la console de démonstration (voir §5.2).
 
 > Les données de démonstration comprennent aussi des offres de **PFE** (gratification 3 000 MAD / mois, convention exigée) et de **Freelance** (2 500 – 3 200 MAD / jour, télétravail), des candidatures aux étapes **Proposition** (OFFER) et **Embauché** (HIRED), des entretiens avec type (sur site, visio, téléphone) et nature, et des notifications associées : de quoi voir toutes les nouveautés (§18) dès le premier démarrage.
 
@@ -429,7 +457,7 @@ Reprenez le candidat (`candidat@hirelink.ma`) après les actions du recruteur :
 
    ![x-inscription-email](guide-captures/121-x-inscription-email.png)
 
-2. Le code à 6 chiffres est **affiché dans la console du backend** (ligne `OTP [...] pour rh@startup-demo.ma → 123456`). Saisissez-le.
+2. Le code à 6 chiffres arrive par e-mail (SMTP configuré, §5.1) ; sans SMTP, il s'affiche dans la console du backend **seulement si** vous avez lancé avec `-Dhirelink.otp.log-to-console=true` (§5.2), ligne `OTP [...] pour rh@startup-demo.ma → 123456`. Saisissez-le.
 
    ![x-inscription-code](guide-captures/122-x-inscription-code.png)
 
@@ -567,7 +595,9 @@ HIRELINK_ADMIN_MFA_REQUIRED=true mvn -o spring-boot:run
 
 > Alternative sans mot de passe ni TOTP : enregistrer une **passkey** (page Sécurité) et se connecter avec le bouton « Se connecter avec une passkey ».
 
-> Si vous avez perdu la clé TOTP et les codes de secours en environnement de test : arrêtez le backend, supprimez la base (`DROP DATABASE hirelink;` puis recréez-la, §3) et relancez : l’administrateur de démonstration sera recréé. Tant que `HIRELINK_ADMIN_MFA_REQUIRED` reste faux, il se reconnecte au seul mot de passe.
+> **Si vous avez perdu la clé TOTP et les codes de secours** : commencez par une action non destructive. Redémarrez le backend avec `HIRELINK_ADMIN_MFA_REQUIRED=false` : l'administrateur de démonstration se reconnecte alors au seul mot de passe, vous relisez ou régénérez les codes de secours depuis la page Sécurité, puis vous réactivez l'exigence. Ne jetez cette option qu'en environnement de test, jamais sur une installation réelle.
+>
+> **Dernier recours, destructif** (uniquement sur une base de test dont vous n'avez rien à garder) : arrêtez le backend, `mysqldump -u root hirelink > backup-db\hirelink-avant-reset.sql`, contrôlez le fichier, puis supprimez la base (`DROP DATABASE hirelink;` puis recréez-la, voir `docs/ACCES_BDD.md`) et relancez : l'administrateur de démonstration sera recréé. Cette opération efface comptes, candidatures, documents, historiques et journal d'audit ; elle n'est jamais nécessaire pour récupérer un accès perdu.
 
 ## 15. Sécurité — scénarios à exécuter
 
@@ -655,7 +685,7 @@ Ces scénarios utilisent le candidat `y.idrissi@outlook.com` (mot de passe initi
 
    ![s-oublie-envoye](guide-captures/157-s-oublie-envoye.png)
 
-3. En développement, le lien de réinitialisation est affiché dans la **console du backend** (ligne `MAIL simulé … token=…`). Ouvrez-le.
+3. Ouvrez le lien reçu par e-mail (SMTP configuré). Sans SMTP, le lien n'apparaît dans la console que si vous avez lancé avec `-Dhirelink.otp.log-to-console=true` (§5.2) : la ligne commence par `[MAIL non envoyé : SMTP absent]` et le corps — donc le `token=` — n'est affiché que dans ce cas. Le lien n'est jamais enregistré dans *Administration → E-mails envoyés*.
 4. Un mot de passe courant (`password1234`) est refusé.
 
    ![s-reinit-faible](guide-captures/158-s-reinit-faible.png)
@@ -731,7 +761,7 @@ try { Invoke-WebRequest -Uri http://localhost:8081/api/v1/applications/by-offer/
 | Le code TOTP est « invalide » | Horloge décalée ou code déjà utilisé | Synchronisez l’heure Windows ; attendez les 30 secondes suivantes ; sinon un code de secours |
 | Passkey : « non supportée » | Adresse autre que localhost, ou navigateur trop ancien | Utilisez http://localhost:5500 avec Chrome/Edge récent |
 | `mvn` n’est pas reconnu | Maven absent du PATH | Utilisez IntelliJ, ou ajoutez Maven au PATH (§1.3) |
-| Aucun code OTP reçu par e-mail | Aucun SMTP configuré (normal en développement) | Le code est dans la console du backend (`OTP [...] → ...`) ; pour recevoir de vrais e-mails, voir §5.1 |
+| Aucun code OTP reçu par e-mail | Aucun SMTP configuré, ou opt-in console absent | Configurez un SMTP (§5.1) ou relancez avec `-Dhirelink.otp.log-to-console=true` (§5.2) ; au démarrage sans SMTP, le backend affiche l'avertissement « Codes et liens de sécurité : ni envoyés ni affichés » |
 | Gmail : `Username and Password not accepted` / `Authentication failed` dans la console | Mot de passe habituel utilisé au lieu d’un mot de passe d’application, ou validation en 2 étapes inactive | Créez un mot de passe d’application (§5.1) et collez-le sans espaces dans `spring.mail.password` |
 | Les e-mails n’arrivent pas, la console affiche `Envoi d'e-mail impossible` | Serveur SMTP injoignable ou identifiants refusés ; l’application continue de fonctionner | Consultez Administration → E-mails envoyés (colonne État) et la console ; vérifiez host, port 587 et identifiants |
 | Notifications qui n’apparaissent qu’après quelques secondes | Le flux temps réel (SSE) est bloqué par un proxy ou un antivirus ; l’application bascule seule sur l’interrogation toutes les 45 s | Aucune action requise ; en cas d’usage derrière un proxy, autorisez les connexions longues vers `/api/v1/notifications/stream` |

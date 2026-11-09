@@ -1136,7 +1136,7 @@
     }
   }
 
-  // Nouvelle candidature, réponse à un entretien… : le tableau se met à jour dès la notification.
+  // Nouvelle candidature, entretien planifié ou reporté… : le tableau se met à jour dès la notification.
   document.addEventListener("hirelink:push", () => load(true));
 
   let pendingApp = new URLSearchParams(location.search).get("app");

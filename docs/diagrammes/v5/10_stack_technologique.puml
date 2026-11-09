@@ -5,7 +5,7 @@ skinparam rectangleBorderColor #1a1418
 rectangle "Couche présentation" #EFF6FF {
   [HTML5 sémantique\n27 pages] as H
   [CSS3 variables\néchelle typographique, badges sobres] as CSS
-  [JavaScript natif\napi.js, ui.js, aucune framework] as JSF
+  [JavaScript natif\napi.js, ui.js, aucun framework] as JSF
   [SVG locaux : logos ENSA, UAE, HireLink,\nmascotte, icônes métier] as SVG
 }
 rectangle "Couche service / API" #FEF3C7 {
@@ -16,9 +16,9 @@ rectangle "Couche service / API" #FEF3C7 {
   [GlobalExceptionHandler\nerreurs en français] as GEH
 }
 rectangle "Couche données" #DCFCE7 {
-  [Spring Data JPA\n24 repositories] as JPA
-  [Hibernate ddl-auto = update\ncrée les 24 tables d'entités] as HB
-  [MariaDB 10.4 · schéma `hirelink`\n25 tables (24 entités\n+ jointure job_offer_tags)] as MDB
+  [Spring Data JPA\n25 repositories] as JPA
+  [Hibernate ddl-auto = update\ncrée les 25 tables d'entités] as HB
+  [MariaDB 10.4 · schéma `hirelink`\n26 tables (25 entités\n+ jointure job_offer_tags)] as MDB
   [database/schema.sql\n4 tables (DDL hérité)] as SQLF
   [backend/data/ fichiers\nCV, logos, jwt.key] as FSX
 }
@@ -35,7 +35,7 @@ rectangle "Outillage et qualité" #F1F5F9 {
   [Postman + newman\n73 requêtes, 49 en lecture seule, 101 assertions vertes] as POST
   [python-docx (rapport et cahier des charges)\nPlantUML (diagrammes)] as PDOC
   [Git · .gitignore\nbackup-db/, tmp/, *.zip exclus] as GIT
-  [DataSeeder : jeux de démonstration\n3 rôles + 20 organisations] as SEED
+  [DataSeeder : jeux de démonstration\ncomptes, organisations, offres, suivis] as SEED
 }
 
 H --> CSS

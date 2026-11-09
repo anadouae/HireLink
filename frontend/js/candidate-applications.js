@@ -213,7 +213,7 @@
       '</div>';
   }
 
-  /** Bloc « Votre entretien » : carte complète avec confirmation de présence et export calendrier. */
+  /** Bloc « Votre entretien » : la convocation décidée par le recruteur, avec l'export calendrier. */
   function paintInterview(app) {
     const box = el("d-interview");
     if (!box) return;
@@ -223,8 +223,7 @@
     const title = document.createElement("h3");
     title.className = "timeline-title";
     title.textContent = "Votre entretien";
-    const reload = () => load();
-    box.append(title, HireLinkInterview.card(app, { role: app.status === "INTERVIEW" ? "candidate" : "readonly", onChange: reload }));
+    box.append(title, HireLinkInterview.card(app, { role: "readonly" }));
     const prep = document.createElement("button");
     prep.type = "button";
     prep.className = "btn btn-ghost btn-sm";

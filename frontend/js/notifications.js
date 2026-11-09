@@ -9,6 +9,8 @@
   if (!session) return;
   const $ = (id) => document.getElementById(id);
   const esc = RC.esc;
+  const kindSel = $("n-f-kind");
+  const whenSel = $("n-f-when");
   let rows = [];
   let view = "all";
   let kindFilter = "all";
@@ -46,6 +48,70 @@
     if (whenFilter === "7d") return t >= now - 7 * 864e5;
     if (whenFilter === "30d") return t >= now - 30 * 864e5;
     return true;
+  }
+
+  /**
+   * Le type et la période sont appliqués par le serveur (GET /notifications?kind=&since=&limit=) :
+   * un compte avec un long historique n'a pas à télécharger toutes ses notifications pour en afficher dix.
+   * Les filtres restent aussi appliqués ici, ce qui garantit que les compteurs des puces égalent les lignes rendues.
+   */
+  const PAGE_LIMIT = 300;
+  let serverFiltered = false;
+
+  function sinceParam() {
+    if (whenFilter === "all") return null;
+    if (whenFilter === "today") {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString();
+    }
+    return new Date(Date.now() - (whenFilter === "7d" ? 7 : 30) * 864e5).toISOString();
+  }
+
+  let filterCall = null;
+  function applyFilters() {
+    const kind = kindSel && kindSel.value !== "all" ? kindSel.value : "";
+    const since = sinceParam();
+    if (!kind && !since) {
+      serverFiltered = false;
+      filterCall = null;
+      scopeNote("");
+      sync(RC.notifications.all());
+      return Promise.resolve();
+    }
+    return fetchFiltered(kind, since || "");
+  }
+
+  function fetchFiltered(kind, since) {
+    const q = new URLSearchParams();
+    if (kind) q.set("kind", kind);
+    if (since) q.set("since", since);
+    q.set("limit", String(PAGE_LIMIT));
+    const url = "/notifications?" + q.toString();
+    // Deux filtres changés d'affilée ne doivent pas afficher la réponse du premier : seule la dernière demande s'applique.
+    if (filterCall && filterCall.url === url) return filterCall.promise;
+    const call = { url: url };
+    serverFiltered = true;
+    call.promise = HireLinkAPI.api(url).then((data) => {
+      if (filterCall !== call) return;
+      filterCall = null;
+      scopeNote((data || []).length >= PAGE_LIMIT
+        ? "Affichage limité aux " + PAGE_LIMIT + " notifications les plus récentes pour ces filtres — raccourcissez la période pour voir plus précis."
+        : "");
+      sync(data || []);
+    }).catch((err) => {
+      if (filterCall === call) filterCall = null;
+      RC.toast("Notifications", err.message || "Filtrage impossible.", "danger");
+    });
+    filterCall = call;
+    return call.promise;
+  }
+
+  function scopeNote(text) {
+    const el = $("n-scope");
+    if (!el) return;
+    el.textContent = text;
+    el.hidden = !text;
   }
 
   function paint() {
@@ -147,9 +213,21 @@
       }
     } else if (e.target.closest("[data-read]")) {
       await RC.notifications.markRead(id);
-      sync(RC.notifications.all());
+      applyFilters();
     }
   });
+  if (kindSel)
+    kindSel.addEventListener("change", () => {
+      kindFilter = kindSel.value || "all";
+      paint();
+      applyFilters();
+    });
+  if (whenSel)
+    whenSel.addEventListener("change", () => {
+      whenFilter = whenSel.value || "all";
+      paint();
+      applyFilters();
+    });
   $("n-chips").addEventListener("click", (e) => {
     const b = e.target.closest("button[data-v]");
     if (b) {
@@ -157,25 +235,17 @@
       paint();
     }
   });
-  const kindSel = $("n-f-kind");
-  if (kindSel)
-    kindSel.addEventListener("change", () => {
-      kindFilter = kindSel.value || "all";
-      paint();
-    });
-  const whenSel = $("n-f-when");
-  if (whenSel)
-    whenSel.addEventListener("change", () => {
-      whenFilter = whenSel.value || "all";
-      paint();
-    });
   $("btn-readall").addEventListener("click", async (e) => {
     RC.busy(e.currentTarget, true);
     await RC.notifications.markAllRead();
     RC.busy(e.currentTarget, false);
-    sync(RC.notifications.all());
+    applyFilters();
   });
-  document.addEventListener("rc:notifications", (e) => sync(e.detail));
+  // Une notification poussée en temps réel doit réapparaître dans la vue filtrée, pas écraser le filtre.
+  document.addEventListener("rc:notifications", (e) => {
+    if (serverFiltered) applyFilters();
+    else sync(e.detail);
+  });
   RC.skeleton($("n-list"), 4, 56);
   RC.notifications.refresh().then(() => {
     if (loaded) return;

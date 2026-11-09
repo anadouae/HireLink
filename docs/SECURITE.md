@@ -80,7 +80,7 @@ Les secrets restent visibles dans l'historique Git ancien : si le dépôt a ét�
 
 ## 6. Tests exécutés
 
-Tous les tests ont été exécutés sur l'application réellement démarrée (backend Spring Boot + MariaDB 10.11, interface servie par `python -m http.server 5500`, navigateur Chrome piloté automatiquement). Résultat final : **toutes les vérifications ci-dessous sont passées** ; les erreurs trouvées en cours de route (réponse 500 sur valeur trop longue, compteur d'essais OTP perdu lors d'un échec, échecs de connexion non journalisés, mot de passe généré affiché dans les logs, Swagger exposé, reprise de compte par le contournement Google de développement) ont été corrigées avant.
+Tous les tests ont été exécutés sur l'application réellement démarrée (backend Spring Boot + MariaDB 10.4.32 de XAMPP, interface servie par `python -m http.server 5500`, navigateur Chrome piloté automatiquement). Résultat final : **toutes les vérifications ci-dessous sont passées** ; les erreurs trouvées en cours de route (réponse 500 sur valeur trop longue, compteur d'essais OTP perdu lors d'un échec, échecs de connexion non journalisés, mot de passe généré affiché dans les logs, Swagger exposé, reprise de compte par le contournement Google de développement) ont été corrigées avant.
 
 | Domaine | Vérifié |
 |---|---|
@@ -105,8 +105,8 @@ Les rôles ne peuvent pas changer après la création du profil (`403`), donc il
 1. **Limitation de débit en mémoire** : les compteurs (verrouillage, IP) sont remis à zéro au redémarrage et ne sont pas partagés entre plusieurs instances. En production multi-instance, utiliser Redis ou un proxy (nginx, Cloudflare).
 2. **CSP : `style-src 'unsafe-inline'`** reste autorisé (styles en ligne de l'interface) ; les scripts en ligne, eux, sont interdits.
 3. **Jeton d'accès dans `localStorage`** : choix de compromis pour une application à pages statiques ; une faille XSS permettrait de le voler pendant 15 min. Atténuations : CSP stricte, échappement systématique, durée de vie courte, refresh `HttpOnly` non lisible par JavaScript. Une évolution possible est de ne garder le jeton qu'en mémoire.
-4. **Base de données testée : MariaDB 10.11** uniquement.
-5. **E-mails** : en développement, les codes et liens sont affichés dans la console du serveur (`hirelink.otp.log-to-console`). En prod, un serveur SMTP est obligatoire.
+4. **Base de données réellement exercée ici : MariaDB 10.4.32** (celle de XAMPP, `SELECT VERSION()`). MySQL 8 n'a pas été testé : les scripts de schéma et de dump ne sont pas interchangeables entre les deux moteurs.
+5. **E-mails** : par défaut, `hirelink.otp.log-to-console=false` — aucun code ni lien secret n'est écrit dans la console ni dans les journaux. Pour une démonstration locale sans SMTP, il faut le réclamer explicitement (`-Dhirelink.otp.log-to-console=true`) et le serveur affiche alors le code. En production, un serveur SMTP est obligatoire : sans lui, les messages de sécurité ne partent nulle part (le démarrage le signale par un avertissement).
 6. **Comptes de démonstration** : leurs anciens mots de passe faibles sont conservés pour la démo ; ils ne sont créés qu'avec `hirelink.seed.enabled=true` (désactivé en prod).
 7. Pas d'analyse automatique des dépendances (OWASP Dependency-Check) ni de test d'intrusion externe.
 8. Les passkeys exigent `localhost` ou HTTPS ; avec une adresse IP ou un autre nom d'hôte, régler `HIRELINK_WEBAUTHN_RP_ID` et `HIRELINK_WEBAUTHN_ORIGINS`.

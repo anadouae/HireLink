@@ -106,23 +106,18 @@ public class WebAuthnService implements CredentialRepository {
     // ---------- connexion par passkey (sans identifiant ou par email) ----------
 
     public Map<String, Object> checkPasskey(String email) {
+        // A3 : ce point d'entrée est appelé par un visiteur non authentifié. Il ne renvoie que ce que le
+        // parcours passkey exige — une proposition ou non — sans nom, sans date d'inscription, sans nombre
+        // de clés et sans renvoyer l'e-mail. La cadence est limitée côté AuthService.
         if (email == null || email.isBlank()) {
-            return Map.of("hasPasskey", false, "registered", false);
+            return Map.of("hasPasskey", false);
         }
         String clean = email.trim().toLowerCase();
         Optional<User> opt = users.findByEmailIgnoreCase(clean);
         if (opt.isEmpty()) {
-            return Map.of("hasPasskey", false, "registered", false, "email", clean);
+            return Map.of("hasPasskey", false);
         }
-        User u = opt.get();
-        List<WebAuthnCredential> creds = repo.findByUserIdOrderByCreatedAtDesc(u.getId());
-        return Map.of(
-                "hasPasskey", !creds.isEmpty(),
-                "count", creds.size(),
-                "registered", true,
-                "email", u.getEmail(),
-                "fullName", u.getFullName() != null ? u.getFullName() : u.getEmail()
-        );
+        return Map.of("hasPasskey", !repo.findByUserIdOrderByCreatedAtDesc(opt.get().getId()).isEmpty());
     }
 
     public Map<String, Object> startLogin() {

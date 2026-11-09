@@ -97,7 +97,6 @@ html[data-theme="dark"] .ag-views button[aria-pressed="true"] { color: #f0b8c4; 
 .ag-ev.is-block.is-short time { flex: none; }
 .ag-ev.is-block.is-short .ag-ev-meta { display: none; }
 .ag-ev.is-cancelled.is-block { background: repeating-linear-gradient(135deg, var(--surface-2) 0 6px, var(--surface) 6px 12px); border-style: dashed; }
-.ag-ev.is-confirmed.is-block b::after { content: " ✓"; color: var(--ok); }
 .ag-ev.is-selected { box-shadow: 0 0 0 2px var(--c), var(--shadow); z-index: 2; }
 .ag-now { position: absolute; left: -1px; right: 0; height: 0; border-top: 2px solid #d64545; z-index: 4; pointer-events: none; }
 .ag-now i { position: absolute; left: -6px; top: -7px; width: 12px; height: 12px; border-radius: 50%; background: #d64545; box-shadow: 0 0 0 4px rgba(214, 69, 69, .18); animation: ag-now 2.4s ease-in-out infinite; }

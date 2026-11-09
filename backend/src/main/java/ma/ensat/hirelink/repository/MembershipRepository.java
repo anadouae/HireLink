@@ -42,6 +42,10 @@ public interface MembershipRepository extends JpaRepository<Membership, Long> {
     @Query("SELECT m FROM Membership m JOIN FETCH m.organization JOIN FETCH m.user WHERE m.user.id = :userId AND m.active = true")
     List<Membership> findByUserIdAndActiveTrue(@Param("userId") Long userId);
 
+    /** Toutes les appartenances, actives ou non : distingue « jamais d'espace » de « espace retiré ». */
+    @Query("SELECT m FROM Membership m JOIN FETCH m.organization WHERE m.user.id = :userId ORDER BY m.id")
+    List<Membership> findAllByUserId(@Param("userId") Long userId);
+
     @Query("SELECT m FROM Membership m JOIN FETCH m.organization JOIN FETCH m.user WHERE m.active = true")
     List<Membership> findAllActiveWithOrganization();
 }

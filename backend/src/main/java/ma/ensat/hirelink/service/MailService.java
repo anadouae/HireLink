@@ -74,7 +74,7 @@ public class MailService {
     @Value("${hirelink.mail.from:}")
     private String from;
 
-    @Value("${hirelink.otp.log-to-console:true}")
+    @Value("${hirelink.otp.log-to-console:false}")
     private boolean devConsole;
 
     @Value("${hirelink.frontend.base-url:http://localhost:5500}")
@@ -90,7 +90,10 @@ public class MailService {
         if (smtpConfigured()) {
             log.info("E-mails : envoi SMTP via {}:{} (expéditeur {})", host, port, sender());
         } else {
-            log.info("E-mails : aucun serveur SMTP configuré — les messages sont journalisés et consultables dans Administration › E-mails envoyés");
+            log.info("E-mails : aucun serveur SMTP configuré — les messages non confidentiels sont consultables dans Administration › E-mails envoyés");
+            if (!devConsole) {
+                log.warn("Codes et liens de sécurité : ni envoyés ni affichés. Pour une démonstration locale, relancer avec -Dhirelink.otp.log-to-console=true.");
+            }
         }
     }
 

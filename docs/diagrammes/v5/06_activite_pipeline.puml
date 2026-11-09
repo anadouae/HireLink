@@ -11,7 +11,7 @@ if (Le recruteur ouvre le dossier ?) then (tri)
     :SHORTLISTED;
     note right
       Scorecard possible à cette étape :
-      scorecard_criterion / scorecard_entry
+      scorecard_criteria / scorecard_entries
     end note
     if (Entretien ?) then (oui)
       :INTERVIEW;
@@ -29,7 +29,7 @@ if (Le recruteur ouvre le dossier ?) then (tri)
         stop
       endif
     else (refus ici)
-      :REJECTED + motif (refusal_reason)\nfirst_decision_at = maintenant;
+      :REJECTED + motif (refusal_reason_code -> refusal_reason_catalog)\nfirst_decision_at = maintenant;
       detach
     endif
   else (refus)
@@ -46,6 +46,6 @@ note right
   - OFFER et HIRED conservés pour les données
     historiques mais aucune nouvelle transition ;
   - chaque déplacement écrit une ligne
-    application_status_history + un audit_log.
+    application_status_history + une ligne audit_logs.
 end note
 @enduml

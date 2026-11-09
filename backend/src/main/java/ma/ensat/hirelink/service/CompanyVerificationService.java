@@ -50,15 +50,18 @@ public class CompanyVerificationService {
     private final UserRepository userRepository;
     private final IceFormatValidator iceFormatValidator;
     private final IceIdentityLookup iceIdentityLookup;
+    private final ma.ensat.hirelink.security.AuthThrottle throttle;
 
     public CompanyVerificationService(
             UserRepository userRepository,
             IceFormatValidator iceFormatValidator,
-            IceIdentityLookup iceIdentityLookup
+            IceIdentityLookup iceIdentityLookup,
+            ma.ensat.hirelink.security.AuthThrottle throttle
     ) {
         this.userRepository = userRepository;
         this.iceFormatValidator = iceFormatValidator;
         this.iceIdentityLookup = iceIdentityLookup;
+        this.throttle = throttle;
     }
 
     public Result verify(String rawIce, String companyName) {
@@ -126,8 +129,18 @@ public class CompanyVerificationService {
                 known.legalName(), known.address(), known.city(), known.source(), known.checkedAt());
     }
 
-    /** Contrôle format + tentative d’identité, sans exiger le badge publication. */
-    public Map<String, Object> inspectIce(String rawIce, String companyName) {
+    /**
+     * Contrôle format + tentative d’identité, sans exiger le badge publication.
+     * A4 : le référentiel interne n’est pas un annuaire consultable. L’identité d’une entreprise n’est
+     * révélée que pour l’ICE déjà enregistré au nom de l’appelant, ou lorsque la raison sociale qu’il
+     * déclare correspond déjà à celle du registre — il n’apprend donc rien sur un tiers en parcourant
+     * l’espace des ICE. Le format, règle arithmétique publique, reste toujours renvoyé.
+     */
+    public Map<String, Object> inspectIce(User caller, Organization org, String rawIce, String companyName) {
+        // A4 : consultation limitée, par compte et sur fenêtre glissante — un script ne peut pas balayer
+        // l'espace des ICE, même avec la règle de révélation ci-dessous.
+        throttle.hit("ice-check:" + caller.getId(), 60, 3600,
+                "Trop de consultations du registre cette heure. Réessayez plus tard.");
         IceFormatValidator.Result format = iceFormatValidator.validate(rawIce);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("formatValid", format.formatValid());
@@ -153,6 +166,19 @@ public class CompanyVerificationService {
             return out;
         }
         var hit = iceIdentityLookup.lookup(format.normalized());
+        boolean own = sameIce(caller.getCompanyIce(), format.normalized())
+                || sameIce(org == null ? null : org.getIce(), format.normalized());
+        boolean declaredByName = hit.isPresent() && companyName != null && !companyName.isBlank()
+                && similar(companyName, hit.get().legalName()) >= 0.72;
+        if (!own && !declaredByName) {
+            out.put("identityFound", false);
+            out.put("checkedAt", java.time.Instant.now().toString());
+            out.put("identityMessage",
+                    "Format valide. Le registre interne n’est consultable que pour l’ICE de votre propre "
+                            + "entreprise : indiquez la raison sociale correspondante ou lancez la vérification "
+                            + "depuis votre fiche. " + IceIdentityLookup.manualPortalHint());
+            return out;
+        }
         out.put("identityFound", hit.isPresent());
         out.put("checkedAt", java.time.Instant.now().toString());
         if (hit.isPresent()) {
@@ -273,6 +299,12 @@ public class CompanyVerificationService {
 
     private boolean blank(String value) {
         return value == null || value.isBlank();
+    }
+
+    /** Deux ICE sont le même lorsqu'ils ont les mêmes 15 chiffres ; un ICE absent ne correspond jamais. */
+    private boolean sameIce(String ownIce, String queriedIce) {
+        if (blank(ownIce) || blank(queriedIce)) return false;
+        return ownIce.replaceAll("\\D", "").equals(queriedIce.replaceAll("\\D", ""));
     }
 
     private double similar(String a, String b) {

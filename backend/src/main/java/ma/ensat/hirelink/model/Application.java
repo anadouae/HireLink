@@ -103,17 +103,24 @@ public class Application {
     @Column(name = "interview_cancel_reason", length = 300)
     private String interviewCancelReason;
 
-    /** Réponse du candidat : PENDING, CONFIRMED ou UNAVAILABLE. */
+    /**
+     * Colonne inerte : l'entretien est une convocation décidée par le recruteur, aucune réponse du candidat
+     * n'est attendue. Conservée en base le temps de la migration destructive, qui sera traitée séparément.
+     */
     @Column(name = "interview_confirmation", length = 16)
     private String interviewConfirmation;
 
-    /** Message du candidat s'il n'est pas disponible. */
+    /** Colonne inerte, même motif que {@code interview_confirmation}. */
     @Column(name = "interview_candidate_note", length = 300)
     private String interviewCandidateNote;
 
     /** Rappel 24 h avant déjà envoyé. */
     @Column(name = "interview_reminder_sent")
     private Boolean interviewReminderSent;
+
+    /** Horodatage de la réservation atomique du rappel J-1 : NULL = jamais réservé. Une réservation périmée est re-prenable. */
+    @Column(name = "interview_reminder_claimed_at")
+    private Instant interviewReminderClaimedAt;
 
     /** Note d’étape, ou message de refus envoyé au candidat */
     @Column(name = "advance_note", length = 4000)
@@ -231,6 +238,8 @@ public class Application {
 
     public Boolean getInterviewReminderSent() { return interviewReminderSent; }
     public void setInterviewReminderSent(Boolean interviewReminderSent) { this.interviewReminderSent = interviewReminderSent; }
+    public Instant getInterviewReminderClaimedAt() { return interviewReminderClaimedAt; }
+    public void setInterviewReminderClaimedAt(Instant interviewReminderClaimedAt) { this.interviewReminderClaimedAt = interviewReminderClaimedAt; }
 
     public String getAdvanceNote() { return advanceNote; }
     public void setAdvanceNote(String advanceNote) { this.advanceNote = advanceNote; }

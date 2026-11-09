@@ -66,7 +66,7 @@ public class OrganizationInvitationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Adresse e-mail invalide");
         }
         Organization org = ownerMembership.getOrganization();
-        int maxMembers = org.getPlanTier() == PlanTier.PREMIUM ? 25 : 5;
+        int maxMembers = (org.getPlanTier() == null ? PlanTier.ACCES : org.getPlanTier()).seatLimit();
         // un compte en pause occupe toujours son siège : il peut être rétabli, ce n'est pas un départ
         long seatCount = memberships.countTeamSeats(org.getId());
         if (seatCount >= maxMembers) {

@@ -58,7 +58,6 @@
     const now = Date.now();
     const upcoming = apps.filter((a) => a.status === "INTERVIEW" && a.interviewAt && a.interviewStatus !== "CANCELLED" && new Date(a.interviewAt).getTime() > now - 3600e3)
       .sort((a, b) => new Date(a.interviewAt) - new Date(b.interviewAt));
-    const toConfirm = upcoming.filter((a) => !a.interviewConfirmation || a.interviewConfirmation === "PENDING");
     const reco = offers.filter((o) => !sent[o.id]).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 4);
     const checks = profileChecks(me);
     const missing = checks.filter((c) => !c[0]);
@@ -71,7 +70,7 @@
       : active.length ? RC.plural(active.length, "candidature") + " en cours. Vous êtes notifié à chaque étape." : "Complétez votre profil puis postulez à une première offre.";
 
     $("db-actions").innerHTML = [
-      { icon: "calendar", title: "Entretiens à venir", count: upcoming.length, tone: "info", sub: toConfirm.length ? "L’invitation est dans votre e-mail" : next ? "Le " + RC.fmtDateTime(next.interviewAt) : "",
+      { icon: "calendar", title: "Entretiens à venir", count: upcoming.length, tone: "info", sub: next ? "Le " + RC.fmtDateTime(next.interviewAt) : "",
         calm: "Aucun entretien prévu", href: next ? "candidate-applications.html?id=" + next.id : "candidate-applications.html?status=INTERVIEW" },
       { icon: "hourglass", title: "Réponses attendues", count: active.length, sub: "Dossiers en cours d’étude", calm: "Aucune candidature en cours", href: "candidate-applications.html?status=active" },
       { icon: "user", title: "Profil complété", big: pct + " %", count: missing.length, tone: "warn", sub: missing[0] ? missing[0][1] : "", calm: "Profil complet, bravo", href: missing[0] ? missing[0][2] : "candidate-profile.html" },

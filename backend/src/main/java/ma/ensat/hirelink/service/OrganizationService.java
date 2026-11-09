@@ -65,20 +65,29 @@ public class OrganizationService {
         this.audit = audit;
     }
 
+    /**
+     * Espace recruteur d'un compte. Consulter ne crée rien (A2) : un compte dont l'appartenance a été
+     * retirée ou mise en pause ne récupère pas un espace OWNER d'un simple GET /organizations/mine, d'un
+     * envoi de logo ou d'une modification de profil. La création reste réservée au premier espace d'un
+     * compte qui n'a jamais appartenu à une organisation.
+     */
     @Transactional
     public Organization ensureForRecruiter(User recruiter) {
-        return membershipRepository.findByUserIdAndActiveTrue(recruiter.getId()).stream()
-                .findFirst()
-                .map(m -> {
-                    Organization o = m.getOrganization();
-                    // force init (open-in-view=false)
-                    o.getName();
-                    o.getPlanTier();
-                    return o;
-                })
-                .orElseGet(() -> createOwned(recruiter,
-                        recruiter.getCompany() != null ? recruiter.getCompany() : "Organisation",
-                        recruiter.getCompanyIce()));
+        List<Membership> actives = activeMemberships(recruiter);
+        if (!actives.isEmpty()) {
+            Organization o = actives.get(0).getOrganization();
+            // force init (open-in-view=false)
+            o.getName();
+            o.getPlanTier();
+            return o;
+        }
+        if (!membershipRepository.findAllByUserId(recruiter.getId()).isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Votre accès à un espace recruteur a été retiré (R02) : demandez sa réactivation à un administrateur.");
+        }
+        return createOwned(recruiter,
+                recruiter.getCompany() != null ? recruiter.getCompany() : "Organisation",
+                recruiter.getCompanyIce());
     }
 
     @Transactional
@@ -88,11 +97,11 @@ public class OrganizationService {
         org.setIce(ice);
         org.setOwner(owner);
         org.setPlanTier(PlanTier.ACCES);
-        org.setVerified(owner.isCompanyVerified());
-        org.setVerificationStatus(owner.getVerificationStatus() != null
-                ? owner.getVerificationStatus()
-                : (owner.isCompanyVerified() ? "REGISTRY_MATCH" : "PENDING"));
-        org.setVerificationMethod(owner.isCompanyVerified() ? "AUTO_REGISTRY" : "PENDING");
+        // A2 : le badge « vérifiée » s'obtient par une vérification portant sur CETTE organisation (ICE
+        // contrôlée ou décision d'administration), jamais par héritage du profil de son créateur.
+        org.setVerified(false);
+        org.setVerificationStatus("PENDING");
+        org.setVerificationMethod("PENDING");
         if (owner.getCompanyPresentation() != null) org.setPresentation(owner.getCompanyPresentation());
         if (owner.getPreferredLocations() != null) org.setCity(owner.getPreferredLocations());
         companyVerificationService.enrichProfile(org);
@@ -150,8 +159,7 @@ public class OrganizationService {
     /** Identifiants des comptes actifs de l'organisation de l'utilisateur (au minimum lui-même). */
     @Transactional(readOnly = true)
     public List<Long> orgMemberIds(User user) {
-        List<Long> ids = membershipRepository.findByUserIdAndActiveTrue(user.getId()).stream()
-                .findFirst()
+        List<Long> ids = activeMemberships(user).stream().findFirst()
                 .map(m -> membershipRepository.findByOrganizationIdAndActiveTrue(m.getOrganization().getId()).stream()
                         .map(x -> x.getUser().getId())
                         .toList())
@@ -166,37 +174,87 @@ public class OrganizationService {
         Set<Long> ids = new LinkedHashSet<>();
         Long authorId = offer.getRecruiter().getId();
         ids.add(authorId);
-        membershipRepository.findByUserIdAndActiveTrue(authorId).stream().findFirst()
-                .ifPresent(m -> membershipRepository.findByOrganizationIdAndActiveTrue(m.getOrganization().getId())
-                        .stream().filter(x -> x.getOrgRole() == OrgRole.OWNER)
-                        .forEach(x -> ids.add(x.getUser().getId())));
+        Organization org = organizationOf(offer);
+        if (org != null) {
+            membershipRepository.findByOrganizationIdAndActiveTrue(org.getId()).stream()
+                    .filter(x -> x.getOrgRole() == OrgRole.OWNER)
+                    .forEach(x -> ids.add(x.getUser().getId()));
+        }
         return ids;
     }
 
     /** L'organisation de l'utilisateur est-elle vérifiée ? (un membre invité hérite du badge de l'organisation). */
     @Transactional(readOnly = true)
     public boolean isOrgVerified(User user) {
-        return membershipRepository.findByUserIdAndActiveTrue(user.getId()).stream().findFirst()
+        return activeMemberships(user).stream().findFirst()
                 .map(m -> m.getOrganization().isVerified())
                 .orElse(false);
     }
 
-    /** Owner/Recruteur de l'organisation peut gérer les offres de ses collègues (pas le Hiring Manager). */
+    /**
+     * Gérer une offre = appartenir ACTIVEMENT à son organisation, avec un rôle qui publie (pas le
+     * Responsable du poste). Être l'auteur historique ne suffit plus (A1) : un recruteur sorti de
+     * l'entreprise ne garde aucun droit sur les offres qu'il y a publiées.
+     */
     @Transactional(readOnly = true)
     public boolean canManageOffer(User actor, JobOffer offer) {
         if (actor.getRole() == Role.ADMINISTRATEUR) return true;
-        Long authorId = offer.getRecruiter().getId();
-        if (authorId.equals(actor.getId())) return true;
-        return membershipRepository.findByUserIdAndActiveTrue(actor.getId()).stream().findFirst()
-                .filter(m -> m.getOrgRole() != OrgRole.HIRING_MANAGER)
-                .flatMap(m -> membershipRepository.findByOrganizationIdAndUserId(m.getOrganization().getId(), authorId))
+        Organization org = organizationOf(offer);
+        if (org == null) return false;
+        return membershipRepository.findByOrganizationIdAndUserId(org.getId(), actor.getId())
                 .filter(Membership::isActive)
+                .filter(m -> m.getOrgRole() != OrgRole.HIRING_MANAGER)
                 .isPresent();
+    }
+
+    /** L'organisation gravée sur l'offre ; à défaut, l'appartenance active de son auteur (donnée héritée). */
+    @Transactional(readOnly = true)
+    public Organization organizationOf(JobOffer offer) {
+        Organization direct = offer.getOrganization();
+        if (direct != null) {
+            direct.getName();
+            return direct;
+        }
+        return activeMemberships(offer.getRecruiter()).stream()
+                .findFirst()
+                .map(Membership::getOrganization)
+                .orElse(null);
+    }
+
+    /**
+     * L'organisation active d'un compte, ou rien. Utilisé pour graver le propriétaire d'une offre neuve :
+     * un administrateur sans appartenance crée une offre sans organisation (il n'a pas d'espace entreprise).
+     */
+    @Transactional(readOnly = true)
+    public Organization currentOrganization(User user) {
+        return activeMemberships(user).stream()
+                .findFirst()
+                .map(m -> {
+                    Organization o = m.getOrganization();
+                    o.getName();
+                    return o;
+                })
+                .orElse(null);
+    }
+
+    /**
+     * Appartenances actives d'un compte. Le modèle n'admet qu'un seul espace actif par personne
+     * (invitation et réintégration désactivent les précédents) : plus d'une appartenance est une donnée
+     * incohérente, pas un choix à faire à l'aveugle.
+     */
+    @Transactional(readOnly = true)
+    public List<Membership> activeMemberships(User user) {
+        List<Membership> actives = membershipRepository.findByUserIdAndActiveTrue(user.getId());
+        if (actives.size() > 1) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Appartenances multiples (R02) : signalez cette situation à un administrateur.");
+        }
+        return actives;
     }
 
     @Transactional(readOnly = true)
     public Membership requireMembership(User user) {
-        Membership m = membershipRepository.findByUserIdAndActiveTrue(user.getId()).stream()
+        Membership m = activeMemberships(user).stream()
                 .findFirst()
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Aucune organisation (R02)"));
         m.getOrganization().getName();
@@ -215,20 +273,14 @@ public class OrganizationService {
         }
     }
 
+    /** Comparaison des deux organisations, sans dépendre de qui a écrit l'offre (A1). */
     @Transactional(readOnly = true)
     public void assertSameOrg(User actor, JobOffer offer) {
         if (actor.getRole() == Role.ADMINISTRATEUR) return;
         Membership m = requireMembership(actor);
-        // Offre liée au recruteur propriétaire : même org via membership owner/recruiter
-        Long offerRecruiterId = offer.getRecruiter().getId();
-        boolean same = membershipRepository.findByOrganizationIdAndUserId(m.getOrganization().getId(), offerRecruiterId)
-                .filter(Membership::isActive).isPresent()
-                || offerRecruiterId.equals(actor.getId());
-        if (!same) {
+        Organization org = organizationOf(offer);
+        if (org == null || !org.getId().equals(m.getOrganization().getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Hors organisation (R02)");
-        }
-        if (m.getOrgRole() == OrgRole.HIRING_MANAGER) {
-            // HM ne crée pas d'offre ; actions limitées ailleurs (R14)
         }
     }
 
@@ -252,13 +304,19 @@ public class OrganizationService {
         }
         String cleanEmail = email.trim().toLowerCase();
         Organization org = om.getOrganization();
+        // B6 : le verrou de ligne sur l'entreprise sérialise les invitations simultanées. Sans lui, deux
+        // requêtes lues en parallèle voient la même place libre et dépassent le plafond de sièges.
+        organizationRepository.findByIdForUpdate(org.getId());
         PlanTier tier = org.getPlanTier() != null ? org.getPlanTier() : PlanTier.ACCES;
-        int maxMembers = tier == PlanTier.PREMIUM ? 25 : 5;
+        int maxMembers = tier.seatLimit();
         List<Membership> activeMembers = membershipRepository.findByOrganizationIdAndActiveTrue(org.getId());
         boolean alreadyInOrg = activeMembers.stream().anyMatch(m -> m.getUser().getEmail().equalsIgnoreCase(cleanEmail));
-        if (!alreadyInOrg && activeMembers.size() >= maxMembers) {
+        // Même décompte qu'à l'acceptation d'invitation : un compte en pause occupe toujours son siège,
+        // sinon une invitation créée ici serait refusée plus tard au moment où le membre essaie d'entrer.
+        long seats = membershipRepository.countTeamSeats(org.getId());
+        if (!alreadyInOrg && seats >= maxMembers) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Capacité d'équipe atteinte (" + activeMembers.size() + "/" + maxMembers + " membres). Passez à la formule supérieure pour inviter d'autres collaborateurs.");
+                    "Capacité d'équipe atteinte (" + seats + "/" + maxMembers + " sièges). Retirez un compte en pause ou passez à la formule supérieure.");
         }
 
         boolean wasNew = false;
@@ -497,9 +555,13 @@ public class OrganizationService {
         return actor.getFullName() == null || actor.getFullName().isBlank() ? "Un administrateur de l'espace" : actor.getFullName();
     }
 
+    /**
+     * Sièges occupés au sens de la formule : membres actifs **et** comptes en pause, car un compte en pause
+     * peut être rétabli et occupe toujours sa place. C'est le même décompte que celui qui refuse une invitation.
+     */
     @Transactional(readOnly = true)
-    public int memberCount(Organization org) {
-        return membershipRepository.findByOrganizationIdAndActiveTrue(org.getId()).size();
+    public int seatCount(Organization org) {
+        return (int) membershipRepository.countTeamSeats(org.getId());
     }
 
     @Transactional(readOnly = true)
@@ -602,15 +664,13 @@ public class OrganizationService {
         return organizationRepository.save(org);
     }
 
-    /** Nom d'entreprise affiché pour une offre : organisation du recruteur, sinon son entreprise déclarée, sinon son nom. */
+    /** Nom d'entreprise affiché pour une offre : organisation de l'offre, sinon l'entreprise déclarée du recruteur, sinon son nom. */
     public String companyNameOf(JobOffer offer) {
         User recruiter = offer.getRecruiter();
-        return membershipRepository.findByUserIdAndActiveTrue(recruiter.getId()).stream()
-                .map(m -> m.getOrganization().getName())
-                .filter(n -> n != null && !n.isBlank())
-                .findFirst()
-                .orElseGet(() -> recruiter.getCompany() != null && !recruiter.getCompany().isBlank()
-                        ? recruiter.getCompany() : recruiter.getFullName());
+        Organization org = organizationOf(offer);
+        if (org != null && org.getName() != null && !org.getName().isBlank()) return org.getName();
+        return recruiter.getCompany() != null && !recruiter.getCompany().isBlank()
+                ? recruiter.getCompany() : recruiter.getFullName();
     }
 
     private static boolean sameText(String a, String b) {
@@ -628,16 +688,17 @@ public class OrganizationService {
         return organizationRepository.save(org);
     }
 
+    /**
+     * Aligne la fiche entreprise sur les champs saisis par le compte (nom, ICE, présentation).
+     * Le badge « vérifiée » n'en fait pas partie (A2) : il se décide par une vérification portant sur
+     * l'ICE de CETTE organisation (recheck / décision d'administration), jamais en copiant le drapeau
+     * d'un compte sur l'organisation — ni dans un sens ni dans l'autre.
+     */
     @Transactional
     public Organization syncFromRecruiter(User recruiter) {
         Organization org = ensureForRecruiter(recruiter);
         if (recruiter.getCompany() != null && !recruiter.getCompany().isBlank()) org.setName(recruiter.getCompany());
         if (recruiter.getCompanyIce() != null && !recruiter.getCompanyIce().isBlank()) org.setIce(recruiter.getCompanyIce());
-        org.setVerified(recruiter.isCompanyVerified());
-        org.setVerificationStatus(recruiter.getVerificationStatus() != null
-                ? recruiter.getVerificationStatus()
-                : (recruiter.isCompanyVerified() ? "REGISTRY_MATCH" : "PENDING"));
-        org.setVerificationMethod(recruiter.isCompanyVerified() ? "AUTO_REGISTRY" : "PENDING");
         if (recruiter.getCompanyPresentation() != null) org.setPresentation(recruiter.getCompanyPresentation());
         companyVerificationService.enrichProfile(org);
         return organizationRepository.save(org);
@@ -668,10 +729,7 @@ public class OrganizationService {
         for (JobOffer offer : jobOfferRepository.findByPublishedTrueAndSuspendedFalse()) {
             // une offre close ou archivée ne fait plus vivre la fiche publique de l'entreprise
             if (offer.getClosedAt() != null || offer.getArchivedAt() != null) continue;
-            Organization org = membershipRepository.findByUserIdAndActiveTrue(offer.getRecruiter().getId()).stream()
-                    .map(Membership::getOrganization)
-                    .findFirst()
-                    .orElse(null);
+            Organization org = organizationOf(offer);
             String name = org != null && org.getName() != null ? org.getName()
                     : (offer.getRecruiter().getCompany() != null ? offer.getRecruiter().getCompany() : "Entreprise");
             // un recruteur sorti de son équipe n'a plus d'organisation active : son offre porte malgré tout

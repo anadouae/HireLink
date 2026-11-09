@@ -34,7 +34,7 @@ public class OtpService {
     @Value("${hirelink.otp.ttl-minutes:15}")
     private int ttlMinutes;
 
-    @Value("${hirelink.otp.log-to-console:true}")
+    @Value("${hirelink.otp.log-to-console:false}")
     private boolean logToConsole;
 
     public OtpService(EmailOtpRepository otpRepository, JwtService jwt, MailService mail) {
@@ -96,22 +96,18 @@ public class OtpService {
         var found = otpRepository.findTopByEmailAndPurposeAndConsumedFalseOrderByCreatedAtDesc(normalized, purpose);
         if (found.isEmpty()) return false;
         EmailOtp o = found.get();
-        if (o.getExpiresAt().isBefore(Instant.now()) || o.getAttempts() >= MAX_ATTEMPTS) {
-            o.setConsumed(true);
-            otpRepository.save(o);
+        if (o.getExpiresAt().isBefore(Instant.now())) {
+            otpRepository.consumeOnce(o.getId());
             return false;
         }
+        // B6 : l'essai est réservé par la base elle-même, pas par une lecture puis une écriture.
+        if (otpRepository.reserveAttempt(o.getId(), MAX_ATTEMPTS) == 0) return false;
         boolean ok = java.security.MessageDigest.isEqual(
                 o.getCode().getBytes(java.nio.charset.StandardCharsets.UTF_8),
                 digest(normalized, purpose, code == null ? "" : code.trim()).getBytes(java.nio.charset.StandardCharsets.UTF_8));
-        if (ok) {
-            o.setConsumed(true);
-        } else {
-            o.setAttempts(o.getAttempts() + 1);
-            if (o.getAttempts() >= MAX_ATTEMPTS) o.setConsumed(true);
-        }
-        otpRepository.save(o);
-        return ok;
+        if (!ok) return false;
+        // Un seul appelant concurrent repart avec le code à usage unique.
+        return otpRepository.consumeOnce(o.getId()) == 1;
     }
 
     private String generateCode() {

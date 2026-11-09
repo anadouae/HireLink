@@ -271,8 +271,10 @@ public class OrganizationController {
             @AuthenticationPrincipal User user,
             @jakarta.validation.Valid @RequestBody IceCheckRequest body
     ) {
-        organizationService.requireMembership(user);
+        Membership m = organizationService.requireMembership(user);
         return companyVerificationService.inspectIce(
+                user,
+                m.getOrganization(),
                 body.ice(),
                 body.name()
         );
@@ -354,8 +356,8 @@ public class OrganizationController {
         m.put("statusLabel", companyVerificationService.statusLabel(org.getVerificationStatus(), org.isVerified()));
         m.put("planTier", org.getPlanTier().name());
         ma.ensat.hirelink.model.PlanTier tier = org.getPlanTier() != null ? org.getPlanTier() : ma.ensat.hirelink.model.PlanTier.ACCES;
-        int maxMembers = tier == ma.ensat.hirelink.model.PlanTier.PREMIUM ? 25 : 5;
-        int memberCount = organizationService.memberCount(org);
+        int maxMembers = tier.seatLimit();
+        int memberCount = organizationService.seatCount(org);
         m.put("maxMembers", maxMembers);
         m.put("memberCount", memberCount);
         m.put("seatsRemaining", Math.max(0, maxMembers - memberCount));

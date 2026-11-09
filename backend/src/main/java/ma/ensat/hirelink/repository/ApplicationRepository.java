@@ -3,6 +3,7 @@ package ma.ensat.hirelink.repository;
 import ma.ensat.hirelink.model.Application;
 import ma.ensat.hirelink.model.ApplicationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -54,6 +55,29 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
             @Param("limit") Instant limit,
             @Param("cancelled") String cancelled
     );
+
+    /**
+     * Réservation atomique du rappel J-1 : un seul appelant sur deux obtient 1.
+     * Une réservation plus ancienne que {@code staleBefore} est re-prenable, pour qu'une instance
+     * arrêtée brutalement ne perde pas le rappel.
+     */
+    @Modifying
+    @Query("""
+            UPDATE Application a SET a.interviewReminderClaimedAt = :claimedAt
+            WHERE a.id = :id
+              AND (a.interviewReminderSent IS NULL OR a.interviewReminderSent = false)
+              AND (a.interviewReminderClaimedAt IS NULL OR a.interviewReminderClaimedAt < :staleBefore)
+            """)
+    int claimInterviewReminder(
+            @Param("id") Long id,
+            @Param("claimedAt") Instant claimedAt,
+            @Param("staleBefore") Instant staleBefore
+    );
+
+    /** Libère la réservation quand l'envoi échoue : le prochain cycle réessaiera. */
+    @Modifying
+    @Query("UPDATE Application a SET a.interviewReminderClaimedAt = NULL WHERE a.id = :id")
+    int releaseInterviewReminder(@Param("id") Long id);
 
     /** (organisation, recruteur, candidature, première réponse) — la matière première des vélocités mesurées. */
     @Query("""

@@ -81,7 +81,6 @@
             candidateName: e.title, jobTitle: e.description || "",
             interviewKind: e.category || "OTHER", interviewType: "EVENT",
             interviewLocation: e.location || "", interviewVideoUrl: e.videoUrl || "",
-            interviewConfirmation: "CONFIRMED",
           },
           source: e, start, end, cancelled: false, past: end.getTime() < Date.now(),
         };
@@ -105,7 +104,7 @@
   /* ------------------------------------------------------------ rendu commun */
   function evClass(e) {
     return "ag-ev " + (e.a.isOrganizationEvent ? "t-event" : typeCls(e.a)) + (e.cancelled ? " is-cancelled" : "") + (e.past ? " is-past" : "") +
-      (e.a.interviewConfirmation === "CONFIRMED" ? " is-confirmed" : "") + (String(e.a.id) === String(selectedId) ? " is-selected" : "");
+      (String(e.a.id) === String(selectedId) ? " is-selected" : "");
   }
   function evAttrs(e) {
     return ' data-ev="' + e.a.id + '" data-focus="' + (e.a.isOrganizationEvent ? "event:" + e.a.eventId : "interview:" + e.a.id + " application:" + e.a.id) + '" tabindex="0" role="button" aria-label="' +
@@ -508,10 +507,9 @@
     const live = list.filter((e) => !e.cancelled);
     const today = live.filter((e) => e.start.getTime() >= t0 && e.start.getTime() < t0 + DAY).length;
     const week = live.filter((e) => e.start.getTime() >= now && e.start.getTime() < now + 7 * DAY).length;
-    const pending = live.filter((e) => !e.past && e.a.interviewConfirmation !== "CONFIRMED").length;
     const next = live.find((e) => e.end.getTime() >= now);
     $("ag-stats").innerHTML =
-      stat(today, "aujourd’hui") + stat(week, "sur 7 jours") + stat(pending, "à confirmer") +
+      stat(today, "aujourd’hui") + stat(week, "sur 7 jours") +
       '<div class="ag-stat is-next"><span>Prochain</span><strong>' +
       (next ? esc(next.a.candidateName || "Candidat") + " · " + esc(cap(fmt(next.start, { weekday: "short", day: "numeric" }))) + " " + hhmm(next.start) : "—") + "</strong></div>";
   }
@@ -642,9 +640,7 @@
     if (e.a.isOrganizationEvent) return '<span class="badge badge-info">Événement</span>';
     if (e.cancelled) return '<span class="badge badge-danger">Annulé</span>';
     if (e.past) return '<span class="badge badge-chrome">Passé</span>';
-    if (e.a.interviewConfirmation === "CONFIRMED") return '<span class="badge badge-ok">Confirmé</span>';
-    if (e.a.interviewConfirmation === "UNAVAILABLE") return '<span class="badge badge-warn">Indisponible</span>';
-    return '<span class="badge badge-info">En attente</span>';
+    return '<span class="badge badge-info">Programmé</span>';
   }
   function emptyBanner(title) {
     const el = document.createElement("div");

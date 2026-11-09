@@ -1,9 +1,10 @@
 /**
  * Entretiens : formulaire de planification (champs selon le mode), carte d'affichage commune aux deux espaces,
- * report / annulation (recruteur), réponse du candidat et téléchargement du fichier calendrier (.ics).
+ * report / annulation (recruteur) et téléchargement du fichier calendrier (.ics).
+ * L'entretien est une convocation décidée par le recruteur : le candidat consulte, il ne répond pas.
  *
  *   HireLinkInterview.form(initialApp?)  → { el, isValid(), validate(), values() }  (values() = corps de InterviewRequest)
- *   HireLinkInterview.card(app, opts)    → <section class="iv-card"> ; opts.role = "recruiter" | "candidate",
+ *   HireLinkInterview.card(app, opts)    → <section class="iv-card"> ; opts.role = "recruiter" | "readonly",
  *                                          opts.onChange() après une action réussie
  */
 (function (global) {
@@ -203,22 +204,13 @@
     return h("a", { href: url, target: "_blank", rel: "noopener noreferrer", text: text });
   }
 
-  function confirmation(app, role) {
-    if (app.interviewStatus === "CANCELLED") return null;
-    const c = app.interviewConfirmation;
-    // Pas de badge « en attente » : notif in-app + e-mail suffisent pour informer.
-    if (c === "CONFIRMED") return h("span", { class: "badge badge-ok", text: role === "candidate" ? "Présence confirmée" : "Présence confirmée" });
-    if (c === "UNAVAILABLE") return h("span", { class: "badge badge-danger", text: role === "candidate" ? "Indisponibilité signalée" : "Candidat indisponible" });
-    return null;
-  }
-
   function failure(err) {
     HireLink.toast("Action impossible", err.message, "danger");
   }
 
   function card(app, opts) {
     const o = opts || {};
-    const role = o.role || "candidate";
+    const role = o.role || "readonly";
     const cancelled = app.interviewStatus === "CANCELLED";
     const when = whenText(app);
     const root = h("section", { class: "iv-card" + (cancelled ? " is-cancelled" : ""), "aria-label": "Entretien" });
@@ -228,7 +220,7 @@
     ]);
     root.append(h("header", {}, [
       h("div", { class: "iv-head-info" }, [h("span", { class: "iv-kind", text: KIND_FR[app.interviewKind] || "Entretien" }), modeBadge]),
-      cancelled ? h("span", { class: "badge badge-danger", text: "Annulé" }) : confirmation(app, role),
+      cancelled ? h("span", { class: "badge badge-danger", text: "Annulé" }) : null,
     ]));
     root.append(h("p", { class: "iv-when" }, [h("strong", { text: when.day }), document.createTextNode(" à "), h("strong", { text: when.time }),
       h("small", { text: " · " + (app.interviewDurationMinutes || 45) + " min · " + when.zone })]));
@@ -251,11 +243,9 @@
     if (app.interviewParticipants) dl.append(row("Participants", app.interviewParticipants));
     if (app.interviewNotes) dl.append(row("Consignes", app.interviewNotes));
     if (cancelled && app.interviewCancelReason) dl.append(row("Motif d’annulation", app.interviewCancelReason));
-    if (app.interviewConfirmation === "UNAVAILABLE" && app.interviewCandidateNote) dl.append(row("Message du candidat", app.interviewCandidateNote));
     root.append(dl);
 
     const actions = h("div", { class: "iv-actions" });
-    if (!cancelled && role === "candidate") actions.append(...candidateActions(app, o));
     if (!cancelled && role === "recruiter") actions.append(...recruiterActions(app, o));
     if (actions.children.length) root.append(actions);
     return root;
@@ -264,24 +254,6 @@
   function done(opts, title, text) {
     HireLink.toast(title, text, "ok");
     if (opts.onChange) opts.onChange();
-  }
-
-  function candidateActions(app, opts) {
-    // Pas de « je confirme » obligatoire : invitation = notif + e-mail. Seule l’indisponibilité est actionnable.
-    if (app.interviewConfirmation === "UNAVAILABLE") return [];
-    const no = h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Je ne suis pas disponible" });
-    no.addEventListener("click", async () => {
-      const note = await Mascotte.confirm({
-        title: "Vous n’êtes pas disponible ?",
-        description: "Le recruteur recevra votre message (notif + e-mail) et pourra proposer un autre créneau.",
-        confirmLabel: "Envoyer",
-        field: { label: "Votre message (facultatif)", placeholder: "Proposez d’autres créneaux si vous le pouvez." },
-      });
-      if (note === null) return;
-      HireLinkAPI.api("/applications/" + app.id + "/interview/answer", { method: "POST", body: { available: false, note } })
-        .then(() => done(opts, "Message envoyé", "Le recruteur va vous proposer un autre créneau.")).catch(failure);
-    });
-    return [no];
   }
 
   function recruiterActions(app, opts) {

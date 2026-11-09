@@ -30,15 +30,15 @@ alt mot de passe erroné
   A --> F : 401 « E-mail ou mot de passe incorrect »
 else compte Google / code par e-mail
   S -> G : vérifier id_token
-  S -> DB : SELECT email_otp (purpose, code, expires_at)
+  S -> DB : SELECT email_otps (purpose, code, expires_at)
 else MFA actif
   S --> F : 200 {mfaRequired: true}
   U -> F : code à 6 chiffres
-  F -> A : POST /auth/login/totp
+  F -> A : POST /auth/mfa/verify
   A -> TOTP : vérifier TOTP ou code de secours
 end
-S -> SS : créer user_session (tokenHash, idle et absolute expiration, ip, deviceLabel)
-SS -> DB : INSERT user_session
+S -> SS : créer user_sessions (tokenHash, idle et absolute expiration, ip, deviceLabel)
+SS -> DB : INSERT user_sessions
 S --> F : AuthResponse {accessToken (JWT), expiresIn}
 F -> F : conserve le JWT en mémoire,\ncookie httpOnly pour le refresh
 @enduml

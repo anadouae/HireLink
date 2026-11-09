@@ -12,6 +12,7 @@ import java.util.Set;
 @Table(name = "job_offers", indexes = {
         @Index(name = "idx_offer_published", columnList = "published"),
         @Index(name = "idx_offer_recruiter", columnList = "recruiter_id"),
+        @Index(name = "idx_offer_org", columnList = "organization_id"),
         @Index(name = "idx_offer_created", columnList = "created_at")
 })
 public class JobOffer {
@@ -23,6 +24,15 @@ public class JobOffer {
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "recruiter_id", nullable = false)
     private User recruiter;
+
+    /**
+     * Entreprise propriétaire de l'offre, fixée à la création. Sans elle, l'organisation d'une offre se
+     * déduisait de l'appartenance *courante* du recruteur : changer d'entreprise déplaçait les offres,
+     * et une offre pouvait se retrouver dans le pipeline d'une organisation qui ne l'a jamais publiée.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "organization_id")
+    private Organization organization;
 
     /** Candidatures liées à cette offre (@OneToMany). */
     @OneToMany(mappedBy = "jobOffer", cascade = CascadeType.ALL, orphanRemoval = false)
@@ -170,6 +180,8 @@ public class JobOffer {
 
     public User getRecruiter() { return recruiter; }
     public void setRecruiter(User recruiter) { this.recruiter = recruiter; }
+    public Organization getOrganization() { return organization; }
+    public void setOrganization(Organization organization) { this.organization = organization; }
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }

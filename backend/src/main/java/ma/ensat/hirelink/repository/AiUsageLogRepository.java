@@ -10,9 +10,14 @@ import java.util.List;
 
 public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, Long> {
 
+    /**
+     * Crédits déjà débités sur la période. Le filtre porte sur la colonne débitée, pas sur « success » :
+     * une réservation en cours (credit = 1, succès pas encore connu) occupe déjà le quota, sinon N appels
+     * simultanés lisent le même solde et dépassent le plafond. Un échec est liquidé à 0 crédit.
+     */
     @Query("""
             SELECT COALESCE(SUM(a.creditsSpent), 0) FROM AiUsageLog a
-            WHERE a.userId = :userId AND a.success = true
+            WHERE a.userId = :userId
               AND a.createdAt >= :from AND a.createdAt < :to
             """)
     Integer sumCreditsSpent(
@@ -20,6 +25,13 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, Long> {
             @Param("from") Instant from,
             @Param("to") Instant to
     );
+
+    /** Réservations jamais liquidées (processus arrêté en plein appel) : à libérer pour ne pas perdre un crédit. */
+    @Query("""
+            SELECT a FROM AiUsageLog a
+            WHERE a.success = false AND a.creditsSpent > 0 AND a.createdAt < :before
+            """)
+    List<AiUsageLog> findUnsettledReservations(@Param("before") Instant before);
 
     /** (fonctionnalité, actions, crédits) — le détail du mois en cours, pour le relevé affiché. */
     @Query("""
