@@ -53,7 +53,12 @@
     ]);
     const sort = $("cand-sort").value;
     if (!q) list.sort((a, b) => {
-      if (sort === "match") return (b.matchScore || 0) - (a.matchScore || 0);
+      if (sort === "match") {
+        if (a.matchScore == null && b.matchScore == null) return 0;
+        if (a.matchScore == null) return 1;
+        if (b.matchScore == null) return -1;
+        return b.matchScore - a.matchScore;
+      }
       if (sort === "sla") return (a.slaRemainingDays == null ? 999 : a.slaRemainingDays) - (b.slaRemainingDays == null ? 999 : b.slaRemainingDays);
       if (sort === "name") return String(a.candidateName).localeCompare(String(b.candidateName), "fr");
       return new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0);
@@ -77,7 +82,7 @@
       return '<tr class="rc-fade"><td><div class="rc-person"><div class="rc-avatar">' + esc(RC.initials(a.candidateName)) + '</div><div><span class="rc-cell-main">' + esc(a.candidateName) +
         '</span><span class="rc-cell-sub">' + esc(a.candidateEmail || "") + "</span></div></div></td><td>" + esc(a.jobTitle || "—") +
         '</td><td><span class="rc-pill' + (TONE[a.status] ? " rc-pill--" + TONE[a.status] : "") + '">' + esc(RC.STATUS_FR[a.status] || a.status) + "</span></td><td>" +
-        (m != null ? '<span class="badge ' + (m >= 80 ? "badge-ok" : m >= 55 ? "badge-info" : "badge-rose") + '">' + m + " %</span>" : "—") +
+        (m != null ? '<span class="badge ' + (m >= 80 ? "badge-ok" : m >= 55 ? "badge-info" : "badge-rose") + '">' + m + " %</span>" : "Non disponible") +
         "</td><td>" + slaCell + "</td><td>" + RC.fmtDate(a.submittedAt) + '</td><td><div class="rc-row-actions"><a class="btn btn-soft btn-sm" href="recruiter-pipeline.html?app=' + a.id + '&focus=application:' + a.id + '">Voir le dossier</a></div></td></tr>';
     }).join("");
     HireLinkSearch.mark(body, q);

@@ -1,21 +1,25 @@
 (function () {
   const $ = (id) => document.getElementById(id);
   let originalEmail = "";
+  let photoGen = 0;
 
   function toast(title, text, tone) {
     if (window.HireLink) HireLink.toast(title, text, tone || "ok");
   }
 
   async function paintPhoto() {
+    const gen = ++photoGen;
     const img = $("acc-photo");
     const fb = $("acc-fallback");
     try {
-      const res = await HireLinkAPI.authFetch("/account/avatar");
+      const res = await HireLinkAPI.authFetch("/account/avatar?t=" + Date.now());
+      if (gen !== photoGen) return;
       if (!res.ok) throw new Error("none");
       img.src = URL.createObjectURL(await res.blob());
       img.hidden = false;
       fb.hidden = true;
     } catch (_) {
+      if (gen !== photoGen) return;
       img.hidden = true;
       fb.hidden = false;
     }
@@ -64,15 +68,15 @@
       try { msg = (await res.json()).message || msg; } catch (_) {}
       toast("Photo", msg, "danger");
     } else {
-      toast("Photo", "Image enregistrée");
       paintPhoto();
+      toast("Photo", "Image enregistrée");
     }
     e.target.value = "";
   };
   $("acc-clear").onclick = async () => {
     await HireLinkAPI.api("/account/avatar", { method: "DELETE" });
-    toast("Photo", "Image supprimée");
     paintPhoto();
+    toast("Photo", "Image supprimée");
   };
   load().catch((err) => toast("Compte", err.message, "danger"));
 })();

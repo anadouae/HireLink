@@ -402,7 +402,10 @@ note bottom of User
   l application ; aucun champ de ce diagramme n est inventé.
   `role` : CANDIDAT | RECRUTEUR | ADMINISTRATEUR (Role.java).
   Dans une organisation : OWNER = Créateur, RECRUTEUR = Recruteur,
-  HIRING_MANAGER = Responsable du poste (OrgRole.libelleFr).
+  HIRING_MANAGER = valeur d'enum conservée pour les anciennes lignes.
+  Il n'est plus proposé à l'invitation ni au changement de rôle.
+  ScorecardCriterion et ScorecardEntry restent lisibles ;
+  les nouvelles écritures sont refusées.
 end note
 
 note right of Application

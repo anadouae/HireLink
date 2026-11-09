@@ -93,6 +93,24 @@ class SkillMatchingServiceTest {
     }
 
     @Test
+    void emptyProfileHasNoAvailableScore() {
+        var empty = candidate(null, null, null, null);
+        var withSkills = offer("Java,Spring Boot", "Docker");
+        var withoutRequired = offer(null, null);
+        assertEquals(null, service.evaluateIfAvailable(empty, withSkills));
+        assertEquals(null, service.evaluateIfAvailable(empty, withoutRequired));
+        var bare = new ma.ensat.hirelink.model.JobOffer();
+        assertEquals(null, service.evaluateIfAvailable(candidate("Java", "Junior", "CDI", "Tétouan"), bare));
+    }
+
+    @Test
+    void manualSkillsWithoutCvAreEnough() {
+        var c = service.evaluateIfAvailable(candidate("Java,Spring Boot", "Junior", "CDI", "Tétouan,Hybride"),
+                offer("Java,Spring Boot", null));
+        assertTrue(c != null && c.score() > 0);
+    }
+
+    @Test
     void scoresAreOrdered() {
         var o = offer("Java,Spring Boot,MySQL", "Docker");
         double good = service.evaluate(candidate("Java,Spring Boot,MySQL,Docker", "Junior", "CDI", "Tétouan"), o).score();

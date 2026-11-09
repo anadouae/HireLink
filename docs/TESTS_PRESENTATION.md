@@ -1,5 +1,7 @@
 # HireLink — Fichier de test guidé (tous les rôles)
 
+Les étapes « Évaluer », « Scorecard » et le changement de rôle vers Responsable du poste décrivent l'ancien parcours. Elles ne sont plus proposées. Les comptes et notes déjà présents restent en base.
+
 Document de référence pour la séance de test. Chaque étape indique **ce qu’on clique** et **ce qu’on doit voir**.
 Tous les libellés et tous les messages attendus ont été relevés dans l’application réellement exécutée
 (navigateur automatisé + appels API réels), pas dans la spéculation. Si un libellé affiché diffère de ce fichier,

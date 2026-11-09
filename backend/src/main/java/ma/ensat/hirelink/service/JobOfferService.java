@@ -100,7 +100,7 @@ public class JobOfferService {
                 .stream()
                 .filter(o -> !isExpired(o) && !isHiddenFromCandidates(o))
                 .map(o -> toDto(o, viewer, false));
-        if (viewer != null && viewer.getRole() == Role.CANDIDAT) {
+        if (viewer != null && viewer.getRole() == Role.CANDIDAT && matchingService.hasConfirmedSkills(viewer)) {
             return stream
                     .sorted(Comparator.comparingDouble((ApiDtos.JobOfferResponse o) ->
                             o.matchScore() != null ? o.matchScore() : 0.0).reversed())
@@ -562,10 +562,12 @@ public class JobOfferService {
         List<String> missing = List.of();
         SkillMatchingService.Compatibility breakdown = null;
         if (viewer != null && viewer.getRole() == Role.CANDIDAT) {
-            breakdown = matchingService.evaluate(viewer, o);
-            match = breakdown.score();
-            matched = breakdown.covered();
-            missing = breakdown.missing();
+            breakdown = matchingService.evaluateIfAvailable(viewer, o);
+            if (breakdown != null) {
+                match = breakdown.score();
+                matched = breakdown.covered();
+                missing = breakdown.missing();
+            }
         }
         ResponsivenessService.Signal pace = responsiveness.signalOf(o.getRecruiter().getAssignedOrgId());
         return new ApiDtos.JobOfferResponse(

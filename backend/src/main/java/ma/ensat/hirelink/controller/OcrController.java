@@ -30,7 +30,7 @@ public class OcrController {
     public Map<String, Object> parseCv(
             @AuthenticationPrincipal User user,
             @RequestPart("file") MultipartFile file,
-            @RequestParam(value = "applySkills", defaultValue = "true") boolean applySkills
+            @RequestParam(value = "applySkills", defaultValue = "false") boolean applySkills
     ) {
         try {
             OcrService.OcrResult result = ocrService.extract(file);

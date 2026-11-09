@@ -288,7 +288,8 @@ html[data-theme="dark"] .offer-fact--money dt { color: var(--champagne-light, #e
 
 /* Liste de gestion des offres (espace recruteur) : carte + barre d'actions sous la carte */
 .offer-card-grid--managed { align-items: start; }
-.offer-managed { display: grid; gap: 0.4rem; }
+.offer-managed { display: grid; gap: 0.4rem; position: relative; }
+.offer-managed:has(.rc-more[open]) { z-index: 40; }
 .offer-managed.is-draft .offer-card { border-style: dashed; }
 /* Close et rangée ne sont pas des brouillons : ce sont des fins de vie, affichées comme telles. */
 .offer-managed.is-closed .offer-card { opacity: .88; }

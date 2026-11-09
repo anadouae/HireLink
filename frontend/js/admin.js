@@ -9,17 +9,17 @@
   /** Un seul fichier pour neuf vues : l'onglet doit dire laquelle est ouverte, sinon les captures ne correspondent à rien. */
   const VIEW_TITLE = {
     dash: "Tableau de bord", orgs: "Entreprises", users: "Comptes", moderation: "Modération", offers: "Offres",
-    plans: "Plans & factures", refusals: "Motifs de refus", audit: "Journal d’audit", emails: "E-mails envoyés",
+    plans: "Plans & factures", refusals: "Motifs de refus", audit: "Journal d’audit", emails: "Journal des e-mails",
   };
   const STATUS_FR = App.STATUS_FR;
   const PAY_FR = { NON_PAYEE: "Non payée", PAYEE: "Payée", ANNULEE: "Annulée", AVOIR: "Avoir historique", EMISE: "Non payée", REGLEE: "Payée", OFFERTE: "Payée" };
   const ROLE_FR = { CANDIDAT: "Candidat", RECRUTEUR: "Recruteur", ADMINISTRATEUR: "Administrateur" };
-  const ORG_ROLE_FR = { OWNER: "Créateur", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Responsable du poste" };
+  const ORG_ROLE_FR = { OWNER: "Créateur", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Accès limité" };
   const ORG_ROLE_TONE = { OWNER: "rc-pill--rose", RECRUTEUR: "", HIRING_MANAGER: "rc-pill--info" };
   /** Filtre de rôle : rôle plateforme (CANDIDAT, RECRUTEUR, ADMINISTRATEUR) ou rôle dans l'organisation (OWNER, HIRING_MANAGER). */
   function userMatches(u, f) {
     if (f === "all") return true;
-    if (f === "OWNER" || f === "HIRING_MANAGER") return u.orgRole === f;
+    if (f === "OWNER") return u.orgRole === f;
     return u.role === f;
   }
 
@@ -642,7 +642,7 @@
   });
 
   /* ------------------------------------------------------------ e-mails envoyés */
-  const MAIL_STATE = { SENT: ["Envoyé", "ok"], LOGGED: ["En attente", "warn"], FAILED: ["Échec", "danger"] };
+  const MAIL_STATE = { SENT: ["Envoyé", "ok"], LOGGED: ["Journalisé", "warn"], FAILED: ["Échec", "danger"] };
   const MAIL_KIND = { SECURITY: "Sécurité", ACCOUNT: "Compte", APPLICATION: "Candidature", INTERVIEW: "Entretien" };
 
   async function loadEmails() {
@@ -652,7 +652,7 @@
       const rows = await HireLinkAPI.api("/admin/emails", { noDedupe: true });
       if (!rows.length) {
         body.innerHTML = '<tr><td colspan="6"></td></tr>';
-        App.empty(body.firstChild.firstChild, { title: "Aucun e-mail pour le moment", text: "Les messages envoyés par HireLink (candidatures, entretiens, sécurité) apparaîtront ici." });
+        App.empty(body.firstChild.firstChild, { title: "Aucun e-mail pour le moment", text: "Les messages envoyés, journalisés ou en échec (candidatures, entretiens, sécurité) apparaîtront ici." });
         return;
       }
       body.innerHTML = rows.map((r) => {

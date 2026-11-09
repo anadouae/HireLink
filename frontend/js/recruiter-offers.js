@@ -1,4 +1,4 @@
-/** Offres : liste de l'organisation, filtres, publication, critères de scorecard, assistant de création. */
+/** Offres : liste de l'organisation, filtres, publication et assistant de création. */
 (function () {
   const RC = HireLinkApp;
   const session = RC.mount({
@@ -33,7 +33,7 @@
   }
 
   function paint() {
-    if (!$("offers-grid")) return; // page remplacée (Hiring Manager)
+    if (!$("offers-grid")) return;
     if (!loaded) return;
     const c = counts();
     const q = (($("rc-search") || {}).value || "").trim();
@@ -88,7 +88,7 @@
   /** Ce que l'on voit d'abord : l'action qui répond à la question du jour. Le reste est dans « ⋯ ». */
   function actionsFor(o, n) {
     const key = stateOf(o).key;
-    const menu = [{ act: "score", label: "Critères de scorecard" }];
+    const menu = [];
     let primary;
     if (key === "online") {
       primary = [{ act: "unpublish", label: "Dépublier", cls: "btn-soft" }, { act: "close", label: "Clôturer", cls: "btn-ghost" }];
@@ -293,40 +293,6 @@
     }
   }
 
-  async function editScorecard(o) {
-    let criteria = [];
-    try { criteria = await HireLinkAPI.api("/offers/" + o.id + "/scorecard-criteria"); } catch (err) { RC.toast("Scorecard", err.message, "danger"); return; }
-    if (!criteria.length) criteria = [{ label: "Technique", weight: 3 }, { label: "Soft skills", weight: 2 }, { label: "Culture fit", weight: 1 }];
-    const row = (c) =>
-      '<div class="rc-row sc-row" style="margin-bottom:.5rem"><input class="rc-select sc-label" style="flex:1;min-width:140px" placeholder="Critère" value="' + esc(c.label || "") + '" />' +
-      '<input class="rc-select sc-weight" type="number" min="1" max="5" style="width:74px" value="' + esc(c.weight || 1) + '" title="Poids" />' +
-      '<label class="rc-muted" style="font-size: var(--text-sm)"><input type="checkbox" class="sc-veto"' + (c.veto ? " checked" : "") + ' /> Veto</label>' +
-      '<button type="button" class="btn btn-ghost btn-sm sc-del" aria-label="Retirer">✕</button></div>';
-    const res = await HireLink.openModal({
-      title: "Critères de scorecard",
-      description: o.title + " — chaque évaluateur note de 1 à 5 sur ces critères.",
-      bodyHtml: '<div id="sc-rows">' + criteria.map(row).join("") + '</div><button type="button" class="btn btn-soft btn-sm" id="sc-add">+ Ajouter un critère</button>',
-      confirmLabel: "Enregistrer",
-      onReady: (api) => {
-        const rows = api.root.querySelector("#sc-rows");
-        api.root.addEventListener("click", (e) => {
-          if (e.target.id === "sc-add") rows.insertAdjacentHTML("beforeend", row({ label: "", weight: 1 }));
-          if (e.target.classList.contains("sc-del")) e.target.closest(".sc-row").remove();
-        });
-      },
-    });
-    if (!res) return;
-    const items = Array.from(document.querySelectorAll("#sc-rows .sc-row")).map((r) => ({
-      label: r.querySelector(".sc-label").value.trim(),
-      weight: Math.max(1, Math.min(5, Number(r.querySelector(".sc-weight").value) || 1)),
-      veto: r.querySelector(".sc-veto").checked,
-    })).filter((i) => i.label);
-    if (!items.length) { RC.toast("Scorecard", "Ajoutez au moins un critère.", "warn"); return; }
-    try {
-      await HireLinkAPI.api("/offers/" + o.id + "/scorecard-criteria", { method: "PUT", body: { criteria: items } });
-      RC.toast("Scorecard", "Critères enregistrés", "ok");
-    } catch (err) { RC.toast("Scorecard", err.message, "danger"); }
-  }
 
   function onGridClick(e) {
     const btn = e.target.closest("button[data-act]");
@@ -335,7 +301,6 @@
     if (!o) return;
     const act = btn.dataset.act;
     if (act === "edit") HireLinkOfferWizard.edit(o, () => load(true));
-    else if (act === "score") editScorecard(o);
     else if (act === "del") remove(o);
     else if (act === "duplicate") duplicate(o, btn);
     else if (act === "extend") extendDeadline(o);

@@ -76,8 +76,45 @@ public class SkillMatchingService {
     public record Criterion(String code, String label, int weight, boolean applicable, Double ratio, double points,
                             String detail, List<String> matched, List<String> missing) {}
 
-    public record Compatibility(double score, boolean capped, List<Criterion> criteria,
+    /**
+     * {@code rawScore} est le total des critères avant plafond. Il est égal à {@code score} quand aucun plafond
+     * ne s'applique. {@code score} est le nombre à afficher.
+     */
+    public record Compatibility(double score, boolean capped, double rawScore, List<Criterion> criteria,
                                 List<String> covered, List<String> missing) {}
+
+    /** Au moins une compétence confirmée dans le profil. Le fichier CV n'entre pas dans cette condition. */
+    public boolean hasConfirmedSkills(User candidate) {
+        if (candidate == null) return false;
+        for (String raw : split(candidate.getSkills())) {
+            if (!catalog.key(raw).isBlank()) return true;
+        }
+        return false;
+    }
+
+    /** L'offre donne au moins un critère que {@link #evaluate} sait comparer. */
+    public boolean offerHasExploitableCriterion(JobOffer offer) {
+        if (offer == null) return false;
+        List<String> reqAll = split(offer.getRequiredSkills());
+        List<String> niceAll = split(offer.getNiceToHaveSkills());
+        boolean skills = reqAll.stream().anyMatch(r -> !catalog.isLanguage(r))
+                || niceAll.stream().anyMatch(r -> !catalog.isLanguage(r))
+                || reqAll.stream().anyMatch(catalog::isLanguage)
+                || niceAll.stream().anyMatch(catalog::isLanguage);
+        boolean contract = offer.getContractType() != null && !offer.getContractType().isBlank();
+        boolean place = offer.getWorkMode() != null
+                || (offer.getLocation() != null && !offer.getLocation().isBlank());
+        return skills || offer.getExperienceLevel() != null || contract || place;
+    }
+
+    /**
+     * Score affichable. {@code null} si le candidat n'a aucune compétence confirmée ou si l'offre
+     * n'a aucun critère comparable : l'absence de données n'est pas un score de 0 %.
+     */
+    public Compatibility evaluateIfAvailable(User candidate, JobOffer offer) {
+        if (!hasConfirmedSkills(candidate) || !offerHasExploitableCriterion(offer)) return null;
+        return evaluate(candidate, offer);
+    }
 
     public Compatibility evaluate(User candidate, JobOffer offer) {
         String candSkills = candidate == null ? null : candidate.getSkills();
@@ -109,6 +146,7 @@ public class SkillMatchingService {
             out.add(new Criterion(c.code(), c.label(), c.weight(), c.applicable(), c.ratio(), pts, c.detail(), c.matched(), c.missing()));
         }
         boolean capped = false;
+        double rawScore = totalWeight == 0 ? 0 : Math.round(sum * 10) / 10.0;
         double cap = Math.min(CAP_WHEN_BELOW_FLOOR, r.score() + CAP_MARGIN);
         if (!req.isEmpty() && r.score() < REQUIRED_FLOOR * 100 && sum > cap) {
             sum = cap;
@@ -117,7 +155,7 @@ public class SkillMatchingService {
         double score = totalWeight == 0 ? 0 : Math.round(sum * 10) / 10.0;
         List<String> covered = new ArrayList<>(r.covered());
         List<String> missing = new ArrayList<>(r.missing());
-        return new Compatibility(score, capped, out, covered, missing);
+        return new Compatibility(score, capped, rawScore, out, covered, missing);
     }
 
     private static Criterion skills(String code, String label, int w, List<String> wanted, MatchDetail d) {

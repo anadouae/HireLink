@@ -20,8 +20,8 @@ if (Présélection) then (oui)
       |-HireLink (système)-|
       :Rappel J-1 envoyé une seule fois\n(interview_reminder_sent = true);
       |-Recruteur-|
-      :Mène l'entretien et saisit la scorecard;
-      :Décide embauche ou refus\n(la décision finale vit dans l'entreprise);
+      :Mène l'entretien hors de HireLink;
+      :L'entreprise décide ensuite\n(HireLink s'arrête à la convocation);
       |-Candidat-|
       :Ajoute l'entretien au calendrier (.ics)\net suit l'avancement;
       stop

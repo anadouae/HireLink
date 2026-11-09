@@ -150,13 +150,20 @@ public class InvoicePdfService {
         return y - (size + 6);
     }
 
-    /** Helvetica standard ne couvre pas tous les accents : on remplace seulement dans ce cas. */
+    /** Un caractère absent de la police est remplacé : la facture reste générable. */
     private static String fit(PDFont font, String text) {
-        if (font instanceof PDType0Font) return text;
         StringBuilder out = new StringBuilder();
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            out.append(c < 32 || c > 255 ? '?' : c);
+        int i = 0;
+        while (i < text.length()) {
+            int cp = text.codePointAt(i);
+            String s = new String(Character.toChars(cp));
+            i += Character.charCount(cp);
+            try {
+                font.encode(s);
+                out.append(s);
+            } catch (Exception ex) {
+                out.append('?');
+            }
         }
         return out.toString();
     }

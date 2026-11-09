@@ -233,7 +233,7 @@
   let newMemberId = null;
   const ROLE_CLS = { OWNER: "r-owner", RECRUTEUR: "r-rec", HIRING_MANAGER: "r-hm" };
   /** Seuls deux rôles s'attribuent ici : celui de créateur se transfère, il ne se choisit pas. */
-  const ASSIGNABLE_ROLES = ["RECRUTEUR", "HIRING_MANAGER"];
+  const ASSIGNABLE_ROLES = ["RECRUTEUR"];
   /** Gouvernement de l'espace : inviter, changer un rôle, suspendre, retirer, transférer, choisir la formule. */
   function canGovern() { return org ? org.myRole === "OWNER" : RC.isCreator(); }
 
@@ -253,6 +253,11 @@
         "</div>";
     }
     if (m.orgRole === "OWNER") return "";
+    if (m.orgRole === "HIRING_MANAGER") {
+      return '<div class="hq-desk-actions"><span class="muted">Accès limité. Aucun nouveau droit n’est accordé.</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-suspend="' + m.userId + '" data-name="' + label + '">Mettre en pause</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-remove="' + m.userId + '" data-name="' + label + '">Retirer</button></div>';
+    }
     const opts = ASSIGNABLE_ROLES.map((r) =>
       '<option value="' + r + '"' + (m.orgRole === r ? " selected" : "") + ">" + esc(RC.ROLE_FR[r]) + "</option>").join("");
     return '<div class="hq-desk-actions">' +
@@ -272,7 +277,7 @@
   function paintMembers(list) {
     const box = $("members-list");
     const order = ["OWNER", "RECRUTEUR", "HIRING_MANAGER"];
-    const titles = { OWNER: "Créateur de l’espace", RECRUTEUR: "Recrutement", HIRING_MANAGER: "Responsables du poste" };
+    const titles = { OWNER: "Créateur de l’espace", RECRUTEUR: "Recrutement", HIRING_MANAGER: "Accès limité" };
     const rows = order.map((r) => ({ r, list: list.filter((m) => (m.orgRole || "RECRUTEUR") === r && !m.suspended && !m.pending) })).filter((g) => g.list.length);
     const paused = list.filter((m) => m.suspended && !m.pending);
     const waiting = list.filter((m) => m.pending);
@@ -654,7 +659,7 @@
       '<div class="hq-sign">' + logoMark(d, "hq-sign-logo") + "</div></div>" +
       '<div class="hq-id"><small>Siège</small><h2>' + esc(d.name) + (d.verified ? ' <span class="hq-verified">' + (window.HLIcons ? HLIcons.svg("shield", 14) : "") + "Vérifiée</span>" : "") + "</h2>" +
       "<p>" + [d.sector ? esc(d.sector) : "", d.city ? (flag(d.city) + " " + esc(d.city)).trim() : ""].filter(Boolean).join(" · ") + "</p>" +
-      '<div class="hq-stats"><span><b>' + n + "</b> membre" + (n > 1 ? "s" : "") + "</span><span><b>" + (roles.RECRUTEUR || 0) + "</b> recruteur" + ((roles.RECRUTEUR || 0) > 1 ? "s" : "") + "</span><span><b>" + (roles.HIRING_MANAGER || 0) + "</b> responsable" + ((roles.HIRING_MANAGER || 0) > 1 ? "s" : "") + "</span><span><b>" + offersOpen + "</b> offre" + (offersOpen > 1 ? "s" : "") + " ouverte" + (offersOpen > 1 ? "s" : "") + "</span><span><b>" + followers() + "</b> candidat" + (followers() > 1 ? "s suivent" : " suit") + "</span></div></div>";
+      '<div class="hq-stats"><span><b>' + n + "</b> membre" + (n > 1 ? "s" : "") + "</span><span><b>" + (roles.RECRUTEUR || 0) + "</b> recruteur" + ((roles.RECRUTEUR || 0) > 1 ? "s" : "") + "</span><span><b>" + (roles.HIRING_MANAGER || 0) + "</b> accès limité" + ((roles.HIRING_MANAGER || 0) > 1 ? "s" : "") + "</span><span><b>" + offersOpen + "</b> offre" + (offersOpen > 1 ? "s" : "") + " ouverte" + (offersOpen > 1 ? "s" : "") + "</span><span><b>" + followers() + "</b> candidat" + (followers() > 1 ? "s suivent" : " suit") + "</span></div></div>";
     bindLogoFallback(box);
   }
 

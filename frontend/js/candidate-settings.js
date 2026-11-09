@@ -208,7 +208,7 @@
     if (!box) return;
     const tips = [];
     if (!me || !me.cvFileName) tips.push("Déposez votre CV. La synthèse n’a rien à lire tant que le document n’est pas là.");
-    else if (!String(me.cvSections || "").trim()) tips.push("Confirmez les sections extraites du CV. Sans ça, le classement des offres travaille sur un texte incomplet.");
+    else if (!String(me.cvSections || "").trim()) tips.push("Confirmez les sections lues dans le CV avant de les garder. Le score de correspondance utilise les compétences confirmées, pas le texte brut du CV.");
     else tips.push("Le CV est lisible. Lancez la synthèse pour voir ce qui manque pour le métier visé, puis ajustez les compétences.");
     if (apps.some(function (a) { return a.status === "INTERVIEW"; })) tips.push("Un entretien est ouvert. Relisez le poste avant le jour J. La synthèse ne répond pas à votre place.");
     box.innerHTML = tips.map(function (t) { return "<p>" + t + "</p>"; }).join("");

@@ -45,16 +45,20 @@
     } catch (err) { RC.toast("Compte", err.message, "danger"); } finally { RC.busy(btn, false); }
   });
 
+  let photoGen = 0;
   async function paintPhoto() {
+    const gen = ++photoGen;
     const img = $("pf-photo"), fb = $("pf-photo-fallback");
     fb.textContent = RC.initials($("set-name").value || session.fullName);
     try {
-      const res = await HireLinkAPI.authFetch("/account/avatar");
+      const res = await HireLinkAPI.authFetch("/account/avatar?t=" + Date.now());
+      if (gen !== photoGen) return;
       if (!res.ok) throw new Error("none");
       img.src = URL.createObjectURL(await res.blob());
       img.hidden = false;
       fb.hidden = true;
     } catch (_) {
+      if (gen !== photoGen) return;
       img.hidden = true;
       fb.hidden = false;
     }

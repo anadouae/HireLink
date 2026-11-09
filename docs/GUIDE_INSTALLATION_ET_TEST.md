@@ -1,5 +1,7 @@
 # HireLink — Guide d’installation et de test (Windows)
 
+Les étapes qui demandent une grille de notes ou d'attribuer un nouveau responsable du poste décrivent un parcours ancien. Le produit actuel s'arrête à la convocation, refuse ces écritures, et conserve les données déjà enregistrées. Le comportement à jour est dans `docs/SCORE_COMPATIBILITE.md` et `docs/diagrammes/v5`.
+
 Ce guide s’adresse à quelqu’un qui n’a jamais lancé le projet. Il explique, pas à pas, comment installer les outils, démarrer HireLink sur Windows, puis tester chaque rôle (candidat, recruteur, hiring manager, administrateur), les parcours croisés entre rôles et la sécurité. Les captures d’écran proviennent d’une exécution réelle de l’application.
 
 > Honnêteté sur les tests : tous les scénarios de ce guide ont été exécutés pour de vrai, avec un navigateur automatisé, sur une base vide, **sous Linux avec MariaDB 10.11** (MySQL 8 n’était pas installable sur la machine de test). Les commandes spécifiques à Windows (installation des outils, PowerShell) sont des commandes standard mais n’ont pas été exécutées sur Windows. Le comportement de l’application ne dépend pas du système.

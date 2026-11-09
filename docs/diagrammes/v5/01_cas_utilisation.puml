@@ -5,7 +5,7 @@ title HireLink — cas d'utilisation généraux (tous les acteurs)
 actor "Visiteur\nsans compte" as V
 actor Candidat as C
 actor "Recruteur\nmembre ou créateur" as R
-actor "Responsable du poste\n(hiring manager)" as H
+actor "Ancien accès limité\n(hors parcours, données conservées)" as H
 actor Administrateur as A
 actor "Système de planification\nrappels, SLA, purges" as SYS
 
@@ -49,7 +49,7 @@ ou prolonger sa date limite"
   usecase UC_pipeline as "Trier les candidatures
 dans le pipeline"
   usecase UC_refuser as "Refuser avec un motif"
-  usecase UC_scorecard as "Shortlist et scorecard"
+  usecase UC_scorecard as "Présélectionner\n(le matching aide, il ne décide pas)"
   usecase UC_planifier as "Planifier un entretien
 (sur site ou visio)"
   usecase UC_reporter as "Reporter ou annuler un entretien"
@@ -59,8 +59,8 @@ transférer la propriété"
   usecase UC_notes as "Note interne et événements
 de l'organisation"
   usecase UC_sla as "Vérifier son rythme de réponse réel"
-  usecase UC_assign as "Attribuer un dossier à un
-responsable du poste"
+  usecase UC_assign as "Ancienne affectation\nà un responsable du poste
+(conservée, plus proposée)"
   usecase UC_followers as "Voir combien de candidats
 suivent l'entreprise"
   usecase UC_credits as "Suivre la consommation des crédits IA"

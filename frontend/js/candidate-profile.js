@@ -494,10 +494,8 @@
     match: {
       label: "Compatibilité",
       points: function (s) {
-        const role = (document.getElementById("pf-roles") || {}).value || "";
-        if (!role) return ["Indiquez le métier recherché. Le classement des offres s'appuie dessus."];
-        if (!s.skills) return ["Sans compétences, le score de compatibilité avec les offres reste faible."];
-        return ["Le métier visé et les compétences peuvent être comparés aux offres. La synthèse ne postule pas."];
+        if (!s.skills) return ["Correspondance non disponible tant qu'aucune compétence n'est confirmée. Le métier recherché n'entre pas dans le score."];
+        return ["Les compétences confirmées alimentent le score, avec le niveau, le contrat et le lieu s'ils sont renseignés. Le métier recherché ne classe pas les offres."];
       },
     },
   };
