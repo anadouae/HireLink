@@ -44,7 +44,7 @@ public class AccountController {
     @GetMapping("/avatar")
     public ResponseEntity<byte[]> avatar(@AuthenticationPrincipal User user) {
         var photo = profile.avatar(user);
-        return ResponseEntity.ok().header("Cache-Control", "private, max-age=60").contentType(org.springframework.http.MediaType.parseMediaType(photo.getContentType())).body(photo.getData());
+        return ResponseEntity.ok().header("Cache-Control", "private, no-store").contentType(org.springframework.http.MediaType.parseMediaType(photo.getContentType())).body(photo.getData());
     }
 
     @PostMapping(value = "/avatar", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)

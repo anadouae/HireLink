@@ -16,19 +16,22 @@ public class PrivacyService {
     private final CvStorage cvStorage;
     private final WebAuthnCredentialRepository webAuthnCredentials;
     private final InAppNotificationRepository notificationRepository;
+    private final SkillMatchingService matchingService;
 
     public PrivacyService(UserRepository userRepository,
                           ApplicationRepository applicationRepository,
                           MembershipRepository membershipRepository,
                           CvStorage cvStorage,
                           WebAuthnCredentialRepository webAuthnCredentials,
-                          InAppNotificationRepository notificationRepository) {
+                          InAppNotificationRepository notificationRepository,
+                          SkillMatchingService matchingService) {
         this.membershipRepository = membershipRepository;
         this.cvStorage = cvStorage;
         this.webAuthnCredentials = webAuthnCredentials;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
         this.applicationRepository = applicationRepository;
+        this.matchingService = matchingService;
     }
 
     @Transactional(readOnly = true)
@@ -51,7 +54,10 @@ public class PrivacyService {
             row.put("offer", a.getJobOffer().getTitle());
             row.put("status", a.getStatus().name());
             row.put("submittedAt", a.getSubmittedAt().toString());
-            row.put("matchScore", a.getMatchScore());
+            row.put("matchScoreAtSubmission", a.getMatchScore());
+            SkillMatchingService.Compatibility current = matchingService.evaluateIfAvailable(user, a.getJobOffer());
+            row.put("currentMatchScore", current == null ? null : current.score());
+            row.put("matchingAvailable", current != null);
             apps.add(row);
         }
         m.put("applications", apps);

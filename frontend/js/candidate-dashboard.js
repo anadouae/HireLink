@@ -58,7 +58,10 @@
     const now = Date.now();
     const upcoming = apps.filter((a) => a.status === "INTERVIEW" && a.interviewAt && a.interviewStatus !== "CANCELLED" && new Date(a.interviewAt).getTime() > now - 3600e3)
       .sort((a, b) => new Date(a.interviewAt) - new Date(b.interviewAt));
-    const reco = offers.filter((o) => !sent[o.id]).sort((a, b) => (b.matchScore || 0) - (a.matchScore || 0)).slice(0, 4);
+    const scoring = offers.some((o) => o.matchScore != null);
+    const reco = scoring
+      ? offers.filter((o) => !sent[o.id] && o.matchScore != null).sort((a, b) => b.matchScore - a.matchScore).slice(0, 4)
+      : [];
     const checks = profileChecks(me);
     const missing = checks.filter((c) => !c[0]);
     const pct = Math.round(((checks.length - missing.length) / checks.length) * 100);
@@ -89,7 +92,7 @@
     $("next-steps").innerHTML = steps.length ? steps.join("")
       : '<div class="db-empty">' + ico("calendar") + "<strong>Rien de prévu pour l’instant</strong><span>Vos entretiens apparaîtront ici dès qu’un recruteur vous en propose un.</span></div>";
 
-    $("profile-pct").textContent = pct === 100 ? "Profil complet" : "Complété à " + pct + " % · le score de compatibilité en dépend";
+    $("profile-pct").textContent = pct === 100 ? "Dossier complet" : "Dossier complété à " + pct + " %";
     $("profile-bar").style.setProperty("--w", pct + "%");
     $("profile-checks").innerHTML = checks.map((c) => "<li" + (c[0] ? ' class="is-ok"' : "") + ">" + ico(c[0] ? "check" : "dot") + (c[0] ? "<span>" + esc(c[1]) + "</span>" : '<a href="' + c[2] + '">' + esc(c[1]) + "</a>") + "</li>").join("");
 
@@ -97,13 +100,21 @@
     $("recent-list").innerHTML = ordered.length ? ordered.slice(0, 5).map(tracker).join("")
       : '<div class="db-empty">' + ico("briefcase") + '<strong>Aucune candidature</strong><span>Postulez à une offre pour suivre ici chaque étape.</span><a class="btn btn-soft btn-sm" href="candidate.html">Parcourir les offres</a></div>';
 
+    const recoTitle = document.getElementById("reco-title");
+    const recoLead = document.getElementById("reco-lead");
+    if (recoTitle) recoTitle.textContent = scoring ? "Offres qui vous correspondent" : "Correspondance non disponible";
+    if (recoLead) recoLead.textContent = scoring
+      ? "Classées par le score pondéré de votre profil"
+      : "Ajoutez au moins une compétence confirmée pour voir des offres adaptées. Ce n'est pas un score de 0 %.";
     if (reco.length) $("reco-list").innerHTML = reco.map((o) => {
       const place = HireLinkPlaces.placeLabel(o.location, o.companyCity);
       const score = o.matchScore != null ? '<span class="badge ' + (o.matchScore >= 60 ? "badge-ok" : "badge-info") + '">' + Math.round(o.matchScore) + " %</span>" : "";
       return '<div class="rc-item"><div class="rc-item-main"><strong>' + esc(o.title) + "</strong><span>" + '<a class="db-co-link" href="candidate-companies.html?name=' + encodeURIComponent(o.companyName || "") + '">' + esc(o.companyName || "Entreprise") + "</a>" + (place ? " · " + esc(place) : "") +
         (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div>" + score + '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler</a></div>';
     }).join("");
-    else $("reco-list").innerHTML = '<div class="db-empty">' + ico("target") + "<strong>Aucune nouvelle offre</strong><span>De nouvelles offres sont publiées chaque semaine.</span></div>";
+    else $("reco-list").innerHTML = scoring
+      ? '<div class="db-empty">' + ico("target") + "<strong>Aucune nouvelle offre</strong><span>De nouvelles offres sont publiées chaque semaine.</span></div>"
+      : '<div class="db-empty">' + ico("target") + "<strong>Correspondance non disponible</strong><span>Le CV n'est pas exigé pour le score. Confirmez au moins une compétence.</span><a class=\"btn btn-soft btn-sm\" href=\"candidate-profile.html\">Compléter mes compétences</a></div>";
   }
 
   RC.skeleton($("reco-list"), 3);

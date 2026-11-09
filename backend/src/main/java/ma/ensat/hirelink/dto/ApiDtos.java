@@ -226,7 +226,12 @@ public class ApiDtos {
             /** Détail du score par critère, recalculé sur le profil et l'offre actuels. */
             ma.ensat.hirelink.service.SkillMatchingService.Compatibility matchBreakdown,
             /** Réponses du candidat au moment de postuler (JSON) ; {@code null} pour les anciennes candidatures. */
-            String applicationDetails
+            String applicationDetails,
+            /** Valeur écrite au dépôt. Elle n'est pas recalculée. Elle peut provenir d'un ancien calcul. */
+            Double matchScoreAtSubmission,
+            /** Même valeur que {@code matchScore} : score actuel, ou {@code null} si le matching n'est pas disponible. */
+            Double currentMatchScore,
+            boolean matchingAvailable
     ) {}
 
     /** Vélocité mesurée du recruteur sur ses propres offres ; {@code badge} vide sous l'échantillon minimum. */

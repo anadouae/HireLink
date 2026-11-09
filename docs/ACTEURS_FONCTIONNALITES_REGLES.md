@@ -7,7 +7,7 @@ Document de référence Séance 1 (complément au cahier des charges).
 
 ### 1.1 Candidat
 - Créer / maintenir profil (compétences, métiers, lieux, contrats, niveau).
-- Importer un CV (OCR / extraction skills locale).
+- Importer un CV texte (PDF ou TXT). Les compétences proposées ne sont enregistrées qu'après confirmation. Une image ou un PDF scanné n'est pas lu. Le DOCX n'est pas accepté.
 - Consulter offres matchées (triées par score de compatibilité — pas d’alerte e-mail de matching, non implémentée).
 - Postuler via parcours multi-étapes (détail offre → CV → lettre opt. → photo opt. → envoi).
 - Suivre le kanban de candidatures (mêmes états que le recruteur).
@@ -18,8 +18,8 @@ Document de référence Séance 1 (complément au cahier des charges).
 ### 1.2 Recruteur (organisation RH / entreprise — pas un cabinet juridique)
 - Gérer fiche entreprise (ICE, vérification).
 - Publier des offres avec compétences + **SLA de réponse**.
-- Inbox prioritaire : file triée par délai de réponse restant, tuile « Réponses à risque » sur le dashboard. *Scoring Hot/Fit : spécifié, non implémenté — le seul score persisté est `match_score` (Jaccard), figé à la soumission.*
-- Pipeline sécurisé : vérifications obligatoires avant avancée, scorecard tech/soft/culture.
+- Inbox prioritaire : file triée par délai de réponse restant, tuile « Réponses à risque » sur le dashboard. Le score persisté au dépôt est `applications.match_score`. La lecture recalcule un score actuel, qui reste vide si le candidat n'a aucune compétence confirmée.
+- Pipeline : reçu, présélection, shortlist, entretien. La grille de notes manuelle n'est plus un parcours. Les anciennes notes restent en base.
 - Organiser entretiens (ONSITE / VISIO) avec créneau et lien de visio ; PHONE et ASYNC restent lisibles (imports antérieurs) mais ne sont plus planifiables.
 - Refus **uniquement** avec motif (anti-ghosting).
 - Entreprise & équipe : badge de réactivité mesuré, rôles d’équipe et sièges (5 en Accès, 25 en Premium), crédits IA. *Badge embarquable, onboarding checklist et canaux d’attraction : spécifiés, non implémentés.*
@@ -55,7 +55,7 @@ Document de référence Séance 1 (complément au cahier des charges).
 | F12 | Facturation (Essentiel→Performance, Accès→Premium) | Candidat, Recruteur | Moyenne |
 | F13 | Paramètres + mode sombre | Tous | Moyenne |
 | F14 | Aide in-app différenciée RH / candidat | Tous | Moyenne |
-| F15 | Scorecard structurée (critères, poids, veto, moyenne panel) | Recruteur, Panel | Haute* |
+| F15 | Grille de notes manuelle — hors parcours. Les tables restent lisibles, les nouvelles écritures sont refusées. | Historique | — |
 | F16 | Entretien typé (RH / technique / manager / cas / équipe / final) avec note, participants et accusé de réception — **un seul créneau par dossier** | Recruteur | Haute* |
 | F17 | Checklist bloquante par étape (templates) | Recruteur | Haute* |
 | F18 | Timeline immuable (ActivityLog append-only) | Système | Haute* |
@@ -63,7 +63,7 @@ Document de référence Séance 1 (complément au cahier des charges).
 | F20 | ~~Feedback 360 (NPS candidat)~~ — non implémenté | Candidat | — |
 | F21 | Signal anti-doublon sur les **offres** (`FraudOfferScanService`). *Blacklist candidat : non implémentée* | Recruteur | Moyenne* |
 | F22 | ~~Offre salariale + acceptation électronique~~ — hors parcours HireLink (`OFFER` / `HIRED` dépréciés, transitions bloquées) | Recruteur, Candidat | — |
-| F23 | Avis du Responsable du poste : affectation `assigned_hm_user_id`, note scorecard, alerte SLA partagée | Collaborateur | Moyenne* |
+| F23 | Ancien rôle d'organisation — absent des écrans et des nouvelles attributions. Les appartenances et affectations déjà enregistrées sont conservées, sans nouveau privilège. | Historique | — |
 | F25 | Détecteur formulation genrée/excluante (locale) | Recruteur | Haute |
 | F26 | Grille d’entretien structurée + crédits IA | Recruteur | Haute |
 | F27 | Badge de réactivité mesuré (« Réactif » / « Attentif », médiane des premières réponses) | Recruteur, Candidat | Haute |
@@ -84,7 +84,7 @@ Document de référence Séance 1 (complément au cahier des charges).
 | RM06 | Seul le propriétaire de l’offre (ou admin) avance / refuse. |
 | RM07 | Avancée d’étape : vérifications identité + CV lu + SLA (API). |
 | RM08 | Passage INTERVIEW : type + date/heure obligatoires. |
-| RM09 | ATS exhaustif : pas d’avance si checklist obligatoire incomplète ; veto scorecard bloque. |
+| RM09 | Avancer un dossier exige la checklist. Le veto d'une ancienne grille de notes ne bloque plus rien : cette grille n'est plus un parcours. |
 | RM10 | Timeline append-only : pas d’update/delete des ActivityLog. |
 | RM11 | Blacklist soft : signal historique, jamais bloquant auto. |
 | RM12 | Loi 09-08 / CNDP : consentement, minimisation, export, rétention. |
@@ -104,4 +104,4 @@ SUBMITTED → SCREENING → SHORTLISTED → INTERVIEW → OFFER → ACCEPTED
 SCREEN → ENTRETIEN_RH → ENTRETIEN_METIER → ENTRETIEN_DIRIGEANT → OFFRE → DECISION
 ```
 
-Chaque transition exige checklist complétée ; les étapes entretien exigent absence de veto scorecard ; chaque action est tracée dans la timeline.
+Chaque transition exige la checklist ; l'entretien se planifie avec un créneau réel ; chaque action est tracée dans la timeline. HireLink s'arrête à la convocation.

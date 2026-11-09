@@ -52,7 +52,11 @@
     root.appendChild(head);
 
     if (b.capped) {
-      root.appendChild(el("p", "hm-cap", "Plafonné : moins de la moitié des compétences obligatoires sont couvertes, les autres critères ne peuvent pas compenser."));
+      const raw = b.rawScore != null ? Math.round(b.rawScore) : null;
+      root.appendChild(el("p", "hm-cap",
+        (raw != null ? "Total des critères : " + raw + " %. " : "")
+        + "Plafond appliqué : moins de la moitié des compétences obligatoires sont couvertes. Score retenu : "
+        + Math.round(b.score) + " %. Les points de chaque critère restent ceux d'avant le plafond."));
     }
 
     const list = el("ol", "hm-list");

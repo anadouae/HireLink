@@ -10,6 +10,7 @@ import ma.ensat.hirelink.repository.OrganizationRepository;
 import ma.ensat.hirelink.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
@@ -102,5 +103,14 @@ class OrganizationServiceTest {
 
         assertEquals(ma.ensat.hirelink.model.Role.CANDIDAT, candidate.getRole());
         verify(users, never()).save(any(User.class));
+    }
+
+    @Test
+    void uneInvitationVersLAncienRoleEstRefusee() {
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
+                () -> service.invite(owner, "nouveau@atlas.ma", OrgRole.HIRING_MANAGER, false));
+
+        assertEquals(HttpStatus.BAD_REQUEST, ex.getStatusCode());
+        verify(users, never()).save(any());
     }
 }

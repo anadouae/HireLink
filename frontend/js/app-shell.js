@@ -21,7 +21,7 @@
   // ASYNC et les modes venus d'un ancien import n'ont ni lien ni numéro utilisables : l'étiquette reste sobre, le détail porte l'instruction saisie.
   var INTERVIEW_TYPE_AUTRE = { label: "Entretien", icon: "calendar", cls: "t-unknown" };
   var interviewTypeUi = function (type) { return INTERVIEW_TYPE_UI[type] || INTERVIEW_TYPE_AUTRE; };
-  var ROLE_FR = { OWNER: "Créateur", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Responsable du poste" };
+  var ROLE_FR = { OWNER: "Créateur", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Accès limité" };
 
   function esc(s) {
     return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -243,7 +243,7 @@
         { id: "refusals", href: "admin.html#refusals", label: "Motifs de refus", icon: "ban" },
         { section: "Sécurité" },
         { id: "audit", href: "admin.html#audit", label: "Journal d’audit", icon: "file" },
-        { id: "emails", href: "admin.html#emails", label: "E-mails envoyés", icon: "inbox" },
+        { id: "emails", href: "admin.html#emails", label: "Journal des e-mails", icon: "inbox" },
         { id: "account", href: "account.html", label: "Mon compte", icon: "shield" },
       ],
       menu: [["account.html", "user", "Mon compte"], ["security.html", "shield", "Sécurité du compte"]],
@@ -340,6 +340,7 @@
     var mark = document.getElementById("rc-orgmark");
     if (mark) mark.textContent = "?";
     toast("Entreprise", "Fiche entreprise injoignable : " + err.message, "warn");
+    document.querySelectorAll("[data-manage]").forEach(function (a) { a.hidden = true; });
   }
 
   /* --------------------------------------------------------------- topbar */

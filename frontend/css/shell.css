@@ -361,7 +361,7 @@ html[data-theme="dark"] .rc-avatar { color: #f0b8c4; }
   min-height: 180px;
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
+  overflow: visible;
   scroll-snap-align: start;
   box-sizing: border-box;
 }
@@ -374,7 +374,7 @@ html[data-theme="dark"] .rc-avatar { color: #f0b8c4; }
 .rc-card-k {
   background: var(--surface); border: 1px solid var(--line); border-radius: 13px; padding: 0.8rem 0.85rem;
   cursor: pointer; position: relative;
-  min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; overflow: hidden;
+  min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; overflow: visible;
   transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease), border-color 0.18s;
   animation: rc-in 0.3s var(--ease) both;
 }
@@ -606,6 +606,7 @@ body.rc .overlay { transition: opacity 0.22s var(--ease); }
 .rc-pill + .rc-pill { margin-left: .3rem; }
 body.rc .switch { flex: none; }
 .rc-more { position: relative; display: inline-block; }
+.rc-more[open] { z-index: 40; }
 .rc-more summary { list-style: none; cursor: pointer; padding-inline: .7rem; }
 .rc-more summary::-webkit-details-marker { display: none; }
 .rc-more-menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 190px; padding: .35rem; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-lg); animation: rc-in .16s var(--ease) both; }

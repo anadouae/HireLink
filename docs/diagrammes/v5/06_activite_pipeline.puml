@@ -10,8 +10,9 @@ if (Le recruteur ouvre le dossier ?) then (tri)
   if (Présélection ?) then (retenue)
     :SHORTLISTED;
     note right
-      Scorecard possible à cette étape :
-      scorecard_criteria / scorecard_entries
+      Pas de grille de notes.
+      Le matching aide la présélection.
+      Les anciennes scorecards restent en base.
     end note
     if (Entretien ?) then (oui)
       :INTERVIEW;

@@ -79,7 +79,7 @@ public class EventNotifier {
                             candidate.getFullName() + " vient de postuler à votre offre « " + offer.getTitle() + " ».",
                             "Objectif interne de première réponse : " + offer.getResponseSlaDays() + " jours.")
                             .withFacts(new Fact("Candidat", candidate.getFullName()),
-                                    new Fact("Compatibilité", app.getMatchScore() == null ? "—" : Math.round(app.getMatchScore()) + " %"))
+                                    new Fact("Compatibilité au dépôt", app.getMatchScore() == null ? "Non disponible" : Math.round(app.getMatchScore()) + " %"))
                             .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")),
                     null);
         }

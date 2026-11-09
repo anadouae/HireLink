@@ -61,6 +61,10 @@ public class OrganizationInvitationService {
         if (role == OrgRole.OWNER) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un seul compte crée l'espace : utilisez le transfert de rôle");
         }
+        if (role == OrgRole.HIRING_MANAGER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Ce rôle n'est plus proposé. Invitez un recruteur.");
+        }
         String email = emailRaw == null ? "" : emailRaw.trim().toLowerCase();
         if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Adresse e-mail invalide");
@@ -162,6 +166,10 @@ public class OrganizationInvitationService {
     @Transactional
     public void accept(String rawToken, String password) {
         OrganizationInvitation invitation = findUsable(rawToken);
+        if (invitation.getOrgRole() == OrgRole.HIRING_MANAGER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cette invitation n'est plus valable. Demandez une invitation de recruteur.");
+        }
         User user = invitation.getUser();
         PasswordPolicy.validate(password, user.getEmail(), user.getFullName());
         organizations.lockOrganization(invitation.getOrganization().getId());

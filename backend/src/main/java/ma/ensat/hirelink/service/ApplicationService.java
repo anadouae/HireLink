@@ -143,8 +143,8 @@ public class ApplicationService {
         Instant now = Instant.now();
         app.setSubmittedAt(now);
         app.setResponseDeadline(now.plus(offer.getResponseSlaDays(), ChronoUnit.DAYS));
-        var compat = matchingService.evaluate(candidate, offer);
-        double score = compat.score();
+        var compat = matchingService.evaluateIfAvailable(candidate, offer);
+        Double score = compat == null ? null : compat.score();
         app.setMatchScore(score);
         app.setCvSource(cvSource);
         app.setCvFileName(req.cvFileName() != null && !req.cvFileName().isBlank()
@@ -179,7 +179,8 @@ public class ApplicationService {
 
         timelineService.append(app.getId(), reopen ? ApplicationStatus.WITHDRAWN.name() : null,
                 ApplicationStatus.SUBMITTED.name(),
-                candidate.getId(), "{\"event\":\"" + (reopen ? "REAPPLY" : "APPLY") + "\",\"match\":" + Math.round(score) + "}");
+                candidate.getId(), "{\"event\":\"" + (reopen ? "REAPPLY" : "APPLY") + "\""
+                        + (score == null ? "" : ",\"match\":" + Math.round(score)) + "}");
         notifier.applicationSubmitted(app);
         return toDto(app);
     }
@@ -238,28 +239,8 @@ public class ApplicationService {
         Application app = applicationRepository.findById(appId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
         organizationService.assertSameOrg(actor, app.getJobOffer());
-        Membership actorM = organizationService.requireMembership(actor);
-        if (actorM.getOrgRole() == OrgRole.HIRING_MANAGER) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul un recruteur assigne un Responsable du poste (R14)");
-        }
-        if (hmUserId != null) {
-            Membership hm = membershipRepository
-                    .findByOrganizationIdAndUserId(actorM.getOrganization().getId(), hmUserId)
-                    .filter(Membership::isActive)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                            "HM hors organisation (R02)"));
-            if (hm.getOrgRole() != OrgRole.HIRING_MANAGER && hm.getOrgRole() != OrgRole.RECRUTEUR) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle cible invalide pour assignation");
-            }
-        }
-        app.setAssignedHmUserId(hmUserId);
-        applicationRepository.save(app);
-        audit.ok("HM_ASSIGNED", actor, "APPLICATION", app.getId(), "HM " + hmUserId);
-        if (hmUserId != null) {
-            notificationService.push("application:" + app.getId(), hmUserId, "Dossier assigné",
-                    "Vous êtes Responsable du poste sur « " + app.getJobOffer().getTitle() + " »", "ASSIGN");
-        }
-        return toDto(app);
+        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "L'affectation à un responsable du poste n'est plus proposée. Les affectations déjà enregistrées sont conservées.");
     }
 
     @Transactional
@@ -428,7 +409,8 @@ public class ApplicationService {
             remaining = ChronoUnit.DAYS.between(Instant.now(), deadline);
             breached = Instant.now().isAfter(deadline);
         }
-        var compat = matchingService.evaluate(app.getCandidate(), o);
+        var compat = matchingService.evaluateIfAvailable(app.getCandidate(), o);
+        Double currentScore = compat == null ? null : compat.score();
         ResponsivenessService.Signal pace = responsiveness.signalOf(o.getRecruiter().getAssignedOrgId());
         return new ApiDtos.ApplicationResponse(
                 app.getId(),
@@ -439,7 +421,7 @@ public class ApplicationService {
                 app.getCandidate().getEmail(),
                 app.getCandidate().getSkills(),
                 app.getStatus(),
-                compat.score(),
+                currentScore,
                 app.getRejectionReason(),
                 app.getRefusalReasonCode(),
                 app.getCvSource(),
@@ -470,7 +452,10 @@ public class ApplicationService {
                 app.getCvSections(),
                 app.getCvStorageName() != null && !app.getCvStorageName().isBlank(),
                 compat,
-                app.getApplicationDetails()
+                app.getApplicationDetails(),
+                app.getMatchScore(),
+                currentScore,
+                compat != null
         );
     }
 

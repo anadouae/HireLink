@@ -156,7 +156,7 @@
           .filter(Boolean)
           .slice(0, 12);
         const match =
-          o.matchScore != null ? Math.round(o.matchScore) + "% match" : "Matching à calculer";
+          o.matchScore != null ? Math.round(o.matchScore) + " % de correspondance" : "Correspondance non disponible";
         const pace = HireLinkOffer.paceOf(o);
         return (
           '<div class="' +
@@ -480,7 +480,7 @@
             try {
               const fd = new FormData();
               fd.append("file", f);
-              const res = await HireLinkAPI.authFetch("/ocr/cv", {
+              const res = await HireLinkAPI.authFetch("/ocr/cv?applySkills=false", {
                 method: "POST",
                 body: fd,
               });

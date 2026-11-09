@@ -260,7 +260,7 @@
     const move = h("button", { type: "button", class: "btn btn-soft btn-sm", text: "Reporter" });
     move.addEventListener("click", async () => {
       const f = form(app);
-      const ok = await HireLink.openModal({ title: "Reporter l’entretien", description: "Le candidat reçoit un e-mail avec le nouveau créneau et une invitation à jour.", bodyHtml: '<div id="iv-slot"></div>', confirmLabel: "Reporter et prévenir", large: true, confirmDisabled: true,
+      const ok = await HireLink.openModal({ title: "Reporter l’entretien", description: "Le nouveau créneau est enregistré dans HireLink. L’e-mail part seulement si la messagerie du serveur est active ; sinon il est journalisé, pas envoyé.", bodyHtml: '<div id="iv-slot"></div>', confirmLabel: "Reporter le créneau", large: true, confirmDisabled: true,
         onConfirm: () => HireLinkAPI.api("/applications/" + app.id + "/interview", { method: "PUT", body: f.values() }),
         onReady: (api) => {
           api.root.querySelector("#iv-slot").appendChild(f.el);
@@ -269,13 +269,13 @@
           f.el.addEventListener("change", refresh);
           refresh();
         } });
-      if (ok) done(opts, "Entretien reporté", "Le candidat a été prévenu.");
+      if (ok) done(opts, "Entretien reporté", "Le candidat voit le nouveau créneau dans HireLink.");
     });
     const cancel = h("button", { type: "button", class: "btn btn-ghost btn-sm iv-danger", text: "Annuler l’entretien" });
     cancel.addEventListener("click", async () => {
       const reason = await Mascotte.confirm({
         title: "Annuler l’entretien ?",
-        description: "Le candidat sera prévenu avec ce motif.",
+        description: "Le motif est enregistré. Le candidat le voit dans HireLink. L’e-mail part seulement si la messagerie est active.",
         confirmLabel: "Annuler l’entretien",
         cancelLabel: "Garder l’entretien",
         danger: true,
@@ -283,7 +283,7 @@
       });
       if (!reason) return;
       HireLinkAPI.api("/applications/" + app.id + "/interview/cancel", { method: "POST", body: { reason } })
-        .then(() => done(opts, "Entretien annulé", "Le candidat a été prévenu.")).catch(failure);
+        .then(() => done(opts, "Entretien annulé", "L’annulation est visible dans HireLink.")).catch(failure);
     });
     return [move, cancel];
   }
@@ -297,7 +297,7 @@
     const f = form(app);
     HireLink.openDrawer({
       title: "Planifier un entretien",
-      description: (app.candidateName || "Candidat") + " — le candidat reçoit la convocation et l’invitation calendrier.",
+      description: (app.candidateName || "Candidat") + " — le créneau est enregistré dans HireLink. L’e-mail de convocation part seulement si la messagerie du serveur est active.",
       bodyHtml: '<div id="iv-plan"></div>',
       confirmLabel: "Planifier et prévenir",
       confirmDisabled: true,
@@ -312,7 +312,7 @@
       },
     }).then((ok) => {
       if (!ok) return;
-      HireLink.toast("Entretien planifié", (app.candidateName || "Candidat") + " a reçu la convocation.", "ok");
+      HireLink.toast("Entretien planifié", "Le créneau est dans HireLink. L’e-mail n’est pas annoncé comme envoyé.", "ok");
       if (o.onDone) o.onDone();
     });
   }

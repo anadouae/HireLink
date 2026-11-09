@@ -295,7 +295,7 @@ public class DataSeeder {
             organizationService.invite(nadia, karim.getEmail(), OrgRole.RECRUTEUR, false);
         } catch (Exception ignored) {}
         try {
-            organizationService.invite(nadia, hm.getEmail(), OrgRole.HIRING_MANAGER, false);
+            organizationService.invite(nadia, hm.getEmail(), OrgRole.RECRUTEUR, false);
         } catch (Exception ignored) {}
         karim.setAssignedOrgId(atlas.getId());
         hm.setAssignedOrgId(atlas.getId());
@@ -950,7 +950,7 @@ public class DataSeeder {
         log.info("══════════════════════════════════════════════════");
         log.info(" HireLink — comptes de démonstration (mots de passe : voir docs/GUIDE_INSTALLATION_ET_TEST.md)");
         log.info("  admin@hirelink.ma · n.bennani@atlasdigital.ma (Créateur) · k.benali@atlasdigital.ma");
-        log.info("  m.alaoui@atlasdigital.ma (Responsable du poste) · candidat@hirelink.ma · recruteur@hirelink.ma (Salma Berrada, Recruteur)");
+        log.info("  m.alaoui@atlasdigital.ma · candidat@hirelink.ma · recruteur@hirelink.ma (Salma Berrada, Recruteur)");
         log.info("══════════════════════════════════════════════════");
     }
 }

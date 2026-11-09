@@ -84,7 +84,9 @@ class ApplicationServiceInterviewTest {
         when(applicationRepository.findById(9L)).thenReturn(Optional.of(app));
         when(applicationRepository.save(any(Application.class))).thenAnswer(i -> i.getArgument(0));
         when(matching.evaluate(any(), any())).thenReturn(
-                new SkillMatchingService.Compatibility(0.42, false, List.of(), List.of(), List.of()));
+                new SkillMatchingService.Compatibility(0.42, false, 0.42, List.of(), List.of(), List.of()));
+        when(matching.evaluateIfAvailable(any(), any())).thenReturn(
+                new SkillMatchingService.Compatibility(0.42, false, 0.42, List.of(), List.of(), List.of()));
         when(responsiveness.signalOf(anyLong())).thenReturn(ResponsivenessService.Signal.NONE);
     }
 

@@ -134,7 +134,7 @@
       setText(row.querySelector("strong"), a.jobTitle || "Offre");
       setText(
         row.querySelector(".row-sub"),
-        (a.matchScore != null ? Math.round(a.matchScore) + "% · " : "") +
+        (a.matchingAvailable === false || a.matchScore == null ? "Correspondance non disponible · " : "Score actuel " + Math.round(a.matchScore) + " % · ") +
           "déposée " +
           fmtWhen(a.submittedAt || a.appliedAt) +
           reasonBit
@@ -281,12 +281,27 @@
     }
 
     const pct = app.matchScore != null ? Math.round(app.matchScore) : null;
-    setText(el("d-match-pct"), pct != null ? pct + "%" : "—");
+    const submitted = app.matchScoreAtSubmission != null ? Math.round(app.matchScoreAtSubmission) : null;
+    setText(el("d-match-pct"), pct != null ? pct + "%" : "Non disponible");
     const bar = el("d-match-bar");
-    if (bar) bar.style.width = (pct != null ? pct : 0) + "%";
+    if (bar) {
+      bar.hidden = pct == null;
+      bar.style.width = (pct != null ? pct : 0) + "%";
+    }
     const why = el("d-match-why");
     if (why) {
       why.replaceChildren();
+      if (pct == null) {
+        const missing = document.createElement("p");
+        missing.textContent = "Correspondance non disponible : le profil n'a pas de compétence confirmée, ou l'offre n'a aucun critère comparable.";
+        why.appendChild(missing);
+      }
+      if (submitted != null) {
+        const note = document.createElement("p");
+        note.className = "muted";
+        note.textContent = "Score enregistré au dépôt : " + submitted + " %. Il n'est pas recalculé.";
+        why.appendChild(note);
+      }
       const panel = window.HireLinkMatch && app.matchBreakdown ? HireLinkMatch.panel(app.matchBreakdown, { audience: "candidate", compact: true }) : null;
       if (panel) why.appendChild(panel);
       if (panel) {
@@ -306,7 +321,7 @@
         }
         HireLinkCredits.paintCosts(why);
       }
-      why.hidden = !panel;
+      why.hidden = why.childNodes.length === 0;
     }
 
     let rows = [];

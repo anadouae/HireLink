@@ -116,7 +116,7 @@
       if (ACTIVE.has(a.status)) {
         active += 1;
         if (a.slaBreached || (a.slaRemainingDays != null && a.slaRemainingDays < 0)) slaBreached += 1;
-        if ((a.matchScore || 0) >= 75) hotMatches += 1;
+        if (a.matchScore != null && a.matchScore >= 75) hotMatches += 1;
       }
     });
     const interviews = by.INTERVIEW || 0;
@@ -182,200 +182,6 @@
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  function starsHtml(id, label) {
-    return (
-      '<div class="hl-score-item">' +
-      "<label>" +
-      esc(label) +
-      "</label>" +
-      '<div class="hl-stars" data-for="' +
-      id +
-      '" role="group" aria-label="' +
-      esc(label) +
-      '">' +
-      [1, 2, 3, 4, 5]
-        .map(
-          (n) =>
-            '<button type="button" data-v="' +
-            n +
-            '" aria-label="' +
-            n +
-            ' sur 5">★</button>'
-        )
-        .join("") +
-      "</div>" +
-      '<input type="hidden" id="' +
-      id +
-      '" value="" />' +
-      "</div>"
-    );
-  }
-
-  function bindStars(root) {
-    (root || document).querySelectorAll(".hl-stars").forEach((group) => {
-      const hid = document.getElementById(group.getAttribute("data-for"));
-      group.querySelectorAll("button").forEach((btn) => {
-        btn.onclick = (e) => {
-          e.preventDefault();
-          const v = Number(btn.getAttribute("data-v"));
-          if (hid) hid.value = String(v);
-          group.querySelectorAll("button").forEach((b) => {
-            b.classList.toggle("is-on", Number(b.getAttribute("data-v")) <= v);
-          });
-          group.dispatchEvent(new CustomEvent("hl-score-change", { bubbles: true }));
-        };
-      });
-    });
-  }
-
-  const FIXED_REASONS = [
-    ["REF01", "Profil non conforme aux exigences."],
-    ["REF02", "Expérience insuffisante."],
-    ["REF03", "Compétences techniques insuffisantes."],
-    ["REF04", "Candidature incomplète."],
-    ["REF05", "Poste déjà pourvu."],
-    ["REF06", "Autre."],
-  ];
-
-  function refusalSelectHtml() {
-    return (
-      '<div class="hl-dossier-section"><h5>Motif du refus</h5>' +
-      '<p class="muted" style="margin:0 0 .55rem">Le candidat voit ce motif. « Autre » peut être précisé. Le message plus bas lui est envoyé seulement si vous le rédigez.</p>' +
-      '<div class="field"><label>Motif</label>' +
-      '<select id="reject-reason"><option value="">— Choisir —</option>' +
-      FIXED_REASONS.map((r) => '<option value="' + r[0] + '">' + esc(r[1]) + "</option>").join("") +
-      "</select></div>" +
-      '<div class="field" id="reject-other-wrap" hidden><label for="reject-other">Précision</label>' +
-      '<textarea id="reject-other" rows="3" placeholder="Ce que le candidat doit lire"></textarea></div></div>' +
-      '<div class="hl-dossier-section"><h5>Message au candidat</h5>' +
-      '<p class="muted" style="margin:0 0 .55rem">Rédigez-le vous-même, ou demandez une aide IA puis modifiez librement. Ce texte part en e-mail.</p>' +
-      '<div class="rc-row" style="gap:.4rem;flex-wrap:wrap;margin-bottom:.55rem">' +
-      '<button type="button" class="btn btn-soft btn-sm" id="reject-ai">Aide IA — proposer un brouillon' + HireLinkCredits.costNote().outerHTML + "</button>" +
-      '<button type="button" class="btn btn-ghost btn-sm" id="reject-clear">Vider</button></div>' +
-      '<div class="field"><label for="reject-message">Message</label>' +
-      '<textarea id="reject-message" rows="7" maxlength="4000" placeholder="Bonjour,…&#10;&#10;Nous vous remercions pour votre candidature…"></textarea></div>' +
-      '<p class="muted" id="reject-ai-hint" style="margin:.35rem 0 0;font-size: var(--text-xs)">Choisissez d’abord un motif pour activer l’aide IA.</p></div>'
-    );
-  }
-
-  async function showTimeline(appId) {
-    try {
-      const rows = await HireLinkAPI.api("/applications/" + appId + "/timeline");
-      const html =
-        !rows.length
-          ? "<p class='muted'>Aucun événement.</p>"
-          : '<ol class="rc-timeline">' +
-            rows
-              .map((h) => {
-                let extra = "";
-                try { extra = h.payload ? JSON.parse(h.payload).reason || "" : ""; } catch (_) {}
-                const from = RC.STATUS_FR[h.from] || h.from;
-                return "<li><strong>" + (from ? esc(from) + " → " : "") + esc(RC.STATUS_FR[h.to] || h.to) + "</strong> · <span class='muted'>" +
-                  esc(RC.fmtDateTime(h.at)) + "</span>" + (extra ? "<br/><span class='muted'>Motif : " + esc(extra) + "</span>" : "") + "</li>";
-              })
-              .join("") +
-            "</ol>";
-      await HireLink.openModal({
-        title: "Historique du dossier",
-        description: "Journal chronologique — non modifiable",
-        bodyHtml: html,
-        confirmLabel: "Fermer",
-        hideCancel: true,
-        large: true,
-      });
-    } catch (err) {
-      HireLink.toast("Timeline", err.message, "danger");
-    }
-  }
-
-  function scoreSummaryHtml(criteria, entries) {
-    if (!entries || !entries.length) return "";
-    const rows = criteria.map((cr) => {
-      const list = entries.filter((e) => e.criterionId === cr.id);
-      if (!list.length) return "";
-      const avg = list.reduce((t, e) => t + e.score, 0) / list.length;
-      return '<div class="hl-fact"><span class="k">' + esc(cr.label) + '</span><span class="v">' + avg.toFixed(1) + " / 5 · " + RC.plural(list.length, "avis", "avis") + "</span></div>";
-    }).join("");
-    return rows ? '<div class="hl-dossier-section"><h5>Synthèse des évaluateurs</h5><div class="hl-fact-grid">' + rows + "</div></div>" : "";
-  }
-
-  async function rateScorecard(c) {
-    try {
-      let criteria = await HireLinkAPI.api("/offers/" + c.jobOfferId + "/scorecard-criteria");
-      if (!criteria.length && RC.isHM()) {
-        HireLink.toast("Scorecard", "Aucun critère défini pour cette offre — demandez à un recruteur de les créer.", "warn");
-        return;
-      }
-      const entries = await HireLinkAPI.api("/applications/" + c.id + "/scorecard").catch(() => []);
-      if (!criteria.length) {
-        criteria = await HireLinkAPI.api("/offers/" + c.jobOfferId + "/scorecard-criteria", {
-          method: "PUT",
-          body: {
-            criteria: [
-              { label: "Technique", weight: 3, veto: false },
-              { label: "Soft skills", weight: 2, veto: false },
-              { label: "Culture fit", weight: 1, veto: false },
-            ],
-          },
-        });
-      }
-      const body =
-        dossierHtml(c, { compact: true }) +
-        scoreSummaryHtml(criteria, entries) +
-        '<div class="hl-dossier-section"><h5>Ma notation · 1 à 5</h5>' +
-        '<div class="hl-score-row">' +
-        criteria
-          .map((cr) =>
-            starsHtml(
-              "sc-" + cr.id,
-              cr.label + (cr.veto ? " (veto)" : "")
-            )
-          )
-          .join("") +
-        "</div></div>";
-
-      const ok = await HireLink.openDrawer({
-        title: "Scorecard · " + c.candidateName,
-        description: c.jobTitle,
-        bodyHtml: body,
-        confirmLabel: "Enregistrer les notes",
-        confirmDisabled: true,
-        wide: true,
-        onReady: (api) => {
-          bindStars(api.root);
-          criteria.forEach((cr) => {
-            const mine = entries.filter((e) => e.criterionId === cr.id && e.evaluatorUserId === session.userId).pop();
-            const btn = mine && api.root.querySelector('.hl-stars[data-for="sc-' + cr.id + '"] button[data-v="' + mine.score + '"]');
-            if (btn) btn.click();
-          });
-          const refresh = () => {
-            const okAll = criteria.every((cr) => {
-              const el = document.getElementById("sc-" + cr.id);
-              return el && el.value;
-            });
-            api.setConfirmEnabled(okAll);
-          };
-          api.root.addEventListener("hl-score-change", refresh);
-          refresh();
-        },
-      });
-      if (!ok) return;
-      for (const cr of criteria) {
-        const el = document.getElementById("sc-" + cr.id);
-        await HireLinkAPI.api("/applications/" + c.id + "/scorecard", {
-          method: "POST",
-          body: {
-            criterionId: Number(cr.id),
-            score: Number((el && el.value) || 3),
-            comment: null,
-          },
-        });
-      }
-      HireLink.toast("Scorecard", "Notes enregistrées", "ok");
-    } catch (err) {
-      HireLink.toast("Scorecard", err.message, "danger");
-    }
-  }
 
   function fact(k, v, tone) {
     return (
@@ -554,7 +360,8 @@
         fact("Poste", c.jobTitle || "—") +
         fact("Envoyée le", sent) +
         fact("Statut", statusLabel) +
-        fact("Compatibilité", matchPct != null ? matchPct + " %" : "—") +
+        fact("Score actuel", matchPct != null ? matchPct + " %" : "Correspondance non disponible") +
+        fact("Score au dépôt", c.matchScoreAtSubmission != null ? Math.round(c.matchScoreAtSubmission) + " %" : "Non enregistré") +
         fact("Délai de réponse", slaTxt, slaBreached ? "is-danger" : "is-ok") +
         "</div>" +
         (c.matchBreakdown ? '<div style="margin-top:.75rem" data-match-slot></div>' : "") +
@@ -730,8 +537,8 @@
       (next === "INTERVIEW"
         ? '<p class="hl-step-where">' +
           (c.interviewAt
-            ? "Créneau déjà posé : " + esc(HireLinkInterview.summary(c)) + " — le candidat reçoit la convocation."
-            : "Aucun créneau pour l’instant : le bouton « Planifier l’entretien » du dossier enverra la convocation.") +
+            ? "Créneau déjà posé : " + esc(HireLinkInterview.summary(c)) + ". Le candidat le voit dans HireLink."
+            : "Aucun créneau pour l’instant. « Planifier l’entretien » enregistre la convocation dans HireLink. L’e-mail part seulement si la messagerie est active.") +
           "</p>"
         : "") +
       (leavingInterview
@@ -895,7 +702,7 @@
       });
       HireLink.toast(
         "Candidature refusée",
-        message ? "Motif enregistré · message envoyé au candidat" : "Motif enregistré · e-mail type envoyé",
+        "Motif enregistré. Le candidat le voit dans HireLink.",
         "ok"
       );
       load(true);
@@ -904,35 +711,6 @@
     }
   }
 
-  function mountHmAssign(c) {
-    const slot = document.getElementById("hm-slot");
-    if (!slot) return;
-    RC.swr("members", "/organizations/mine/members", (members) => {
-      const eligible = (members || []).filter((m) => m.orgRole === "HIRING_MANAGER" || m.orgRole === "RECRUTEUR");
-      if (!eligible.length || !document.getElementById("hm-slot")) return;
-      slot.innerHTML =
-        "<h5>Responsable du poste assigné</h5>" +
-        '<div class="rc-row"><select id="hm-select" class="rc-select" style="flex:1"><option value="">— Aucun —</option>' +
-        eligible.map((m) => '<option value="' + m.userId + '"' + (Number(c.assignedHmUserId) === Number(m.userId) ? " selected" : "") + ">" +
-          esc(m.fullName || m.email) + " · " + esc(RC.ROLE_FR[m.orgRole] || m.orgRole) + "</option>").join("") +
-        '</select><button type="button" class="btn btn-soft btn-sm" id="hm-save">Assigner</button></div>' +
-        '<p class="muted" style="margin:.4rem 0 0;font-size: var(--text-xs)">Le Responsable du poste se connecte au même espace recruteur (dossiers filtrés), avec notification in-app et e-mail pour les entretiens — pas besoin d’un espace séparé.</p>';
-      document.getElementById("hm-save").onclick = async (e) => {
-        const v = document.getElementById("hm-select").value;
-        RC.busy(e.currentTarget, true);
-        try {
-          const updated = await HireLinkAPI.api("/applications/" + c.id + "/assign-hm", { method: "PATCH", body: { hmUserId: v ? Number(v) : null } });
-          c.assignedHmUserId = updated.assignedHmUserId;
-          RC.data.invalidate();
-          RC.toast("Assignation", v ? "Responsable du poste assigné" : "Assignation retirée", "ok");
-        } catch (err) {
-          RC.toast("Assignation", err.message, "danger");
-        } finally {
-          RC.busy(e.currentTarget, false);
-        }
-      };
-    });
-  }
 
   async function openDossier(c) {
     currentDossierCandidate = c;
@@ -952,12 +730,12 @@
           : "") +
         '<button type="button" class="btn btn-ghost btn-sm" id="btn-rej-from">Refuser</button>' +
         "</div>" +
-        (RC.canManage() ? '<div class="hl-dossier-section" id="hm-slot"></div>' : ""),
+        "",
       confirmLabel: "Fermer",
       hideCancel: true,
       wide: true,
       onReady: () => {
-        mountHmAssign(c);
+        /* L'ancienne affectation n'est plus proposée. Les valeurs déjà enregistrées restent en base. */
         const skSlot = document.querySelector("[data-sk-slot]");
         if (skSlot) HireLinkSkills.renderBoxes(skSlot, c.candidateSkills);
         const mSlot = document.querySelector("[data-match-slot]");
@@ -1010,7 +788,7 @@
       all: scope.length,
       urgent: scope.filter((a) => a.slaRemainingDays != null && a.slaRemainingDays <= 2 && !a.slaBreached).length,
       breached: scope.filter((a) => a.slaBreached).length,
-      hot: scope.filter((a) => (a.matchScore || 0) >= 75).length,
+      hot: scope.filter((a) => a.matchScore != null && a.matchScore >= 75).length,
       interview: scope.filter((a) => a.status === "INTERVIEW").length,
     };
     const chips = document.getElementById("pipe-chips");
@@ -1034,7 +812,7 @@
     } else if (filter === "breached") {
       filtered = filtered.filter((a) => a.slaBreached);
     } else if (filter === "hot") {
-      filtered = filtered.filter((a) => (a.matchScore || 0) >= 75);
+      filtered = filtered.filter((a) => a.matchScore != null && a.matchScore >= 75);
     } else if (filter === "interview") {
       filtered = filtered.filter((a) => a.status === "INTERVIEW");
     }
@@ -1058,7 +836,10 @@
           const sa = a.slaRemainingDays == null ? 99 : a.slaRemainingDays;
           const sb = b.slaRemainingDays == null ? 99 : b.slaRemainingDays;
           if (sa !== sb) return sa - sb;
-          return (b.matchScore || 0) - (a.matchScore || 0);
+          if (a.matchScore == null && b.matchScore == null) return 0;
+          if (a.matchScore == null) return 1;
+          if (b.matchScore == null) return -1;
+          return b.matchScore - a.matchScore;
         });
       const el = document.createElement("div");
       el.className = "rc-col rc-col--" + (col.tone || "neutral");
@@ -1088,7 +869,7 @@
           "<div class='rc-card-meta'><span class='badge'></span><span class='rc-pill js-sla'></span></div>" +
           "<div class='rc-card-act'>" +
           "<button type='button' class='btn btn-sm btn-soft js-view'>Dossier</button>" +
-          (canAdvance ? "<button type='button' class='btn btn-sm btn-primary js-adv'>Avancer →</button><button type='button' class='btn btn-sm btn-soft js-rate'>Évaluer</button>" : "") +
+          (canAdvance ? "<button type='button' class='btn btn-sm btn-primary js-adv'>Avancer →</button>" : "") +
           "<button type='button' class='btn btn-sm btn-ghost rc-ico-only js-rej' title='Refuser' aria-label='Refuser'>✕</button></div>";
         card.querySelector("h3").textContent = c.candidateName || "Candidat";
         const scoped = selectedOfferId() != null;
@@ -1101,10 +882,12 @@
           sub += (sub ? " · " : "") + "Entretien à planifier";
         }
         card.querySelector("p").textContent = sub || (scoped ? "Dossier sur ce poste" : "");
-        card.querySelector(".rc-bar > i").style.width = Math.min(100, c.matchScore || 0) + "%";
+        const bar = card.querySelector(".rc-bar");
+        if (matchPct == null) bar.hidden = true;
+        else card.querySelector(".rc-bar > i").style.width = Math.min(100, c.matchScore) + "%";
         const mb = card.querySelector(".badge");
         mb.className = "badge " + matchBadgeClass(matchPct);
-        mb.textContent = matchPct != null ? matchPct + " % match" : "Match —";
+        mb.textContent = matchPct != null ? matchPct + " % actuel" : "Non disponible";
         const pill = card.querySelector(".js-sla");
         if (sla == null && !breached) pill.remove();
         else {
@@ -1117,8 +900,6 @@
         card.querySelector(".js-view").onclick = (e) => { e.stopPropagation(); openDossier(c); };
         const advBtn = card.querySelector(".js-adv");
         if (advBtn) advBtn.onclick = (e) => { e.stopPropagation(); advance(c); };
-        const rateBtn = card.querySelector(".js-rate");
-        if (rateBtn) rateBtn.onclick = (e) => { e.stopPropagation(); rateScorecard(c); };
         card.querySelector(".js-rej").onclick = (e) => { e.stopPropagation(); rejectFlow(c); };
         body.appendChild(card);
       });

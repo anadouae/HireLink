@@ -56,7 +56,7 @@
             <div class="rc-kpis">
           <div class="rc-kpi rc-kpi--warn"><small>Vérification</small><strong id="kpi-status" style="font-size: var(--text-xl)">—</strong><span id="kpi-ice">&nbsp;</span></div>
           <div class="rc-kpi rc-kpi--info"><small>Crédits IA</small><strong id="kpi-credits">—</strong><span id="kpi-plan">&nbsp;</span></div>
-          <div class="rc-kpi"><small>Membres &amp; Capacité</small><strong id="kpi-members">—</strong><span id="kpi-seats">Direction, Recruteurs, Managers</span></div>
+          <div class="rc-kpi"><small>Membres &amp; Capacité</small><strong id="kpi-members">—</strong><span id="kpi-seats">Créateur et recruteurs</span></div>
         </div>
                     <div class="hq-overview">
               <div class="rc-card"><div class="rc-card-head"><div><h2>Fiche publique</h2><p>Ce que voient les candidats. L’aperçu suit vos modifications dans Paramètres.</p></div></div><div class="rc-card-body"><div id="co-preview"></div></div></div>
@@ -64,12 +64,11 @@
                 <ul class="hq-role-list">
                   <li><span class="hq-role r-owner">Créateur</span><p>invite, met en pause, retire et change les rôles ; modifie la fiche entreprise et choisit la formule. Il peut transférer son rôle, mais reste le seul à pouvoir le faire.</p></li>
                   <li><span class="hq-role r-rec">Recruteur</span><p>crée et gère les offres, le pipeline, les entretiens et l’agenda. Il ne peut pas inviter ni retirer un membre.</p></li>
-                  <li><span class="hq-role r-hm">Responsable du poste</span><p>voit uniquement les dossiers qu’on lui assigne, et les évalue avec la grille de notes. Il ne publie pas d’offre, n’invite personne et n’accède pas aux dossiers des autres.</p></li>
                 </ul>
                 <p class="hq-role-states">
                   <span class="st-on"><i></i>Actif : il occupe un siège</span>
                   <span class="st-pause"><i></i>En pause : siège et rôle conservés, accès coupé, réversible</span>
-                  <span class="st-wait"><i></i>Invitation en attente : siège réservé tant que la personne n’a pas répondu</span>
+                  <span class="st-wait"><i></i>Invitation en attente : aucun accès, et le siège n’est pris qu’à l’acceptation</span>
                 </p>
               </div></div>
             </div>
@@ -78,7 +77,7 @@
             <div class="hq-members-head" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;flex-wrap:wrap;gap:.8rem;padding:.5rem 0">
               <div>
                 <h2 style="margin:0;font-size: var(--text-lg);font-weight:700">Membres de l’entreprise</h2>
-                <p class="rc-muted" style="margin:.25rem 0 0;font-size: var(--text-base)">Gérez vos équipes de recrutement et assignez des Responsables du poste aux dossiers.</p>
+                <p class="rc-muted" style="margin:.25rem 0 0;font-size: var(--text-base)">Gérez les recruteurs de l’entreprise. Seuls le créateur et les recruteurs sont proposés.</p>
               </div>
               <button type="button" class="btn btn-primary btn-invite-trigger" data-creator style="display:inline-flex;align-items:center;gap:.45rem">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
@@ -128,7 +127,6 @@
               <div class="rc-field"><label for="invite-email">E-mail professionnel *</label><input id="invite-email" type="email" required placeholder="prenom.nom@entreprise.ma" autocomplete="email" /></div>
               <fieldset class="hq-role-pick"><legend>Rôle attribué</legend>
                 <label><input type="radio" name="invite-role" value="RECRUTEUR" checked /><span><b class="hq-role r-rec">Recruteur</b><small>Offres, pipeline, entretiens et agenda</small></span></label>
-                <label><input type="radio" name="invite-role" value="HIRING_MANAGER" /><span><b class="hq-role r-hm">Responsable du poste</b><small>Uniquement les dossiers qui lui sont assignés</small></span></label>
               </fieldset>
               <p class="rc-muted" style="font-size: var(--text-sm)">Tant que l’invitation n’est pas acceptée, la personne apparaît dans « Invitations en attente » et n’a accès à rien. Aucun mot de passe partagé n’est créé.</p>
               <div class="rc-row"><button type="button" class="btn btn-ghost" id="hq-drawer-cancel">Annuler</button><button type="submit" id="btn-submit-invite" class="btn btn-primary">Envoyer l’invitation</button></div>

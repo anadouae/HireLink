@@ -12,7 +12,7 @@ ou prolonger sa date limite"
   usecase UC_pipeline as "Trier les candidatures
 dans le pipeline"
   usecase UC_refuser as "Refuser avec un motif"
-  usecase UC_scorecard as "Shortlist et scorecard"
+  usecase UC_scorecard as "Présélectionner\n(aide au matching, pas une grille)"
   usecase UC_planifier as "Planifier un entretien
 (sur site ou visio)"
   usecase UC_reporter as "Reporter ou annuler un entretien"

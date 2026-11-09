@@ -163,8 +163,11 @@ public class AiCreditService {
         reservation.setModel(result.model());
         reservation.setCharsIn(result.charsIn());
         reservation.setCharsOut(result.charsOut());
-        reservation.setSuccess(result.success());
-        reservation.setCreditsSpent(result.success() ? COST_PER_ACTION : 0);
+        boolean external = result.success()
+                && result.provider() != null
+                && !result.provider().toLowerCase(java.util.Locale.ROOT).startsWith("local");
+        reservation.setSuccess(external);
+        reservation.setCreditsSpent(external ? COST_PER_ACTION : 0);
         aiUsageLogRepository.save(reservation);
     }
 

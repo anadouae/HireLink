@@ -31,23 +31,8 @@ public class ScorecardService {
 
     @Transactional
     public List<ScorecardCriterion> setCriteria(User recruiter, Long offerId, List<Map<String, Object>> items) {
-        JobOffer offer = jobOfferRepository.findById(offerId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
-        if (!organizationService.canManageOffer(recruiter, offer)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Pas propriétaire");
-        }
-        criterionRepository.findByJobOfferId(offerId).forEach(criterionRepository::delete);
-        List<ScorecardCriterion> saved = new ArrayList<>();
-        for (Map<String, Object> it : items) {
-            ScorecardCriterion c = new ScorecardCriterion();
-            c.setJobOfferId(offerId);
-            String label = String.valueOf(it.getOrDefault("label", "Critère")).strip();
-            c.setLabel(label.isEmpty() ? "Critère" : label.substring(0, Math.min(label.length(), 120)));
-            c.setWeight(Math.max(1, ((Number) it.getOrDefault("weight", 1)).intValue()));
-            c.setVeto(Boolean.TRUE.equals(it.get("veto")));
-            saved.add(criterionRepository.save(c));
-        }
-        return saved;
+        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "La grille de notation manuelle n'est plus utilisée. Le matching reste une aide à la présélection.");
     }
 
     @Transactional(readOnly = true)
@@ -60,31 +45,8 @@ public class ScorecardService {
 
     @Transactional
     public ScorecardEntry rate(User evaluator, Long applicationId, Long criterionId, int score, String comment) {
-        if (criterionId == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisissez un critère d'évaluation.");
-        }
-        if (score < 1 || score > 5) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Note entre 1 et 5");
-        }
-        Application app = applicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
-        ScorecardCriterion c = criterionRepository.findById(criterionId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Critère introuvable"));
-        if (!c.getJobOfferId().equals(app.getJobOffer().getId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Critère hors offre");
-        }
-        // R02 / R14 : membres de l'organisation de l'offre ; un Hiring Manager seulement sur ses dossiers assignés
-        organizationService.assertCanAccessApplication(evaluator, app);
-        // Une note par (dossier, critère, évaluateur) : on met à jour au lieu d'empiler des doublons
-        ScorecardEntry e = entryRepository
-                .findFirstByApplicationIdAndCriterionIdAndEvaluatorUserId(applicationId, criterionId, evaluator.getId())
-                .orElseGet(ScorecardEntry::new);
-        e.setApplicationId(applicationId);
-        e.setCriterionId(criterionId);
-        e.setEvaluatorUserId(evaluator.getId());
-        e.setScore(score);
-        e.setComment(comment == null ? null : comment.substring(0, Math.min(comment.length(), 1000)));
-        return entryRepository.save(e);
+        throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "La grille de notation manuelle n'est plus utilisée. Le matching reste une aide à la présélection.");
     }
 
     @Transactional(readOnly = true)

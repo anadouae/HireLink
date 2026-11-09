@@ -67,7 +67,7 @@
         <section id="view-users" hidden>
           <div class="rc-head"><div><p class="rc-eyebrow">Comptes</p><h1>Utilisateurs</h1><p>Activez ou désactivez un compte. Un compte désactivé ne peut plus se connecter.</p></div></div>
           <div class="rc-toolbar">
-            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="OWNER">Créateurs d’espace</button><button type="button" class="rc-chip" data-f="HIRING_MANAGER">Responsables de poste</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Admins</button></div>
+            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="OWNER">Créateurs d’espace</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Admins</button></div>
             <span class="rc-spacer"></span>
             <select id="user-org" aria-label="Filtrer par organisation"><option value="">Toutes les organisations</option></select>
             <input id="user-search" class="rc-search-input" type="search" placeholder="Rechercher un compte…" aria-label="Rechercher un compte" />
@@ -146,7 +146,7 @@
         </section>
 
         <section id="view-emails" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Messagerie</p><h1>E-mails</h1><p>En attente : aucun SMTP n’a pris le message en charge. Envoyé : le serveur d’envoi l’a accepté. Ce n’est ni une livraison ni une lecture. Échec : l’envoi a été refusé. Les messages secrets ne conservent pas leur contenu.</p></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Messagerie</p><h1>E-mails</h1><p>Journalisé : la messagerie est absente, le message n’a pas été envoyé. Envoyé : le serveur d’envoi l’a accepté, sans preuve de livraison ni de lecture. Échec : l’envoi a été refusé. Les messages secrets ne conservent pas leur contenu.</p></div>
             <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="mail-refresh">Actualiser</button></div></div>
           <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
             <thead><tr><th>Date</th><th>Destinataire</th><th>Objet</th><th>Type</th><th>État</th><th>Détail</th></tr></thead>

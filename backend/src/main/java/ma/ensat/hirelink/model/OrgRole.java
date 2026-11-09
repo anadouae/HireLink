@@ -15,7 +15,7 @@ public enum OrgRole {
         return switch (this) {
             case OWNER -> "Créateur";
             case RECRUTEUR -> "Recruteur";
-            case HIRING_MANAGER -> "Responsable du poste";
+            case HIRING_MANAGER -> "Accès limité";
         };
     }
 }

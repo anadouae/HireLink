@@ -90,10 +90,10 @@
     const mode = val("f-mode"), sentFilter = val("f-sent");
     const pace = val("f-pace"), minMatch = Number(val("f-match") || 0);
     const kept = cached.filter((o) => {
-      const score = o.matchScore == null ? 0 : o.matchScore;
+      const score = o.matchScore;
       const st = appState(o.id);
       if (matchOnly && !o.matchesProfile) return false;
-      if (minMatch && score < minMatch) return false;
+      if (minMatch && (score == null || score < minMatch)) return false;
       if (city && O.placeOf(o) !== city) return false;
       if (company && companyOf(o) !== company) return false;
       if (skill && !tokenize(o.requiredSkills).some((s) => s.toLowerCase() === skill.toLowerCase())) return false;
@@ -116,8 +116,11 @@
         { get: (o) => o.description, weight: 1 },
       ]);
     }
+    const scoring = cached.some((o) => o.matchScore != null);
     return kept.sort((a, b) =>
-      (isOpenToApply(b.id) - isOpenToApply(a.id)) || (b.matchScore || 0) - (a.matchScore || 0) || String(a.title || "").localeCompare(String(b.title || ""), "fr"));
+      (isOpenToApply(b.id) - isOpenToApply(a.id))
+      || (scoring ? (b.matchScore || 0) - (a.matchScore || 0) : 0)
+      || String(a.title || "").localeCompare(String(b.title || ""), "fr"));
   }
 
   function clearAll() {
@@ -167,10 +170,15 @@
   }
 
   function updateHint() {
+    const scoring = cached.some((o) => o.matchScore != null);
+    if (!scoring) {
+      $("match-hint").textContent = "Correspondance non disponible : ajoutez au moins une compétence dans votre profil.";
+      return;
+    }
     const n = cached.filter((o) => o.matchesProfile).length;
     $("match-hint").textContent = n
       ? n + " offre" + (n > 1 ? "s" : "") + " sur " + cached.length + " correspondent à votre profil (score ≥ 50 %)."
-      : "Complétez vos compétences dans votre profil pour voir les offres adaptées.";
+      : "Aucune offre n'atteint 50 % avec votre profil actuel.";
   }
 
   function render() {
@@ -201,7 +209,7 @@
     const badge = o.matchScore != null ? document.createElement("span") : null;
     if (badge) {
       badge.textContent = Math.round(o.matchScore) + " %";
-      badge.title = "Compatibilité : part des compétences demandées que vous possédez.";
+      badge.title = "Score pondéré : compétences obligatoires et appréciées, langues, expérience, contrat et lieu.";
     }
     return O.card(o, {
       selected,

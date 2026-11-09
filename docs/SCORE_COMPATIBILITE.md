@@ -22,17 +22,22 @@ Confirmé 2, Senior 3, Lead/Manager 4 ; de l'offre : Aucune 0, Débutant 1, Conf
 
 ## Règles
 
+0. **Disponibilité** : le score n'est calculé que si le candidat a au moins une compétence confirmée dans `users.skills`
+   et si l'offre a au moins un critère exploitable. Sinon l'interface affiche « Correspondance non disponible », jamais 0 %.
+   Un CV déposé ne suffit pas : les compétences extraites n'entrent dans le profil qu'après confirmation. La méthode
+   affichée est `evaluateIfAvailable` ; `evaluate` conserve l'algorithme pour les cas où les deux côtés sont renseignés.
 1. **Renormalisation** : un critère que l'offre ne précise pas (pas de compétences appréciées, pas de langue…) est retiré,
    et les poids restants sont ramenés à 100. L'offre n'est pas pénalisée pour ce qu'elle ne demande pas.
-2. **Information absente du profil** (niveau, contrats ou lieux non remplis) : ratio neutre de 0,5. Un profil incomplet
-   n'est ni favorisé ni écrasé, et le détail invite à le compléter.
+2. **Information absente du profil** (niveau, contrats ou lieux non remplis, alors que des compétences sont confirmées) :
+   ratio neutre de 0,5 pour ce critère seulement. Ce n'est pas un score de profil vide.
 3. **Garde-fou compétences** : si moins de 50 % des compétences obligatoires sont couvertes, le total est plafonné à
    `min(60, couverture % + 20)`. Le lieu ou le contrat ne peuvent pas compenser l'absence du cœur du métier.
 4. Score = Σ (poids × ratio) / Σ poids applicables × 100, arrondi au dixième.
 5. Le filtre « Offres qui correspondent à mon profil » retient les offres dont le score est ≥ 50 %.
-6. Le score affiché est recalculé à chaque lecture sur le profil et l'offre actuels. Seule la valeur figée au moment de la
-   candidature est conservée, dans `applications.match_score` ; le détail (compétences couvertes / manquantes) n'est pas
-   stocké, il est redérivé à la demande.
+6. `applications.match_score` est le score figé au dépôt. Il n'est pas recalculé. La lecture expose aussi le score actuel,
+   qui peut être indisponible si le profil n'a plus de compétence confirmée. Le détail (compétences couvertes / manquantes)
+   n'est pas stocké : il est redérivé à la demande. Quand le plafond s'applique, les points par critère restent ceux d'avant
+   le plafond ; l'interface indique le total brut et le score retenu.
 
 ## Exemples réels (données de démo)
 

@@ -332,6 +332,9 @@ public class OrganizationService {
         if (role == OrgRole.OWNER) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un seul compte crée l'espace : utilisez le transfert de rôle");
         }
+        if (role == OrgRole.HIRING_MANAGER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce rôle n'est plus proposé. Invitez un recruteur.");
+        }
         if (email == null || email.isBlank() || !email.contains("@")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Adresse e-mail invalide");
         }
@@ -412,9 +415,7 @@ public class OrganizationService {
             String title = "Vous avez rejoint « " + org.getName() + " »";
             String body = "Rôle : " + roleFr + ". Retrouvez l'équipe dans votre espace.";
             if (mail) {
-                String rights = role == OrgRole.HIRING_MANAGER
-                        ? "En tant que Responsable du poste, vous voyez uniquement les dossiers qui vous sont assignés depuis le pipeline."
-                        : "En tant que Recruteur, vous accédez aux offres, au pipeline, aux entretiens et à l'agenda de l'entreprise.";
+                String rights = "En tant que Recruteur, vous accédez aux offres, au pipeline, aux entretiens et à l'agenda de l'entreprise.";
                 String credsInfo = wasNew
                         ? " Utilisez « Connexion par code e-mail » avec cette adresse, puis choisissez votre mot de passe personnel."
                         : " Connectez-vous avec vos identifiants habituels.";
@@ -491,6 +492,10 @@ public class OrganizationService {
         Membership m = requireManagedMember(actor, userId);
         if (newRole == null || newRole == OrgRole.OWNER) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle invalide : utilisez le transfert du rôle de créateur");
+        }
+        if (newRole == OrgRole.HIRING_MANAGER) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Ce rôle n'est plus attribué. Les membres qui l'ont déjà le conservent.");
         }
         if (m.getOrgRole() == OrgRole.OWNER) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce compte est le créateur de l'espace : transférez-lui d'abord le rôle");
