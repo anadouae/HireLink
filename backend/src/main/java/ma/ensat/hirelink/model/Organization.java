@@ -48,6 +48,14 @@ public class Organization {
     @Enumerated(EnumType.STRING)
     @Column(name = "plan_tier", nullable = false, length = 24)
     private PlanTier planTier = PlanTier.ACCES;
+
+    /** Fin de la période déjà réglée. Nul si aucun paiement de cette version n'a fixé de date. */
+    @Column(name = "subscription_ends_at")
+    private Instant subscriptionEndsAt;
+
+    /** La résiliation prend effet à subscriptionEndsAt. L'accès déjà payé n'est pas coupé tout de suite. */
+    @Column(name = "cancel_at_period_end")
+    private Boolean cancelAtPeriodEnd;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id")
     private User owner;
@@ -94,6 +102,10 @@ public class Organization {
     public void setPresentation(String presentation) { this.presentation = presentation; }
     public PlanTier getPlanTier() { return planTier; }
     public void setPlanTier(PlanTier planTier) { this.planTier = planTier; }
+    public Instant getSubscriptionEndsAt() { return subscriptionEndsAt; }
+    public void setSubscriptionEndsAt(Instant subscriptionEndsAt) { this.subscriptionEndsAt = subscriptionEndsAt; }
+    public boolean isCancelAtPeriodEnd() { return Boolean.TRUE.equals(cancelAtPeriodEnd); }
+    public void setCancelAtPeriodEnd(Boolean cancelAtPeriodEnd) { this.cancelAtPeriodEnd = cancelAtPeriodEnd; }
     public User getOwner() { return owner; }
     public void setOwner(User owner) { this.owner = owner; }
     public Instant getCreatedAt() { return createdAt; }

@@ -144,23 +144,27 @@ public class DataSeeder {
     }
 
     private void seedRefusalCatalog(RefusalReasonRepository repo) {
-        String[][] rows = {
-                {"PROFILE_MISMATCH", "Compétences techniques insuffisamment alignées sur le poste"},
-                {"EXPERIENCE_LEVEL", "Niveau d'expérience inférieur au minimum requis"},
-                {"LANGUAGE_GAP", "Niveau de français / anglais insuffisant pour le poste"},
-                {"LOCATION_UNAVAILABLE", "Mobilité ou lieu de travail incompatible"},
-                {"SALARY_EXPECTATION", "Prétentions salariales hors enveloppe budgétaire"},
-                {"PROCESS_WITHDRAW_ORG", "Poste pourvu ou recrutement clôturé"},
-                {"OTHER_CATALOG", "Autre motif documenté"}
+        String[][] current = {
+                {"REF01", "Profil non conforme aux exigences."},
+                {"REF02", "Expérience insuffisante."},
+                {"REF03", "Compétences techniques insuffisantes."},
+                {"REF04", "Candidature incomplète."},
+                {"REF05", "Poste déjà pourvu."},
+                {"REF06", "Autre."}
         };
-        for (String[] r : rows) {
-            if (repo.findByCode(r[0]).isEmpty()) {
-                RefusalReason rr = new RefusalReason();
-                rr.setCode(r[0]);
-                rr.setLabel(r[1]);
-                rr.setActive(true);
+        String[] retired = {"PROFILE_MISMATCH", "EXPERIENCE_LEVEL", "LANGUAGE_GAP", "LOCATION_UNAVAILABLE", "SALARY_EXPECTATION", "PROCESS_WITHDRAW_ORG", "OTHER_CATALOG"};
+        for (String[] r : current) {
+            RefusalReason rr = repo.findByCode(r[0]).orElseGet(RefusalReason::new);
+            rr.setCode(r[0]);
+            rr.setLabel(r[1]);
+            rr.setActive(true);
+            repo.save(rr);
+        }
+        for (String code : retired) {
+            repo.findByCode(code).ifPresent(rr -> {
+                rr.setActive(false);
                 repo.save(rr);
-            }
+            });
         }
     }
 

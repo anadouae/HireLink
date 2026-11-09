@@ -30,7 +30,9 @@ public class AuditService {
     }
 
     public void log(String action, User actor, String targetType, Object targetId, boolean success, String detail) {
-        record(action, actor == null ? null : actor.getId(), actor == null ? null : actor.getEmail(), targetType, targetId, success, detail);
+        record(action, actor == null ? null : actor.getId(), actor == null ? null : actor.getEmail(),
+                actor == null || actor.getRole() == null ? null : actor.getRole().name(),
+                targetType, targetId, success, detail);
     }
 
     public void ok(String action, User actor, String targetType, Object targetId, String detail) {
@@ -53,6 +55,7 @@ public class AuditService {
         write("ACCESS_DENIED",
                 actor == null ? null : actor.getId(),
                 actor == null ? null : actor.getEmail(),
+                actor == null || actor.getRole() == null ? null : actor.getRole().name(),
                 "ENDPOINT",
                 req.getMethod() + " " + req.getRequestURI(),
                 false,
@@ -61,14 +64,19 @@ public class AuditService {
     }
 
     public void record(String action, Long actorId, String actorEmail, String targetType, Object targetId, boolean success, String detail) {
-        write(action, actorId, actorEmail, targetType, targetId, success, detail, ClientInfo.current().ip());
+        record(action, actorId, actorEmail, null, targetType, targetId, success, detail);
     }
 
-    private void write(String action, Long actorId, String actorEmail, String targetType, Object targetId, boolean success, String detail, String ip) {        try {
+    public void record(String action, Long actorId, String actorEmail, String actorRole, String targetType, Object targetId, boolean success, String detail) {
+        write(action, actorId, actorEmail, actorRole, targetType, targetId, success, detail, ClientInfo.current().ip());
+    }
+
+    private void write(String action, Long actorId, String actorEmail, String actorRole, String targetType, Object targetId, boolean success, String detail, String ip) {        try {
             AuditLog a = new AuditLog();
             a.setAction(action);
             a.setActorUserId(actorId);
             a.setActorEmail(clip(actorEmail, 160));
+            a.setActorRole(clip(actorRole, 32));
             a.setTargetType(targetType);
             a.setTargetId(targetId == null ? null : clip(String.valueOf(targetId), 64));
             a.setIp(clip(ip, 64));

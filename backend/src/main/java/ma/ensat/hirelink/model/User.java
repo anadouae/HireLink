@@ -151,6 +151,12 @@ public class User {
     @Column(name = "plan_tier", length = 24)
     private PlanTier planTier;
 
+    @Column(name = "subscription_ends_at")
+    private Instant subscriptionEndsAt;
+
+    @Column(name = "cancel_at_period_end")
+    private Boolean cancelAtPeriodEnd;
+
     /** Hiring Manager assigné (R14) — optionnel. */
     @Column(name = "assigned_org_id")
     private Long assignedOrgId;
@@ -306,6 +312,10 @@ public class User {
 
     public PlanTier getPlanTier() { return planTier; }
     public void setPlanTier(PlanTier planTier) { this.planTier = planTier; }
+    public Instant getSubscriptionEndsAt() { return subscriptionEndsAt; }
+    public void setSubscriptionEndsAt(Instant subscriptionEndsAt) { this.subscriptionEndsAt = subscriptionEndsAt; }
+    public boolean isCancelAtPeriodEnd() { return Boolean.TRUE.equals(cancelAtPeriodEnd); }
+    public void setCancelAtPeriodEnd(Boolean cancelAtPeriodEnd) { this.cancelAtPeriodEnd = cancelAtPeriodEnd; }
 
     public Long getAssignedOrgId() { return assignedOrgId; }
     public void setAssignedOrgId(Long assignedOrgId) { this.assignedOrgId = assignedOrgId; }

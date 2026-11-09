@@ -45,35 +45,43 @@
     } catch (err) { RC.toast("Compte", err.message, "danger"); } finally { RC.busy(btn, false); }
   });
 
-  function paintPhoto() {
-    let url = "";
-    try { url = localStorage.getItem(photoKey) || ""; } catch (_) {}
+  async function paintPhoto() {
     const img = $("pf-photo"), fb = $("pf-photo-fallback");
     fb.textContent = RC.initials($("set-name").value || session.fullName);
-    img.hidden = !url; fb.hidden = !!url;
-    if (url) img.src = url;
+    try {
+      const res = await HireLinkAPI.authFetch("/account/avatar");
+      if (!res.ok) throw new Error("none");
+      img.src = URL.createObjectURL(await res.blob());
+      img.hidden = false;
+      fb.hidden = true;
+    } catch (_) {
+      img.hidden = true;
+      fb.hidden = false;
+    }
     RC.paintProfile();
   }
   $("btn-photo-pick").addEventListener("click", () => $("pf-photo-file").click());
-  $("btn-photo-clear").addEventListener("click", () => { try { localStorage.removeItem(photoKey); } catch (_) {} paintPhoto(); RC.toast("Photo", "Image retirée", "ok"); });
+  $("btn-photo-clear").addEventListener("click", async () => {
+    try {
+      await HireLinkAPI.api("/account/avatar", { method: "DELETE" });
+      paintPhoto();
+      RC.toast("Photo", "Image retirée", "ok");
+    } catch (err) { RC.toast("Photo", err.message, "danger"); }
+  });
   $("pf-photo-file").addEventListener("change", (e) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        const size = 256, c = document.createElement("canvas");
-        c.width = c.height = size;
-        const side = Math.min(img.width, img.height);
-        c.getContext("2d").drawImage(img, (img.width - side) / 2, (img.height - side) / 2, side, side, 0, 0, size, size);
-        try { localStorage.setItem(photoKey, c.toDataURL("image/jpeg", 0.82)); } catch (_) { RC.toast("Photo", "Image trop lourde pour ce navigateur", "danger"); return; }
-        paintPhoto();
-        RC.toast("Photo", "Image enregistrée sur cet appareil", "ok");
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(f);
+    const body = new FormData();
+    body.append("file", f);
+    HireLinkAPI.authFetch("/account/avatar", { method: "POST", body }).then(async (res) => {
+      if (!res.ok) {
+        let msg = "Image refusée";
+        try { msg = (await res.json()).message || msg; } catch (_) {}
+        throw new Error(msg);
+      }
+      paintPhoto();
+      RC.toast("Photo", "Image enregistrée", "ok");
+    }).catch((err) => RC.toast("Photo", err.message, "danger"));
     e.target.value = "";
   });
 
@@ -109,15 +117,19 @@
   }
   $("btn-billing-premium").addEventListener("click", () => { HireLinkGrowth.showPremium("recruiter"); });
   $("btn-billing-cancel").addEventListener("click", async () => {
+    const ok = window.HireLink && HireLink.openModal
+      ? await HireLink.openModal({ title: "Résilier mon abonnement ?", description: "L'accès déjà payé reste ouvert jusqu'à la fin de période enregistrée. Aucun remboursement n'est émis.", confirmLabel: "Résilier" })
+      : true;
+    if (!ok) return;
     try {
       const r = await HireLinkAPI.api("/billing/subscription", { method: "DELETE" });
-      HireLinkAPI.setPlanTier(r.planTier);
-      RC.toast("Formule", "Retour à la formule Accès", "info");
+      RC.toast("Formule", r.message || "Résiliation enregistrée", "info");
       refreshBilling();
     } catch (err) {
       RC.toast("Formule", err.message, "danger");
     }
   });
+  if (window.HireLinkInvoices) HireLinkInvoices.mount(document.getElementById("org-invoices"), "company");
   window.addEventListener("focus", refreshBilling);
   refreshBilling();
 })();

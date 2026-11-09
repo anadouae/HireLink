@@ -12,7 +12,7 @@
     plans: "Plans & factures", refusals: "Motifs de refus", audit: "Journal d’audit", emails: "E-mails envoyés",
   };
   const STATUS_FR = App.STATUS_FR;
-  const PAY_FR = { EMISE: "À encaisser", REGLEE: "Payée", OFFERTE: "Incluse", AVOIR: "Avoir", ANNULEE: "Annulée" };
+  const PAY_FR = { NON_PAYEE: "Non payée", PAYEE: "Payée", ANNULEE: "Annulée", AVOIR: "Avoir historique", EMISE: "Non payée", REGLEE: "Payée", OFFERTE: "Payée" };
   const ROLE_FR = { CANDIDAT: "Candidat", RECRUTEUR: "Recruteur", ADMINISTRATEUR: "Administrateur" };
   const ORG_ROLE_FR = { OWNER: "Créateur", RECRUTEUR: "Recruteur", HIRING_MANAGER: "Responsable du poste" };
   const ORG_ROLE_TONE = { OWNER: "rc-pill--rose", RECRUTEUR: "", HIRING_MANAGER: "rc-pill--info" };
@@ -163,27 +163,20 @@
       "<p style='margin:0 0 .6rem'>" + statusPill(org) + " <span class='rc-muted'>ICE " + esc(org.ice || "—") + " · " + esc(org.offerCount) + " offre(s)</span></p>" +
       "<p style='margin:0 0 1rem'><strong>Créateur de l’espace.</strong> " + esc(org.ownerName || "—") + " · " + esc(org.ownerEmail || "") + "</p>" +
       "<h4 style='margin:0 0 .4rem'>Équipe</h4><ul class='rc-list' style='list-style:none;padding:0;margin:0 0 1rem'>" + (members || "<li class='rc-muted'>Aucun membre actif.</li>") + "</ul>" +
-      "<h4 style='margin:0 0 .4rem'>Plan</h4><div class='rc-form'><div class='rc-field'><label for='org-plan'>Plan</label><select id='org-plan'>" + plansOpts + "</select></div>" +
-      "<div class='rc-field'><label for='org-cycle'>Période de facturation</label><select id='org-cycle'><option value='month'>Mensuelle</option><option value='year'>Annuelle</option></select></div></div>" +
-      "<p class='rc-muted' style='margin:.5rem 0 0'>Un changement de plan émet automatiquement une facture.</p>" +
+      "<h4 style='margin:0 0 .4rem'>Plan</h4><div class='rc-form'><div class='rc-field'><label for='org-plan'>Plan</label><select id='org-plan' disabled>" + plansOpts + "</select></div></div>" +
+      "<p class='rc-muted' style='margin:.5rem 0 0'>La formule affichée est en lecture seule. Un passage payant passe par la facture du créateur de l’espace.</p>" +
       "<div class='rc-row-actions' style='margin-top:1rem;justify-content:flex-start'><button type='button' class='btn " + (org.verified ? "btn-ghost" : "btn-soft") + " btn-sm' id='org-toggle-verify'>" + (org.verified ? "Retirer la vérification" : "Marquer comme vérifiée") + "</button></div>";
     let verifyToggle = false;
     const ok = await HireLink.openModal({
-      title: org.name, description: "Fiche entreprise", large: true, bodyHtml: body, confirmLabel: "Enregistrer le plan", cancelLabel: "Fermer",
+      title: org.name, description: "Fiche entreprise", large: true, bodyHtml: body, confirmLabel: "Fermer", hideCancel: true,
       onReady: (api) => {
         const b = api.root.querySelector("#org-toggle-verify");
         if (b) b.onclick = () => { verifyToggle = true; HireLink.closeModal(true); };
       },
     });
-    if (!ok) return;
-    const planChange = $("org-plan").value !== org.planTier;
-    // Le PATCH serveur traite les deux clés indépendamment : les envoyer ensemble évite de perdre le plan choisi.
-    const payload = verifyToggle
-      ? Object.assign({ verified: !org.verified }, planChange ? { planTier: $("org-plan").value, cycle: $("org-cycle").value } : {})
-      : { planTier: $("org-plan").value, cycle: $("org-cycle").value };
-    if (!verifyToggle && !planChange) return;
+    if (!ok || !verifyToggle) return;
     try {
-      await HireLinkAPI.api("/admin/organizations/" + id, { method: "PATCH", body: payload });
+      await HireLinkAPI.api("/admin/organizations/" + id, { method: "PATCH", body: { verified: !org.verified } });
       App.toast("Entreprise mise à jour", org.name, "ok");
       await Promise.all([refresh("orgs"), refresh("invoices")]);
     } catch (err) { fail("Entreprise", err); }
@@ -530,10 +523,11 @@
 
   function paintInvoices() {
     const body = $("invoices-body");
-    const rows = state.invoices.filter((r) => state.invoiceFilter === "all"
-      || (state.invoiceFilter === "AVOIR" ? (r.status === "AVOIR" || r.status === "ANNULEE") : r.status === state.invoiceFilter));
+    const q = (($("invoice-q") && $("invoice-q").value) || "").trim().toLowerCase();
+    const rows = state.invoices.filter((r) => (state.invoiceFilter === "all" || r.status === state.invoiceFilter)
+      && (!q || (r.number + " " + (r.organization || "") + " " + (r.debtorName || "") + " " + (r.debtorEmail || "")).toLowerCase().includes(q)));
     if (!state.invoices.length) {
-      body.innerHTML = '<tr><td colspan="7" class="rc-muted" style="text-align:center;padding:1.6rem">Aucune facture. Elles apparaissent à chaque changement de plan d’une entreprise.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" class="rc-muted" style="text-align:center;padding:1.6rem">Aucune facture.</td></tr>';
       return;
     }
     if (!rows.length) {
@@ -541,23 +535,18 @@
       return;
     }
     body.innerHTML = rows.map((r) => {
-      const idx = state.invoices.indexOf(r);
-      const tone = r.status === "REGLEE" ? "rc-pill--ok" : r.status === "EMISE" ? "rc-pill--warn" : r.status === "AVOIR" ? "rc-pill--info" : "";
-      const acts = r.status === "AVOIR" || r.status === "ANNULEE" || r.status === "OFFERTE"
-        ? '<button type="button" class="btn btn-soft btn-sm" data-inv="' + idx + '">Ouvrir</button>'
-        : '<button type="button" class="btn btn-soft btn-sm" data-inv="' + idx + '">Ouvrir</button>' +
-          '<button type="button" class="btn btn-ghost btn-sm" data-inv-act="' + (r.status === "REGLEE" ? "EMISE" : "REGLEE") + '" data-id="' + r.id + '">' +
-          (r.status === "REGLEE" ? "Marquer non payée" : "Marquer payée") + "</button>" +
-          '<button type="button" class="btn btn-ghost btn-sm" data-inv-act="avoir" data-id="' + r.id + '">Créer un avoir</button>';
-      return "<tr><td>" + esc(r.number) + (r.cancels ? '<div class="rc-cell-sub">annule ' + esc(r.cancels) + "</div>" : "") + "</td><td>" + esc(App.fmtDate(r.issuedAt)) + "</td><td>" + esc(r.organization) +
-        "</td><td>" + esc(r.planLabel) + " · " + (r.cycle === "year" ? "annuel" : "mensuel") + (r.note ? '<div class="rc-cell-sub">' + esc(r.note) + "</div>" : "") + "</td><td>" + money(r.amountTtc) +
-        '</td><td><span class="rc-pill ' + tone + '">' + esc(PAY_FR[r.status] || r.status) + "</span></td>" +
+      const tone = r.status === "PAYEE" ? "rc-pill--ok" : r.status === "NON_PAYEE" ? "rc-pill--warn" : "";
+      const acts = '<button type="button" class="btn btn-soft btn-sm" data-pdf="' + r.id + '" data-mode="view">Voir</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-pdf="' + r.id + '" data-mode="download">Télécharger</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-pdf="' + r.id + '" data-mode="print">Imprimer</button>';
+      return "<tr><td>" + esc(r.number) + "</td><td>" + esc(App.fmtDate(r.issuedAt)) + "</td><td>" + esc(r.organization || "—") +
+        "</td><td>" + esc(r.debtorName || "—") + (r.debtorEmail ? '<div class="rc-cell-sub">' + esc(r.debtorEmail) + "</div>" : "") +
+        "</td><td>" + money(r.amountTtc) + '</td><td><span class="rc-pill ' + tone + '">' + esc(PAY_FR[r.status] || r.status) + "</span></td>" +
         '<td><div class="rc-row-actions">' + acts + "</div></td></tr>";
     }).join("");
-    // L'avoir est une ligne négative : il vient en déduction de ce qui a été encaissé.
-    const paid = state.invoices.filter((r) => r.status === "REGLEE" || r.status === "AVOIR").reduce((s, r) => s + r.amountTtc, 0);
-    const due = state.invoices.filter((r) => r.status === "EMISE").length;
-    $("invoices-note").textContent = money(paid) + " encaissés" + (due ? " · " + App.plural(due, "facture à encaisser", "factures à encaisser") : " · rien à encaisser");
+    const paid = state.invoices.filter((r) => r.status === "PAYEE").reduce((s, r) => s + Number(r.amountTtc || 0), 0);
+    const due = state.invoices.filter((r) => r.status === "NON_PAYEE").reduce((s, r) => s + Number(r.amountTtc || 0), 0);
+    $("invoices-note").textContent = money(paid) + " payés · reste à recevoir " + money(due);
   }
   $("invoice-filter").addEventListener("click", (e) => {
     const b = e.target.closest("[data-f]");
@@ -566,49 +555,27 @@
     $("invoice-filter").querySelectorAll(".rc-chip").forEach((c) => c.classList.toggle("is-on", c === b));
     paintInvoices();
   });
+  if ($("invoice-q")) $("invoice-q").addEventListener("input", paintInvoices);
   $("invoices-body").addEventListener("click", async (e) => {
-    const open = e.target.closest("[data-inv]");
-    if (open) return printInvoice(state.invoices[Number(open.dataset.inv)]);
-    const btn = e.target.closest("[data-inv-act]");
-    const r = btn && state.invoices.find((x) => String(x.id) === btn.dataset.id);
-    if (!r) return;
+    const btn = e.target.closest("[data-pdf]");
+    if (!btn) return;
     try {
-      if (btn.dataset.invAct === "avoir") {
-        const motif = await Mascotte.confirm({
-          title: "Créer un avoir pour " + r.number + " ?",
-          description: r.organization + " · " + money(r.amountTtc) + ". La facture d'origine est conservée, annulée par un avoir négatif.",
-          confirmLabel: "Créer l'avoir", cancelLabel: "Y renoncer", danger: true,
-          field: { label: "Motif de l'avoir", placeholder: "Geste commercial — erreur de facturation", maxlength: 200, required: true },
-        });
-        if (!motif) return;
-        const avoir = await HireLinkAPI.api("/admin/invoices/" + r.id + "/credit-note", { method: "POST", body: { motif } });
-        App.toast("Avoir émis", avoir.number + " annule " + r.number, "ok");
+      const res = await HireLinkAPI.authFetch("/admin/invoices/" + btn.dataset.pdf + "/pdf");
+      if (!res.ok) throw new Error("PDF indisponible");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (btn.dataset.mode === "download") {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "facture-" + btn.dataset.pdf + ".pdf";
+        a.click();
       } else {
-        const toPaid = btn.dataset.invAct === "REGLEE";
-        const ok = await Mascotte.confirm({
-          title: toPaid ? "Marquer cette facture payée ?" : "Revenir à « à encaisser » ?",
-          description: r.number + " · " + r.organization + " · " + money(r.amountTtc),
-          confirmLabel: toPaid ? "Facture payée" : "Non payée", cancelLabel: "Annuler",
-        });
-        if (!ok) return;
-        await HireLinkAPI.api("/admin/invoices/" + r.id, { method: "PATCH", body: { status: btn.dataset.invAct } });
-        App.toast("Facture mise à jour", r.number + " · " + (toPaid ? "payée" : "à encaisser"), "ok");
+        const w = window.open(url);
+        if (btn.dataset.mode === "print" && w) w.addEventListener("load", () => { try { w.print(); } catch (_) {} });
       }
-      await refresh("invoices");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err) { fail("Facture", err); }
   });
-
-  function printInvoice(row) {
-    const w = window.open("", "_blank");
-    if (!w) return App.toast("Facture", "Autorisez les fenêtres pour afficher la facture", "warn");
-    w.document.open();
-    w.document.write("<!DOCTYPE html><html lang='fr'><head><meta charset='utf-8'><title>Facture " + esc(row.number) +
-      "</title><style>body{font-family:Inter,system-ui,sans-serif;color:#1a1214;padding:2.5rem;max-width:720px;margin:auto}h1{margin:.2rem 0}table{width:100%;border-collapse:collapse;margin-top:1.5rem}td{padding:.55rem 0;border-bottom:1px solid #eee}.total td{font-weight:700;border-bottom:0}</style></head><body><p><strong>HireLink</strong></p><h1>Facture " +
-      esc(row.number) + "</h1><p>Émise le " + esc(new Date(row.issuedAt).toLocaleString("fr-FR")) + " · " + esc(PAY_FR[row.status] || row.status) + "</p><p><strong>" + esc(row.organization) + "</strong><br>ICE " + esc(row.ice || "—") +
-      "</p><table><tr><td>" + esc(row.planLabel) + " · " + (row.cycle === "year" ? "annuel" : "mensuel") + "</td><td style='text-align:right'>" + money(row.amountHt) + " HT</td></tr><tr><td>TVA 20 %</td><td style='text-align:right'>" + money(row.tva) +
-      "</td></tr><tr class='total'><td>Total TTC</td><td style='text-align:right'>" + money(row.amountTtc) + "</td></tr></table></body></html>");
-    w.document.close();
-  }
 
   /* ----------------------------------------------------------- journal d'audit */
   /** Le filtre se complète avec les actions réellement écrites : aucune trace ne devient infiltrable. */
@@ -623,24 +590,32 @@
       });
   }
 
+  let auditPage = 0;
   async function loadAudit() {
     const body = $("audit-body");
     const action = $("audit-filter").value;
-    body.innerHTML = '<tr><td colspan="6" class="rc-muted" style="text-align:center;padding:1.4rem">Chargement…</td></tr>';
+    body.innerHTML = '<tr><td colspan="7" class="rc-muted" style="text-align:center;padding:1.4rem">Chargement…</td></tr>';
     try {
-      const rows = await HireLinkAPI.api("/admin/audit" + (action ? "?action=" + encodeURIComponent(action) : ""), { noDedupe: true });
-      if (!action) syncAuditFilter(rows);
+      const qs = "?page=" + auditPage + "&size=50" + (action ? "&action=" + encodeURIComponent(action) : "");
+      const rows = await HireLinkAPI.api("/admin/audit" + qs, { noDedupe: true });
+      if (!action && auditPage === 0) syncAuditFilter(rows);
       body.innerHTML = rows.length
         ? rows.map((r) =>
             "<tr><td>" + esc(App.fmtDateTime(r.at)) + '</td><td><span class="rc-pill ' + (r.success ? "rc-pill--ok" : "rc-pill--danger") + '">' + esc(r.action) + "</span></td><td>" +
-            esc(r.actor || "—") + "</td><td>" + esc(r.target || "—") + "</td><td>" + esc(r.ip || "—") + '</td><td class="rc-muted">' + esc(r.detail || "") + "</td></tr>").join("")
-        : '<tr><td colspan="6" class="rc-muted" style="text-align:center;padding:1.6rem">Aucun évènement.</td></tr>';
+            esc(r.actor || "—") + "</td><td>" + esc(r.actorRole || "—") + "</td><td>" + esc(r.target || "—") + '</td><td>' + (r.success ? "Réussi" : "Échec") + '</td><td class="rc-muted">' + esc(r.detail || "") + "</td></tr>").join("")
+        : '<tr><td colspan="7" class="rc-muted" style="text-align:center;padding:1.6rem">Aucun évènement.</td></tr>';
+      const pager = $("audit-pager");
+      if (pager) {
+        pager.innerHTML = '<button type="button" class="btn btn-ghost btn-sm" id="audit-prev"' + (auditPage ? "" : " disabled") + '>Page précédente</button> <span class="rc-muted">Page ' + (auditPage + 1) + '</span> <button type="button" class="btn btn-ghost btn-sm" id="audit-next"' + (rows.length < 50 ? " disabled" : "") + ">Page suivante</button>";
+        pager.querySelector("#audit-prev").onclick = () => { auditPage = Math.max(0, auditPage - 1); loadAudit(); };
+        pager.querySelector("#audit-next").onclick = () => { auditPage += 1; loadAudit(); };
+      }
     } catch (err) {
-      body.innerHTML = '<tr><td colspan="6"></td></tr>';
+      body.innerHTML = '<tr><td colspan="7"></td></tr>';
       App.errorState(body.firstChild.firstChild, err.message, loadAudit);
     }
   }
-  $("audit-filter").addEventListener("change", loadAudit);
+  $("audit-filter").addEventListener("change", () => { auditPage = 0; loadAudit(); });
   $("audit-refresh").addEventListener("click", loadAudit);
   /** authFetch, pas un lien : l'en-tête d'autorisation ne voyage pas dans une navigation. */
   $("audit-export").addEventListener("click", async () => {
@@ -667,7 +642,7 @@
   });
 
   /* ------------------------------------------------------------ e-mails envoyés */
-  const MAIL_STATE = { SENT: ["Envoyé", "ok"], LOGGED: ["Journalisé (sans SMTP)", ""], FAILED: ["Échec d’envoi", "danger"] };
+  const MAIL_STATE = { SENT: ["Envoyé", "ok"], LOGGED: ["En attente", "warn"], FAILED: ["Échec", "danger"] };
   const MAIL_KIND = { SECURITY: "Sécurité", ACCOUNT: "Compte", APPLICATION: "Candidature", INTERVIEW: "Entretien" };
 
   async function loadEmails() {
@@ -684,7 +659,7 @@
         const st = MAIL_STATE[r.status] || [r.status, ""];
         return "<tr><td>" + esc(App.fmtDateTime(r.at)) + "</td><td>" + esc(r.recipient) + "</td><td>" + esc(r.subject) + "</td><td>" + esc(MAIL_KIND[r.kind] || r.kind) +
           '</td><td><span class="rc-pill' + (st[1] ? " rc-pill--" + st[1] : "") + '">' + esc(st[0]) + "</span></td><td>" +
-          (r.hasBody ? '<button type="button" class="btn btn-ghost btn-sm" data-mail="' + r.id + '">Voir</button>' : "") + "</td></tr>";
+          esc(r.error || "") + (r.hasBody ? ' <button type="button" class="btn btn-ghost btn-sm" data-mail="' + r.id + '">Voir</button>' : "") + "</td></tr>";
       }).join("");
     } catch (err) {
       body.innerHTML = '<tr><td colspan="6"></td></tr>';
@@ -716,10 +691,9 @@
       state.reasons = await HireLinkAPI.api("/refusal-reasons?all=true");
       body.innerHTML = state.reasons.length
         ? state.reasons.map((r) =>
-            "<tr><td><code>" + esc(r.code) + "</code></td><td>" + esc(r.label) + '</td><td><span class="rc-pill ' + (r.active ? "rc-pill--ok" : "") + '">' + (r.active ? "Actif" : "Inactif") +
-            '</span></td><td><div class="rc-row-actions"><button class="btn btn-ghost btn-sm" data-rr="edit" data-id="' + r.id + '">Renommer</button><button class="btn btn-ghost btn-sm" data-rr="toggle" data-id="' + r.id + '">' +
-            (r.active ? "Désactiver" : "Activer") + '</button><button class="btn btn-ghost btn-sm" data-rr="del" data-id="' + r.id + '">Supprimer</button></div></td></tr>').join("")
-        : '<tr><td colspan="4" class="rc-muted" style="text-align:center;padding:1.6rem">Aucun motif.</td></tr>';
+            "<tr><td><code>" + esc(r.code) + "</code></td><td>" + esc(r.label) + '</td><td><span class="rc-pill ' + (r.active ? "rc-pill--ok" : "") + '">' + (r.active ? "Actif" : "Historique") +
+            "</span></td></tr>").join("")
+        : '<tr><td colspan="3" class="rc-muted" style="text-align:center;padding:1.6rem">Aucun motif.</td></tr>';
     } catch (err) {
       body.innerHTML = '<tr><td colspan="4" class="rc-muted">' + esc(err.message) + "</td></tr>";
     }

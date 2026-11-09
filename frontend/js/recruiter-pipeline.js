@@ -229,19 +229,18 @@
   }
 
   const FIXED_REASONS = [
-    ["PROFILE_MISMATCH", "Compétences pas assez proches du poste"],
-    ["EXPERIENCE_LEVEL", "Expérience insuffisante pour le poste"],
-    ["LANGUAGE_GAP", "Langue insuffisante pour le poste"],
-    ["LOCATION_UNAVAILABLE", "Lieu ou mobilité incompatible"],
-    ["SALARY_EXPECTATION", "Prétentions hors budget"],
-    ["PROCESS_WITHDRAW_ORG", "Poste pourvu ou recrutement clos"],
-    ["OTHER_CATALOG", "Autre"],
+    ["REF01", "Profil non conforme aux exigences."],
+    ["REF02", "Expérience insuffisante."],
+    ["REF03", "Compétences techniques insuffisantes."],
+    ["REF04", "Candidature incomplète."],
+    ["REF05", "Poste déjà pourvu."],
+    ["REF06", "Autre."],
   ];
 
   function refusalSelectHtml() {
     return (
       '<div class="hl-dossier-section"><h5>Motif du refus</h5>' +
-      '<p class="muted" style="margin:0 0 .55rem">Le candidat voit ce motif. « Autre » permet de le préciser.</p>' +
+      '<p class="muted" style="margin:0 0 .55rem">Le candidat voit ce motif. « Autre » peut être précisé. Le message plus bas lui est envoyé seulement si vous le rédigez.</p>' +
       '<div class="field"><label>Motif</label>' +
       '<select id="reject-reason"><option value="">— Choisir —</option>' +
       FIXED_REASONS.map((r) => '<option value="' + r[0] + '">' + esc(r[1]) + "</option>").join("") +
@@ -809,9 +808,9 @@
         const refresh = () => {
           const reason = ((reasonEl() || {}).value || "").trim();
           const otherWrap = document.getElementById("reject-other-wrap");
-          if (otherWrap) otherWrap.hidden = reason !== "OTHER_CATALOG";
+          if (otherWrap) otherWrap.hidden = reason !== "REF06";
           const other = ((document.getElementById("reject-other") || {}).value || "").trim();
-          const motifOk = !!reason && (reason !== "OTHER_CATALOG" || other.length > 2);
+          const motifOk = !!reason;
           api.setConfirmEnabled(motifOk && syncChecks());
           if (hint) {
             hint.textContent = reason
@@ -838,7 +837,7 @@
               return;
             }
             const label =
-              code === "OTHER_CATALOG"
+              code === "REF06"
                 ? ((document.getElementById("reject-other") || {}).value || "").trim() || "Autre"
                 : (FIXED_REASONS.find((r) => r[0] === code) || [, code])[1];
             if (!HireLinkCredits.preflight()) return;
@@ -847,7 +846,7 @@
               const data = await HireLinkAPI.api("/ai/refusal-draft", {
                 method: "POST",
                 body: {
-                  reasonCode: code === "OTHER_CATALOG" ? "OTHER_CATALOG" : code,
+                  reasonCode: code,
                   reasonLabel: label,
                   jobTitle: c.jobTitle || "",
                 },
@@ -877,13 +876,9 @@
       HireLink.toast("Motif requis", "Choisissez un motif", "warn");
       return;
     }
-    if (reason === "OTHER_CATALOG") {
+    if (reason === "REF06") {
       const other = ((document.getElementById("reject-other") || {}).value || "").trim();
-      if (other.length < 3) {
-        HireLink.toast("Motif requis", "Précisez le motif", "warn");
-        return;
-      }
-      reason = "OTHER:" + other;
+      if (other) reason = "REF06:" + other;
     }
     const message = ((document.getElementById("reject-message") || {}).value || "").trim();
     try {
