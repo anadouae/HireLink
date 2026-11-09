@@ -161,7 +161,7 @@ public class EventNotifier {
         Email email = interviewEmail(app, title, rescheduled
                 ? "Votre entretien pour « " + job + " » a été reporté. Voici le nouveau créneau."
                 : "Bonne nouvelle : le recruteur vous propose un entretien pour « " + job + " ».")
-                .withButton("Confirmer ma présence", page("candidate-applications.html?id=" + app.getId()));
+                .withButton("Voir ma convocation", page("candidate-applications.html?id=" + app.getId()));
         notifications.pushAndMail("interview:" + app.getId(), app.getCandidate().getId(), title, "« " + job + " » — " + interviews.summary(app), "INTERVIEW",
                 Kind.INTERVIEW, title.toLowerCase() + " : " + job, email, calendar(app));
         for (Long target : staff(app)) {
@@ -193,22 +193,6 @@ public class EventNotifier {
                             .withFacts(new Fact("Motif", app.getInterviewCancelReason()))
                             .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")),
                     null);
-        }
-    }
-
-    /** Réponse du candidat : confirmation ou indisponibilité (le recruteur propose alors un autre créneau). */
-    public void interviewAnswered(Application app) {
-        boolean ok = InterviewService.CONFIRMED.equals(app.getInterviewConfirmation());
-        String name = app.getCandidate().getFullName();
-        String title = ok ? "Entretien confirmé" : "Candidat indisponible";
-        String body = ok ? name + " a confirmé l'entretien du " + interviews.when(app)
-                : name + " n'est pas disponible pour l'entretien du " + interviews.when(app)
-                + (app.getInterviewCandidateNote() == null ? "" : " : « " + app.getInterviewCandidateNote() + " »");
-        for (Long target : staff(app)) {
-            notifications.pushAndMail("interview:" + app.getId(), target, title, body, "INTERVIEW", Kind.INTERVIEW, title.toLowerCase() + " : " + name,
-                    Email.of(title, body, ok ? "Rien à faire : l'entretien reste planifié."
-                            : "Vous pouvez proposer un nouveau créneau depuis le pipeline.")
-                            .withButton("Ouvrir le pipeline", page("recruiter-pipeline.html")), null);
         }
     }
 

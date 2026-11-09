@@ -1,6 +1,6 @@
 # HireLink — API : offres, entretiens, notifications, e-mails
 
-Base : `/api/v1`. Toutes les routes exigent un jeton (`Authorization: Bearer …`) sauf mention contraire. La documentation interactive complète est servie par Swagger (`/swagger-ui.html`, désactivé en production).
+Base : `/api/v1`. Toutes les routes exigent un jeton (`Authorization: Bearer …`) sauf mention contraire. La documentation interactive est servie par Swagger (`/swagger-ui.html`) uniquement si l'exploitant l'ouvre explicitement (`hirelink.swagger.enabled=true`, éteint par défaut partout).
 
 ## Offres
 
@@ -48,9 +48,8 @@ Les champs qui ne concernent pas le type de contrat sont ignorés (jamais enregi
 | Route | Rôle | Description |
 |---|---|---|
 | `PATCH /applications/{id}/status` | RECRUTEUR | change l'étape ; vers `INTERVIEW`, le corps contient `interview` ; `HIRED` notifie et écrit au candidat |
-| `PUT /applications/{id}/interview` | RECRUTEUR | reporte l'entretien |
+| `PUT /applications/{id}/interview` | RECRUTEUR | planifie ou reporte l'entretien ; le candidat reçoit une notification et un e-mail, aucune réponse n'est attendue |
 | `POST /applications/{id}/interview/cancel` `{reason}` | RECRUTEUR | annule (motif obligatoire) |
-| `POST /applications/{id}/interview/answer` `{available, note}` | CANDIDAT | confirme ou indique une indisponibilité |
 | `GET /applications/{id}/interview.ics` | le candidat ou un membre de l'organisation | fichier calendrier |
 
 `interview` : `type` (`ONSITE`, `VISIO`, `PHONE`), `kind` (`HR`, `TECHNICAL`, `MANAGER`, `FINAL`), `startsAt` (heure locale ISO), `timeZone` (défaut `Africa/Casablanca`), `durationMinutes` (10 – 480), `location`, `mapUrl`, `videoUrl`, `phone`, `participants`, `instructions`. L'adresse (`location`) est obligatoire sur site, le lien en visio, le numéro au téléphone ; le créneau ne peut pas être dans le passé ; `timeZone` doit appartenir à la liste prise en charge.
@@ -62,6 +61,19 @@ Les champs qui ne concernent pas le type de contrat sont ignorés (jamais enregi
 3. Le client se reconnecte avec un nouveau ticket (délai croissant) ; `GET /notifications` reste utilisé en secours (toutes les 45 s si le flux est coupé).
 
 Chaque utilisateur ne reçoit que ses propres notifications. La déconnexion ferme le flux côté navigateur.
+
+### `GET /notifications` — liste et filtres
+
+| Paramètre | Valeurs | Effet (appliqué par la base) |
+|---|---|---|
+| `kind` | `STATUS`, `INTERVIEW`, `SLA`, `ASSIGN`, `APPLICATION`, `FOLLOW`, `MODERATION`, `SYSTEM`, `HIRED`, `DECISION`, `PIPELINE`, `INFO` | une seule catégorie ; toute autre valeur → `400` |
+| `state` | `all` (défaut), `unread`, `read` | état de lecture ; toute autre valeur → `400` |
+| `since` | `2026-11-09` ou horodatage complet (`2026-11-09T00:00:00.000Z`) | notifications plus récentes que ce moment ; lisible uniquement, sinon `400` |
+| `limit` | 1 à 500 (défaut 300) | plafonne la réponse ; hors bornes → `400` |
+
+Sans aucun paramètre, la route renvoie **tout l'historique** : c'est ce qu'utilise la cloche, dont le compteur doit rester exact.
+La page « Notifications » passe les paramètres au serveur, puis applique les mêmes filtres côté navigateur ; si le plafond est
+atteint, elle affiche « Affichage limité aux 300 notifications les plus récentes » au lieu de laisser croire que rien d'autre n'existe.
 
 ## E-mails
 

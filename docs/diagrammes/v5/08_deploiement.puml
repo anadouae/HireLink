@@ -10,7 +10,7 @@ node "Windows 11 — poste local" {
     artifact "backend/data/\ncvs · org-logos · jwt.key" as DATA
   }
   node "MariaDB 10.4 (service `mysql`, XAMPP)" {
-    artifact "schéma `hirelink`\n25 tables · 3306\nroot@127.0.0.1" as SQL
+    artifact "schéma `hirelink`\n26 tables · 3306\nroot@127.0.0.1" as SQL
   }
 }
 
@@ -23,7 +23,7 @@ FRONT --> BACK : REST + JWT (Authorization)\nCORS : origine :5500 autorisée
 BACK --> SQL : JDBC HikariCP\nspring.jpa.hibernate.ddl-auto = update
 BACK --> DATA : écriture CV et logos
 BACK ..> LLMS : appel IA (optionnel,\nfallback LocalLlmProvider sin clé)
-BACK ..> SMTPX : e-mails transactionnels\n(statut réel dans sent_email)
+BACK ..> SMTPX : e-mails transactionnels\n(statut réel dans sent_emails)
 BACK ..> FRONT : jetons, erreurs en français\nenvelope {message}
 
 note bottom of BACK

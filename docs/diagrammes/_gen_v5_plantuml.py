@@ -3,9 +3,16 @@
 
 Sources .puml ecrites dans docs/diagrammes/v5/, PNG rendus par le serveur PlantUML
 (https://www.plantuml.com/plantuml). Aucun binaire local requis.
-Lance :  python docs/diagrammes/_gen_v5_plantuml.py [--svg] [--only nom]
+
+Le drapeau --local remplace le serveur par « java -jar plantuml.jar » (variable
+d'environnement PLANTUML_JAR, ou --jar chemin) : le serveur public se sature et
+rend parfois une page HTML de consentement a la place du PNG.
+Lance :  python docs/diagrammes/_gen_v5_plantuml.py [--svg] [--only nom] [--local]
 """
+import os
 import re
+import shutil
+import subprocess
 import sys
 import time
 import zlib
@@ -84,17 +91,65 @@ def fetch(src: str, ext: str) -> bytes:
     return last
 
 
+def label_count(src: str, ext: str) -> int:
+    """Nombre d'étiquettes réellement dessinées, mesuré sur le SVG.
+
+    Le serveur public renvoie parfois un PNG « dégradé » où toutes les étiquettes ont
+    disparu, sans code d'erreur. Le nombre de textes du SVG sert de référence pour
+    rejeter ces rendus.
+    """
+    body = fetch(src, ext)
+    if not body.startswith(b"<svg"):
+        return -1
+    return body.decode("utf-8", "ignore").count("<text")
+
+
+def avec_skin(name: str, src: str) -> str:
+    if "@startuml " + name in src:
+        return src.replace("@startuml " + name, "@startuml " + name + SKIN, 1)
+    return src
+
+
+def render_local(name: str, src: str, jar: str) -> pathlib.Path:
+    """Rendu par le moteur Java : même langage, mais aucun serveur à supplier."""
+    OUT.mkdir(parents=True, exist_ok=True)
+    src = avec_skin(name, src)
+    puml = OUT / f"{name}.puml"
+    puml.write_text(src, encoding="utf-8")
+    cible = OUT / f"{name}.png"
+    travail = pathlib.Path(os.environ.get("TEMP", ".")) / f"plantuml_{name}"
+    travail.mkdir(exist_ok=True)
+    subprocess.run(["java", "-jar", jar, "-tpng", "-o", str(travail), str(puml)],
+                   check=True, capture_output=True)
+    # Le jar nomme l'image d'après l'identifiant du @startuml, pas d'après le fichier source.
+    produits = sorted(travail.glob("*.png"))
+    if not produits:
+        raise RuntimeError(f"{name}: le jar n'a produit aucune image")
+    cible.write_bytes(produits[0].read_bytes())
+    shutil.rmtree(travail, ignore_errors=True)
+    return cible
+
+
 def render(name: str, src: str, as_svg: bool) -> pathlib.Path:
     OUT.mkdir(parents=True, exist_ok=True)
-    src = src.replace("@startuml " + name, "@startuml " + name + SKIN, 1) if "@startuml" in src else src
+    src = avec_skin(name, src)
     (OUT / f"{name}.puml").write_text(src, encoding="utf-8")
     ext = "svg" if as_svg else "png"
-    body = fetch(src, ext)
-    target = OUT / f"{name}.{ext}"
+    expected = label_count(src, "svg")
     signature = b"\x89PNG\r\n\x1a\n" if ext == "png" else b"<svg"
-    if not body.startswith(signature):
-        raise RuntimeError(f"{name}: sortie inattendue {body[:200]!r}")
-    target.write_bytes(body)
+    # Le serveur public peut répondre un PNG sans aucune étiquette, en silence : on rend
+    # trois fois et on garde la plus grande image, celle qui porte les textes.
+    best = b""
+    for _ in range(3):
+        body = fetch(src, ext)
+        if body.startswith(signature) and len(body) > len(best):
+            best = body
+    if not best:
+        raise RuntimeError(f"{name}: sortie inattendue")
+    if expected >= 0 and len(best) < 20000:
+        print(f"ATTENTION {name}: {len(best)} o pour {expected} étiquettes, rendu à revérifier")
+    target = OUT / f"{name}.{ext}"
+    target.write_bytes(best)
     return target
 
 
@@ -103,13 +158,20 @@ def main() -> int:
     if "--only" in sys.argv:
         only = sys.argv[sys.argv.index("--only") + 1]
     as_svg = "--svg" in sys.argv
+    jar = None
+    if "--local" in sys.argv:
+        jar = (os.environ.get("PLANTUML_JAR")
+               or (sys.argv[sys.argv.index("--jar") + 1] if "--jar" in sys.argv else None))
+        if not jar or not pathlib.Path(jar).exists():
+            print("PLANTUML_JAR (ou --jar) doit pointer sur plantuml.jar ; rendu serveur à la place.")
+            jar = None
     import diagrams_v5
     diagrams = diagrams_v5.DIAGRAMS
     for name, src in diagrams.items():
         if only and only not in name:
             continue
         try:
-            path = render(name, src, as_svg)
+            path = render_local(name, src, jar) if jar else render(name, src, as_svg)
             print(f"OK  {path.name:44s} {path.stat().st_size:>8} o")
         except Exception as exc:  # noqa: BLE001 - un diagramme casse ne doit pas bloquer les autres
             print(f"ECHEC {name}: {exc}")

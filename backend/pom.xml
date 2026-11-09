@@ -106,6 +106,17 @@
   </dependencies>
 
   <build>
+    <resources>
+      <!-- Les secrets locaux (application-local.properties) restent sur le disque : ils ne doivent
+           jamais être copiés dans target/classes ni embarqués dans le JAR. Le classpath ne les voit
+           donc pas ; spring.config.import les relit depuis ./ (dossier backend) ou ./backend/. -->
+      <resource>
+        <directory>src/main/resources</directory>
+        <excludes>
+          <exclude>application-local.properties</exclude>
+        </excludes>
+      </resource>
+    </resources>
     <plugins>
       <plugin>
         <groupId>org.springframework.boot</groupId>

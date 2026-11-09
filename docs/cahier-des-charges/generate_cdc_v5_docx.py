@@ -147,7 +147,7 @@ def add_cover(doc):
 
     s = doc.add_paragraph()
     s.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    set_run(s.add_run("Cahier des charges — version 5"), bold=True, size=17, color=ROYAL)
+    set_run(s.add_run("Cahier des charges — version 5.1"), bold=True, size=17, color=ROYAL)
 
     s2 = doc.add_paragraph()
     s2.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -167,11 +167,11 @@ def add_cover(doc):
         ("Module", "Frameworks et Technologies Web"),
         ("Réalisé par", "EL ASSAL Douae"),
         ("Projet", "HireLink — ATS français pour PME marocaines"),
-        ("Date", "6 novembre 2026"),
-        ("Version du document", "5.0"),
+        ("Date", "7 novembre 2026"),
+        ("Version du document", "5.1"),
         ("Backend", "Spring Boot 3.3 / Java 21 — http://localhost:8081/api/v1"),
         ("Frontend", "HTML, CSS et JavaScript statiques — http://localhost:5500"),
-        ("Base de données", "MariaDB 10.4.32 — schéma hirelink, 25 tables"),
+        ("Base de données", "MariaDB 10.4.32 — schéma hirelink, 26 tables"),
     ]
     add_table(doc, ["Rubrique", "Valeur"], meta, col_widths=[4.6, 12.4], size=10)
 
@@ -186,10 +186,10 @@ def add_sommaire(doc):
         ("1", "Contexte et problématique", "1.1 terrain, 1.2 question, 1.3 réponse produit, 1.4 périmètre technique"),
         ("2", "Objectifs et périmètre", "GO-01 à GO-09, ce qui est dans le périmètre, ce qui n'y est pas"),
         ("3", "Acteurs et personas", "rôles, six personas, matrice des droits réels, comptes de démonstration"),
-        ("4", "Exigences fonctionnelles", "EF-01 à EF-71 regroupées en huit modules"),
+        ("4", "Exigences fonctionnelles", "EF-01 à EF-81 regroupées en neuf modules"),
         ("5", "Règles de gestion", "R01 à R16 et RM01 tels qu'écrits dans le code, plus onze règles RG-nn"),
         ("6", "Exigences non fonctionnelles", "EN-01 à EN-34 : sécurité, performance, exploitation, ergonomie, RGPD"),
-        ("7", "Modèle de données", "25 tables, relations, énumérations et vocabulaires contrôlés"),
+        ("7", "Modèle de données", "26 tables, relations, énumérations et vocabulaires contrôlés"),
         ("8", "Parcours fonctionnels", "six parcours pas à pas, avec le point d'observation"),
         ("9", "Matrice de traçabilité", "EF → fichier:line → preuve observable"),
         ("10", "Planning, risques, limites, glossaire", "séances, RQ-01 à RQ-10, annexes"),
@@ -256,7 +256,7 @@ def section_1(doc):
               [
                   ("Le recruteur est tenu par un délai interne",
                    "job_offers.response_sla_days ; deadline calculée à la candidature "
-                   "(applications.sla_due_at) ; SlaMonitorService, exécuté toutes les 30 minutes, notifie "
+                   "(applications.response_deadline) ; SlaMonitorService, exécuté toutes les 30 minutes, notifie "
                    "l'auteur de l'offre et le responsable du poste assigné.",
                    "Le délai n'est pas affiché au candidat : le champ reste un simple suivi interne, comme l'indique le "
                    "commentaire du DTO (ApiDtos, responseSlaDays)."),
@@ -295,13 +295,14 @@ def section_1(doc):
               ["Couche", "Technologie", "Volumétrie vérifiée dans le dépôt"],
               [
                   ("API", "Spring Boot 3.3, Java 21, Maven",
-                   "20 contrôleurs REST, 151 endpoints sous /api/v1, 51 services, 35 classes de modèle dont "
-                   "24 entités @Table et 12 énumérations."),
+                   "21 contrôleurs REST, 154 endpoints sous /api/v1, 52 services, 36 classes de modèle dont "
+                   "25 entités @Table et 11 énumérations."),
                   ("Persistance", "Spring Data JPA / Hibernate, MariaDB 10.4.32",
-                   "base hirelink, hibernate.ddl-auto=update : 24 tables d'entités + la jointure job_offer_tags, soit 25 tables."),
+                   "base hirelink, hibernate.ddl-auto=update : 25 tables d'entités + la jointure job_offer_tags, soit 26 tables."),
                   ("Interface", "HTML, CSS et JavaScript sans framework",
                    "9 pages publiques (frontend/*.html), 18 pages applicatives (frontend/app/*.html), "
-                   "58 fichiers JS, 21 fichiers CSS."),
+                   "55 fichiers JS écrits par le projet (trois bibliothèques tierces sont isolées dans "
+                   "js/vendor) et 21 fichiers CSS."),
                   ("Sécurité", "Spring Security 6, JWT, WebAuthn, TOTP",
                    "filtre JWT, cookie de rafraîchissement HttpOnly, CAPTCHA auto-hébergé, journal d'audit."),
                   ("Exploitation", "Deux processus locaux",
@@ -377,16 +378,18 @@ def section_2(doc):
     add_table(doc,
               ["Grandeur", "Valeur mesurée", "Comment le revérifier"],
               [
-                  ("Comptes", "130", "SELECT COUNT(*) FROM users;"),
-                  ("Candidats", "32 dont 17 Junior et 9 Confirmé",
+                  ("Comptes", "126", "SELECT COUNT(*) FROM users;"),
+                  ("Candidats", "29 dont 16 Junior, 9 Confirmé, 2 Stagiaire, 2 Senior",
                    "SELECT experience_level, COUNT(*) FROM users WHERE role='CANDIDAT' GROUP BY 1;"),
                   ("Organisations", "42", "SELECT COUNT(*) FROM organizations;"),
                   ("Organisations avec au moins une offre publiée", "40",
                    "jointure organizations ↔ users.company ↔ job_offers.published"),
-                  ("Offres", "117 dont 106 publiées et suspendues = 0",
+                  ("Offres", "117 dont 106 publiées, 1 suspendue par la modération",
                    "SELECT published, COUNT(*) FROM job_offers GROUP BY 1;"),
                   ("Candidatures", "217", "SELECT COUNT(*) FROM applications;"),
-                  ("Tables", "25", "SHOW TABLES;"),
+                  ("Tables", "26", "SHOW TABLES;"),
+                  ("Entreprises suivies", "1 couple candidat-organisation",
+                   "SELECT COUNT(*) FROM company_follows;"),
               ],
               col_widths=[5.4, 5.2, 6.4], size=9)
 
@@ -472,6 +475,10 @@ def section_2(doc):
                   ("Règles R06, R07, R09 et R10", "Sans correspondance dans le code",
                    "Aucune occurrence de ces références dans le backend ; elles sont retirées de la numérotation "
                    "et ne sont donc pas revendiquées en section 5."),
+                  ("Types de notification « Décision » et « Pipeline »", "Options de filtre jamais remplies",
+                   "NotificationService n'écrit ni DECISION ni PIPELINE : ces deux options du filtre de "
+                   "app/notifications.html ne peuvent ramener aucune ligne. Elles sont signalées ici comme "
+                   "résiduelles, et non revendiquées comme une fonction."),
               ],
               col_widths=[4.6, 2.6, 9.8], size=9)
 
@@ -517,7 +524,7 @@ def section_3(doc):
                   ("Salma Berrada", "Candidate, profil Junior, Tétouan, recherche un premier poste de "
                    "développeuse", "Postuler simplement, suivre l'état de chaque dossier, savoir si une "
                    "entreprise répond vraiment.", "EF-01, EF-02, EF-12, EF-13, EF-16, EF-21, EF-24, EF-28, "
-                   "EF-29, EF-31, EF-45, EF-67, EF-68"),
+                   "EF-29, EF-31, EF-45, EF-67, EF-68, EF-76, EF-78, EF-80"),
                   ("Nadia Bennani", "Créatrice de l'espace Atlas Digital (OWNER), entreprise vérifiée",
                    "Structurer l'équipe, maîtriser la formule et le nombre de sièges, répondre aux "
                    "signalements.", "EF-02, EF-10, EF-48, EF-49, EF-50, EF-51, EF-52, EF-59"),
@@ -559,6 +566,8 @@ def section_3(doc):
                   ("Planifier un entretien", "non", "non", "oui", "oui", "assigné", "non", "403 « HM : dossier non assigné (R14) »"),
                   ("Répondre à une proposition d'entretien", "non", "oui (son dossier)", "non", "non", "non", "non", "403"),
                   ("Signaler une offre", "oui", "oui", "non", "non", "non", "non", "403 « Réservé aux candidats » (POST /offers/{id}/report)"),
+                  ("Suivre une entreprise et recevoir ses nouvelles offres", "non", "oui", "non", "non", "non", "non", "403 « Réservé aux candidats » (POST /follows/{organizationId})"),
+                  ("Voir combien de candidats suivent son entreprise", "non", "non", "oui", "oui", "oui", "oui", "—"),
                   ("Suspendre ou rétablir une offre", "non", "non", "non", "non", "non", "oui", "403 « Accès refusé. » hors /admin"),
                   ("Journal d'audit et export CSV", "non", "non", "non", "non", "non", "oui", "403 « Accès refusé. »"),
                   ("Gérer le catalogue de motifs de refus", "non", "non", "non", "non", "non", "oui", "403 « Réservé à l'administration »"),
@@ -603,7 +612,7 @@ MODULES_EF = [
         ("EF-07", "Exiger un CAPTCHA après deux échecs de connexion",
          "Épreuve image + question affichées au troisième essai", "POST /auth/captcha (l'image est rendue par le serveur)"),
         ("EF-08", "Mot de passe oublié et réinitialisation en un seul usage",
-         "Lien à usage unique ; le second usage est refusé", "POST /auth/forgot, POST /auth/reset"),
+         "Lien à usage unique ; le second usage est refusé", "POST /auth/forgot-password, POST /auth/reset-password"),
         ("EF-09", "Renouveler le jeton sans re-saisir le mot de passe",
          "Navigation continue après expiration du jeton d'accès", "POST /auth/refresh (cookie HttpOnly)"),
         ("EF-10", "Voir et révoquer ses sessions et appareils",
@@ -637,7 +646,8 @@ MODULES_EF = [
         ("EF-22", "Filtrer par ville, contrat, mode de travail, niveau, compatibilité",
          "Compteur du panneau = nombre de lignes réellement affichées", "app/candidate.html"),
         ("EF-23", "Rechercher en texte libre",
-         "Résultats instantanés sur titre, ville, compétences", "GET /offers/public?q="),
+         "Résultats instantanés sur titre, ville, compétences",
+         "filtrage exécuté dans le navigateur sur la liste renvoyée par GET /offers/public"),
         ("EF-24", "Voir le détail d'une offre et son score de compatibilité",
          "Décomposition du score (compétences demandées / présentes)", "GET /offers/{id}"),
         ("EF-25", "Consulter la vitrine publique d'une entreprise",
@@ -721,7 +731,7 @@ MODULES_EF = [
         ("EF-56", "Modérer les offres signalées (suspendre, rétablir, dépublier)",
          "File d'attente des signalements, décision tracée", "POST /admin/offers/{id}/suspend, /restore, /unpublish"),
         ("EF-57", "Gérer les comptes (activer, suspendre, rechercher)",
-         "Table des 130 comptes avec filtre", "GET /admin/users, PATCH /admin/users/{id}/active"),
+         "Table des 126 comptes avec filtre", "GET /admin/users, PATCH /admin/users/{id}/active"),
         ("EF-58", "Gérer les organisations et leurs logos",
          "Logo absent = initiales, aucune image cassée", "GET /admin/organizations, PATCH /admin/organizations/{id}"),
         ("EF-59", "Gérer les plans commerciaux et les factures",
@@ -752,6 +762,34 @@ MODULES_EF = [
          "Corrections proposées avant envoi", "POST /ai/language-check"),
         ("EF-71", "Consulter son solde de crédits IA",
          "Coût par appel, solde restant, historique du mois", "GET /ai/credits"),
+        ("EF-72", "Préparer un entretien : questions attendues et repères de réponse",
+         "Depuis « Mes candidatures », l'aide se genère pour l'offre concernée", "POST /ai/interview-prep"),
+        ("EF-73", "Récupérer une grille d'entretien pour un poste (recruteur)",
+         "Questions rangées par thème, modifiables avant usage", "POST /ai/interview-kit"),
+        ("EF-74", "Synthétiser un CV en quelques lignes",
+         "Depuis le profil candidat et depuis l'assistant recruteur", "POST /ai/cv-summary"),
+        ("EF-75", "Se faire conseiller par le coach IA sur son profil",
+         "Réponse à une question libre, appuyée sur le CV déposé", "POST /ai/coach"),
+    ]),
+    ("4.9 Suivi d'entreprise et notifications en temps réel", [
+        ("EF-76", "Suivre une entreprise depuis sa fiche publique",
+         "Le bouton « Suivre » devient « Vous suivez » ; un second clic ne crée pas de doublon",
+         "POST /follows/{organizationId} — contrainte unique sur le couple (candidat, organisation)"),
+        ("EF-77", "Consulter la liste des entreprises que l'on suit et s'en désabonner",
+         "Liste et compteur cohérents, retrait immédiat", "GET /follows, DELETE /follows/{organizationId}"),
+        ("EF-78", "Être prévenu quand une entreprise suivie publie une offre",
+         "Une notification de type « Suivi » par candidat qui suit, jamais deux pour la même offre",
+         "CompanyFollowService.announceNewOffer, appelé par JobOfferService à la publication (kind FOLLOW, notification interne seule)"),
+        ("EF-79", "Compter les candidats qui suivent son entreprise (recruteur)",
+         "Le compteur de la fiche « Entreprise & équipe » vient de la table company_follows",
+         "GET /organizations/mine → followerCount"),
+        ("EF-80", "Recevoir une notification sans rafraîchir la page",
+         "La cloche et le badge se mettent à jour pendant que l'onglet reste ouvert",
+         "POST /notifications/stream-ticket puis GET /notifications/stream (flux SSE)"),
+        ("EF-81", "Filtrer son centre de notifications par type",
+         "Une ligne « Tous les types », puis un intitulé français par type",
+         "app/notifications.html ; kinds réellement écrits par le serveur : APPLICATION, FOLLOW, STATUS, "
+         "INTERVIEW, SLA, ASSIGN, SYSTEM, MODERATION, HIRED (dossiers historiques), INFO (repli)"),
     ]),
 ]
 
@@ -759,7 +797,7 @@ MODULES_EF = [
 def section_4(doc):
     doc.add_page_break()
     add_heading_custom(doc, "4. Exigences fonctionnelles", 1)
-    add_para(doc, "Soixante-onze exigences, regroupées en huit modules. La colonne « preuve observable » "
+    add_para(doc, "Quatre-vingt-et-une exigences, regroupées en neuf modules. La colonne « preuve observable » "
                   "indique ce que le professeur voit à l'écran ; la colonne « implémentation » donne la route "
                   "REST ou la page qui la sert. Aucune exigence de cette liste ne décrit une fonction absente "
                   "du dépôt : les fonctions non réalisées sont nommées en section 2.3.")
@@ -851,6 +889,11 @@ REGLES_DOCUMENT = [
               "français ; le front affiche ce message, jamais un texte inventé.",
      "49 statuts attendus sur 49 retrouvés, 101 assertions sans échec (run newman du 6 novembre 2026).",
      "config/GlobalExceptionHandler"),
+    ("RG-12", "Un candidat ne suit une entreprise qu'une seule fois, et la publication d'une offre ne notifie "
+              "chaque follower qu'une seule fois.",
+     "Contrainte unique sur le couple (candidate_user_id, organization_id) ; un second clic sur « Suivre » "
+     "reste sans effet et sans doublon de notification.",
+     "model/CompanyFollow, CompanyFollowService.announceNewOffer"),
 ]
 
 
@@ -932,7 +975,7 @@ EN = [
     ("Exploitation", [
         ("EN-25", "Deux processus suffisent : API sur 8081, interface statique sur 5500.", "docs/API.md"),
         ("EN-26", "Schéma créé par Hibernate (ddl-auto=update) ; le script SQL n'est plus la référence.",
-         "25 tables, 4 seulement dans database/schema.sql"),
+         "26 tables, 4 seulement dans database/schema.sql"),
         ("EN-27", "Données de démonstration reproductibles par DataSeeder (comptes, organisations, offres).",
          "config/DataSeeder"),
         ("EN-28", "Les secrets ne sortent pas du poste : clés d'API dans application-local.properties "

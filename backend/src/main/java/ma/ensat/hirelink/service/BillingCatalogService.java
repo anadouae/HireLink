@@ -25,10 +25,14 @@ public class BillingCatalogService {
 
     private final CommercialPlanRepository planRepository;
     private final BillingInvoiceRepository invoiceRepository;
+    private final ma.ensat.hirelink.repository.OrganizationRepository organizationRepository;
 
-    public BillingCatalogService(CommercialPlanRepository planRepository, BillingInvoiceRepository invoiceRepository) {
+    public BillingCatalogService(CommercialPlanRepository planRepository,
+                                 BillingInvoiceRepository invoiceRepository,
+                                 ma.ensat.hirelink.repository.OrganizationRepository organizationRepository) {
         this.planRepository = planRepository;
         this.invoiceRepository = invoiceRepository;
+        this.organizationRepository = organizationRepository;
     }
 
     @Transactional
@@ -195,9 +199,18 @@ public class BillingCatalogService {
         return row;
     }
 
+    /**
+     * Numérotation métier : une séquence par entreprise et par mois (HL-AAAAMM-entreprise-n).
+     * L'ancien « count() global + 1 » attribuait le même numéro à deux entreprises et échouait sur
+     * l'index unique de billing_invoices.number. Le verrou de ligne sur l'entreprise sérialise deux
+     * facturations simultanées ; la contrainte d'unicité reste le filet.
+     */
     private String nextNumber(Long orgId) {
-        String day = DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneId.of("Africa/Casablanca")).format(Instant.now());
-        return "HL-" + day + "-" + orgId + "-" + (invoiceRepository.count() + 1);
+        organizationRepository.findByIdForUpdate(orgId);
+        String month = DateTimeFormatter.ofPattern("yyyyMM").withZone(ZoneId.of("Africa/Casablanca")).format(Instant.now());
+        String prefix = "HL-" + month + "-" + orgId + "-";
+        long alreadyIssued = invoiceRepository.countByOrganizationIdAndNumberStartingWith(orgId, prefix);
+        return prefix + (alreadyIssued + 1);
     }
 
     /** Catalogue des plans créé une fois au démarrage (jamais pendant une requête de lecture). */

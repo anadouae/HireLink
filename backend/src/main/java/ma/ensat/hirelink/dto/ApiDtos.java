@@ -210,8 +210,6 @@ public class ApiDtos {
             String interviewParticipants,
             String interviewStatus,
             String interviewCancelReason,
-            String interviewConfirmation,
-            String interviewCandidateNote,
             String advanceNote,
             Long assignedHmUserId,
             Instant submittedAt,
@@ -249,8 +247,6 @@ public class ApiDtos {
     ) {}
 
     public record CancelInterviewRequest(@NotBlank @Size(max = 300) String reason) {}
-
-    public record InterviewAnswerRequest(@NotNull Boolean available, @Size(max = 300) String note) {}
 
     public record AdvanceRequest(
             @NotNull ApplicationStatus status,

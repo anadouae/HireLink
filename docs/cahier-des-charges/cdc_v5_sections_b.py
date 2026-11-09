@@ -16,6 +16,7 @@ TABLES = [
     ("users", "User", "Hibernate", "comptes, rôles, profil candidat, MFA, formule"),
     ("organizations", "Organization", "Hibernate", "entreprise, ICE, logo, présentation"),
     ("memberships", "Membership", "Hibernate", "appartenance à une organisation + OrgRole"),
+    ("notifications", "InAppNotification", "Hibernate", "notifications internes avec lien profond"),
     ("job_offers", "JobOffer", "Hibernate", "offre, cycle de vie, quarantaine, SLA de réponse"),
     ("applications", "Application", "Hibernate", "candidature, statut, entretien, CV, échéances"),
     ("application_status_history", "ApplicationStatusHistory", "Hibernate", "frise : chaque changement d'étape"),
@@ -28,9 +29,9 @@ TABLES = [
     ("organization_events", "OrganizationEvent", "Hibernate", "fil d'événements de l'équipe"),
     ("organization_notes", "OrganizationNote", "Hibernate", "notes internes par organisation"),
     ("organization_invitations", "OrganizationInvitation", "Hibernate", "invitations en attente"),
+    ("company_follows", "CompanyFollow", "Hibernate", "candidats qui suivent une entreprise, couple unique"),
     ("billing_invoices", "BillingInvoice", "Hibernate", "factures et avoirs"),
     ("commercial_plans", "CommercialPlan", "Hibernate", "formules : crédits IA et sièges uniquement"),
-    ("notifications", "InAppNotification", "Hibernate", "notifications internes avec lien profond"),
     ("sent_emails", "SentEmail", "Hibernate", "e-mails réellement envoyés et leur statut"),
     ("email_otps", "EmailOtp", "schema.sql puis Hibernate", "codes de connexion et de vérification"),
     ("password_reset_tokens", "PasswordResetToken", "Hibernate", "jetons de réinitialisation à usage unique"),
@@ -70,6 +71,11 @@ VOCABULAIRES = [
     ("Type d'entretien", "ONSITE, VISIO", "SCHEDULABLE", "adresse ou lien obligatoire selon le type (RG-04)"),
     ("Motif de refus", "catalogue administrable", "table refusal_reason_catalog",
      "GET /refusal-reasons, géré par l'administrateur"),
+    ("Type de notification interne", "APPLICATION, FOLLOW, STATUS, INTERVIEW, SLA, ASSIGN, SYSTEM, "
+     "MODERATION, HIRED, INFO", "colonne notifications.kind",
+     "NotificationService ; le centre de notifications filtre sur ces types"),
+    ("Source d'e-mail", "SECURITY et ACCOUNT obligatoires, APPLICATION et INTERVIEW réglables",
+     "MailService.Kind", "un e-mail non obligatoire part seulement si l'interrupteur du compte est actif"),
 ]
 
 # (référence, ce qui est exigé, marqueur à chercher, dossier de recherche, motif de la preuve)
@@ -82,8 +88,17 @@ TRAÇABILITÉ = [
     ("EF-11", "export et effacement RGPD", '@PostMapping("/erase")', BACKEND / "controller"),
     ("EF-13 / RG-09", "liste fermée des niveaux d'expérience", "EXPERIENCE_LEVELS", BACKEND / "controller"),
     ("EF-16", "analyse de CV", '@PostMapping(value = "/cv"', BACKEND / "controller" / "OcrController.java"),
-    ("EF-21", "recherche publique d'offres", '@GetMapping("/public")', BACKEND / "controller"),
+    ("EF-21", "liste publique des offres", '@GetMapping("/public")', BACKEND / "controller"),
     ("EF-25", "vitrine publique d'entreprise", '@GetMapping("/public/company")', BACKEND / "controller"),
+    ("EF-76 / RG-12", "suivre une entreprise, un seul couple", 'columnNames = {"candidate_user_id", "organization_id"}', BACKEND / "model"),
+    ("EF-76", "route de suivi", '@RequestMapping("/api/v1/follows")', BACKEND / "controller"),
+    ("EF-78", "notification des followers à la publication", "announceNewOffer", BACKEND / "service"),
+    ("EF-79", "compteur des candidats qui suivent", '"followerCount"', BACKEND / "controller"),
+    ("EF-80", "flux temps réel SSE", '@GetMapping(value = "/stream"', BACKEND / "controller"),
+    ("EF-72", "préparation d'entretien par l'assistant", '@PostMapping("/interview-prep")', BACKEND / "controller"),
+    ("EF-73", "grille d'entretien par l'assistant", '@PostMapping("/interview-kit")', BACKEND / "controller"),
+    ("EF-74", "synthèse de CV", '@PostMapping("/cv-summary")', BACKEND / "controller"),
+    ("EF-75", "coach IA", '@PostMapping("/coach")', BACKEND / "controller"),
     ("EF-27 / RG-10", "signalement et seuil de suspension", "SUSPENDED_BY_REPORTS", BACKEND),
     ("EF-28 / RM01", "anti-doublon de candidature", "Candidature déjà existante", BACKEND),
     ("EF-30", "retrait de candidature", "req.status() == ApplicationStatus.WITHDRAWN", BACKEND / "service"),
@@ -138,12 +153,12 @@ def _anchor(marker, root: pathlib.Path):
 def section_7(doc, h2, table, para, caption, page_break):
     page_break(doc)
     h2(doc, "7. Modèle de données", 1)
-    para(doc, "Vingt-cinq tables dans le schéma `hirelink`. Vingt-quatre correspondent aux entités JPA et sont "
-              "créées par Hibernate au premier démarrage (ddl-auto=update) ; la vingt-cinquième, "
+    para(doc, "Vingt-six tables dans le schéma `hirelink`. Vingt-cinq correspondent aux entités JPA et sont "
+              "créées par Hibernate au premier démarrage (ddl-auto=update) ; la vingt-sixième, "
               "job_offer_tags, est la table de jointure générée par l'annotation ManyToMany. Le fichier "
               "database/schema.sql ne décrit que quatre tables et n'est plus la référence : cette divergence "
               "est assumée et notée ici plutôt que masquée.")
-    caption(doc, "Tableau 7.1 — Les 25 tables, leur entité et ce qu'elles portent")
+    caption(doc, f"Tableau 7.1 — Les {len(TABLES)} tables, leur entité et ce qu'elles portent")
     table(doc, ["Table", "Entité JPA", "Créée par", "Contenu"],
           [(t, e, c, d) for t, e, c, d in TABLES], col_widths=[4.0, 3.6, 2.6, 6.8], size=8)
 
@@ -243,13 +258,13 @@ def section_10(doc, h2, table, para, caption, page_break, bullets):
           [("1", "Produit existant, audit des écrans et des promesses non tenues",
             "relecture page par page, retrait des promesses de visibilité"),
            ("2", "Architecture commentée, contrat front/back, routes et champs",
-            "inventaire des 151 endpoints et des 27 pages"),
+            "inventaire des 154 endpoints et des 27 pages"),
            ("3", "Rôles d'entreprise, cycle de vie des offres, modération administrateur",
             "tests manuels + collection Postman"),
            ("4", "Crédits IA visibles, CAPTCHA serveur, badges sobres",
             "GET /ai/credits, POST /auth/captcha"),
            ("5", "Nettoyage de la base de démonstration, schéma mort supprimé",
-            "25 tables, plus aucune table morte"),
+            "26 tables, plus aucune table morte"),
            ("6", "Documentation : cahier des charges, diagrammes, captures, tests",
             "le présent document, docs/diagrammes/v5, docs/postman"),
            ],

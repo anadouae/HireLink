@@ -18,7 +18,15 @@ import java.util.*;
 public class HttpLlmProvider implements LlmProvider {
 
     private final LocalLlmProvider local;
-    private final RestTemplate http = new RestTemplate();
+    private RestTemplate http;
+
+    /** Délai de connexion imposé : un fournisseur absent ne doit pas retenir un thread serveur. */
+    @Value("${hirelink.llm.connect-timeout-ms:5000}")
+    private int connectTimeoutMs;
+
+    /** Délai de lecture imposé : au-delà, la chaîne de secours (puis le fallback local) prend le relais. */
+    @Value("${hirelink.llm.read-timeout-ms:20000}")
+    private int readTimeoutMs;
 
     /** Provider principal : gemini | groq | mistral */
     @Value("${hirelink.llm.provider:gemini}")
@@ -52,6 +60,20 @@ public class HttpLlmProvider implements LlmProvider {
 
     public HttpLlmProvider(LocalLlmProvider local) {
         this.local = local;
+        this.http = buildHttp(5000, 20000);
+    }
+
+    @jakarta.annotation.PostConstruct
+    void applyConfiguredTimeouts() {
+        this.http = buildHttp(connectTimeoutMs, readTimeoutMs);
+    }
+
+    private static RestTemplate buildHttp(int connectMs, int readMs) {
+        org.springframework.http.client.SimpleClientHttpRequestFactory factory =
+                new org.springframework.http.client.SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Math.max(1, connectMs));
+        factory.setReadTimeout(Math.max(1, readMs));
+        return new RestTemplate(factory);
     }
 
     @Override
@@ -131,12 +153,6 @@ public class HttpLlmProvider implements LlmProvider {
 
     private static boolean hasKey(String k) {
         return k != null && !k.isBlank();
-    }
-
-    private static String mask(String k) {
-        if (!hasKey(k)) return "(vide)";
-        if (k.length() <= 8) return "****";
-        return k.substring(0, 4) + "…" + k.substring(k.length() - 4);
     }
 
     private LlmResult callGemini(String systemPrompt, String userPrompt) {

@@ -7,6 +7,10 @@
 
   function apiBase() {
     if (global.HIRELINK_API_BASE) return global.HIRELINK_API_BASE;
+    try {
+      var stored = global.sessionStorage && global.sessionStorage.getItem("hirelink.api");
+      if (stored) return stored;
+    } catch (e) {}
     // même nom d'hôte que la page (cookie de session SameSite=Strict) ; repli sur localhost (fichier ouvert directement)
     var h = global.location && /^https?:$/.test(global.location.protocol) && global.location.hostname ? global.location.hostname : "localhost";
     return "http://" + h + ":8081/api/v1";

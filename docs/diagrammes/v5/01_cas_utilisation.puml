@@ -1,0 +1,175 @@
+@startuml cas_utilisation_hirelink_v6
+left to right direction
+title HireLink — cas d'utilisation généraux (tous les acteurs)
+
+actor "Visiteur\nsans compte" as V
+actor Candidat as C
+actor "Recruteur\nmembre ou créateur" as R
+actor "Responsable du poste\n(hiring manager)" as H
+actor Administrateur as A
+actor "Système de planification\nrappels, SLA, purges" as SYS
+
+rectangle "Espace public" {
+  usecase UC_visu_offres as "Consulter les offres publiées"
+  usecase UC_visu_entreprise as "Voir la vitrine d'une entreprise"
+  usecase UC_compte as "Créer son compte et se connecter
+(mot de passe, code par e-mail, Google, passkey)"
+}
+
+rectangle "Espace candidat" {
+  usecase UC_filtres as "Filtrer : ville, contrat,
+expérience, mode de travail"
+  usecase UC_profil as "Gérer son profil : compétences,
+CV, disponibilité"
+  usecase UC_ocr as "Importer un CV et
+l'analyser (OCR)"
+  usecase UC_postuler as "Postuler (assistant en étapes)"
+  usecase UC_suivi as "Suivre l'avancement
+de ses candidatures"
+  usecase UC_retirer as "Retirer sa candidature"
+  usecase UC_reponse as "Répondre à une invitation :
+confirmer, refuser, proposer un créneau"
+  usecase UC_ics as "Ajouter l'entretien au calendrier (.ics)"
+  usecase UC_notif as "Lire ses notifications"
+  usecase UC_follow as "Suivre une entreprise
+et recevoir ses nouvelles offres"
+  usecase UC_unfollow as "Ne plus suivre une entreprise"
+  usecase UC_securite as "Sécurité : sessions, MFA, passkey"
+  usecase UC_rgpd as "Exporter ses données (RGPD)"
+  usecase UC_ia as "Aide IA : réécrire son profil,
+préparer un entretien"
+  usecase UC_signaler as "Signaler une offre abusée"
+}
+
+rectangle "Espace entreprise" {
+  usecase UC_new as "Créer, modifier, publier une offre"
+  usecase UC_duplicate as "Dupliquer une offre
+ou prolonger sa date limite"
+  usecase UC_close as "Clôturer ou archiver une offre"
+  usecase UC_pipeline as "Trier les candidatures
+dans le pipeline"
+  usecase UC_refuser as "Refuser avec un motif"
+  usecase UC_scorecard as "Shortlist et scorecard"
+  usecase UC_planifier as "Planifier un entretien
+(sur site ou visio)"
+  usecase UC_reporter as "Reporter ou annuler un entretien"
+  usecase UC_agenda as "Consulter l'agenda de l'équipe"
+  usecase UC_equipe as "Inviter un membre, promouvoir,
+transférer la propriété"
+  usecase UC_notes as "Note interne et événements
+de l'organisation"
+  usecase UC_sla as "Vérifier son rythme de réponse réel"
+  usecase UC_assign as "Attribuer un dossier à un
+responsable du poste"
+  usecase UC_followers as "Voir combien de candidats
+suivent l'entreprise"
+  usecase UC_credits as "Suivre la consommation des crédits IA"
+  usecase UC_recherche as "Rechercher un candidat
+dans son organisation"
+}
+
+rectangle "Espace responsable du poste" {
+  usecase UC_hm_dossiers as "Ne voir que les dossiers
+qui lui sont assignés"
+}
+
+rectangle "Espace administrateur" {
+  usecase UC_moderation as "Modérer les offres en quarantaine"
+  usecase UC_ice as "Vérifier l'ICE d'une entreprise"
+  usecase UC_comptes as "Gérer les comptes : activer,
+suspendre, inviter"
+  usecase UC_orgs as "Gérer les organisations
+et leurs logos"
+  usecase UC_billing as "Gérer les plans commerciaux
+et la facturation"
+  usecase UC_motifs as "Gérer les motifs de refus"
+  usecase UC_stats as "Statistiques et consommation IA"
+  usecase UC_emails as "Consulter les e-mails réellement envoyés"
+  usecase UC_search_admin as "Rechercher transversalement
+(candidats, offres, entreprises)"
+  usecase UC_retention as "Purger les données mortes (rétention)"
+  usecase UC_audit as "Consulter et exporter
+le journal d'audit"
+}
+
+V --> UC_visu_offres
+V --> UC_visu_entreprise
+V --> UC_compte
+
+C --> UC_filtres
+C --> UC_profil
+C --> UC_postuler
+C --> UC_suivi
+C --> UC_retirer
+C --> UC_reponse
+C --> UC_notif
+C --> UC_follow
+C --> UC_unfollow
+C --> UC_securite
+C --> UC_rgpd
+C --> UC_ia
+C --> UC_signaler
+
+R --> UC_new
+R --> UC_duplicate
+R --> UC_close
+R --> UC_pipeline
+R --> UC_planifier
+R --> UC_reporter
+R --> UC_agenda
+R --> UC_equipe
+R --> UC_notes
+R --> UC_sla
+R --> UC_assign
+R --> UC_notif
+R --> UC_followers
+R --> UC_credits
+R --> UC_recherche
+
+H --> UC_hm_dossiers
+H --> UC_scorecard
+H --> UC_planifier
+
+A --> UC_moderation
+A --> UC_ice
+A --> UC_comptes
+A --> UC_orgs
+A --> UC_billing
+A --> UC_motifs
+A --> UC_stats
+A --> UC_emails
+A --> UC_search_admin
+A --> UC_retention
+A --> UC_audit
+
+UC_postuler ..> UC_ocr : <<include>>
+UC_postuler ..> UC_profil : <<include>>
+UC_reponse ..> UC_ics : <<extend>>
+UC_pipeline ..> UC_refuser : <<extend>>
+UC_pipeline ..> UC_scorecard : <<extend>>
+UC_assign ..> UC_hm_dossiers : <<include>>
+SYS --> UC_planifier : relance
+SYS --> UC_sla : mesure
+SYS --> UC_notif : alerte
+
+' Les trois espaces comptent assez de cas pour depasser une page de rapport.
+' Un lien cache avec direction (« -[hidden]right-> ») est ignore par le moteur sur
+' une source de cas d'utilisation ; la forme sans direction (« -[hidden]-> ») place
+' le second cas dans la colonne suivante et fait passer la vue de 46 lignes a 19.
+UC_filtres -[hidden]-> UC_suivi
+UC_suivi -[hidden]-> UC_notif
+UC_new -[hidden]-> UC_agenda
+UC_agenda -[hidden]-> UC_sla
+UC_moderation -[hidden]-> UC_stats
+
+note right of UC_follow
+  La notification de type « Suivi » est émise par le
+  serveur quand l'entreprise suivie publie une offre.
+end note
+
+note bottom of UC_equipe
+  Seul le créateur de l'espace (OWNER) gère l'équipe
+  et la formule ; un membre RECRUTEUR se voit opposer
+  un 403 par le serveur.
+end note
+@enduml

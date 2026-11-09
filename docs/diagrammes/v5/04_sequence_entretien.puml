@@ -20,7 +20,7 @@ IV -> IV : créneau dans le futur, adresse ou lien obligatoire
 IV -> IV : recalcule l'instant avec le fuseau choisi
 IV -> DB : UPDATE applications SET interview_* ,\ninterview_status = SCHEDULED,\ninterview_candidate_note = null
 IV -> MAIL : notification + e-mail au candidat
-MAIL -> DB : INSERT sent_email (statut réel de l'envoi)
+MAIL -> DB : INSERT sent_emails (statut réel de l'envoi)
 IV --> R : 200, échéance de réponse affichée
 
 == réponse du candidat ==

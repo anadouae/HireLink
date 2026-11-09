@@ -2,7 +2,6 @@ package ma.ensat.hirelink.controller;
 
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
-import ma.ensat.hirelink.repository.AiUsageLogRepository;
 import ma.ensat.hirelink.model.AiUsageLog;
 import ma.ensat.hirelink.service.AiCreditService;
 import ma.ensat.hirelink.service.HttpLlmProvider;
@@ -25,18 +24,15 @@ public class AiAssistController {
     private final AiCreditService aiCreditService;
     private final LanguageCheckService languageCheckService;
     private final HttpLlmProvider llmProvider;
-    private final AiUsageLogRepository aiUsageLogRepository;
 
     public AiAssistController(
             AiCreditService aiCreditService,
             LanguageCheckService languageCheckService,
-            HttpLlmProvider llmProvider,
-            AiUsageLogRepository aiUsageLogRepository
+            HttpLlmProvider llmProvider
     ) {
         this.aiCreditService = aiCreditService;
         this.languageCheckService = languageCheckService;
         this.llmProvider = llmProvider;
-        this.aiUsageLogRepository = aiUsageLogRepository;
     }
 
     public record ProfileRewriteRequest(@jakarta.validation.constraints.Size(max = 3000) String skills, @jakarta.validation.constraints.Size(max = 300) String roles, @jakarta.validation.constraints.Size(max = 40) String level) {}
@@ -60,7 +56,7 @@ public class AiAssistController {
             @AuthenticationPrincipal User user,
             @jakarta.validation.Valid @RequestBody ProfileRewriteRequest body
     ) {
-        requireCredit(user);
+        AiUsageLog reservation = aiCreditService.reserve(user, "profile-rewrite");
         // R15 : compétences / rôles / niveau uniquement — pas de nom/email
         String skills = body.skills() != null ? body.skills() : user.getSkills();
         String roles = body.roles() != null ? body.roles() : user.getSoughtRoles();
@@ -75,7 +71,7 @@ public class AiAssistController {
         m.put("content", llm.text());
         m.put("provider", llm.provider());
         m.put("tips", List.of("Relisez avant d'enregistrer — l'IA ne réécrit jamais à votre place."));
-        m.put("credits", debitIfSuccess(user, "profile-rewrite", llm));
+        m.put("credits", settle(user, reservation, llm));
         return m;
     }
 
@@ -84,7 +80,7 @@ public class AiAssistController {
             @AuthenticationPrincipal User user,
             @jakarta.validation.Valid @RequestBody InterviewPrepRequest body
     ) {
-        requireCredit(user);
+        AiUsageLog reservation = aiCreditService.reserve(user, "interview-prep");
         String skills = body.skills() != null ? body.skills() : user.getSkills();
         LlmProvider.LlmResult llm = llmProvider.complete(
                 "Assistant préparation entretien. Français. Pas de données personnelles. Pas de markdown : aucun dièse, aucun astérisque, aucun tableau. Un titre court par ligne, puis des phrases.",
@@ -96,7 +92,7 @@ public class AiAssistController {
         m.put("content", llm.text());
         m.put("provider", llm.provider());
         m.put("tips", List.of("Adaptez les réponses à votre vécu réel."));
-        m.put("credits", debitIfSuccess(user, "interview-prep", llm));
+        m.put("credits", settle(user, reservation, llm));
         return m;
     }
 
@@ -108,7 +104,7 @@ public class AiAssistController {
         if (user.getRole() != Role.RECRUTEUR && user.getRole() != Role.ADMINISTRATEUR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux recruteurs");
         }
-        requireCredit(user);
+        AiUsageLog reservation = aiCreditService.reserve(user, "interview-kit");
         // La grille affichée est structurée (cartes). L’appel LLM reste pour le débit / audit provider.
         LlmProvider.LlmResult llm = llmProvider.complete(
                 "Génère une grille d'entretien structurée en français. Pas d'identité candidat. Pas de markdown : aucun dièse, aucun astérisque.",
@@ -120,7 +116,7 @@ public class AiAssistController {
         m.put("questions", aiCreditService.interviewKit(body.jobTitle(), body.skills()));
         m.put("note", "Cliquez une question pour voir ce qu’il faut écouter. À adapter avant l’entretien.");
         m.put("provider", llm.provider());
-        m.put("credits", debitIfSuccess(user, "interview-kit", llm));
+        m.put("credits", settle(user, reservation, llm));
         return m;
     }
 
@@ -132,7 +128,7 @@ public class AiAssistController {
         if (user.getRole() != Role.RECRUTEUR && user.getRole() != Role.ADMINISTRATEUR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux recruteurs");
         }
-        requireCredit(user);
+        AiUsageLog reservation = aiCreditService.reserve(user, "refusal-draft");
         // R15 : motif catalogue + intitulé poste uniquement
         LlmProvider.LlmResult llm = llmProvider.complete(
                 "Rédige un brouillon de message de refus professionnel en français. Pas de nom ni email. Pas de markdown : aucun dièse, aucun astérisque.",
@@ -145,7 +141,7 @@ public class AiAssistController {
         m.put("content", llm.text());
         m.put("provider", llm.provider());
         m.put("note", "Proposition — le recruteur valide avant envoi.");
-        m.put("credits", debitIfSuccess(user, "refusal-draft", llm));
+        m.put("credits", settle(user, reservation, llm));
         return m;
     }
 
@@ -161,8 +157,8 @@ public class AiAssistController {
         }
         String text;
         String provider = "local";
+        AiUsageLog reservation = aiCreditService.reserve(user, "cv-summary");
         try {
-            requireCredit(user);
             boolean recruiter = user.getRole() == Role.RECRUTEUR;
             LlmProvider.LlmResult llm = llmProvider.complete(
                     recruiter
@@ -172,10 +168,12 @@ public class AiAssistController {
             );
             text = llm.text();
             provider = llm.provider();
-            debitIfSuccess(user, "cv-summary", llm);
+            aiCreditService.settle(reservation, llm);
         } catch (ResponseStatusException e) {
+            aiCreditService.release(reservation);
             throw e;
         } catch (Exception e) {
+            aiCreditService.release(reservation);
             text = localSummary(cv);
         }
         Map<String, Object> m = new LinkedHashMap<>();
@@ -200,7 +198,7 @@ public class AiAssistController {
         if (user.getRole() != Role.CANDIDAT && user.getRole() != Role.ADMINISTRATEUR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux candidats");
         }
-        requireCredit(user);
+        AiUsageLog reservation = aiCreditService.reserve(user, "coach");
         String cv = nullSafe(body.cvText());
         if (cv.length() > 4000) cv = cv.substring(0, 4000);
         String question = nullSafe(body.message());
@@ -213,7 +211,7 @@ public class AiAssistController {
         m.put("title", "Coach CV");
         m.put("content", llm.text());
         m.put("provider", llm.provider());
-        m.put("credits", debitIfSuccess(user, "coach", llm));
+        m.put("credits", settle(user, reservation, llm));
         return m;
     }
 
@@ -222,7 +220,7 @@ public class AiAssistController {
             @AuthenticationPrincipal User user,
             @jakarta.validation.Valid @RequestBody MatchExplainRequest body
     ) {
-        requireCredit(user);
+        AiUsageLog reservation = aiCreditService.reserve(user, "match-explain");
         LlmProvider.LlmResult llm = llmProvider.complete(
                 "Explique un écart de matching en français clair. Pas d'identité. Pas de markdown : aucun dièse, aucun astérisque.",
                 "Compétences candidat=" + nullSafe(body.skills())
@@ -233,7 +231,7 @@ public class AiAssistController {
         m.put("title", "Explication du matching");
         m.put("content", llm.text());
         m.put("provider", llm.provider());
-        m.put("credits", debitIfSuccess(user, "match-explain", llm));
+        m.put("credits", settle(user, reservation, llm));
         return m;
     }
 
@@ -254,33 +252,12 @@ public class AiAssistController {
         return m;
     }
 
-    private void requireCredit(User user) {
-        var st = aiCreditService.status(user);
-        if (!st.allowed()) {
-            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
-                    "Crédits IA épuisés (" + st.used() + "/" + st.limit() + " ce mois). Le compteur repart dans "
-                            + st.daysToReset() + " jour" + (st.daysToReset() > 1 ? "s" : "") + ".");
-        }
-    }
-
-    /** R16 : débit seulement si succès — ledger durable = ai_usage_logs. */
-    private Map<String, Object> debitIfSuccess(User user, String feature, LlmProvider.LlmResult llm) {
-        AiUsageLog log = new AiUsageLog();
-        log.setUserId(user.getId());
-        log.setOrganizationId(user.getAssignedOrgId());
-        log.setFeature(feature);
-        log.setProvider(llm.provider());
-        log.setModel(llm.model());
-        log.setCharsIn(llm.charsIn());
-        log.setCharsOut(llm.charsOut());
-        log.setSuccess(llm.success());
-        if (llm.success()) {
-            log.setCreditsSpent(1);
-            aiUsageLogRepository.save(log);
-            return creditMap(user, aiCreditService.status(user));
-        }
-        log.setCreditsSpent(0);
-        aiUsageLogRepository.save(log);
+    /**
+     * B2 : le crédit est réservé (débité) avant l'appel, puis liquidé après. Un appel qui échoue rend son
+     * crédit ; deux appels simultanés sur le dernier crédit ne laissent qu'un gagnant (402 pour l'autre).
+     */
+    private Map<String, Object> settle(User user, AiUsageLog reservation, LlmProvider.LlmResult llm) {
+        aiCreditService.settle(reservation, llm);
         return creditMap(user, aiCreditService.status(user));
     }
 

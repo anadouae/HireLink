@@ -344,6 +344,11 @@ public class ApplicationService {
 
     private void assertCanActOnPipeline(User actor, Application app) {
         if (actor.getRole() == Role.ADMINISTRATEUR) return;
+        // A5 : rôle vérifié explicitement, pas par l'effet de bord d'une absence d'organisation.
+        if (actor.getRole() != Role.RECRUTEUR) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Pipeline réservé aux comptes recruteurs (R11)");
+        }
         boolean hmAssigned = app.getAssignedHmUserId() != null
                 && app.getAssignedHmUserId().equals(actor.getId());
         if (hmAssigned) {
@@ -450,8 +455,6 @@ public class ApplicationService {
                 app.getInterviewParticipants(),
                 app.getInterviewAt() == null ? null : app.getInterviewStatus() == null ? InterviewService.SCHEDULED : app.getInterviewStatus(),
                 app.getInterviewCancelReason(),
-                app.getInterviewAt() == null ? null : app.getInterviewConfirmation() == null ? InterviewService.PENDING : app.getInterviewConfirmation(),
-                app.getInterviewCandidateNote(),
                 app.getAdvanceNote(),
                 app.getAssignedHmUserId(),
                 app.getSubmittedAt(),
@@ -489,20 +492,6 @@ public class ApplicationService {
         applicationRepository.save(app);
         audit.ok("INTERVIEW_CANCELLED", actor, "APPLICATION", app.getId(), reason);
         notifier.interviewCancelled(app);
-        return toDto(app);
-    }
-
-    /** Le candidat confirme sa présence ou signale qu'il n'est pas disponible. */
-    @Transactional
-    public ApiDtos.ApplicationResponse answerInterview(User candidate, Long appId, ApiDtos.InterviewAnswerRequest req) {
-        Application app = applicationRepository.findById(appId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Candidature introuvable"));
-        if (!candidate.getId().equals(app.getCandidate().getId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Ce dossier ne vous appartient pas");
-        }
-        interviews.answer(app, req.available(), req.note());
-        applicationRepository.save(app);
-        notifier.interviewAnswered(app);
         return toDto(app);
     }
 

@@ -2,20 +2,31 @@
 """Sources des diagrammes HireLink v5.
 
 Chaque entree est un source PlantUML fidele au code reel de la plateforme
-(24 entites JPA, 21 controlleurs, 27 pages front, 49 requetes lecture seule vertes).
+(25 entites JPA, 26 tables, 21 controlleurs, 154 endpoints, 27 pages front).
 """
 
-# ---------------------------------------------------------------- cas d'utilisation (3 vues)
-# Forme longue refusee par le serveur PlantUML public : un libelle "usecase" contenant
-# une sequence backslash-n provoque HTTP 400 ; la forme "usecase ID as \"libelle\"" l'accepte.
-CAS_CANDIDAT = """@startuml cas_utilisation_candidat_v5
+# ---------------------------------------------------------------- cas d'utilisation (une seule vue, tous les acteurs)
+# Un libellé "usecase" accepte une vraie fin de ligne ; un libellé "actor" non : HTTP 400.
+# C'est pourquoi les étiquettes d'acteurs utilisent la séquence backslash-backslash-n.
+CAS_UTILISATION = """@startuml cas_utilisation_hirelink_v6
 left to right direction
-title HireLink — cas d'utilisation du candidat
+title HireLink — cas d'utilisation généraux (tous les acteurs)
+
+actor "Visiteur\\nsans compte" as V
 actor Candidat as C
+actor "Recruteur\\nmembre ou créateur" as R
+actor "Responsable du poste\\n(hiring manager)" as H
+actor Administrateur as A
+actor "Système de planification\\nrappels, SLA, purges" as SYS
+
+rectangle "Espace public" {
+  usecase UC_visu_offres as "Consulter les offres publiées"
+  usecase UC_visu_entreprise as "Voir la vitrine d'une entreprise"
+  usecase UC_compte as "Créer son compte et se connecter\n(mot de passe, code par e-mail, Google, passkey)"
+}
+
 rectangle "Espace candidat" {
-  usecase UC_consulter as "Consulter les offres publiées"
   usecase UC_filtres as "Filtrer : ville, contrat,\nexpérience, mode de travail"
-  usecase UC_vitrine as "Voir la vitrine d'une entreprise"
   usecase UC_profil as "Gérer son profil : compétences,\nCV, disponibilité"
   usecase UC_ocr as "Importer un CV et\nl'analyser (OCR)"
   usecase UC_postuler as "Postuler (assistant en étapes)"
@@ -24,36 +35,17 @@ rectangle "Espace candidat" {
   usecase UC_reponse as "Répondre à une invitation :\nconfirmer, refuser, proposer un créneau"
   usecase UC_ics as "Ajouter l'entretien au calendrier (.ics)"
   usecase UC_notif as "Lire ses notifications"
+  usecase UC_follow as "Suivre une entreprise\net recevoir ses nouvelles offres"
+  usecase UC_unfollow as "Ne plus suivre une entreprise"
   usecase UC_securite as "Sécurité : sessions, MFA, passkey"
   usecase UC_rgpd as "Exporter ses données (RGPD)"
   usecase UC_ia as "Aide IA : réécrire son profil,\npréparer un entretien"
   usecase UC_signaler as "Signaler une offre abusée"
 }
-C --> UC_consulter
-C --> UC_filtres
-C --> UC_vitrine
-C --> UC_profil
-C --> UC_postuler
-C --> UC_suivi
-C --> UC_retirer
-C --> UC_reponse
-C --> UC_notif
-C --> UC_securite
-C --> UC_rgpd
-C --> UC_ia
-C --> UC_signaler
-UC_postuler ..> UC_ocr : <<include>>
-UC_postuler ..> UC_profil : <<include>>
-UC_reponse ..> UC_ics : <<extend>>
-@enduml"""
 
-CAS_RECRUTEUR = """@startuml cas_utilisation_recruteur_v5
-left to right direction
-title HireLink — cas d'utilisation du recruteur
-actor Recruteur as R
-actor SYS as "Système de planification\n(rappels, SLA, purges)"
-rectangle "Espace recruteur" {
+rectangle "Espace entreprise" {
   usecase UC_new as "Créer, modifier, publier une offre"
+  usecase UC_duplicate as "Dupliquer une offre\nou prolonger sa date limite"
   usecase UC_close as "Clôturer ou archiver une offre"
   usecase UC_pipeline as "Trier les candidatures\ndans le pipeline"
   usecase UC_refuser as "Refuser avec un motif"
@@ -63,31 +55,17 @@ rectangle "Espace recruteur" {
   usecase UC_agenda as "Consulter l'agenda de l'équipe"
   usecase UC_equipe as "Inviter un membre, promouvoir,\ntransférer la propriété"
   usecase UC_notes as "Note interne et événements\nde l'organisation"
-  usecase UC_sla as "Vérifier le rythme de réponse promis"
+  usecase UC_sla as "Vérifier son rythme de réponse réel"
+  usecase UC_assign as "Attribuer un dossier à un\nresponsable du poste"
+  usecase UC_followers as "Voir combien de candidats\nsuivent l'entreprise"
   usecase UC_credits as "Suivre la consommation des crédits IA"
   usecase UC_recherche as "Rechercher un candidat\ndans son organisation"
 }
-R --> UC_new
-R --> UC_close
-R --> UC_pipeline
-R --> UC_planifier
-R --> UC_reporter
-R --> UC_agenda
-R --> UC_equipe
-R --> UC_notes
-R --> UC_sla
-R --> UC_credits
-R --> UC_recherche
-UC_pipeline ..> UC_refuser : <<extend>>
-UC_pipeline ..> UC_scorecard : <<extend>>
-SYS --> UC_planifier : relance
-SYS --> UC_sla : mesure
-@enduml"""
 
-CAS_ADMIN = """@startuml cas_utilisation_admin_v5
-left to right direction
-title HireLink — cas d'utilisation de l'administrateur
-actor Administrateur as A
+rectangle "Espace responsable du poste" {
+  usecase UC_hm_dossiers as "Ne voir que les dossiers\nqui lui sont assignés"
+}
+
 rectangle "Espace administrateur" {
   usecase UC_moderation as "Modérer les offres en quarantaine"
   usecase UC_ice as "Vérifier l'ICE d'une entreprise"
@@ -97,9 +75,49 @@ rectangle "Espace administrateur" {
   usecase UC_motifs as "Gérer les motifs de refus"
   usecase UC_stats as "Statistiques et consommation IA"
   usecase UC_emails as "Consulter les e-mails réellement envoyés"
-  usecase UC_search as "Rechercher transversalement\n(candidats, offres, entreprises)"
+  usecase UC_search_admin as "Rechercher transversalement\n(candidats, offres, entreprises)"
   usecase UC_retention as "Purger les données mortes (rétention)"
+  usecase UC_audit as "Consulter et exporter\nle journal d'audit"
 }
+
+V --> UC_visu_offres
+V --> UC_visu_entreprise
+V --> UC_compte
+
+C --> UC_filtres
+C --> UC_profil
+C --> UC_postuler
+C --> UC_suivi
+C --> UC_retirer
+C --> UC_reponse
+C --> UC_notif
+C --> UC_follow
+C --> UC_unfollow
+C --> UC_securite
+C --> UC_rgpd
+C --> UC_ia
+C --> UC_signaler
+
+R --> UC_new
+R --> UC_duplicate
+R --> UC_close
+R --> UC_pipeline
+R --> UC_planifier
+R --> UC_reporter
+R --> UC_agenda
+R --> UC_equipe
+R --> UC_notes
+R --> UC_sla
+R --> UC_assign
+R --> UC_notif
+R --> UC_followers
+R --> UC_credits
+R --> UC_recherche
+
+H --> UC_hm_dossiers
+H --> UC_scorecard
+H --> UC_planifier
+
 A --> UC_moderation
 A --> UC_ice
 A --> UC_comptes
@@ -108,11 +126,41 @@ A --> UC_billing
 A --> UC_motifs
 A --> UC_stats
 A --> UC_emails
-A --> UC_search
+A --> UC_search_admin
 A --> UC_retention
-@enduml"""
+A --> UC_audit
 
-# ---------------------------------------------------------------- classes
+UC_postuler ..> UC_ocr : <<include>>
+UC_postuler ..> UC_profil : <<include>>
+UC_reponse ..> UC_ics : <<extend>>
+UC_pipeline ..> UC_refuser : <<extend>>
+UC_pipeline ..> UC_scorecard : <<extend>>
+UC_assign ..> UC_hm_dossiers : <<include>>
+SYS --> UC_planifier : relance
+SYS --> UC_sla : mesure
+SYS --> UC_notif : alerte
+
+' Les trois espaces comptent assez de cas pour depasser une page de rapport.
+' Un lien cache avec direction (« -[hidden]right-> ») est ignore par le moteur sur
+' une source de cas d'utilisation ; la forme sans direction (« -[hidden]-> ») place
+' le second cas dans la colonne suivante et fait passer la vue de 46 lignes a 19.
+UC_filtres -[hidden]-> UC_suivi
+UC_suivi -[hidden]-> UC_notif
+UC_new -[hidden]-> UC_agenda
+UC_agenda -[hidden]-> UC_sla
+UC_moderation -[hidden]-> UC_stats
+
+note right of UC_follow
+  La notification de type « Suivi » est émise par le
+  serveur quand l'entreprise suivie publie une offre.
+end note
+
+note bottom of UC_equipe
+  Seul le créateur de l'espace (OWNER) gère l'équipe
+  et la formule ; un membre RECRUTEUR se voit opposer
+  un 403 par le serveur.
+end note
+@enduml"""
 CLASSES = """@startuml classes_hirelink_v5
 skinparam packageStyle rectangle
 skinparam classAttributeIconSize 0
@@ -123,25 +171,48 @@ package "Identité et accès" {
     id: Long
     email: String
     passwordHash: String
+    firstName: String
+    lastName: String
     fullName: String
+    gender: String
+    nationality: String
+    jobTitle: String
     role: Role
+    active: boolean
+    emailVerified: boolean
+    mustSetPassword: boolean
+    googleSub: String
+    emailNotifications: Boolean
     skills: String
+    soughtRoles: String
     experienceLevel: String
-    birthDate: LocalDate
     availability: String
+    preferredContracts: String
+    preferredLocations: String
+    workMode: String
+    city: String
+    birthDate: LocalDate
+    phone: String
+    school: String
+    educationDomain: String
+    graduationYear: Integer
     cvFileName: String
+    cvStorageName: String
     cvSections: String
-    assignedOrgId: Long
-    planTier: PlanTier
+    company: String
+    companyIce: String
+    companyPresentation: String
+    phoneCountry: String
+    passwordChangedAt: Instant
+    companyVerified: boolean
     verificationStatus: String
-    mfaEnabled: Boolean
-    mustSetPassword: Boolean
-    emailVerified: Boolean
-  }
-  class Membership {
-    id: Long
-    orgRole: OrgRole
-    suspendedAt: Instant
+    planTier: PlanTier
+    profileComplete: boolean
+    mfaEnabled: boolean
+    mfaSecretEnc: String
+    mfaBackupHashes: String
+    assignedOrgId: Long
+    createdAt: Instant
   }
   class Organization {
     id: Long
@@ -149,54 +220,111 @@ package "Identité et accès" {
     ice: String
     iceFormatValid: Boolean
     iceLegalName: String
+    iceAddress: String
+    iceSource: String
     iceCheckedAt: Instant
+    verified: boolean
+    verificationStatus: String
+    verificationMethod: String
     logoUrl: String
     sector: String
     city: String
+    employeeRange: String
     website: String
     presentation: String
+    planTier: PlanTier
+    createdAt: Instant
+  }
+  class Membership {
+    id: Long
+    orgRole: OrgRole
+    active: boolean
+    invitedAt: Instant
+    acceptedAt: Instant
+    suspendedAt: Instant
+  }
+  class CompanyFollow {
+    id: Long
+    candidateUserId: Long
+    organizationId: Long
+    createdAt: Instant
   }
   class OrganizationEvent {
     id: Long
     title: String
-    createdBy: User
+    description: String
+    startsAt: Instant
+    durationMinutes: int
+    location: String
+    videoUrl: String
+    category: String
+    createdAt: Instant
   }
   class OrganizationNote {
     id: Long
-    owner: User
+    title: String
+    content: String
+    inkColor: String
+    noteColor: String
+    drawingData: String
+    positionX: int
+    positionY: int
+    updatedAt: Instant
   }
   class OrganizationInvitation {
     id: Long
     email: String
-    user: User
+    orgRole: OrgRole
+    tokenHash: String
+    expiresAt: Instant
+    acceptedAt: Instant
+    revokedAt: Instant
+    version: long
   }
   class UserSession {
-    id: Long
+    id: String
+    userId: Long
     tokenHash: String
+    previousHash: String
+    deviceHash: String
+    createdAt: Instant
+    lastUsedAt: Instant
     idleExpiresAt: Instant
     absoluteExpiresAt: Instant
     revokedAt: Instant
+    revokedReason: String
     ip: String
+    userAgent: String
     deviceLabel: String
   }
   class WebAuthnCredential {
     id: Long
     credentialId: String
     publicKeyCose: String
+    signatureCount: long
+    userHandle: String
+    userId: Long
+    name: String
     lastUsedAt: Instant
+    createdAt: Instant
   }
   class EmailOtp {
     id: Long
     email: String
     purpose: String
     code: String
+    attempts: int
+    consumed: boolean
     expiresAt: Instant
+    createdAt: Instant
   }
   class PasswordResetToken {
     id: Long
     tokenHash: String
     expiresAt: Instant
     usedAt: Instant
+    userId: Long
+    createdAt: Instant
   }
 }
 
@@ -205,8 +333,10 @@ package "Recrutement" {
     id: Long
     title: String
     description: String
+    requiredSkills: String
+    niceToHaveSkills: String
     location: String
-    contractType: ContractType
+    contractType: String
     workMode: WorkMode
     experienceLevel: ExperienceLevel
     educationLevel: EducationLevel
@@ -216,14 +346,24 @@ package "Recrutement" {
     salaryPeriod: PayPeriod
     salaryBasis: PayBasis
     currency: String
+    durationMonths: Integer
+    startDate: LocalDate
+    startAsap: Boolean
+    schedule: String
+    agreementRequired: Boolean
+    hiringPossible: Boolean
+    probationMonths: Integer
+    positions: Integer
+    benefits: String
     deadline: LocalDate
-    responseSlaDays: Integer
-    published: Boolean
-    suspended: Boolean
-    archivedAt: Instant
-    closedAt: Instant
+    responseSlaDays: int
+    published: boolean
+    suspended: boolean
+    reportCount: int
     quarantineReason: String
-    reportCount: Integer
+    closedAt: Instant
+    archivedAt: Instant
+    createdAt: Instant
   }
   class Application {
     id: Long
@@ -232,47 +372,64 @@ package "Recrutement" {
     coverLetter: String
     cvSource: String
     cvFileName: String
-    submittedAt: Instant
-    firstDecisionAt: Instant
-    responseDeadline: Instant
+    cvStorageName: String
+    cvSections: String
+    applicationDetails: String
+    advanceNote: String
+    rejectionReason: String
+    refusalReasonCode: String
+    assignedHmUserId: Long
     interviewType: String
     interviewKind: String
     interviewAt: Instant
+    interviewDurationMinutes: Integer
     interviewTimeZone: String
     interviewStatus: String
+    interviewConfirmation: String
     interviewLocation: String
     interviewVideoUrl: String
     interviewMapUrl: String
     interviewParticipants: String
     interviewNotes: String
+    interviewCancelReason: String
+    interviewCandidateNote: String
     interviewReminderSent: Boolean
-    rejectionReason: String
-    refusalReasonCode: String
+    responseDeadline: Instant
+    firstDecisionAt: Instant
+    slaBreachNotified: boolean
+    submittedAt: Instant
+    updatedAt: Instant
   }
   class ApplicationStatusHistory {
     id: Long
     applicationId: Long
-    fromStatus: ApplicationStatus
-    toStatus: ApplicationStatus
+    fromStatus: String
+    toStatus: String
     actorUserId: Long
     payloadJson: String
+    createdAt: Instant
   }
   class ScorecardCriterion {
     id: Long
     jobOfferId: Long
     label: String
+    weight: int
+    veto: boolean
   }
   class ScorecardEntry {
     id: Long
     applicationId: Long
     criterionId: Long
     evaluatorUserId: Long
+    score: int
     comment: String
+    createdAt: Instant
   }
   class RefusalReason {
     id: Long
     code: String
     label: String
+    active: boolean
   }
   class Tag {
     id: Long
@@ -283,7 +440,10 @@ package "Recrutement" {
     jobOfferId: Long
     reporterUserId: Long
     reason: String
+    status: String
+    handledByEmail: String
     resolvedAt: Instant
+    createdAt: Instant
   }
 }
 
@@ -293,23 +453,32 @@ package "Transverse" {
     userId: Long
     title: String
     body: String
+    kind: String
     link: String
+    readFlag: boolean
+    createdAt: Instant
   }
   class SentEmail {
     id: Long
     recipient: String
     subject: String
     kind: String
-    status: String
+    status: Status
     error: String
+    bodyHtml: String
+    createdAt: Instant
   }
   class AuditLog {
     id: Long
     actorUserId: Long
+    actorEmail: String
     action: String
     targetType: String
-    targetId: Long
+    targetId: String
+    detail: String
     ip: String
+    success: boolean
+    createdAt: Instant
   }
   class AiUsageLog {
     id: Long
@@ -318,61 +487,122 @@ package "Transverse" {
     feature: String
     provider: String
     model: String
+    charsIn: int
+    charsOut: int
+    creditsSpent: int
+    success: boolean
+    createdAt: Instant
   }
   class CommercialPlan {
     id: Long
     code: String
     label: String
     audience: String
+    monthlyMad: int
+    yearlyMad: int
+    credits: int
     features: String
   }
   class BillingInvoice {
     id: Long
+    number: String
     planCode: String
-    amount: Integer
+    planLabel: String
+    cycle: String
+    amountHt: double
+    tva: double
+    amountTtc: double
     status: String
+    note: String
+    issuedAt: Instant
+    cancelsInvoiceId: Long
   }
 }
 
-User "1" --o "0..*" JobOffer : publie
-User "1" -- "0..*" Application : postule
-JobOffer "1" *-- "0..*" Application
-Application "1" *-- "0..*" ApplicationStatusHistory
-JobOffer "1" o-- "0..*" ScorecardCriterion
-Application "1" o-- "0..*" ScorecardEntry
-Organization "1" *-- "0..*" Membership
-User "1" -- "0..*" Membership : adhère
-Organization "1" -- "0..*" OrganizationEvent
-Organization "1" -- "0..*" OrganizationNote
-Organization "1" -- "0..*" OrganizationInvitation
-Organization "1" -- "0..*" BillingInvoice
-User "1" *-- "0..*" UserSession
-User "1" *-- "0..*" WebAuthnCredential
-JobOffer "0..*" o-- "0..*" Tag
-User "1" -- "0..*" InAppNotification
-JobOffer "1" -- "0..*" OfferReport : signalée
-Application "1" -- "0..*" AiUsageLog
+' ---------------------------------------------------------------- associations
+' Chaque ligne correspond a une colonne portee par le code (annotation JPA ou
+' colonne *_id declaree dans l entite). Le libelle est le verbe metier, la
+' cardinalite est ltee de la colonne elle-meme (nullable, unique, cascade).
+
+Organization "1" -- "0..*" Membership : compte les membres
+User "1" -- "0..*" Membership : adhère à
+User "0..*" -- "0..1" Organization : est possédée par
+User "0..*" -- "0..1" Organization : est rattachée à
+User "1" -- "0..*" JobOffer : publie
+User "1" -- "0..*" Application : dépose
+JobOffer "1" -- "0..*" Application : reçoit
+Application "1" *-- "0..*" ApplicationStatusHistory : laisse une trace
+Application "0..*" -- "0..1" User : est assignée à un responsable
+User "1" -- "0..*" ScorecardEntry : évalue
+ScorecardCriterion "1" -- "0..*" ScorecardEntry : est notée par
+JobOffer "1" *-- "0..*" ScorecardCriterion : définit sa grille
+Application "0..*" -- "0..1" RefusalReason : est refusée pour
+JobOffer "1" -- "0..*" OfferReport : est signalée
+User "1" -- "0..*" OfferReport : signale
+JobOffer "0..*" -- "0..*" Tag : est étiquetée
+User "1" -- "0..*" CompanyFollow : suit une entreprise
+Organization "1" -- "0..*" CompanyFollow : est suivie
+Organization "1" -- "0..*" OrganizationEvent : journalise la vie d équipe
+User "1" -- "0..*" OrganizationEvent : crée
+Organization "1" -- "0..*" OrganizationNote : porte ses post-it
+User "1" -- "0..*" OrganizationNote : rédige
+Organization "1" -- "0..*" OrganizationInvitation : invite
+User "1" -- "0..*" OrganizationInvitation : rattache
+Organization "1" -- "0..*" BillingInvoice : est facturée
+CommercialPlan "1" -- "0..*" BillingInvoice : porte la formule
+BillingInvoice "0..*" -- "0..1" BillingInvoice : est annulée par un avoir
+User "1" *-- "0..*" UserSession : ouvre
+User "1" -- "0..*" WebAuthnCredential : détient une passkey
+User "1" -- "0..*" PasswordResetToken : demande une réinitialisation
+User "1" -- "0..*" InAppNotification : reçoit
+User "0..*" -- "0..*" AiUsageLog : consomme de l IA
+Organization "0..*" -- "0..*" AiUsageLog : consomme de l IA
+User "0..*" -- "0..1" AuditLog : commet
 
 note bottom of User
-  `role` : Role = CANDIDAT | RECRUTEUR | ADMINISTRATEUR
-  `experienceLevel` : vocabulaire du profil
-  Stagiaire, Junior, Confirmé, Senior, Lead, Manager
-  (vérifié côté serveur dans MeController)
+  Colonnes réellement portées : users 45, job_offers 35, applications 35,
+  organizations 20. Les attributs affichés sont ceux lus ou écrits par
+  l application ; aucun champ de ce diagramme n est inventé.
+  `role` : CANDIDAT | RECRUTEUR | ADMINISTRATEUR (Role.java).
+  Dans une organisation : OWNER = Créateur, RECRUTEUR = Recruteur,
+  HIRING_MANAGER = Responsable du poste (OrgRole.libelleFr).
 end note
 
 note right of Application
-  `status` : SUBMITTED → SCREENING → SHORTLISTED → INTERVIEW,
-  REJECTED et WITHDRAWN terminaux.
-  OFFER / HIRED = uniquement données historiques.
-  Un seul et même pipeline candidat et recruteur.
+  `status` : SUBMITTED -> SCREENING -> SHORTLISTED -> INTERVIEW,
+  REJECTED et WITHDRAWN terminaux. OFFER / HIRED = données historiques
+  seulement, aucune transition nouvelle ne mène à ces deux statuts.
+  Les données d entretien sont des colonnes de cette table : un seul
+  créneau par dossier, reprogrammable mais non cumulable.
+  `refusalReasonCode` est un lien logique vers refusal_reason_catalog.code,
+  sans clé étrangère : le motif reste lisible même si l admin le retire.
 end note
 
 note bottom of JobOffer
-  24 tables d entités créées par Hibernate (ddl-auto=update),
-  plus la jointure job_offer_tags : 25 tables au total.
-  database/schema.sql ne crée que 4 tables (DDL hérité).
+  Une offre n a PAS de colonne organization_id : elle tient son organisation
+  par son recruteur (job_offers.recruiter_id -> users -> memberships).
+  `contractType` est une String qui porte le libellé de ContractType
+  (CDI, CDD, Stage, PFE, PFA, Stage d'été, Alternance, Freelance,
+  Temps partiel), pas le nom de l enum.
+  25 entités JPA + la jointure job_offer_tags = 26 tables (ddl-auto=update).
+  database/schema.sql ne crée que 4 tables (DDL hérité, non référentiel).
 end note
-@enduml"""
+
+note bottom of CompanyFollow
+  `company_follows` porte une contrainte unique sur le couple
+  (candidate_user_id, organization_id) : un candidat ne peut suivre une
+  entreprise qu une fois. C est la source de la notification de type FOLLOW
+  envoyée à la publication d une offre, et du compteur « candidats suivent »
+  visible par l équipe de recrutement.
+end note
+
+note bottom of EmailOtp
+  Trois tables sans clé étrangère, volontairement : email_otps (par e-mail),
+  sent_emails (par destinataire) et audit_logs (par cible polymorphe
+  targetType / targetId). Elles survivent à la suppression du compte.
+end note
+@enduml
+"""
 
 # ---------------------------------------------------------------- sequence : candidature
 SEQ_CANDIDATURE = """@startuml sequence_candidature_v5
@@ -389,7 +619,7 @@ box "Backend Spring Boot :8081" #FEF3C7
   participant "SkillMatchingService" as SM
   participant "NotificationService" as NS
 endbox
-database "MariaDB hirelink (25 tables)" as DB
+database "MariaDB hirelink (26 tables)" as DB
 
 C -> F : saisit lettre + compétences, clique « Postuler »
 F -> J : POST /api/v1/applications\\nAuthorization: Bearer <jwt>
@@ -407,7 +637,7 @@ else première candidature
   SM --> AS : matchScore (0..1)
   AS -> DB : UPDATE applications SET match_score = ?
   AS -> NS : notifie le recruteur + événement organisation
-  NS -> DB : INSERT in_app_notification / organization_event
+  NS -> DB : INSERT notifications / organization_events
   AS -> DB : INSERT application_status_history (null -> SUBMITTED)
   AS --> AC : ApplicationResponse
   AC --> F : 201 + id, statut, score
@@ -438,7 +668,7 @@ IV -> IV : créneau dans le futur, adresse ou lien obligatoire
 IV -> IV : recalcule l'instant avec le fuseau choisi
 IV -> DB : UPDATE applications SET interview_* ,\\ninterview_status = SCHEDULED,\\ninterview_candidate_note = null
 IV -> MAIL : notification + e-mail au candidat
-MAIL -> DB : INSERT sent_email (statut réel de l'envoi)
+MAIL -> DB : INSERT sent_emails (statut réel de l'envoi)
 IV --> R : 200, échéance de réponse affichée
 
 == réponse du candidat ==
@@ -495,15 +725,15 @@ alt mot de passe erroné
   A --> F : 401 « E-mail ou mot de passe incorrect »
 else compte Google / code par e-mail
   S -> G : vérifier id_token
-  S -> DB : SELECT email_otp (purpose, code, expires_at)
+  S -> DB : SELECT email_otps (purpose, code, expires_at)
 else MFA actif
   S --> F : 200 {mfaRequired: true}
   U -> F : code à 6 chiffres
-  F -> A : POST /auth/login/totp
+  F -> A : POST /auth/mfa/verify
   A -> TOTP : vérifier TOTP ou code de secours
 end
-S -> SS : créer user_session (tokenHash, idle et absolute expiration, ip, deviceLabel)
-SS -> DB : INSERT user_session
+S -> SS : créer user_sessions (tokenHash, idle et absolute expiration, ip, deviceLabel)
+SS -> DB : INSERT user_sessions
 S --> F : AuthResponse {accessToken (JWT), expiresIn}
 F -> F : conserve le JWT en mémoire,\\ncookie httpOnly pour le refresh
 @enduml"""
@@ -522,7 +752,7 @@ if (Le recruteur ouvre le dossier ?) then (tri)
     :SHORTLISTED;
     note right
       Scorecard possible à cette étape :
-      scorecard_criterion / scorecard_entry
+      scorecard_criteria / scorecard_entries
     end note
     if (Entretien ?) then (oui)
       :INTERVIEW;
@@ -540,7 +770,7 @@ if (Le recruteur ouvre le dossier ?) then (tri)
         stop
       endif
     else (refus ici)
-      :REJECTED + motif (refusal_reason)\\nfirst_decision_at = maintenant;
+      :REJECTED + motif (refusal_reason_code -> refusal_reason_catalog)\\nfirst_decision_at = maintenant;
       detach
     endif
   else (refus)
@@ -557,7 +787,7 @@ note right
   - OFFER et HIRED conservés pour les données
     historiques mais aucune nouvelle transition ;
   - chaque déplacement écrit une ligne
-    application_status_history + un audit_log.
+    application_status_history + une ligne audit_logs.
 end note
 @enduml"""
 
@@ -567,29 +797,29 @@ skinparam packageStyle rectangle
 title Architecture logique — HireLink (ma.ensat.hirelink)
 
 package "frontend/ (statique, servi sur :5500)" {
-  [pages HTML\\nindex, auth, company, checkout,\\nset-password, invitation, help] as HTMLRacine
-  [app/*.html\\ncandidat (7) · recruteur (8) ·\\nadmin (1) · sécurité/notifications] as HTMLApp
+  [pages HTML (9)\\nindex, auth, company, about, help,\\ncheckout, set-password, invitation, security] as HTMLRacine
+  [app/*.html (18)\\ncandidat (6) · recruteur (9) ·\\nadmin (1) · security (1) · notifications (1)] as HTMLApp
   [js/ api.js · ui.js ·\\npage-par-page] as JS
   [css/ · assets/ logos locaux] as CSS
 }
 
 package "backend/ src/main/java/ma/ensat/hirelink" {
-  package "controller (20)" {
+  package "controller (21)" {
     [AuthController, MeController,\\nAccountController] as CAuth
     [JobOfferController,\\nApplicationController,\\nOfferReportController,\\nScorecardController] as CRecruteur
-    [OrganizationController,\\nBillingController] as COrg
+    [OrganizationController,\\nBillingController,\\nCompanyFollowController] as COrg
     [AiAssistController, OcrController,\\nSkillController, MediaController] as CAi
     [AdminController,\\nAdminEmailController,\\nCatalogSuggestController,\\nCatalogPrivacyController,\\nRefusalReasonController,\\nNotificationController,\\nHealthController] as CAdmin
   }
-  package "service (51)" {
+  package "service (52)" {
     [AuthService, SessionService,\\nOtpService, PasswordResetService,\\nCaptchaService, TotpService,\\nWebAuthnService, GoogleTokenService] as SAuth
     [JobOfferService, ApplicationService,\\nInterviewService, ScorecardService,\\nRefusalReasonService, ResponsivenessService] as SRecruteur
-    [OrganizationService,\\nOrganizationInvitationService,\\nCompanyVerificationService (ICE),\\nBillingCatalogService,\\nRetentionService] as SOrg
+    [OrganizationService,\\nOrganizationInvitationService,\\nCompanyVerificationService (ICE),\\nCompanyFollowService,\\nBillingCatalogService,\\nRetentionService] as SOrg
     [HttpLlmProvider, LocalLlmProvider,\\nAiCreditService, LanguageCheckService,\\nSkillMatchingService, OcrService] as SAi
     [NotificationService, EventNotifier,\\nMailService, EmailTemplates,\\nInterviewReminderService,\\nSlaMonitorService, AuditService] as STransverse
   }
-  package "repository (24 Spring Data JPA)" as Repo
-  package "model (24 entités + 11 enums)" as Model
+  package "repository (25 Spring Data JPA)" as Repo
+  package "model (25 entités + 11 enums)" as Model
   package "security" {
     [JwtService, JwtAuthFilter,\\nAuthThrottle, RateLimitFilter,\\nPasswordPolicy, ClientInfo] as Sec
   }
@@ -599,7 +829,7 @@ package "backend/ src/main/java/ma/ensat/hirelink" {
   package "dto (records ApiDtos / AuthDtos)" as DTO
 }
 
-database "MariaDB `hirelink`\\n3306 · 25 tables" as DB
+database "MariaDB `hirelink`\\n3306 · 26 tables" as DB
 storage "backend/data/\\ncvs · org-logos · jwt.key" as FS
 cloud "API LLM\\nGemini · Groq · Mistral" as LLM
 cloud "SMTP (désactivé en local\\npar --spring.mail.host=)" as SMTP
@@ -646,7 +876,7 @@ node "Windows 11 — poste local" {
     artifact "backend/data/\\ncvs · org-logos · jwt.key" as DATA
   }
   node "MariaDB 10.4 (service `mysql`, XAMPP)" {
-    artifact "schéma `hirelink`\\n25 tables · 3306\\nroot@127.0.0.1" as SQL
+    artifact "schéma `hirelink`\\n26 tables · 3306\\nroot@127.0.0.1" as SQL
   }
 }
 
@@ -659,7 +889,7 @@ FRONT --> BACK : REST + JWT (Authorization)\\nCORS : origine :5500 autorisée
 BACK --> SQL : JDBC HikariCP\\nspring.jpa.hibernate.ddl-auto = update
 BACK --> DATA : écriture CV et logos
 BACK ..> LLMS : appel IA (optionnel,\\nfallback LocalLlmProvider sin clé)
-BACK ..> SMTPX : e-mails transactionnels\\n(statut réel dans sent_email)
+BACK ..> SMTPX : e-mails transactionnels\\n(statut réel dans sent_emails)
 BACK ..> FRONT : jetons, erreurs en français\\nenvelope {message}
 
 note bottom of BACK
@@ -729,7 +959,7 @@ skinparam rectangleBorderColor #1a1418
 rectangle "Couche présentation" #EFF6FF {
   [HTML5 sémantique\\n27 pages] as H
   [CSS3 variables\\néchelle typographique, badges sobres] as CSS
-  [JavaScript natif\\napi.js, ui.js, aucune framework] as JSF
+  [JavaScript natif\\napi.js, ui.js, aucun framework] as JSF
   [SVG locaux : logos ENSA, UAE, HireLink,\\nmascotte, icônes métier] as SVG
 }
 rectangle "Couche service / API" #FEF3C7 {
@@ -740,9 +970,9 @@ rectangle "Couche service / API" #FEF3C7 {
   [GlobalExceptionHandler\\nerreurs en français] as GEH
 }
 rectangle "Couche données" #DCFCE7 {
-  [Spring Data JPA\\n24 repositories] as JPA
-  [Hibernate ddl-auto = update\\ncrée les 24 tables d'entités] as HB
-  [MariaDB 10.4 · schéma `hirelink`\\n25 tables (24 entités\\n+ jointure job_offer_tags)] as MDB
+  [Spring Data JPA\\n25 repositories] as JPA
+  [Hibernate ddl-auto = update\\ncrée les 25 tables d'entités] as HB
+  [MariaDB 10.4 · schéma `hirelink`\\n26 tables (25 entités\\n+ jointure job_offer_tags)] as MDB
   [database/schema.sql\\n4 tables (DDL hérité)] as SQLF
   [backend/data/ fichiers\\nCV, logos, jwt.key] as FSX
 }
@@ -759,7 +989,7 @@ rectangle "Outillage et qualité" #F1F5F9 {
   [Postman + newman\\n73 requêtes, 49 en lecture seule, 101 assertions vertes] as POST
   [python-docx (rapport et cahier des charges)\\nPlantUML (diagrammes)] as PDOC
   [Git · .gitignore\\nbackup-db/, tmp/, *.zip exclus] as GIT
-  [DataSeeder : jeux de démonstration\\n3 rôles + 20 organisations] as SEED
+  [DataSeeder : jeux de démonstration\\ncomptes, organisations, offres, suivis] as SEED
 }
 
 H --> CSS
@@ -784,9 +1014,7 @@ PDOC --> GIT
 @enduml"""
 
 DIAGRAMS = {
-    "01a_cas_utilisation_candidat": CAS_CANDIDAT,
-    "01b_cas_utilisation_recruteur": CAS_RECRUTEUR,
-    "01c_cas_utilisation_admin": CAS_ADMIN,
+    "01_cas_utilisation": CAS_UTILISATION,
     "02_classes": CLASSES,
     "03_sequence_candidature": SEQ_CANDIDATURE,
     "04_sequence_entretien": SEQ_ENTRETIEN,

@@ -8,15 +8,32 @@ echo   API : http://localhost:8081/api/v1
 echo ============================================================
 echo.
 
-:: Java 23 (compatible avec pom.xml qui exige Java 21+)
-set JAVA_HOME=C:\Program Files\Java\jdk-23
-set PATH=%JAVA_HOME%\bin;C:\apache-maven-3.10.0\bin;%PATH%
+:: Java 21 ou plus, puis Maven : d'abord le PATH, ensuite les installations habituelles.
+where java >nul 2>nul
+if errorlevel 1 (
+    if exist "C:\Program Files\Java\jdk-23\bin\java.exe" set "JAVA_HOME=C:\Program Files\Java\jdk-23"
+    if not defined JAVA_HOME if exist "C:\Program Files\Java\jdk-21\bin\java.exe" set "JAVA_HOME=C:\Program Files\Java\jdk-21"
+    if not defined JAVA_HOME if exist "C:\Program Files\Eclipse Adoptium\jdk-21.0.5.11-hotspot\bin\java.exe" set "JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-21.0.5.11-hotspot"
+    if defined JAVA_HOME set "PATH=%JAVA_HOME%\bin;%PATH%"
+)
+where mvn >nul 2>nul
+if errorlevel 1 (
+    if exist "C:\apache-maven-3.10.0\bin\mvn.cmd" set "PATH=C:\apache-maven-3.10.0\bin;%PATH%"
+    if exist "%USERPROFILE%\apache-maven\bin\mvn.cmd" set "PATH=%USERPROFILE%\apache-maven\bin;%PATH%"
+)
 
 echo Verification Java...
 java -version 2>&1
 if errorlevel 1 (
-    echo ERREUR : Java 23 introuvable dans C:\Program Files\Java\jdk-23
-    echo Verifiez le chemin ou installez Java 21+.
+    echo ERREUR : Java 21 ou plus introuvable.
+    echo Installez un JDK 21, cochez "Add to PATH", puis rouvrez cette fenetre.
+    pause
+    exit /b 1
+)
+where mvn >nul 2>nul
+if errorlevel 1 (
+    echo ERREUR : Maven introuvable.
+    echo Installez Maven 3.9 et ajoutez son dossier bin au PATH.
     pause
     exit /b 1
 )
@@ -28,7 +45,7 @@ echo.
 echo Appuyez sur une touche pour lancer le backend...
 pause >nul
 
-cd /d "C:\Users\daurinia\Desktop\HireLink\backend"
+cd /d "%~dp0backend"
 
 echo.
 echo === Demarrage en cours (peut prendre 20-30 secondes) ===

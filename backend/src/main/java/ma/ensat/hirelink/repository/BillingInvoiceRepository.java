@@ -7,4 +7,7 @@ import java.util.List;
 
 public interface BillingInvoiceRepository extends JpaRepository<BillingInvoice, Long> {
     List<BillingInvoice> findAllByOrderByIssuedAtDesc();
+
+    /** Sequenceurs de numérotation : une facture par entreprise et par mois, sans trou ni doublon. */
+    long countByOrganizationIdAndNumberStartingWith(Long organizationId, String prefix);
 }

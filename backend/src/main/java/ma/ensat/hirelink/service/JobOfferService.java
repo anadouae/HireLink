@@ -3,7 +3,6 @@ package ma.ensat.hirelink.service;
 import ma.ensat.hirelink.dto.ApiDtos;
 import ma.ensat.hirelink.model.Application;
 import ma.ensat.hirelink.model.JobOffer;
-import ma.ensat.hirelink.model.Membership;
 import ma.ensat.hirelink.model.OfferReport;
 import ma.ensat.hirelink.model.Organization;
 import ma.ensat.hirelink.model.Role;
@@ -11,7 +10,6 @@ import ma.ensat.hirelink.model.Tag;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.ApplicationRepository;
 import ma.ensat.hirelink.repository.JobOfferRepository;
-import ma.ensat.hirelink.repository.MembershipRepository;
 import ma.ensat.hirelink.repository.OfferReportRepository;
 import ma.ensat.hirelink.repository.TagRepository;
 import org.springframework.http.HttpStatus;
@@ -49,7 +47,6 @@ public class JobOfferService {
     private final FraudOfferScanService fraudOfferScanService;
     private final OfferReportRepository offerReportRepository;
     private final NotificationService notificationService;
-    private final MembershipRepository membershipRepository;
     private final OrganizationService organizationService;
     private final TagRepository tagRepository;
     private final SkillCatalogService skillCatalog;
@@ -68,7 +65,6 @@ public class JobOfferService {
             FraudOfferScanService fraudOfferScanService,
             OfferReportRepository offerReportRepository,
             NotificationService notificationService,
-            MembershipRepository membershipRepository,
             OrganizationService organizationService,
             TagRepository tagRepository,
             SkillCatalogService skillCatalog,
@@ -94,7 +90,6 @@ public class JobOfferService {
         this.fraudOfferScanService = fraudOfferScanService;
         this.offerReportRepository = offerReportRepository;
         this.notificationService = notificationService;
-        this.membershipRepository = membershipRepository;
         this.audit = audit;
     }
 
@@ -104,7 +99,7 @@ public class JobOfferService {
                 .findByPublishedTrueAndSuspendedFalse()
                 .stream()
                 .filter(o -> !isExpired(o) && !isHiddenFromCandidates(o))
-                .map(o -> toDto(o, viewer));
+                .map(o -> toDto(o, viewer, false));
         if (viewer != null && viewer.getRole() == Role.CANDIDAT) {
             return stream
                     .sorted(Comparator.comparingDouble((ApiDtos.JobOfferResponse o) ->
@@ -117,10 +112,23 @@ public class JobOfferService {
     @Transactional(readOnly = true)
     public List<ApiDtos.JobOfferResponse> listMine(User recruiter) {
         // Offres de toute l'organisation (R02) : un collègue voit et pilote les mêmes offres que le pipeline.
-        List<Long> authors = recruiter.getRole() == Role.ADMINISTRATEUR
-                ? List.of(recruiter.getId())
-                : organizationService.orgMemberIds(recruiter);
-        return jobOfferRepository.findByRecruiterIdIn(authors).stream()
+        // L'appartenance gravée sur l'offre fait foi ; les auteurs membres restent inclus pour les offres
+        // antérieures à cette colonne.
+        if (recruiter.getRole() == Role.ADMINISTRATEUR) {
+            return sorted(jobOfferRepository.findByRecruiterId(recruiter.getId()));
+        }
+        List<Long> authors = organizationService.orgMemberIds(recruiter);
+        Organization org = organizationService.currentOrganization(recruiter);
+        java.util.Map<Long, JobOffer> byId = new java.util.LinkedHashMap<>();
+        if (org != null) {
+            for (JobOffer o : jobOfferRepository.findByOrganizationId(org.getId())) byId.put(o.getId(), o);
+        }
+        for (JobOffer o : jobOfferRepository.findByRecruiterIdIn(authors)) byId.put(o.getId(), o);
+        return sorted(List.copyOf(byId.values()));
+    }
+
+    private List<ApiDtos.JobOfferResponse> sorted(List<JobOffer> offers) {
+        return offers.stream()
                 .sorted(Comparator.comparing(JobOffer::getCreatedAt,
                         Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(o -> toDto(o, null))
@@ -136,7 +144,7 @@ public class JobOfferService {
         if (!isOpenToCandidates(o) && !owner && !admin) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Offre non publique");
         }
-        return toDto(o, viewer);
+        return toDto(o, viewer, owner);
     }
 
     @Transactional
@@ -148,6 +156,9 @@ public class JobOfferService {
         }
         JobOffer o = new JobOffer();
         o.setRecruiter(recruiter);
+        // Le propriétaire de l'offre est gravé à la création (A1) : il ne suit plus les mouvements de
+        // l'auteur entre deux organisations. Un administrateur sans espace entreprise n'en attache aucun.
+        o.setOrganization(organizationService.currentOrganization(recruiter));
         applyWithFraudGate(o, req, wantPublish);
         jobOfferRepository.save(o);
         audit.ok(wantPublish ? "OFFER_PUBLISHED" : "OFFER_CREATED", recruiter, "OFFER", o.getId(), o.getTitle());
@@ -535,7 +546,17 @@ public class JobOfferService {
         }
     }
 
+    /** Vue « interne » : le board du recruteur et les actions de modération voient l'état réel de l'offre. */
     private ApiDtos.JobOfferResponse toDto(JobOffer o, User viewer) {
+        return toDto(o, viewer, true);
+    }
+
+    /**
+     * A6 : suspension, compteur de signalements et motif de quarantaine sont des informations de
+     * modération. Elles ne sortent que vers un gestionnaire de l'offre ou un administrateur ; la vitrine
+     * publique et le tableau de bord d'une autre organisation reçoivent ces champs neutres.
+     */
+    private ApiDtos.JobOfferResponse toDto(JobOffer o, User viewer, boolean moderationVisible) {
         Double match = null;
         List<String> matched = List.of();
         List<String> missing = List.of();
@@ -556,9 +577,9 @@ public class JobOfferService {
                 o.getContractType(),
                 o.getResponseSlaDays(),
                 o.isPublished(),
-                o.isSuspended(),
-                o.getReportCount(),
-                o.getQuarantineReason(),
+                moderationVisible && o.isSuspended(),
+                moderationVisible ? o.getReportCount() : 0,
+                moderationVisible ? o.getQuarantineReason() : null,
                 o.getRecruiter().getId(),
                 o.getRecruiter().getFullName(),
                 o.getCreatedAt(),
@@ -605,10 +626,7 @@ public class JobOfferService {
     }
 
     private Organization orgOf(JobOffer o) {
-        return membershipRepository.findByUserIdAndActiveTrue(o.getRecruiter().getId()).stream()
-                .map(Membership::getOrganization)
-                .findFirst()
-                .orElse(null);
+        return organizationService.organizationOf(o);
     }
 
     private String companyName(JobOffer o) {

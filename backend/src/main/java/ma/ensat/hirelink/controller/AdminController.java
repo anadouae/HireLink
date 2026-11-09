@@ -360,7 +360,7 @@ public class AdminController {
         out.put("queue", queue);
         out.put("handled", handled);
         out.put("pendingCount", pending.size());
-        out.put("suspendedOffers", jobOfferRepository.findAll().stream().filter(JobOffer::isSuspended).count());
+        out.put("suspendedOffers", jobOfferRepository.countBySuspendedTrue());
         return out;
     }
 
@@ -372,7 +372,7 @@ public class AdminController {
         Map<Long, Integer> apps = applicationsByOffer();
         Map<Long, String> orgNames = orgNamesByRecruiter();
         List<Map<String, Object>> rows = new ArrayList<>();
-        for (JobOffer o : jobOfferRepository.findAll()) {
+        for (JobOffer o : jobOfferRepository.findAllWithRecruiter()) {
             rows.add(offerRow(o, apps.getOrDefault(o.getId(), 0), orgNames));
         }
         rows.sort((a, b) -> Long.compare(((Number) b.get("id")).longValue(), ((Number) a.get("id")).longValue()));

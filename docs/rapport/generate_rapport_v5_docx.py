@@ -128,7 +128,7 @@ def add_cover(doc):
         ("Version du document", "5.0 — 6 novembre 2026"),
         ("Backend", "Spring Boot 3.3.13, Java 21 — http://localhost:8081/api/v1"),
         ("Frontend", "HTML, CSS, JavaScript statiques — http://localhost:5500"),
-        ("Base de données", "MariaDB 10.4.32, schéma hirelink, 25 tables"),
+        ("Base de données", "MariaDB 10.4.32, schéma hirelink, 26 tables"),
         ("Livrables", "rapport (ce fichier), cahier des charges v5, 12 diagrammes, "
          "1 export BPMN 2.0, 23 captures, 2 collections Postman et leur run"),
     ]
@@ -185,14 +185,14 @@ def chapitre_1(doc):
                   "gamifié sans fondement) ont été retirées du produit plutôt que masquées.")
     add_caption(doc, "Tableau 1.1 — Le projet en dix chiffres vérifiés dans le dépôt")
     add_table(doc, ["Grandeur", "Valeur", "Comment elle est obtenue"],
-              [("Contrôleurs REST", "20", "inventaire du paquet controller"),
-               ("Endpoints sous /api/v1", "151", "annotations @RequestMapping/@GetMapping/… "
+              [("Contrôleurs REST", "21", "inventaire du paquet controller"),
+               ("Endpoints sous /api/v1", "154", "annotations @GetMapping/@PostMapping/@PutMapping/@PatchMapping/@DeleteMapping relevées "
                 "relevées automatiquement"),
-               ("Services métier", "51", "paquet service"),
-               ("Repositories Spring Data", "24", "paquet repository"),
-               ("Entités JPA", "24", "classes portant @Table"),
-               ("Énumérations du domaine", "11 (+1 imbriquée)", "paquet model"),
-               ("Tables réelles en base", "25", "SHOW TABLES sur le schéma hirelink"),
+               ("Services métier", "52", "paquet service"),
+               ("Repositories Spring Data", "25", "paquet repository"),
+               ("Entités JPA", "25", "classes portant @Table"),
+               ("Énumérations du domaine", "11", "paquet model — 25 entités et 11 enums, soit 36 classes"),
+               ("Tables réelles en base", "26", "SHOW TABLES sur le schéma hirelink : les 25 tables d'entités plus la jointure job_offer_tags"),
                ("Pages de l'interface", "27 (9 publiques, 18 applicatives)", "frontend et frontend/app"),
                ("Fichiers JavaScript / CSS", "58 / 21", "inventaire de frontend"),
                ("Données de démonstration", "130 comptes, 42 organisations, 117 offres (106 publiées), "
@@ -274,7 +274,7 @@ def chapitre_3(doc):
                 "visibilité et des badges sans fondement.", "Relecture page par page, puis contrôle des "
                 "formules réellement appliquées par le serveur."),
                ("2", "Architecture commentée, contrat front/back : inventaire des routes et des champs "
-                "consommés.", "151 endpoints et 27 pages listés ; les fonctions mortes sont archivées "
+                "consommés.", "154 endpoints et 27 pages listés ; les fonctions mortes sont archivées "
                 "plutôt que supprimées silencieusement."),
                ("3", "Rôles d'entreprise (propriétaire, recruteur, responsable de poste), cycle de vie "
                 "complet des offres, modération administrateur.", "Tests manuels puis collection Postman "
@@ -282,7 +282,7 @@ def chapitre_3(doc):
                ("4", "Crédits IA affichés, CAPTCHA produit par le serveur, badges sobres fondés sur des "
                 "comptages.", "GET /ai/credits, POST /auth/captcha, comparaison avant/après en base."),
                ("5", "Nettoyage de la base de démonstration : tables et colonnes mortes supprimées, "
-                "vocabulaires normalisés, routes mortes retirées.", "25 tables, plus aucune table morte ; "
+                "vocabulaires normalisés, routes mortes retirées.", "26 tables, plus aucune table morte ; "
                 "les routes retirées répondent 404."),
                ("6", "Documentation : cahier des charges v5, douze diagrammes, vingt-trois captures, "
                 "collections Postman et leur run.", "Le présent document et l'annexe C."),
@@ -314,12 +314,12 @@ def chapitre_4(doc):
     add_caption(doc, "Tableau 4.1 — Couches et responsabilités")
     add_table(doc, ["Couche", "Paquet", "Responsabilité", "Volume"],
               [("Contrôleurs", "ma.ensat.hirelink.controller", "routes, autorisations par annotation, "
-                "mapping requête/réponse", "20 classes, 151 endpoints"),
+                "mapping requête/réponse", "21 classes, 154 endpoints"),
                ("Services", "ma.ensat.hirelink.service", "règles de gestion, transactions, contrôles "
-                "d'organisation", "51 classes"),
-               ("Repositories", "ma.ensat.hirelink.repository", "accès JPA, requêtes nommées", "24 interfaces"),
+                "d'organisation", "52 classes"),
+               ("Repositories", "ma.ensat.hirelink.repository", "accès JPA, requêtes nommées", "25 interfaces"),
                ("Modèle", "ma.ensat.hirelink.model", "entités @Table et énumérations du domaine",
-                "24 entités, 11 enums"),
+                "25 entités, 11 enums"),
                ("Sécurité", "ma.ensat.hirelink.security", "filtre JWT, cookie de rafraîchissement, "
                 "politique de mot de passe, anti-robot", "filtres et services dédiés"),
                ("Configuration", "ma.ensat.hirelink.config", "contrat d'erreur global, données de "
@@ -469,13 +469,14 @@ def chapitre_6(doc):
                ("Administrateur", "Role.ADMINISTRATEUR", "modération des offres signalées, comptes, "
                 "organisations et vérification, plans et factures, statistiques, e-mails, audit"),
                ], col_widths=[3.2, 4.6, 9.2], size=9)
-    figure(doc, "01a_cas_utilisation_candidat.png", "Figure 6.1 — Cas d'utilisation du candidat : espace "
-                                                    "public et espace privé, avec les extensions d'analyse "
-                                                    "de CV et de suggestion de compétences.")
-    figure(doc, "01b_cas_utilisation_recruteur.png", "Figure 6.2 — Cas d'utilisation du recruteur et du "
-                                                     "responsable de poste dans l'espace entreprise.")
-    figure(doc, "01c_cas_utilisation_admin.png", "Figure 6.3 — Cas d'utilisation de l'administrateur : "
-                                                 "modération, comptes, entreprises, facturation, audit.")
+    add_para(doc, "La vue des cas d'utilisation est unique : elle réunit les six acteurs et les "
+                  "quarante-six cas dans un seul diagramme, découpé en cinq espaces. Les cas "
+                  "« include » et « extend » ne sont écrits que pour les appels réellement "
+                  "déclenchés par le serveur.")
+    figure(doc, "01_cas_utilisation.png", "Figure 6.1 — Cas d'utilisation général : les six acteurs "
+                                         "(visiteur, candidat, recruteur, responsable de poste, "
+                                         "administrateur, système de planification) et les "
+                                         "quarante-six cas, regroupés par espace.", largeur=15.0)
     add_caption(doc, "Tableau 6.2 — Exemples de refus serveur observés en test")
     add_table(doc, ["Action tentée hors droit", "Réponse du serveur"],
               [("POST /applications avec un jeton recruteur", "403 « Réservé aux candidats »"),
@@ -934,8 +935,10 @@ def annexes(doc):
                 "dix sections, 71 exigences fonctionnelles, 34 non fonctionnelles, 41 lignes de "
                 "traçabilité calculées sur le dépôt"),
                ("Rapport de projet", "docs/rapport/HireLink_Rapport_de_projet_v5.docx", "ce document"),
-               ("Diagrammes", "docs/diagrammes/v5/", "12 sources .puml et 12 PNG : cas d'utilisation (3), "
-                "classes, séquences (3), activité, paquets, déploiement, BPMN, pile technique"),
+               ("Diagrammes", "docs/diagrammes/v5/", "10 sources .puml et 10 PNG : cas d'utilisation "
+                "(une seule vue pour tous les acteurs), classes, séquences (3), activité, paquets, "
+                "déploiement, BPMN, pile technique ; 3 déclinaisons par rôle en annexe "
+                "`_details-par-role/`"),
                ("Processus BPMN", "docs/diagrammes/v5/processus_recrutement_hirelink.bpmn",
                 "export BPMN 2.0 XML, trois couloirs, importable dans Camunda Modeler ou Bizagi"),
                ("Captures d'écran", "docs/guide-captures/v5-2026-11-06/", "23 images et leur légende"),
@@ -947,7 +950,9 @@ def annexes(doc):
     add_heading_custom(doc, "Annexe D — Reproduire les preuves", 1)
     add_caption(doc, "Tableau D.1 — Commandes de reproduction")
     add_table(doc, ["Objectif", "Commande"],
-              [("Régénérer les 12 diagrammes", "python docs/diagrammes/_gen_v5_plantuml.py"),
+              [("Régénérer les 10 diagrammes", "python docs/diagrammes/_gen_v5_plantuml.py"),
+               ("Les rendre sans le serveur public", "python docs/diagrammes/_gen_v5_plantuml.py "
+                "--local --jar chemin/vers/plantuml.jar"),
                ("Un seul diagramme", "python docs/diagrammes/_gen_v5_plantuml.py --only 04"),
                ("Régénérer l'export BPMN", "python docs/diagrammes/_gen_v5_bpmn_xml.py"),
                ("Régénérer les collections Postman", "python docs/postman/gen_postman_v5.py"),
@@ -959,13 +964,16 @@ def annexes(doc):
                ("Régénérer les documents", "python docs/cahier-des-charges/generate_cdc_v5_docx.py puis "
                 "python docs/rapport/generate_rapport_v5_docx.py"),
                ], col_widths=[5.0, 12.0], size=9)
-    add_para(doc, "Le rendu des diagrammes passe par le serveur PlantUML public : ni Java ni Graphviz "
-                  "n'est installé sur ce poste. Le script essaie une requête, puis une seconde en POST, "
-                  "puis attend et recommence, parce que ce serveur renvoie parfois une page de "
-                  "consentement anti-robot ou un HTTP 400 sur une source trop longue. Deux pièges ont été "
-                  "relevés : un libellé de cas d'utilisation contenant un retour à la ligne dans la forme "
-                  "longue fait échouer le rendu, et le mot-clé cloud n'est pas admis dans un diagramme de "
-                  "séquence.", size=10)
+    add_para(doc, "Le rendu des diagrammes passe par le serveur PlantUML public, qui se sature : il "
+                  "renvoie parfois une page de consentement anti-robot, un HTTP 400 sur une source trop "
+                  "longue, ou — sans code d'erreur — une image où toutes les étiquettes ont disparu. Le "
+                  "script rend donc chaque diagramme trois fois et garde la plus grande image. Le poste "
+                  "dispose aussi d'un Java 17 et d'un plantuml.jar : l'option --local rend les mêmes "
+                  "sources sans appeler le serveur. Trois pièges ont été relevés : un libellé d'acteur "
+                  "contenant un vrai retour à la ligne fait échouer le rendu (la séquence « backslash-n » "
+                  "passe), le mot-clé cloud n'est pas admis dans un diagramme de séquence, et un lien "
+                  "cache avec direction est ignoré dans un diagramme de cas d'utilisation — la forme sans "
+                  "direction place les cas en colonnes et tient sur une page.", size=10)
     add_heading_custom(doc, "Annexe E — Glossaire", 1)
     add_caption(doc, "Tableau E.1 — Termes utilisés")
     add_table(doc, ["Terme", "Sens retenu ici"],

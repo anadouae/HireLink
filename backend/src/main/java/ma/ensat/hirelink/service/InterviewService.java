@@ -17,17 +17,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Règles d'un entretien (type, nature, lieu ou lien selon le mode, fuseau, durée), report, annulation,
- * réponse du candidat et export calendrier (.ics). Ne touche ni aux droits ni à la base : l'appelant s'en charge.
+ * Règles d'un entretien (type, nature, lieu ou lien selon le mode, fuseau, durée), report, annulation
+ * et export calendrier (.ics). L'entretien est une convocation décidée par le recruteur : aucune réponse
+ * du candidat n'est attendue. Ne touche ni aux droits ni à la base : l'appelant s'en charge.
  */
 @Service
 public class InterviewService {
 
     public static final String SCHEDULED = "SCHEDULED";
     public static final String CANCELLED = "CANCELLED";
-    public static final String PENDING = "PENDING";
-    public static final String CONFIRMED = "CONFIRMED";
-    public static final String UNAVAILABLE = "UNAVAILABLE";
 
     public static final Map<String, String> TYPE_FR = Map.of(
             "ONSITE", "Sur site", "VISIO", "Visioconférence", "PHONE", "Téléphone");
@@ -43,7 +41,7 @@ public class InterviewService {
     private static final DateTimeFormatter ICS_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneId.of("UTC"));
     private static final DateTimeFormatter HUMAN = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy 'à' HH'h'mm", java.util.Locale.FRENCH);
 
-    /** Valide la demande et applique l'entretien (nouvelle planification ou report) : réponse du candidat remise à zéro. */
+    /** Valide la demande et applique l'entretien (nouvelle planification ou report) : le rappel J-1 est réarmé. */
     public void schedule(Application app, InterviewRequest req) {
         String type = req.type().trim().toUpperCase();
         if (!SCHEDULABLE.contains(type)) throw bad("Choisissez un entretien sur site ou en visioconférence.");
@@ -71,8 +69,6 @@ public class InterviewService {
         app.setInterviewNotes(clean(req.instructions()));
         app.setInterviewStatus(SCHEDULED);
         app.setInterviewCancelReason(null);
-        app.setInterviewConfirmation(PENDING);
-        app.setInterviewCandidateNote(null);
         app.setInterviewReminderSent(false);
     }
 
@@ -80,12 +76,6 @@ public class InterviewService {
         requireActive(app);
         app.setInterviewStatus(CANCELLED);
         app.setInterviewCancelReason(reason.trim());
-    }
-
-    public void answer(Application app, boolean available, String note) {
-        requireActive(app);
-        app.setInterviewConfirmation(available ? CONFIRMED : UNAVAILABLE);
-        app.setInterviewCandidateNote(available ? null : clean(note));
     }
 
     public boolean isActive(Application app) {

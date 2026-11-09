@@ -4,6 +4,7 @@ import ma.ensat.hirelink.model.InAppNotification;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.InAppNotificationRepository;
 import ma.ensat.hirelink.repository.UserRepository;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +12,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +89,17 @@ public class NotificationService {
     @Transactional(readOnly = true)
     public List<InAppNotification> mine(User user) {
         return repository.findByUserIdOrderByCreatedAtDescIdDesc(user.getId());
+    }
+
+    /**
+     * Liste filtrée par la base (type, date de départ, lu/non lu) avec un plafond de lignes.
+     * Le plafond est assumé : la page d'accueil des notifications avertit l'utilisateur quand il est atteint,
+     * au lieu de lui faire croire que les lignes manquantes n'existent pas.
+     */
+    @Transactional(readOnly = true)
+    public List<InAppNotification> mineFiltered(User user, String kind, Instant since, Boolean readFlag, int limit) {
+        String k = kind == null || kind.isBlank() ? null : kind.trim().toUpperCase();
+        return repository.findFiltered(user.getId(), k, since, readFlag, PageRequest.of(0, Math.max(1, limit)));
     }
 
     @Transactional

@@ -126,9 +126,9 @@ public class AuthController {
     // ---- passkeys (connexion & inscription guidée) ----
 
     @PostMapping("/passkey/status")
-    public Map<String, Object> passkeyStatus(@RequestBody(required = false) AuthDtos.PasskeyStatusRequest body) {
+    public Map<String, Object> passkeyStatus(@RequestBody(required = false) AuthDtos.PasskeyStatusRequest body, HttpServletRequest req) {
         String email = body != null ? body.email() : null;
-        return authService.passkeyCheck(email);
+        return authService.passkeyCheck(email, ClientInfo.from(req));
     }
 
     @PostMapping("/passkey/login/options")

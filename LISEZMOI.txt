@@ -3,9 +3,10 @@ HireLink — version premium
 
 1. Arrêter le backend : dans le terminal où il tourne, appuyer sur Ctrl+C.
 
-2. Extraire ce fichier zip dans C:\Users\daurinia\Desktop\HireLink
+2. Extraire ce fichier zip dans le dossier de votre choix (par exemple le dossier du depot),
    et accepter de REMPLACER les fichiers existants.
-   (Le fichier application-local.properties n'est pas dans le zip : vos réglages sont conservés.)
+   (Le fichier application-local.properties n'est pas dans le zip : vos réglages sont conservés.
+    backend\data\jwt.key ne doit JAMAIS être distribué : chaque installation génère ou reçoit sa propre clé.)
 
 3. Base de données (facultatif) : dans phpMyAdmin, choisir la base « hirelink »,
    onglet Importer, puis le fichier database\update_logos_entreprises_maroc.sql.

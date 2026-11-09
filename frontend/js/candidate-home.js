@@ -44,6 +44,24 @@
     HireLinkApply.start(o, load);
   }
 
+  /** Le motif saisi ici est celui que la modération lit dans Administration › Signalements. */
+  function openReport(o) {
+    HireLink.openModal({
+      title: "Signaler cette offre",
+      description: "Décrivez le problème : la modération reçoit votre texte exact avec l'offre.",
+      bodyHtml: '<label class="field-label" for="hl-report-reason">Motif (500 caractères maximum)</label>'
+        + '<textarea id="hl-report-reason" class="input" rows="4" maxlength="500" placeholder="Ex. : l’entreprise demande un paiement pour postuler."></textarea>',
+      confirmLabel: "Envoyer le signalement",
+      onConfirm: async () => {
+        const field = document.getElementById("hl-report-reason");
+        if (!field || field.value.trim().length < 5) { if (field) field.focus(); return false; }
+        await HireLinkAPI.api("/offers/" + o.id + "/report", { method: "POST", body: { reason: field.value.trim() } });
+        HireLink.toast("Signalement envoyé", "Merci. Trois signalements suspendent automatiquement l’offre.", "success");
+        load(true);
+      },
+    });
+  }
+
   function fillSelect(id, values, label) {
     const sel = $(id);
     const keep = sel.value;
@@ -269,6 +287,13 @@
       b.addEventListener("click", () => openApply(o));
       actions.appendChild(b);
     }
+    const flag = document.createElement("button");
+    flag.type = "button";
+    flag.className = "btn btn-ghost";
+    flag.textContent = "Signaler cette offre";
+    flag.title = "Alerter la modération sur cette offre";
+    flag.addEventListener("click", () => openReport(o));
+    actions.appendChild(flag);
     const extra = [];
     if (o.niceToHaveSkills) {
       const niceTitle = document.createElement("h3");

@@ -6,6 +6,8 @@ actor SYS as "Système de planification
 (rappels, SLA, purges)"
 rectangle "Espace recruteur" {
   usecase UC_new as "Créer, modifier, publier une offre"
+  usecase UC_duplicate as "Dupliquer une offre
+ou prolonger sa date limite"
   usecase UC_close as "Clôturer ou archiver une offre"
   usecase UC_pipeline as "Trier les candidatures
 dans le pipeline"
@@ -19,12 +21,19 @@ dans le pipeline"
 transférer la propriété"
   usecase UC_notes as "Note interne et événements
 de l'organisation"
-  usecase UC_sla as "Vérifier le rythme de réponse promis"
+  usecase UC_sla as "Vérifier son rythme de réponse réel"
+  usecase UC_assign as "Attribuer un dossier à un
+responsable du poste"
+  usecase UC_notif as "Lire ses notifications : candidatures,
+entretiens, délais, équipe, modération"
+  usecase UC_followers as "Voir combien de candidats
+suivent l'entreprise"
   usecase UC_credits as "Suivre la consommation des crédits IA"
   usecase UC_recherche as "Rechercher un candidat
 dans son organisation"
 }
 R --> UC_new
+R --> UC_duplicate
 R --> UC_close
 R --> UC_pipeline
 R --> UC_planifier
@@ -33,10 +42,14 @@ R --> UC_agenda
 R --> UC_equipe
 R --> UC_notes
 R --> UC_sla
+R --> UC_assign
+R --> UC_notif
+R --> UC_followers
 R --> UC_credits
 R --> UC_recherche
 UC_pipeline ..> UC_refuser : <<extend>>
 UC_pipeline ..> UC_scorecard : <<extend>>
 SYS --> UC_planifier : relance
 SYS --> UC_sla : mesure
+SYS --> UC_notif : alerte
 @enduml

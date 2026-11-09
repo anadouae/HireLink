@@ -33,7 +33,9 @@ public class SecurityConfig {
     @Value("${hirelink.cors.allowed-origins}")
     private String allowedOrigins;
 
-    @Value("${hirelink.swagger.enabled:true}")
+    // A7 : documentation technique éteinte sauf demande explicite. Le défaut du code est « fermé »,
+    // pour qu'une installation qui oublierait la propriété ne livre pas Swagger en production.
+    @Value("${hirelink.swagger.enabled:false}")
     private boolean swaggerEnabled;
 
     @Value("${hirelink.security.bcrypt-strength:12}")
@@ -77,7 +79,13 @@ public class SecurityConfig {
                             "/api/v1/auth/mfa/verify",
                             "/api/v1/auth/mfa/enroll/start",
                             "/api/v1/auth/mfa/enroll/finish",
-                            "/api/v1/auth/passkey/**"
+                            // A7 : les cinq routes passkey réellement utilisées, pas un patron « ** » qui
+                            // rendrait publique toute route passkey ajoutée plus tard.
+                            "/api/v1/auth/passkey/status",
+                            "/api/v1/auth/passkey/login/options",
+                            "/api/v1/auth/passkey/login/finish",
+                            "/api/v1/auth/passkey/enroll/options",
+                            "/api/v1/auth/passkey/enroll/finish"
                     ).permitAll();
                     auth.requestMatchers("/api/v1/organizations/invitations/**").permitAll();
                     if (swaggerEnabled) {

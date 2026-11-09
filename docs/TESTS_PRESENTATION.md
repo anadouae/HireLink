@@ -31,19 +31,23 @@ l’offre sur laquelle le scénario 3 postule, et le scénario 4 traite cette m�
 
 ## 2. Démarrage
 
-Terminal 1 — le serveur (laissez la fenêtre ouverte, c’est elle qui affiche les codes d’inscription, §12) :
+Terminal 1 — le serveur (laissez la fenêtre ouverte ; pour que les codes d’inscription y paraissent, voir §12) :
 
 ```
-cd C:\Users\daurinia\Desktop\HireLink\backend
-mvn spring-boot:run
+cd <dossier-du-depot>\HireLink\backend
+mvn spring-boot:run -Dspring-boot.run.jvmArguments="-Dspring.mail.host= -Dhirelink.otp.log-to-console=true"
 ```
+
+`<dossier-du-depot>` désigne l’endroit où vous avez cloné ou extrait HireLink : aucun chemin personnel n’est requis.
+Sans `-Dhirelink.otp.log-to-console=true`, aucun code ni lien de sécurité n’est écrit dans la console (c’est la
+valeur par défaut, choisie pour la sécurité) : il faut alors un SMTP (§5.1 du guide d’installation).
 
 Vérification : ouvrez http://localhost:8081/api/v1/health → `{"application":"HireLink","status":"UP",…,"database":{"connected":true}}`.
 
 Terminal 2 — le site :
 
 ```
-cd C:\Users\daurinia\Desktop\HireLink\frontend
+cd <dossier-du-depot>\HireLink\frontend
 python -m http.server 5500
 ```
 

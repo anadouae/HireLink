@@ -1,12 +1,19 @@
 package ma.ensat.hirelink.service;
 
+import ma.ensat.hirelink.model.AiUsageLog;
 import ma.ensat.hirelink.model.PlanTier;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.AiUsageLogRepository;
+import ma.ensat.hirelink.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
@@ -18,17 +25,27 @@ import java.util.Map;
 /**
  * Ledger crédits IA F16 — paliers CDC §9.
  * Compteur durable via ai_usage_logs (pas de ConcurrentHashMap).
- * Matching local (F14) ne consomme rien. F15 consomme 1 crédit après succès (R16).
+ * Matching local (F14) ne consomme rien. F15 : le crédit est réservé avant l'appel (B2) puis liquidé —
+ * un appel qui échoue rend son crédit, jamais l'inverse.
  */
 @Service
 public class AiCreditService {
 
+    private static final Logger log = LoggerFactory.getLogger(AiCreditService.class);
+
     private final AiUsageLogRepository aiUsageLogRepository;
     private final BillingCatalogService billingCatalogService;
+    private final UserRepository userRepository;
 
-    public AiCreditService(AiUsageLogRepository aiUsageLogRepository, BillingCatalogService billingCatalogService) {
+    @Value("${hirelink.ai.reservation-stale-minutes:15}")
+    private int staleReservationMinutes = 15;
+
+    public AiCreditService(AiUsageLogRepository aiUsageLogRepository,
+                           BillingCatalogService billingCatalogService,
+                           UserRepository userRepository) {
         this.aiUsageLogRepository = aiUsageLogRepository;
         this.billingCatalogService = billingCatalogService;
+        this.userRepository = userRepository;
     }
 
     /** Une action IA réussie = un crédit. Le coût n'est pas une variable d'ajustement invisible. */
@@ -109,6 +126,78 @@ public class AiCreditService {
         Instant to = ym.plusMonths(1).atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
         Integer sum = aiUsageLogRepository.sumCreditsSpent(userId, from, to);
         return sum == null ? 0 : sum;
+    }
+
+    /**
+     * Réservation atomique d'un crédit AVANT l'appel IA (B2) : verrou de ligne sur le compte, contrôle du
+     * solde, écriture d'une ligne déjà débitée. N appels simultanés sur le dernier crédit ne laissent donc
+     * qu'un gagnant ; les autres reçoivent une 402 sans avoir payé d'appel.
+     * La ligne reste « non liquidée » jusqu'à {@link #settle} ou {@link #release}.
+     */
+    @Transactional
+    public AiUsageLog reserve(User user, String feature) {
+        userRepository.findByIdForUpdate(user.getId())
+                .orElseThrow(() -> new java.util.NoSuchElementException("Compte inconnu"));
+        CreditStatus st = status(user);
+        if (!st.allowed()) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.PAYMENT_REQUIRED,
+                    "Crédits IA épuisés (" + st.used() + "/" + st.limit() + " ce mois). Le compteur repart dans "
+                            + st.daysToReset() + " jour" + (st.daysToReset() > 1 ? "s" : "") + ".");
+        }
+        AiUsageLog row = new AiUsageLog();
+        row.setUserId(user.getId());
+        row.setOrganizationId(user.getAssignedOrgId());
+        row.setFeature(feature);
+        row.setProvider("reservation");
+        row.setCreditsSpent(COST_PER_ACTION);
+        row.setSuccess(false);
+        return aiUsageLogRepository.save(row);
+    }
+
+    /** Liquidation après l'appel : succès = le débit reste ; échec = 0 crédit, aucune perte injustifiée. */
+    @Transactional
+    public void settle(AiUsageLog reservation, LlmProvider.LlmResult result) {
+        if (reservation == null) return;
+        reservation.setProvider(result.provider());
+        reservation.setModel(result.model());
+        reservation.setCharsIn(result.charsIn());
+        reservation.setCharsOut(result.charsOut());
+        reservation.setSuccess(result.success());
+        reservation.setCreditsSpent(result.success() ? COST_PER_ACTION : 0);
+        aiUsageLogRepository.save(reservation);
+    }
+
+    /** Libération quand l'appel n'aboutit pas du tout (exception) : le crédit est rendu. */
+    @Transactional
+    public void release(AiUsageLog reservation) {
+        if (reservation == null) return;
+        reservation.setCreditsSpent(0);
+        reservation.setSuccess(false);
+        aiUsageLogRepository.save(reservation);
+    }
+
+    /** Une réservation orpheline (processus arrêté en plein appel) ne doit pas immobiliser un crédit. */
+    @Transactional
+    public int releaseStaleReservations() {
+        Instant before = Instant.now().minus(Duration.ofMinutes(staleReservationMinutes));
+        List<AiUsageLog> stale = aiUsageLogRepository.findUnsettledReservations(before);
+        for (AiUsageLog row : stale) {
+            row.setCreditsSpent(0);
+        }
+        aiUsageLogRepository.saveAll(stale);
+        if (!stale.isEmpty()) {
+            log.info("{} réservation(s) de crédit IA rendue(s) faute de liquidation", stale.size());
+        }
+        return stale.size();
+    }
+
+    /** Balaye les réservations non liquidées : le crédit réservé par un appel interrompu revient à son titulaire. */
+    @Scheduled(fixedDelayString = "${hirelink.ai.reservation-sweep-ms:900000}",
+            initialDelayString = "${hirelink.ai.reservation-sweep-initial-delay-ms:120000}")
+    @Transactional
+    public void sweepStaleReservations() {
+        releaseStaleReservations();
     }
 
     /**

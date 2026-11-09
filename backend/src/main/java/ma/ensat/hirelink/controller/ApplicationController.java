@@ -89,16 +89,6 @@ public class ApplicationController {
         return applicationService.cancelInterview(user, id, body.reason());
     }
 
-    @org.springframework.security.access.prepost.PreAuthorize("hasRole('CANDIDAT')")
-    @PostMapping("/{id}/interview/answer")
-    public ApiDtos.ApplicationResponse answerInterview(
-            @AuthenticationPrincipal User user,
-            @PathVariable Long id,
-            @Valid @RequestBody ApiDtos.InterviewAnswerRequest body
-    ) {
-        return applicationService.answerInterview(user, id, body);
-    }
-
     @GetMapping("/{id}/interview.ics")
     public ResponseEntity<byte[]> interviewCalendar(@AuthenticationPrincipal User user, @PathVariable Long id) {
         ApplicationService.CalendarFile file = applicationService.interviewCalendar(user, id);

@@ -302,7 +302,9 @@ public class AuthService {
 
     // ------------------------------------------------------------------ passkeys
 
-    public java.util.Map<String, Object> passkeyCheck(String email) {
+    public java.util.Map<String, Object> passkeyCheck(String email, ClientInfo ci) {
+        // A3 : la réponse est déjà minimale ; le cadencement empêche le balayage d'adresses.
+        throttle.hit("passkey-status:ip:" + ci.ip(), 30, 600, LOCKED);
         return webAuthn.checkPasskey(email);
     }
 

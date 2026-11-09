@@ -17,6 +17,8 @@ et la facturation"
   usecase UC_search as "Rechercher transversalement
 (candidats, offres, entreprises)"
   usecase UC_retention as "Purger les données mortes (rétention)"
+  usecase UC_audit as "Consulter et exporter
+le journal d'audit"
 }
 A --> UC_moderation
 A --> UC_ice
@@ -28,4 +30,5 @@ A --> UC_stats
 A --> UC_emails
 A --> UC_search
 A --> UC_retention
+A --> UC_audit
 @enduml
