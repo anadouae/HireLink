@@ -110,3 +110,4 @@ Les rôles ne peuvent pas changer après la création du profil (`403`), donc il
 6. **Comptes de démonstration** : leurs anciens mots de passe faibles sont conservés pour la démo ; ils ne sont créés qu'avec `hirelink.seed.enabled=true` (désactivé en prod).
 7. Pas d'analyse automatique des dépendances (OWASP Dependency-Check) ni de test d'intrusion externe.
 8. Les passkeys exigent `localhost` ou HTTPS ; avec une adresse IP ou un autre nom d'hôte, régler `HIRELINK_WEBAUTHN_RP_ID` et `HIRELINK_WEBAUTHN_ORIGINS`.
+9. **CSP des pages** : `connect-src` et `img-src` autorisent l'origine de la page, Google, et le port local documenté `8081`. Un autre port local (recette à côté d'une démo déjà lancée) doit être ajouté explicitement dans la balise de la page concernée. Ce n'est pas une ouverture de tous les ports. En production, le profil `prod` n'ajoute aucun port : l'API est jointe via l'origine configurée (`HIRELINK_CORS_ORIGINS`, `HIRELINK_FRONTEND_URL`).

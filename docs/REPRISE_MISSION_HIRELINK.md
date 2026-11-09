@@ -91,19 +91,37 @@ Parcours navigateur du code corrigé, le 9 novembre 2026, sur un second serveur s
 
 Ces chiffres sont ceux du jeu de données `hirelink_recette`. Ils diffèrent de la démo 8081 (crédits 12/20, 18 actions, offre de test L1).
 
-Deux blocages ont été corrigés avant ce parcours. Les pages mettaient en cache `config.js` et `api.js`, donc le paramètre `?api=` était ignoré. La politique de sécurité des pages (`connect-src`) n’autorisait que le port 8081, et le navigateur coupait l’appel vers 8091 avant qu’il parte (`Réseau indisponible`). `api.js` lit maintenant le même réglage d’onglet que `config.js`. Les pages autorisent `http://localhost:*` et `http://127.0.0.1:*` pour les appels et les images. Le port par défaut reste 8081. Le serveur 5501 a été arrêté après le parcours. Le frontend 5500 répondait encore 200.
+Deux blocages ont été corrigés avant ce parcours. Les pages mettaient en cache `config.js` et `api.js`, donc le paramètre `?api=` était ignoré. `api.js` lit maintenant le même réglage d’onglet que `config.js`. L’ouverture de tous les ports locaux, ajoutée pour joindre 8091, a ensuite été retirée : la politique livrée n’autorise que le port 8081. Le serveur 5501 a été arrêté après le parcours. Le frontend 5500 répondait encore 200.
 
 ## Cahier v6.1
 
 Introuvable dans le dépôt et sur le Bureau (les fichiers « v6 » trouvés sont un guide LexHub et des notes IPv6, sans rapport). La v5 du dépôt n’a pas été utilisée comme substitut.
 
+## Commit local et installation propre
+
+Commit de sauvegarde, branche `finalisation/livraison`, sans push : `8dc3eb203054af4fc3d7a445119ac014637b401e`.
+
+Installation faite depuis un clone de ce commit, dossier `HireLink-install-8dc3eb2`, base `hirelink_install`, port **8092**, frontend statique **5502**. Le script `LANCER-HIRELINK.bat` n'a pas été exécuté : il viserait le port 8081 et la base `hirelink`. Le clone ne contenait ni `application-local.properties` ni `jwt.key`. SMTP absent. Après le démarrage, `hirelink.job_offers` valait toujours 118 et `hirelink_install.job_offers` 53.
+
+Preuves HTTP sur 8092 :
+
+- Santé UP, 52 offres publiques. Les champs de modération sont présents mais neutres (`suspended=false`, `reportCount=0`, `quarantineReason=null`) : la vitrine ne révèle pas une suspension.
+- Candidat : candidature créée (200) avec un CV joint nommé, puis 1 dossier au statut `SUBMITTED`. Un envoi sans CV sur un profil vide renvoie 400, comportement prévu.
+- Équipe Atlas : 4 membres actifs. Huit invitations successives et six en parallèle ont été acceptées ; le nombre d'actifs est resté 4. Une invitation sans réponse n'occupe pas un siège. L'acceptation, elle, revérifie le plafond sous verrou de ligne (correctif après cette installation).
+- Facture `HL-202611-1-1`, visible par l'administrateur, passée à `REGLEE`. Quatre souscriptions simultanées après un retour au palier Accès : une facture nouvelle, trois refus, aucun numéro en double (3 factures au total, y compris celle du retour).
+- Crédits IA : 8 grilles en parallèle, 8 réussites, débit exact de 8 (199 puis 191).
+- Administration : 48 comptes et 53 offres renvoyés en liste complète.
+- Après le verrou des sièges et de la facture : `mvn test` sur `hirelink_test`, 109 tests, 0 échec, 0 erreur.
+
+## Pagination des listes administrateur
+
+Les écrans Compte et Offres filtrent et recherchent la liste entière dans le navigateur. Les découper en pages sans déplacer cette recherche côté serveur rendrait les filtres faux. Sur la base d'installation, ces listes font 48 et 53 lignes, déjà chargées avec le recruteur et l'entreprise (D2). La pagination n'est donc pas appliquée.
+
 ## Corrections restantes (prochaine action exacte)
 
-1. Le travail reste non commité. Un clone de `origin/main` (`83b5bcf`) ne contient pas ces corrections. Le commit et le push attendent une autorisation explicite.
-2. Ne pas paginer `/admin/users` ni `/admin/offers` : les écrans attendent encore la liste complète.
-3. L’instance 8091 est arrêtée. Le port 8081 (processus de 10 h 09) est resté en service.
-4. Le cahier v6.1 est toujours absent. La répétition d’installation depuis un clone GitHub propre reste bloquée tant que ce travail n’est pas sur `origin/main`.
-5. `LANCER-HIRELINK-DEMO.bat` cherche Java et Maven comme le lanceur principal, et démarre quand même le port 8081 avec SMTP coupé. Ne pas le lancer tant que la démo tourne déjà.
+1. Rien n'a été poussé. `origin/main` reste `83b5bcf`. La publication GitHub attend une autorisation.
+2. Le port 8081 n'a pas été redémarré. La clé `backend/data/jwt.key` n'a pas été régénérée.
+3. Les pages autorisent de nouveau seulement le port local 8081, pas un port quelconque. Une recette sur un autre port doit citer ce port dans la balise CSP de la page.
 
 ## Opérations interdites sans autorisation
 

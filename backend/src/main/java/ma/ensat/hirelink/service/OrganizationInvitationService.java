@@ -66,6 +66,7 @@ public class OrganizationInvitationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Adresse e-mail invalide");
         }
         Organization org = ownerMembership.getOrganization();
+        organizations.lockOrganization(org.getId());
         int maxMembers = (org.getPlanTier() == null ? PlanTier.ACCES : org.getPlanTier()).seatLimit();
         // un compte en pause occupe toujours son siège : il peut être rétabli, ce n'est pas un départ
         long seatCount = memberships.countTeamSeats(org.getId());
@@ -163,9 +164,17 @@ public class OrganizationInvitationService {
         OrganizationInvitation invitation = findUsable(rawToken);
         User user = invitation.getUser();
         PasswordPolicy.validate(password, user.getEmail(), user.getFullName());
+        organizations.lockOrganization(invitation.getOrganization().getId());
         Membership membership = memberships.findByOrganizationIdAndUserId(
                 invitation.getOrganization().getId(), user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invitation invalide."));
+        boolean alreadySeated = membership.isActive() || membership.getSuspendedAt() != null;
+        PlanTier tier = invitation.getOrganization().getPlanTier() == null
+                ? PlanTier.ACCES : invitation.getOrganization().getPlanTier();
+        if (!alreadySeated && memberships.countTeamSeats(invitation.getOrganization().getId()) >= tier.seatLimit()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Capacité d'équipe atteinte (" + tier.seatLimit() + " sièges). L'invitation ne peut pas être acceptée.");
+        }
         membership.setOrgRole(invitation.getOrgRole());
         membership.setActive(true);
         membership.setAcceptedAt(Instant.now());
