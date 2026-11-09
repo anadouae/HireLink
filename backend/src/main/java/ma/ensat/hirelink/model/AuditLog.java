@@ -24,6 +24,9 @@ public class AuditLog {
     @Column(name = "actor_email", length = 160)
     private String actorEmail;
 
+    @Column(name = "actor_role", length = 32)
+    private String actorRole;
+
     @Column(nullable = false, length = 48)
     private String action;
 
@@ -48,6 +51,8 @@ public class AuditLog {
     public void setActorUserId(Long actorUserId) { this.actorUserId = actorUserId; }
     public String getActorEmail() { return actorEmail; }
     public void setActorEmail(String actorEmail) { this.actorEmail = actorEmail; }
+    public String getActorRole() { return actorRole; }
+    public void setActorRole(String actorRole) { this.actorRole = actorRole; }
     public String getAction() { return action; }
     public void setAction(String action) { this.action = action; }
     public String getTargetType() { return targetType; }

@@ -149,24 +149,44 @@ public class OrganizationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation introuvable"));
     }
 
-    /** Change le plan de l'organisation, l'applique à ses recruteurs et émet la facture correspondante. */
+    /**
+     * Applique une formule déjà payée. N'émet pas de facture et n'est pas un raccourci d'administration.
+     */
     @Transactional
-    public BillingInvoice changePlan(Organization org, PlanTier tier, String cycle) {
-        Organization locked = organizationRepository.findByIdForUpdate(org.getId())
+    public void applyPaidPlan(Long orgId, PlanTier tier, java.time.Instant endsAt) {
+        Organization locked = organizationRepository.findByIdForUpdate(orgId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation introuvable"));
-        if (locked.getPlanTier() == tier) {
-            return null;
-        }
         locked.setPlanTier(tier);
+        locked.setSubscriptionEndsAt(endsAt);
+        locked.setCancelAtPeriodEnd(false);
         organizationRepository.save(locked);
-        org = locked;
-        for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
+        for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(orgId)) {
             if (m.getUser().getRole() == Role.RECRUTEUR) {
                 m.getUser().setPlanTier(tier);
+                m.getUser().setSubscriptionEndsAt(endsAt);
+                m.getUser().setCancelAtPeriodEnd(false);
                 userRepository.save(m.getUser());
             }
         }
-        return billingCatalogService.issueForPlanChange(org, tier, cycle);
+    }
+
+    /** Fin de période demandée : retour à la formule gratuite permanente, sans remboursement. */
+    @Transactional
+    public void downgradeExpired(Long orgId) {
+        Organization locked = organizationRepository.findByIdForUpdate(orgId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation introuvable"));
+        locked.setPlanTier(PlanTier.ACCES);
+        locked.setSubscriptionEndsAt(null);
+        locked.setCancelAtPeriodEnd(false);
+        organizationRepository.save(locked);
+        for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(orgId)) {
+            if (m.getUser().getRole() == Role.RECRUTEUR) {
+                m.getUser().setPlanTier(PlanTier.ACCES);
+                m.getUser().setSubscriptionEndsAt(null);
+                m.getUser().setCancelAtPeriodEnd(false);
+                userRepository.save(m.getUser());
+            }
+        }
     }
 
     /** Identifiants des comptes actifs de l'organisation de l'utilisateur (au minimum lui-même). */

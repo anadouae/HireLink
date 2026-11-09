@@ -1,0 +1,11 @@
+.hl-pay{position:fixed;inset:0;z-index:80;background:rgba(26,18,20,.46);display:flex;align-items:center;justify-content:center;padding:1rem}
+.hl-pay-card{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);max-width:760px;width:100%;background:#fff;border-radius:18px;overflow:hidden;box-shadow:0 24px 60px rgba(26,18,20,.2)}
+.hl-pay-sum{background:#4a1c2a;color:#fff;padding:1.6rem}
+.hl-pay-sum h2{margin:.4rem 0}
+.hl-pay-form{padding:1.4rem}
+.hl-pay-banner{background:#f4efe6;border-radius:10px;padding:.55rem .7rem;font-weight:600}
+.hl-pay-form label{display:block;margin:1rem 0}
+.hl-pay-form select,.hl-pay-form input{width:100%;margin-top:.3rem;padding:.55rem;border:1px solid #ddd;border-radius:8px}
+.hl-pay-actions{display:flex;gap:.5rem;justify-content:flex-end}
+.hl-pay-msg{margin:0 0 .8rem}
+@media(max-width:720px){.hl-pay-card{grid-template-columns:1fr}}

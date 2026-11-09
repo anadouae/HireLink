@@ -40,45 +40,23 @@ public class RefusalReasonService {
     @Transactional
     public Map<String, Object> create(User actor, String code, String label, boolean active) {
         requireAdmin(actor);
-        if (code == null || code.isBlank() || label == null || label.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "code et label requis");
-        }
-        String c = code.trim().toUpperCase();
-        if (repository.findByCode(c).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Code déjà existant");
-        }
-        RefusalReason r = new RefusalReason();
-        r.setCode(c);
-        r.setLabel(label.trim());
-        r.setActive(active);
-        repository.save(r);
-        return toMap(r);
+        throw frozen();
     }
 
     @Transactional
     public Map<String, Object> update(User actor, Long id, String code, String label, Boolean active) {
         requireAdmin(actor);
-        RefusalReason r = require(id);
-        if (code != null && !code.isBlank()) {
-            String c = code.trim().toUpperCase();
-            repository.findByCode(c).ifPresent(other -> {
-                if (!other.getId().equals(id)) {
-                    throw new ResponseStatusException(HttpStatus.CONFLICT, "Code déjà existant");
-                }
-            });
-            r.setCode(c);
-        }
-        if (label != null && !label.isBlank()) r.setLabel(label.trim());
-        if (active != null) r.setActive(active);
-        repository.save(r);
-        return toMap(r);
+        throw frozen();
     }
 
     @Transactional
     public void delete(User actor, Long id) {
         requireAdmin(actor);
-        RefusalReason r = require(id);
-        repository.delete(r);
+        throw frozen();
+    }
+
+    private static ResponseStatusException frozen() {
+        return new ResponseStatusException(HttpStatus.CONFLICT, "Le catalogue de refus est fixe dans cette version.");
     }
 
     private RefusalReason require(Long id) {

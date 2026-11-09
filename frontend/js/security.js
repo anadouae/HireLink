@@ -233,13 +233,13 @@
         description: "Confirmez votre identité, puis choisissez le nouveau mot de passe. Vos autres appareils seront déconnectés.",
         confirmLabel: "Enregistrer",
         extraHtml:
-          '<div class="rc-field"><label for="ra-new">Nouveau mot de passe</label><input id="ra-new" type="password" autocomplete="new-password" /></div><p class="rc-muted" style="margin:0;font-size: var(--text-sm)">' +
+          '<div class="rc-field"><label for="ra-new">Nouveau mot de passe</label><input id="ra-new" type="password" autocomplete="new-password" /></div><div class="rc-field"><label for="ra-confirm">Confirmation</label><input id="ra-confirm" type="password" autocomplete="new-password" /></div><p class="rc-muted" style="margin:0;font-size: var(--text-sm)">' +
           esc(sum.passwordRules) +
           "</p>",
         run: (re, m) =>
           api("/account/password", {
             method: "POST",
-            body: Object.assign({ newPassword: m.querySelector("#ra-new").value }, re),
+            body: Object.assign({ newPassword: m.querySelector("#ra-new").value, confirmPassword: m.querySelector("#ra-confirm").value }, re),
           }),
       });
       if (r) await done("Mot de passe modifié. Vos autres appareils ont été déconnectés.");

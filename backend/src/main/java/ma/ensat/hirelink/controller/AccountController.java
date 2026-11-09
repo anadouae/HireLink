@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import ma.ensat.hirelink.dto.AuthDtos;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.security.RefreshCookies;
+import ma.ensat.hirelink.service.AccountProfileService;
 import ma.ensat.hirelink.service.AccountService;
 import ma.ensat.hirelink.service.AuthService;
 import org.springframework.http.ResponseEntity;
@@ -21,11 +22,46 @@ import java.util.Map;
 public class AccountController {
 
     private final AccountService account;
+    private final AccountProfileService profile;
     private final RefreshCookies cookies;
 
-    public AccountController(AccountService account, RefreshCookies cookies) {
+    public AccountController(AccountService account, AccountProfileService profile, RefreshCookies cookies) {
         this.account = account;
+        this.profile = profile;
         this.cookies = cookies;
+    }
+
+    @GetMapping("/profile")
+    public Map<String, Object> profile(@AuthenticationPrincipal User user) {
+        return profile.profile(user);
+    }
+
+    @PutMapping("/profile")
+    public Map<String, Object> updateProfile(@AuthenticationPrincipal User user, @RequestBody Map<String, String> body) {
+        return profile.update(user, body.get("firstName"), body.get("lastName"), body.get("email"), body.get("currentPassword"));
+    }
+
+    @GetMapping("/avatar")
+    public ResponseEntity<byte[]> avatar(@AuthenticationPrincipal User user) {
+        var photo = profile.avatar(user);
+        return ResponseEntity.ok().header("Cache-Control", "private, max-age=60").contentType(org.springframework.http.MediaType.parseMediaType(photo.getContentType())).body(photo.getData());
+    }
+
+    @PostMapping(value = "/avatar", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Map<String, Object> uploadAvatar(@AuthenticationPrincipal User user, @RequestParam("file") org.springframework.web.multipart.MultipartFile file) throws java.io.IOException {
+        profile.saveAvatar(user, file.getBytes(), file.getContentType());
+        return Map.of("hasAvatar", true);
+    }
+
+    @DeleteMapping("/avatar")
+    public Map<String, Object> deleteAvatar(@AuthenticationPrincipal User user) {
+        profile.deleteAvatar(user);
+        return Map.of("hasAvatar", false);
+    }
+
+    @GetMapping("/logins")
+    public List<Map<String, Object>> logins(@AuthenticationPrincipal User user) {
+        return profile.logins(user);
     }
 
     @GetMapping("/security")

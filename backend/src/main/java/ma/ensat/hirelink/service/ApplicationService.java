@@ -325,6 +325,9 @@ public class ApplicationService {
         applicationRepository.save(app);
 
         audit.ok("STAGE_CHANGE", actor, "APPLICATION", app.getId(), from + " → " + req.status());
+        if (req.status() == ApplicationStatus.REJECTED) {
+            audit.ok("APPLICATION_REFUSED", actor, "APPLICATION", app.getId(), app.getRefusalReasonCode());
+        }
         String payload = buildTimelinePayload(app, req);
         timelineService.append(app.getId(), from.name(), req.status().name(), actor.getId(), payload);
         // Invitation e-mail uniquement si un créneau existe déjà : sinon, on annonce l'étape et rien de plus.
@@ -383,14 +386,13 @@ public class ApplicationService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisissez un motif de refus.");
         }
         String reason = reasonRaw.trim();
-        if (reason.regionMatches(true, 0, "OTHER:", 0, 6)) {
-            String note = reason.substring(6).trim();
-            if (note.isBlank()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Précisez le motif.");
-            }
+        int split = reason.indexOf(':');
+        if (split > 0 && (reason.regionMatches(true, 0, "OTHER:", 0, 6) || reason.regionMatches(true, 0, "REF06:", 0, 6))) {
+            String note = reason.substring(split + 1).trim();
             if (note.length() > 500) note = note.substring(0, 500);
-            app.setRefusalReasonCode("OTHER_CATALOG");
-            app.setRejectionReason(note);
+            String code = reason.regionMatches(true, 0, "REF06:", 0, 6) ? "REF06" : "OTHER_CATALOG";
+            app.setRefusalReasonCode(code);
+            app.setRejectionReason(note.isBlank() ? "Autre" : note);
             return;
         }
         RefusalReason catalog = refusalReasonRepository.findByCode(reason)

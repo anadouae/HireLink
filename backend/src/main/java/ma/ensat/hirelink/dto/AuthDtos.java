@@ -106,7 +106,8 @@ public class AuthDtos {
             @Size(max = 200) String currentPassword,
             @Size(max = 32) String mfaCode,
             @Size(max = 12) String otp,
-            @NotBlank @Size(max = 200) String newPassword
+            @NotBlank @Size(max = 200) String newPassword,
+            @NotBlank @Size(max = 200) String confirmPassword
     ) {}
 
     public record MfaCode(

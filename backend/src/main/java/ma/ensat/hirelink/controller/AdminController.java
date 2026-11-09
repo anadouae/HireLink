@@ -21,6 +21,7 @@ import ma.ensat.hirelink.service.BillingCatalogService;
 import ma.ensat.hirelink.service.CompanyVerificationService;
 import ma.ensat.hirelink.service.EventNotifier;
 import ma.ensat.hirelink.service.OrganizationService;
+import ma.ensat.hirelink.service.PaymentService;
 import ma.ensat.hirelink.repository.ApplicationRepository;
 import ma.ensat.hirelink.repository.BillingInvoiceRepository;
 import ma.ensat.hirelink.repository.JobOfferRepository;
@@ -61,6 +62,7 @@ public class AdminController {
     private final AiCreditService aiCreditService;
     private final OfferReportRepository offerReportRepository;
     private final JobOfferService jobOfferService;
+    private final PaymentService paymentService;
 
     public AdminController(
             UserRepository userRepository,
@@ -79,7 +81,8 @@ public class AdminController {
             AiUsageLogRepository aiUsageLogRepository,
             AiCreditService aiCreditService,
             OfferReportRepository offerReportRepository,
-            JobOfferService jobOfferService
+            JobOfferService jobOfferService,
+            PaymentService paymentService
     ) {
         this.audit = audit;
         this.sessionService = sessionService;
@@ -88,6 +91,7 @@ public class AdminController {
         this.aiCreditService = aiCreditService;
         this.offerReportRepository = offerReportRepository;
         this.jobOfferService = jobOfferService;
+        this.paymentService = paymentService;
         this.organizationService = organizationService;
         this.eventNotifier = eventNotifier;
         this.userRepository = userRepository;
@@ -177,19 +181,23 @@ public class AdminController {
     @GetMapping("/audit")
     public List<Map<String, Object>> auditLog(
             @AuthenticationPrincipal User user,
-            @RequestParam(required = false) String action
+            @RequestParam(required = false) String action,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
     ) {
         requireAdmin(user);
-        var page = org.springframework.data.domain.PageRequest.of(0, 200);
+        int safe = Math.min(100, Math.max(1, size));
+        var pageable = org.springframework.data.domain.PageRequest.of(Math.max(0, page), safe);
         var rows = action == null || action.isBlank()
-                ? auditLogRepository.findAllByOrderByIdDesc(page)
-                : auditLogRepository.findByActionOrderByIdDesc(action.trim(), page);
+                ? auditLogRepository.findAllByOrderByIdDesc(pageable)
+                : auditLogRepository.findByActionOrderByIdDesc(action.trim(), pageable);
         List<Map<String, Object>> out = new ArrayList<>();
         for (var a : rows) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", a.getId());
             m.put("at", a.getCreatedAt().toString());
             m.put("actor", a.getActorEmail());
+            m.put("actorRole", a.getActorRole());
             m.put("action", a.getAction());
             m.put("target", a.getTargetType() == null ? null : a.getTargetType() + ":" + a.getTargetId());
             m.put("ip", a.getIp());
@@ -256,10 +264,11 @@ public class AdminController {
             }
         }
         if (body.get("planTier") != null) {
-            PlanTier tier = parseTier(String.valueOf(body.get("planTier")));
-            if (tier != org.getPlanTier()) {
-                organizationService.changePlan(org, tier, String.valueOf(body.get("cycle")));
-                audit.ok("ORG_PLAN_CHANGED", admin, "ORGANIZATION", org.getId(), org.getName() + " → " + tier);
+            PlanTier requested = parseTier(String.valueOf(body.get("planTier")));
+            if (requested != org.getPlanTier()) {
+                throw new ResponseStatusException(
+                        HttpStatus.CONFLICT,
+                        "Une formule payante s'active apres le paiement de la facture par le createur de l'espace. L'administrateur ne modifie pas ce statut.");
             }
         }
         organizationRepository.save(org);
@@ -268,35 +277,29 @@ public class AdminController {
 
     @GetMapping("/invoices")
     @Transactional(readOnly = true)
-    public List<Map<String, Object>> invoices(@AuthenticationPrincipal User user) {
+    public List<Map<String, Object>> invoices(
+            @AuthenticationPrincipal User user,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status
+    ) {
         requireAdmin(user);
-        return billingCatalogService.invoices().stream().map(billingCatalogService::toInvoice).toList();
+        String query = q == null ? "" : q.trim().toLowerCase();
+        String wanted = status == null ? "" : status.trim().toUpperCase();
+        return billingCatalogService.invoices().stream()
+                .map(billingCatalogService::toInvoice)
+                .filter(row -> wanted.isEmpty() || wanted.equals(String.valueOf(row.get("status"))))
+                .filter(row -> query.isEmpty() || (String.valueOf(row.get("number")) + " " + row.get("organization") + " " + row.get("debtorName") + " " + row.get("debtorEmail")).toLowerCase().contains(query))
+                .toList();
     }
 
-    /** Encaissement constaté par l'administrateur : EMISE (à encaisser) ou REGLEE (payée). */
-    @PatchMapping("/invoices/{id}")
-    public Map<String, Object> updateInvoice(
-            @AuthenticationPrincipal User admin,
-            @PathVariable Long id,
-            @RequestBody Map<String, String> body
-    ) {
+    @GetMapping("/invoices/{id}/pdf")
+    public org.springframework.http.ResponseEntity<byte[]> invoicePdf(@AuthenticationPrincipal User admin, @PathVariable Long id) {
         requireAdmin(admin);
-        BillingInvoice inv = billingCatalogService.markStatus(id, body.get("status"), body.get("note"));
-        audit.ok("INVOICE_STATUS_CHANGED", admin, "INVOICE", inv.getId(), inv.getNumber() + " → " + inv.getStatus());
-        return billingCatalogService.toInvoice(inv);
-    }
-
-    /** Un avoir annule une facture sans la réécrire : les deux lignes restent consultables. */
-    @PostMapping("/invoices/{id}/credit-note")
-    public Map<String, Object> creditNote(
-            @AuthenticationPrincipal User admin,
-            @PathVariable Long id,
-            @RequestBody Map<String, String> body
-    ) {
-        requireAdmin(admin);
-        BillingInvoice avoir = billingCatalogService.creditNote(id, body.get("motif"));
-        audit.ok("INVOICE_CREDIT_NOTE", admin, "INVOICE", avoir.getId(), avoir.getNumber() + " annule " + avoir.getCancelsInvoiceId());
-        return billingCatalogService.toInvoice(avoir);
+        byte[] body = paymentService.pdf(admin, id);
+        return org.springframework.http.ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"facture-" + id + ".pdf\"")
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(body);
     }
 
     /* ---------------------------------------------------------------- modération */
@@ -514,7 +517,8 @@ public class AdminController {
 
     private static String csvCell(String raw) {
         String v = raw == null ? "" : raw.replace("\r", " ").replace("\n", " ");
-        if (v.contains(";") || v.contains("\"")) return '"' + v.replace("\"", "\"\"") + '"';
+        if (!v.isEmpty() && "=+-@\t".indexOf(v.charAt(0)) >= 0) v = "'" + v;
+        if (v.contains(";") || v.contains("\"") || v.startsWith("'")) return '"' + v.replace("\"", "\"\"") + '"';
         return v;
     }
 

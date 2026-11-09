@@ -6,6 +6,7 @@ import ma.ensat.hirelink.model.Organization;
 import ma.ensat.hirelink.model.PlanTier;
 import ma.ensat.hirelink.repository.BillingInvoiceRepository;
 import ma.ensat.hirelink.repository.CommercialPlanRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class BillingCatalogService {
@@ -26,13 +28,19 @@ public class BillingCatalogService {
     private final CommercialPlanRepository planRepository;
     private final BillingInvoiceRepository invoiceRepository;
     private final ma.ensat.hirelink.repository.OrganizationRepository organizationRepository;
+    private final ma.ensat.hirelink.repository.UserRepository userRepository;
+
+    @Value("${hirelink.billing.vat-rate:}")
+    private String vatRate;
 
     public BillingCatalogService(CommercialPlanRepository planRepository,
                                  BillingInvoiceRepository invoiceRepository,
-                                 ma.ensat.hirelink.repository.OrganizationRepository organizationRepository) {
+                                 ma.ensat.hirelink.repository.OrganizationRepository organizationRepository,
+                                 ma.ensat.hirelink.repository.UserRepository userRepository) {
         this.planRepository = planRepository;
         this.invoiceRepository = invoiceRepository;
         this.organizationRepository = organizationRepository;
+        this.userRepository = userRepository;
     }
 
     @Transactional
@@ -69,93 +77,85 @@ public class BillingCatalogService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan introuvable"));
     }
 
-    /** La facture suit le changement de plan. Elle n’est pas créée à la main. */
+    private static final Set<String> OPEN = Set.of("NON_PAYEE", "EMISE");
+
+    /**
+     * Facture d'un abonnement payant, non réglée. Les droits ne sont pas accordés ici.
+     * Une facture ouverte identique est réutilisée pour éviter les doublons.
+     */
     @Transactional
-    public BillingInvoice issueForPlanChange(Organization org, PlanTier tier, String cycle) {
+    public BillingInvoice issuePending(Organization org, ma.ensat.hirelink.model.User debtor, PlanTier tier, String cycle) {
         CommercialPlan plan = require(tier);
         String period = "year".equalsIgnoreCase(cycle) ? "year" : "month";
         int ttc = "year".equals(period) ? plan.getYearlyMad() : plan.getMonthlyMad();
-        double ht = Math.round((ttc / 1.2) * 100.0) / 100.0;
-        double tva = Math.round((ttc - ht) * 100.0) / 100.0;
+        if (ttc <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette formule est gratuite : elle ne produit pas de facture.");
+        }
+        BillingInvoice open = findOpen(org, debtor, plan.getCode(), period);
+        if (open != null) return open;
+        Amounts amounts = amounts(ttc);
         BillingInvoice invoice = new BillingInvoice();
-        invoice.setNumber(nextNumber(org.getId()));
+        invoice.setNumber(org != null ? nextNumber(org.getId()) : nextUserNumber(debtor.getId()));
         invoice.setOrganization(org);
+        invoice.setDebtorUser(debtor);
         invoice.setPlanCode(plan.getCode());
         invoice.setPlanLabel(plan.getLabel());
         invoice.setCycle(period);
-        invoice.setAmountHt(ht);
-        invoice.setTva(tva);
+        invoice.setAmountHt(amounts.ht());
+        invoice.setTva(amounts.tva());
         invoice.setAmountTtc(ttc);
-        invoice.setStatus(ttc == 0 ? "OFFERTE" : "REGLEE");
+        invoice.setVatConfigured(amounts.configured());
+        invoice.setStatus("NON_PAYEE");
+        invoice.setRightsApplied(false);
         invoice.setIssuedAt(Instant.now());
+        if (org != null) {
+            invoice.setBillToName(org.getName());
+            invoice.setBillToEmail(debtor.getEmail());
+            invoice.setBillToExtra(org.getIce() == null || org.getIce().isBlank() ? "" : "ICE " + org.getIce());
+        } else {
+            invoice.setBillToName(debtor.getFullName());
+            invoice.setBillToEmail(debtor.getEmail());
+            invoice.setBillToExtra("");
+        }
         return invoiceRepository.save(invoice);
     }
+
+    private BillingInvoice findOpen(Organization org, ma.ensat.hirelink.model.User debtor, String plan, String period) {
+        List<BillingInvoice> rows = org != null
+                ? invoiceRepository.findByOrganizationIdAndStatusInOrderByIssuedAtDesc(org.getId(), OPEN)
+                : invoiceRepository.findByDebtorUserIdAndOrganizationIsNullAndStatusInOrderByIssuedAtDesc(debtor.getId(), OPEN);
+        for (BillingInvoice row : rows) {
+            if (plan.equals(row.getPlanCode()) && period.equals(row.getCycle()) && row.payable()) return row;
+        }
+        return null;
+    }
+
+    private Amounts amounts(int ttc) {
+        if (vatRate == null || vatRate.isBlank()) {
+            return new Amounts(ttc, 0, false);
+        }
+        double rate;
+        try {
+            rate = Double.parseDouble(vatRate.trim());
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Taux de TVA illisible.");
+        }
+        if (rate < 0 || rate > 1) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Taux de TVA hors limites.");
+        }
+        double ht = Math.round((ttc / (1 + rate)) * 100.0) / 100.0;
+        double tva = Math.round((ttc - ht) * 100.0) / 100.0;
+        return new Amounts(ht, tva, true);
+    }
+
+    private record Amounts(double ht, double tva, boolean configured) {}
 
     @Transactional(readOnly = true)
     public List<BillingInvoice> invoices() {
         return invoiceRepository.findAllByOrderByIssuedAtDesc();
     }
 
-    /**
-     * L'encaissement se constate ici, pas dans la comptabilité : EMISE = pas encore réglée,
-     * REGLEE = encaissement confirmé. Une facture annulée par un avoir n'est plus modifiable.
-     */
-    @Transactional
-    public BillingInvoice markStatus(Long id, String status, String note) {
-        BillingInvoice inv = invoiceRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable"));
-        if ("AVOIR".equals(inv.getStatus()) || "ANNULEE".equals(inv.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette facture est déjà soldée par un avoir.");
-        }
-        if (!"REGLEE".equalsIgnoreCase(status) && !"EMISE".equalsIgnoreCase(status)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut de facture inconnu.");
-        }
-        inv.setStatus("REGLEE".equalsIgnoreCase(status) ? "REGLEE" : "EMISE");
-        if (note != null) inv.setNote(trimTo(note, 255));
-        return invoiceRepository.save(inv);
-    }
-
-    /**
-     * Un avoir est une facture négative qui en annule une autre : on ne réécrit pas l'originale,
-     * la piste d'audit reste lisible des deux côtés.
-     */
-    @Transactional
-    public BillingInvoice creditNote(Long id, String motif) {
-        BillingInvoice orig = invoiceRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable"));
-        if ("AVOIR".equals(orig.getStatus()) || "ANNULEE".equals(orig.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette facture a déjà fait l'objet d'un avoir.");
-        }
-        String reason = trimTo(motif, 255);
-        if (reason == null || reason.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indiquez le motif de l'avoir.");
-        }
-        BillingInvoice avoir = new BillingInvoice();
-        avoir.setNumber(orig.getNumber() + "-A");
-        avoir.setOrganization(orig.getOrganization());
-        avoir.setPlanCode(orig.getPlanCode());
-        avoir.setPlanLabel(orig.getPlanLabel());
-        avoir.setCycle(orig.getCycle());
-        avoir.setAmountHt(-orig.getAmountHt());
-        avoir.setTva(-orig.getTva());
-        avoir.setAmountTtc(-orig.getAmountTtc());
-        avoir.setStatus("AVOIR");
-        avoir.setNote(reason);
-        avoir.setCancelsInvoiceId(orig.getId());
-        avoir.setIssuedAt(Instant.now());
-        invoiceRepository.save(avoir);
-        orig.setStatus("ANNULEE");
-        orig.setNote(reason);
-        invoiceRepository.save(orig);
-        return avoir;
-    }
-
-    private static String trimTo(String raw, int max) {
-        if (raw == null) return null;
-        String v = raw.trim();
-        if (v.isEmpty()) return null;
-        return v.length() > max ? v.substring(0, max) : v;
-    }
+    /** Les documents historiques restent lisibles. Cette version ne crée plus d'avoir et ne change pas un statut à la main. */
 
     public Map<String, Object> toPlan(CommercialPlan plan) {
         Map<String, Object> row = new LinkedHashMap<>();
@@ -178,13 +178,17 @@ public class BillingCatalogService {
     public Map<String, Object> toInvoice(BillingInvoice maybeDetached) {
         BillingInvoice invoice = invoiceRepository.findById(maybeDetached.getId()).orElse(maybeDetached);
         Organization org = invoice.getOrganization();
+        ma.ensat.hirelink.model.User debtor = invoice.getDebtorUser();
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", invoice.getId());
         row.put("number", invoice.getNumber());
         row.put("issuedAt", invoice.getIssuedAt().toString());
-        row.put("organization", org.getName());
-        row.put("organizationId", org.getId());
-        row.put("ice", org.getIce() == null ? "" : org.getIce());
+        row.put("organization", org == null ? "" : org.getName());
+        row.put("organizationId", org == null ? null : org.getId());
+        row.put("ice", org == null || org.getIce() == null ? "" : org.getIce());
+        row.put("debtorUserId", debtor == null ? null : debtor.getId());
+        row.put("debtorName", invoice.getBillToName() == null ? (debtor == null ? "" : debtor.getFullName()) : invoice.getBillToName());
+        row.put("debtorEmail", invoice.getBillToEmail() == null ? (debtor == null ? "" : debtor.getEmail()) : invoice.getBillToEmail());
         row.put("plan", invoice.getPlanCode());
         row.put("planLabel", invoice.getPlanLabel());
         row.put("cycle", invoice.getCycle());
@@ -192,7 +196,12 @@ public class BillingCatalogService {
         row.put("tva", invoice.getTva());
         row.put("amountTtc", invoice.getAmountTtc());
         row.put("currency", "MAD");
-        row.put("status", invoice.getStatus());
+        row.put("status", invoice.canonicalStatus());
+        row.put("storedStatus", invoice.getStatus());
+        row.put("vatConfigured", invoice.getVatConfigured());
+        row.put("payable", invoice.payable());
+        row.put("paidAt", invoice.getPaidAt() == null ? "" : invoice.getPaidAt().toString());
+        row.put("transactionRef", invoice.getTransactionRef() == null ? "" : invoice.getTransactionRef());
         row.put("note", invoice.getNote() == null ? "" : invoice.getNote());
         row.put("cancels", invoice.getCancelsInvoiceId() == null ? ""
                 : invoiceRepository.findById(invoice.getCancelsInvoiceId()).map(BillingInvoice::getNumber).orElse(""));
@@ -210,6 +219,14 @@ public class BillingCatalogService {
         String month = DateTimeFormatter.ofPattern("yyyyMM").withZone(ZoneId.of("Africa/Casablanca")).format(Instant.now());
         String prefix = "HL-" + month + "-" + orgId + "-";
         long alreadyIssued = invoiceRepository.countByOrganizationIdAndNumberStartingWith(orgId, prefix);
+        return prefix + (alreadyIssued + 1);
+    }
+
+    private String nextUserNumber(Long userId) {
+        userRepository.findByIdForUpdate(userId);
+        String month = DateTimeFormatter.ofPattern("yyyyMM").withZone(ZoneId.of("Africa/Casablanca")).format(Instant.now());
+        String prefix = "HL-" + month + "-U" + userId + "-";
+        long alreadyIssued = invoiceRepository.countByDebtorUserIdAndNumberStartingWith(userId, prefix);
         return prefix + (alreadyIssued + 1);
     }
 

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
@@ -15,6 +16,8 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findByActionOrderByIdDesc(String action, Pageable pageable);
 
     /** L'export CSV remonte plus loin que l'écran, sans jamais vider la table en memory. */
+    List<AuditLog> findByActorUserIdAndActionInOrderByIdDesc(Long actorUserId, Collection<String> actions, Pageable pageable);
+
     List<AuditLog> findTop2000ByOrderByIdDesc();
     List<AuditLog> findTop2000ByActionOrderByIdDesc(String action);
 

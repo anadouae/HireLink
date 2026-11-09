@@ -122,6 +122,9 @@ public class AccountService {
     @Transactional
     public void changePassword(User user, AuthDtos.ChangePassword req, String currentSid) {
         reauth(user, req.currentPassword(), req.mfaCode(), req.otp(), true, "Changement de mot de passe");
+        if (!req.newPassword().equals(req.confirmPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La confirmation ne correspond pas au nouveau mot de passe.");
+        }
         PasswordPolicy.validate(req.newPassword(), user.getEmail(), user.getFullName());
         if (user.getPasswordHash() != null && encoder.matches(req.newPassword(), user.getPasswordHash())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le nouveau mot de passe doit être différent de l'actuel.");

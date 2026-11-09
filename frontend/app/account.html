@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mon compte — HireLink</title>
+  <meta name="robots" content="noindex" />
+  <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <script data-role="ADMINISTRATEUR" src="../js/app-guard.js?v=20261101r"></script>
+  <script src="../js/theme.js?v=20261101r"></script>
+</head>
+<body class="rc" data-role="ADMINISTRATEUR" data-active="account">
+  <div class="rc-app">
+    <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
+    <div class="rc-main">
+      <header class="rc-topbar" id="rc-topbar"></header>
+      <main class="rc-content">
+        <div class="rc-head"><div><p class="rc-eyebrow">Administration</p><h1>Mon compte</h1><p>Identité enregistrée sur le serveur. La sécurité du mot de passe est sur la page dédiée.</p></div>
+          <div class="rc-head-actions"><a class="btn btn-ghost btn-sm" href="security.html">Sécurité du compte</a></div></div>
+        <section class="rc-card"><div class="rc-card-head"><div><h2>Profil</h2></div></div>
+          <form id="account-form" class="rc-card-body"><div class="rc-form">
+            <div class="rc-field"><label for="acc-first">Prénom</label><input id="acc-first" required /></div>
+            <div class="rc-field"><label for="acc-last">Nom</label><input id="acc-last" required /></div>
+            <div class="rc-field"><label for="acc-email">E-mail</label><input id="acc-email" type="email" required /></div>
+            <div class="rc-field" id="acc-pw-wrap" hidden><label for="acc-pw">Mot de passe actuel</label><input id="acc-pw" type="password" autocomplete="current-password" /></div>
+            <div class="is-full"><button class="btn btn-primary" type="submit">Enregistrer</button></div>
+          </div></form>
+        </section>
+        <section class="rc-card"><div class="rc-card-head"><div><h2>Photo</h2><p>JPEG, PNG ou WebP, 1,5 Mo maximum.</p></div></div>
+          <div class="rc-card-body rc-logo-row"><div class="rc-logo" style="border-radius:50%"><img id="acc-photo" alt="Photo de profil" hidden /><span id="acc-fallback">A</span></div>
+            <div class="rc-row"><button type="button" class="btn btn-primary btn-sm" id="acc-pick">Ajouter / remplacer</button><button type="button" class="btn btn-ghost btn-sm" id="acc-clear">Supprimer</button>
+            <input type="file" id="acc-file" accept="image/jpeg,image/png,image/webp" hidden /></div></div>
+        </section>
+        <section class="rc-card"><div class="rc-card-head"><div><h2>Connexions enregistrées</h2><p>Uniquement les événements réellement écrits dans le journal.</p></div></div>
+          <div class="rc-tablewrap"><table class="rc-table"><thead><tr><th>Date</th><th>Résultat</th><th>Adresse</th></tr></thead><tbody id="acc-logins"></tbody></table></div>
+        </section>
+      </main>
+    </div>
+  </div>
+  <script defer src="../js/ui.js?v=20261106g"></script>
+  <script defer src="../js/api.js?v=20261109a"></script>
+  <script defer src="../js/app-shell.js?v=20261109c"></script>
+  <script defer src="../js/account.js?v=20261109a"></script>
+</body>
+</html>

@@ -244,9 +244,9 @@
         { section: "Sécurité" },
         { id: "audit", href: "admin.html#audit", label: "Journal d’audit", icon: "file" },
         { id: "emails", href: "admin.html#emails", label: "E-mails envoyés", icon: "inbox" },
-        { id: "security", href: "security.html", label: "Mon compte", icon: "shield" },
+        { id: "account", href: "account.html", label: "Mon compte", icon: "shield" },
       ],
-      menu: [["security.html", "shield", "Sécurité du compte"]],
+      menu: [["account.html", "user", "Mon compte"], ["security.html", "shield", "Sécurité du compte"]],
     },
   };
   var CFG = ROLES.RECRUTEUR;
@@ -343,14 +343,18 @@
   }
 
   /* --------------------------------------------------------------- topbar */
-  function photoUrl() {
-    try { return localStorage.getItem("hirelink.photo." + (session.userId || "")) || ""; } catch (_) { return ""; }
-  }
   function paintProfile() {
     var b = document.getElementById("rc-profile");
     if (!b) return;
-    var p = photoUrl();
-    b.innerHTML = p ? '<img alt="" src="' + esc(p) + '" />' : esc(initials(session.fullName));
+    b.textContent = initials(session.fullName);
+    if (!global.HireLinkAPI || !HireLinkAPI.authFetch) return;
+    HireLinkAPI.authFetch("/account/avatar").then(function (res) {
+      if (!res.ok) return null;
+      return res.blob();
+    }).then(function (blob) {
+      if (!blob || !blob.size) return;
+      b.innerHTML = '<img alt="" src="' + URL.createObjectURL(blob) + '" />';
+    }).catch(function () {});
   }
   function premiumOn() { return !!CFG.premiumKey && HireLinkAPI.isPremium(); }
 

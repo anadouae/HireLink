@@ -1,7 +1,20 @@
 # Reprise de mission — HireLink
 
 Document de passation. Aucun mot de passe, jeton ou secret n’y figure.
-Dernière mise à jour : 9 novembre 2026, vers 14 h 05 (UTC), agent de reprise.
+Dernière mise à jour : 9 novembre 2026, après la mission finale (facturation).
+
+## État au 9 novembre 2026, fin de mission finale
+
+- Branche de travail : `finalisation/livraison`. Point de restauration local : `restauration/avant-mission-finale` au commit `9a49171`. Aucun push.
+- La démonstration sur les ports 8081 et 5500 n’a pas été redémarrée. Son binaire Java date d’avant ces changements. Ne pas le redémarrer pour « appliquer » le schéma : Hibernate `ddl-auto=update` modifierait alors la base `hirelink`.
+- Base de démonstration `hirelink` : 118 offres, à préserver. Clé `backend/data/jwt.key` : ne pas la régénérer ni la lire dans un rapport.
+- Facturation : statuts `NON_PAYEE`, `PAYEE`, `ANNULEE`. Un avoir historique reste lisible, sans création nouvelle. Pas de TVA inventée (`hirelink.billing.vat-rate` vide). Adresse et ICE de l’émetteur non renseignés.
+- Le paiement est simulé (`MockPaymentProvider`). Aucun essai gratuit. Les formules gratuites permanentes Accès et Essentiel restent. Une formule payante n’est activée qu’après une transaction réussie.
+- La résiliation coupe l’accès à la fin de la période déjà réglée. Si aucune date de fin n’est enregistrée, l’accès reste.
+- Motifs de refus figés : REF01 à REF06. Le catalogue administrateur n’est plus modifiable.
+- Les e-mails sans SMTP sont `LOGGED` (en attente), pas envoyés.
+- Le cahier des charges v6.1 est toujours absent. Les listes administrateur d’entreprises et d’utilisateurs restent filtrées côté navigateur. Le journal d’audit est paginé.
+- Les sections plus bas décrivent des états antérieurs. En cas de contradiction, cette section prévaut.
 
 ## Objectif global
 

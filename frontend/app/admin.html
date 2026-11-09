@@ -108,7 +108,7 @@
         </section>
 
         <section id="view-plans" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Facturation</p><h1>Plans et factures</h1><p>Les factures sont émises automatiquement à chaque changement de plan d’une entreprise.</p></div></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Facturation</p><h1>Plans et factures</h1><p>Une formule payante s’active après le paiement simulé du créateur de l’espace. L’administration consulte les factures, elle n’en change pas le statut.</p></div></div>
           <div class="rc-grid rc-grid--2" id="plan-cards"></div>
           <section class="rc-card is-flush" style="margin-top:1rem">
             <div class="rc-card-head"><div><h2>Consommation IA — mois en cours</h2><p class="rc-muted" style="margin:.15rem 0 0">1 crédit par action IA réussie. Une action échouée n’est jamais débitée.</p></div></div>
@@ -118,46 +118,38 @@
             </table></div>
           </section>
           <section class="rc-card is-flush" style="margin-top:1rem">
-            <div class="rc-card-head"><div><h2>Factures</h2><p class="rc-muted" style="margin:.15rem 0 0" id="invoices-note">Une facture naît d’un changement de plan ; l’avoir l’annule sans l’effacer.</p></div></div>
-            <div class="rc-toolbar" style="padding:0 1rem"><div class="rc-chips" id="invoice-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="EMISE">À encaisser</button><button type="button" class="rc-chip" data-f="REGLEE">Payées</button><button type="button" class="rc-chip" data-f="AVOIR">Avoirs</button></div></div>
+            <div class="rc-card-head"><div><h2>Factures</h2><p class="rc-muted" style="margin:.15rem 0 0" id="invoices-note">Le reste à recevoir est la somme des factures non payées.</p></div></div>
+            <div class="rc-toolbar" style="padding:0 1rem;gap:.6rem;flex-wrap:wrap"><label class="rc-search" style="min-width:220px"><input type="search" id="invoice-q" placeholder="Numéro, entreprise, débiteur" aria-label="Rechercher une facture" /></label><div class="rc-chips" id="invoice-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="NON_PAYEE">Non payées</button><button type="button" class="rc-chip" data-f="PAYEE">Payées</button><button type="button" class="rc-chip" data-f="ANNULEE">Annulées</button><button type="button" class="rc-chip" data-f="AVOIR">Historique</button></div></div>
             <div class="rc-tablewrap"><table class="rc-table">
-              <thead><tr><th>N°</th><th>Date</th><th>Entreprise</th><th>Plan</th><th>Total TTC</th><th>Statut</th><th></th></tr></thead>
+              <thead><tr><th>N°</th><th>Date</th><th>Entreprise</th><th>Débiteur</th><th>Total TTC</th><th>Statut</th><th></th></tr></thead>
               <tbody id="invoices-body"></tbody>
             </table></div>
           </section>
         </section>
 
         <section id="view-refusals" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Référentiel</p><h1>Motifs de refus</h1><p>Catalogue proposé aux recruteurs lorsqu’ils refusent une candidature.</p></div></div>
-          <section class="rc-card">
-            <div class="rc-card-body">
-              <form id="rr-form" class="rc-form" style="grid-template-columns:minmax(150px,240px) 1fr auto;align-items:end">
-                <div class="rc-field"><label for="rr-code">Code</label><input id="rr-code" placeholder="PROFIL_INADEQUAT" required pattern="[A-Za-z0-9_]+" /></div>
-                <div class="rc-field"><label for="rr-label">Libellé</label><input id="rr-label" placeholder="Libellé affiché" required /></div>
-                <button class="btn btn-primary" type="submit">Ajouter</button>
-              </form>
-            </div>
-          </section>
+          <div class="rc-head"><div><p class="rc-eyebrow">Référentiel</p><h1>Motifs de refus</h1><p>Liste fixe utilisée par les recruteurs. Les anciens codes restent en base, inactifs, pour l’historique.</p></div></div>
+          <form id="rr-form" hidden></form>
           <section class="rc-card is-flush" style="margin-top:1rem"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Code</th><th>Libellé</th><th>Statut</th><th></th></tr></thead>
+            <thead><tr><th>Code</th><th>Libellé</th><th>Statut</th></tr></thead>
             <tbody id="rr-body"></tbody>
           </table></div></section>
         </section>
 
         <section id="view-audit" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Sécurité</p><h1>Journal d’audit</h1><p>Connexions, échecs, changements de rôle ou d’étape, décisions ICE, exports de données : les 200 derniers évènements. Aucun mot de passe ni jeton n’y est enregistré.</p></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Sécurité</p><h1>Journal d’audit</h1><p>Opérations sensibles, 50 lignes par page. Aucun mot de passe ni jeton n’y est enregistré. Le journal ne se modifie pas depuis cet écran.</p></div>
             <div class="rc-head-actions"><select id="audit-filter" aria-label="Filtrer par action"><option value="">Toutes les actions</option><option>LOGIN_FAILURE</option><option>LOGIN_LOCKED</option><option>LOGIN_SUCCESS</option><option>MFA_FAILURE</option><option>SESSION_TOKEN_REUSE</option><option>ACCESS_DENIED</option><option>USER_SUSPENDED</option><option>ORG_VERIFIED</option><option>STAGE_CHANGE</option><option>OFFER_SUSPENDED</option><option>OFFER_RESTORED</option><option>INVOICE_STATUS_CHANGED</option><option>DATA_EXPORT</option><option>AUDIT_EXPORTED</option><option>ACCOUNT_ERASED</option></select><button type="button" class="btn btn-ghost btn-sm" id="audit-export" title="2 000 derniers évènements, filtre en cours inclus">Exporter CSV</button><button type="button" class="btn btn-soft btn-sm" id="audit-refresh">Actualiser</button></div></div>
           <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Date</th><th>Action</th><th>Compte</th><th>Cible</th><th>IP</th><th>Détail</th></tr></thead>
+            <thead><tr><th>Date</th><th>Action</th><th>Compte</th><th>Rôle</th><th>Cible</th><th>Résultat</th><th>Détail</th></tr></thead>
             <tbody id="audit-body"></tbody>
-          </table></div></section>
+          </table></div><div class="rc-card-foot" id="audit-pager"></div></section>
         </section>
 
         <section id="view-emails" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Messagerie</p><h1>E-mails envoyés</h1><p>Les 100 derniers messages émis par la plateforme. Sans serveur SMTP configuré, ils sont seulement journalisés ici. Les e-mails contenant un code ou un lien secret ne conservent pas leur contenu.</p></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Messagerie</p><h1>E-mails</h1><p>En attente : aucun SMTP n’a pris le message en charge. Envoyé : le serveur d’envoi l’a accepté. Ce n’est ni une livraison ni une lecture. Échec : l’envoi a été refusé. Les messages secrets ne conservent pas leur contenu.</p></div>
             <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="mail-refresh">Actualiser</button></div></div>
           <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Date</th><th>Destinataire</th><th>Objet</th><th>Type</th><th>État</th><th></th></tr></thead>
+            <thead><tr><th>Date</th><th>Destinataire</th><th>Objet</th><th>Type</th><th>État</th><th>Détail</th></tr></thead>
             <tbody id="mail-body"></tbody>
           </table></div></section>
         </section>

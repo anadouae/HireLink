@@ -1,89 +1,93 @@
 package ma.ensat.hirelink.controller;
 
-import ma.ensat.hirelink.model.BillingInvoice;
-import ma.ensat.hirelink.model.Membership;
-import ma.ensat.hirelink.model.OrgRole;
-import ma.ensat.hirelink.model.PlanTier;
+import ma.ensat.hirelink.model.CommercialPlan;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
-import ma.ensat.hirelink.repository.UserRepository;
 import ma.ensat.hirelink.service.BillingCatalogService;
-import ma.ensat.hirelink.service.OrganizationService;
-import org.springframework.http.HttpStatus;
+import ma.ensat.hirelink.service.PaymentService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Abonnement Premium : le plan est porté par le serveur (candidat → compte, recruteur → organisation).
- * Les crédits IA et les badges en découlent ; l'ancien indicateur côté navigateur n'existe plus.
+ * Abonnement et factures. Le paiement est simulé : le serveur fixe le montant et n'active
+ * une formule payante qu'après une transaction réussie.
  */
-@org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CANDIDAT','RECRUTEUR')")
+@org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CANDIDAT','RECRUTEUR','ADMINISTRATEUR')")
 @RestController
 @RequestMapping("/api/v1/billing")
 public class BillingController {
 
-    private final UserRepository userRepository;
-    private final OrganizationService organizationService;
     private final BillingCatalogService billingCatalogService;
+    private final PaymentService payments;
 
-    public BillingController(UserRepository userRepository,
-                             OrganizationService organizationService,
-                             BillingCatalogService billingCatalogService) {
-        this.userRepository = userRepository;
-        this.organizationService = organizationService;
+    public BillingController(BillingCatalogService billingCatalogService, PaymentService payments) {
         this.billingCatalogService = billingCatalogService;
+        this.payments = payments;
     }
 
-    /** Catalogue lisible : le compteur de crédits affiche le prix et le plafond réels, pas un texte figé. */
     @GetMapping("/plans")
     @Transactional(readOnly = true)
-    public java.util.List<Map<String, Object>> plans(@AuthenticationPrincipal User user) {
+    public List<Map<String, Object>> plans(@AuthenticationPrincipal User user) {
         String audience = user.getRole() == Role.CANDIDAT ? "CANDIDAT" : "RECRUTEUR";
-        java.util.List<Map<String, Object>> out = new java.util.ArrayList<>();
-        for (ma.ensat.hirelink.model.CommercialPlan plan : billingCatalogService.plans()) {
-            if (audience.equals(plan.getAudience())) out.add(billingCatalogService.toPlan(plan));
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (CommercialPlan plan : billingCatalogService.plans()) {
+            if (user.getRole() == Role.ADMINISTRATEUR || audience.equals(plan.getAudience())) {
+                out.add(billingCatalogService.toPlan(plan));
+            }
         }
         return out;
     }
 
     @PostMapping("/subscribe")
-    @Transactional
     public Map<String, Object> subscribe(@AuthenticationPrincipal User user, @RequestBody(required = false) Map<String, Object> body) {
         String cycle = body != null && "year".equals(String.valueOf(body.get("cycle"))) ? "year" : "month";
-        return switchTo(user, user.getRole() == Role.CANDIDAT ? PlanTier.PERFORMANCE : PlanTier.PREMIUM, cycle);
+        return payments.prepare(user, cycle);
     }
 
     @DeleteMapping("/subscription")
-    @Transactional
     public Map<String, Object> cancel(@AuthenticationPrincipal User user) {
-        return switchTo(user, user.getRole() == Role.CANDIDAT ? PlanTier.ESSENTIEL : PlanTier.ACCES, "month");
+        return payments.cancel(user);
     }
 
-    private Map<String, Object> switchTo(User user, PlanTier tier, String cycle) {
-        BillingInvoice invoice = null;
-        if (user.getRole() == Role.CANDIDAT) {
-            user.setPlanTier(tier);
-            userRepository.save(user);
-        } else if (user.getRole() == Role.RECRUTEUR) {
-            Membership m = organizationService.requireMembership(user);
-            if (m.getOrgRole() != OrgRole.OWNER) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace choisit la formule");
-            }
-            if (m.getOrganization().getPlanTier() != tier) {
-                invoice = organizationService.changePlan(m.getOrganization(), tier, cycle);
-            }
-        } else {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Non disponible pour ce rôle");
-        }
-        Map<String, Object> out = new LinkedHashMap<>();
-        out.put("planTier", tier.name());
-        out.put("premium", tier == PlanTier.PREMIUM || tier == PlanTier.PERFORMANCE);
-        out.put("invoice", invoice == null ? null : billingCatalogService.toInvoice(invoice));
-        return out;
+    @GetMapping("/invoices")
+    public List<Map<String, Object>> invoices(@AuthenticationPrincipal User user, @RequestParam(defaultValue = "mine") String scope) {
+        return payments.list(user, scope);
+    }
+
+    @GetMapping("/invoices/{id}")
+    public Map<String, Object> invoice(@AuthenticationPrincipal User user, @PathVariable Long id) {
+        return payments.one(user, id);
+    }
+
+    @GetMapping("/invoices/{id}/pdf")
+    public ResponseEntity<byte[]> pdf(@AuthenticationPrincipal User user, @PathVariable Long id) {
+        byte[] body = payments.pdf(user, id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"facture-" + id + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(body);
+    }
+
+    @PostMapping("/payments")
+    public Map<String, Object> pay(@AuthenticationPrincipal User user, @RequestBody Map<String, Object> body) {
+        return payments.pay(user, body);
+    }
+
+    @GetMapping("/payments/{id}")
+    public Map<String, Object> payment(@AuthenticationPrincipal User user, @PathVariable Long id) {
+        return payments.payment(user, id);
+    }
+
+    @GetMapping("/payments")
+    public Map<String, Object> paymentByKey(@AuthenticationPrincipal User user, @RequestParam String idempotencyKey) {
+        return payments.paymentByKey(user, idempotencyKey);
     }
 }

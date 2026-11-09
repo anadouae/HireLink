@@ -1,308 +1,112 @@
 (function () {
   const params = new URLSearchParams(location.search);
   const plan = params.get("plan") === "recruiter" ? "recruiter" : "candidate";
-  const PLANS = {
-    candidate: {
-      title: "Candidat Performance",
-      month: 39,
-      points: ["40 usages IA par mois", "Préparation d’entretien", "Réécriture et contrôle de la langue"],
-    },
-    recruiter: {
-      title: "Recruteur Premium",
-      month: 299,
-      points: ["200 usages IA par mois", "25 sièges d’équipe", "Alertes de délai de réponse"],
-    },
-  };
-  const conf = PLANS[plan];
   let cycle = "month";
+  let invoice = null;
+  let idempotencyKey = (crypto.randomUUID ? crypto.randomUUID() : "idem" + Date.now()).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
   let session = null;
-  try {
-    session = JSON.parse(localStorage.getItem("hirelink.session") || "null");
-  } catch (_) {}
-
+  try { session = JSON.parse(localStorage.getItem("hirelink.session") || "null"); } catch (_) {}
   const backFile = params.get("back") || "";
-  const backHref =
-    /^[\w.-]+\.html$/.test(backFile)
-      ? "app/" + backFile
-      : session && session.role === "RECRUTEUR"
-        ? "app/recruiter.html"
-        : session && session.role === "CANDIDAT"
-          ? "app/candidate.html"
-          : "index.html";
+  const backHref = /^[\w.-]+\.html$/.test(backFile)
+    ? "app/" + backFile
+    : session && session.role === "RECRUTEUR" ? "app/recruiter.html"
+    : session && session.role === "CANDIDAT" ? "app/candidate.html" : "index.html";
   document.getElementById("pay-back").href = backHref;
   document.getElementById("pay-done").href = backHref;
 
   function money(n) {
-    return n.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MAD";
+    return Number(n || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MAD";
   }
-
-  function totalTtc() {
-    return cycle === "year" ? conf.month * 10 : conf.month;
-  }
-
-  function paintSummary() {
-    const ttc = totalTtc();
-    const ht = Math.round((ttc / 1.2) * 100) / 100;
-    const tva = Math.round((ttc - ht) * 100) / 100;
-    document.getElementById("pay-plan").textContent = conf.title;
-    document.getElementById("pay-sub").textContent =
-      cycle === "year" ? "Facturation annuelle, deux mois offerts." : "Facturation mensuelle, résiliable à tout moment.";
-    document.getElementById("pay-lines").innerHTML = conf.points.map((p) => "<li>" + p + "</li>").join("");
-    document.getElementById("pay-ht").textContent = money(ht);
-    document.getElementById("pay-tva").textContent = money(tva);
-    document.getElementById("pay-ttc").textContent = money(ttc);
-    document.getElementById("pay-submit").textContent = "Payer " + money(ttc);
-    document.getElementById("pay-demo").textContent = "Activer « " + conf.title + " » sans carte (démonstration)";
-    document.querySelectorAll(".pay-cycle button").forEach((b) => {
-      b.classList.toggle("is-on", b.getAttribute("data-cycle") === cycle);
-      b.setAttribute("aria-pressed", b.getAttribute("data-cycle") === cycle ? "true" : "false");
-    });
-  }
-
-  document.querySelector(".pay-cycle").addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-cycle]");
-    if (!btn) return;
-    cycle = btn.getAttribute("data-cycle");
-    paintSummary();
-  });
-
-  function brandOf(digits) {
-    if (/^4/.test(digits)) return "Visa";
-    if (/^5[1-5]/.test(digits) || /^2/.test(digits)) return "Mastercard";
-    if (/^3[47]/.test(digits)) return "Amex";
-    return digits ? "Carte" : "Carte";
-  }
-
-  function luhn(num) {
-    let sum = 0;
-    let alt = false;
-    for (let i = num.length - 1; i >= 0; i--) {
-      let n = parseInt(num[i], 10);
-      if (alt) {
-        n *= 2;
-        if (n > 9) n -= 9;
-      }
-      sum += n;
-      alt = !alt;
-    }
-    return sum % 10 === 0;
-  }
-
-  const number = document.getElementById("pay-number");
-  number.addEventListener("input", () => {
-    const digits = number.value.replace(/\D/g, "").slice(0, 16);
-    number.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
-    document.getElementById("pay-brand").textContent = brandOf(digits);
-  });
-  document.getElementById("pay-exp").addEventListener("input", (e) => {
-    let v = e.target.value.replace(/\D/g, "").slice(0, 4);
-    if (v.length >= 3) v = v.slice(0, 2) + "/" + v.slice(2);
-    e.target.value = v;
-  });
-  document.getElementById("pay-cvc").addEventListener("input", (e) => {
-    e.target.value = e.target.value.replace(/\D/g, "").slice(0, 4);
-  });
-
-  if (session && session.email) document.getElementById("pay-email").value = session.email;
-  const holder = session && (session.fullName || session.name);
-  if (holder) document.getElementById("pay-holder").value = holder;
-
-  const savedKey = "hirelink.paymethod." + plan;
-  let saved = null;
-  try {
-    saved = JSON.parse(localStorage.getItem(savedKey) || "null");
-  } catch (_) {}
-  const savedBox = document.getElementById("pay-saved");
-  const newFields = document.getElementById("pay-new-fields");
-  function syncMethod() {
-    if (savedBox.hidden) return;
-    const useNew = savedBox.querySelector('input[value="new"]').checked;
-    newFields.hidden = !useNew;
-    newFields.querySelectorAll("input").forEach((input) => {
-      input.required = useNew;
-    });
-  }
-  savedBox.addEventListener("change", syncMethod);
-  if (saved && saved.last4) {
-    savedBox.hidden = false;
-    document.getElementById("pay-saved-label").textContent =
-      saved.brand + " ···· " + saved.last4 + "  exp. " + saved.exp;
-    savedBox.querySelector('input[value="saved"]').checked = true;
-    syncMethod();
-  }
-
   function showError(msg) {
     const el = document.getElementById("pay-error");
     el.hidden = !msg;
     el.textContent = msg || "";
   }
-
-  function validateNew() {
-    const email = document.getElementById("pay-email").value.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return "Indiquez un e-mail valide.";
-    const digits = number.value.replace(/\D/g, "");
-    if (digits.length < 13 || digits.length > 16 || !luhn(digits)) return "Numéro de carte invalide.";
-    const exp = document.getElementById("pay-exp").value;
-    const m = exp.match(/^(\d{2})\/(\d{2})$/);
-    if (!m) return "Expiration au format MM/AA.";
-    const month = Number(m[1]);
-    const year = 2000 + Number(m[2]);
-    const now = new Date();
-    if (month < 1 || month > 12) return "Mois d’expiration invalide.";
-    if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) {
-      return "Cette carte est expirée.";
-    }
-    const cvc = document.getElementById("pay-cvc").value;
-    if (cvc.length < 3) return "CVC incomplet.";
-    if (!document.getElementById("pay-holder").value.trim()) return "Nom sur la carte requis.";
-    if (!document.getElementById("pay-address").value.trim() || !document.getElementById("pay-city").value.trim()) {
-      return "Complétez l’adresse de facturation.";
-    }
-    if (!document.getElementById("pay-zip").value.trim()) return "Code postal requis.";
-    return "";
+  function paint(inv) {
+    document.getElementById("pay-plan").textContent = inv ? inv.planLabel : (plan === "recruiter" ? "Recruteur Premium" : "Candidat Performance");
+    document.getElementById("pay-sub").textContent = inv ? "Facture " + inv.number : "La facture est créée au moment de la confirmation. Le montant vient du serveur.";
+    document.getElementById("pay-lines").innerHTML = "";
+    document.getElementById("pay-ht").textContent = inv ? money(inv.amountHt) : "—";
+    document.getElementById("pay-tva-label").textContent = inv && inv.vatConfigured === false ? "TVA non configurée" : "TVA";
+    document.getElementById("pay-tva").textContent = inv ? (inv.vatConfigured === false ? "—" : money(inv.tva)) : "—";
+    document.getElementById("pay-ttc").textContent = inv ? money(inv.amountTtc) : "—";
   }
-
-  /** Active la formule côté serveur ; le reçu n'est affiché qu'une fois l'abonnement enregistré. */
-  async function activate() {
-    const r = await HireLinkAPI.api("/billing/subscribe", { method: "POST", body: { cycle } });
-    HireLinkAPI.setPlanTier(r.planTier);
-    return r.invoice;
-  }
-
-  function receipt(method, invoice) {
-    const ttc = totalTtc();
-    // Aucun numéro inventé : le serveur n'émet une facture que si la formule change vraiment.
-    const id = invoice && invoice.number ? invoice.number : "Aucune facture émise";
-    const when = new Date().toLocaleString("fr-FR");
-    const esc = (s) =>
-      String(s == null ? "" : s)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/\'/g, "&#39;");
-    const rows = [
-      ["N° de reçu", id],
-      ["Date", when],
-      ["Offre", conf.title],
-      ["Période", cycle === "year" ? "Annuelle" : "Mensuelle"],
-      ["Montant TTC", money(ttc)],
-      ["Carte", method.brand + " ···· " + method.last4],
-      ["Titulaire", method.holder],
-      ["Facturation", method.city + ", " + method.country],
-      ["E-mail", method.email],
-    ];
-    document.getElementById("pay-receipt-body").innerHTML = rows
-      .map((r) => "<div><dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd></div>")
-      .join("");
-    document.getElementById("pay-panel").hidden = true;
-    document.getElementById("pay-receipt").hidden = false;
-  }
-
-  /** Sans session, l'abonnement ne peut pas être rattaché à un compte : on passe par la connexion. */
-  function needLogin() {
-    if (localStorage.getItem("hirelink.token")) return false;
-    showError("Connectez-vous pour activer la formule. Redirection…");
-    setTimeout(() => {
-      location.href = "auth.html?mode=login";
-    }, 900);
-    return true;
-  }
-
-  document.getElementById("pay-demo").addEventListener("click", (e) => {
-    const btn = e.currentTarget;
-    // Même verrou que le paiement par carte : deux « Activer » simultanés factureront deux fois
-    // (le serveur ne compare la formule qu'avant de valider sa transaction).
-    if (btn.disabled) return;
-    showError("");
-    if (needLogin()) return;
-    const label = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = "Activation…";
-    const email = (document.getElementById("pay-email").value || (session && session.email) || "demo@hirelink.ma").trim();
-    activate()
-      .then((invoice) =>
-        receipt(
-          {
-            brand: "Démo",
-            last4: "4242",
-            holder: (document.getElementById("pay-holder").value || (session && session.fullName) || "Démonstration").trim(),
-            email: email,
-            city: document.getElementById("pay-city").value.trim() || "Tétouan",
-            country: document.getElementById("pay-country").value || "Maroc",
-          },
-          invoice
-        )
-      )
-      .catch((err) => {
-        showError(err.message || "Activation impossible");
-        btn.disabled = false;
-        btn.textContent = label;
-      });
+  paint(null);
+  document.querySelector(".pay-cycle").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-cycle]");
+    if (!btn || invoice) return;
+    cycle = btn.getAttribute("data-cycle");
+    document.querySelectorAll(".pay-cycle button").forEach((b) => {
+      const on = b === btn;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
   });
 
-  document.getElementById("pay-form").addEventListener("submit", (e) => {
+  function newKey() {
+    return (crypto.randomUUID ? crypto.randomUUID() : "idem" + Date.now()).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
+  }
+  const stored = sessionStorage.getItem("hirelink.checkout." + plan);
+  if (stored) {
+    HireLinkAPI.api("/billing/payments?idempotencyKey=" + encodeURIComponent(stored)).then((r) => {
+      if (r && r.status === "SUCCEEDED") finish(r);
+      else if (r && r.status === "FAILED") {
+        sessionStorage.removeItem("hirelink.checkout." + plan);
+        showError(r.failureReason || "Le dernier paiement simulé a été refusé. Vous pouvez réessayer.");
+      }
+    }).catch(() => {});
+  }
+
+  document.getElementById("pay-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    showError("");
-    const useSaved = saved && saved.last4 && savedBox.querySelector('input[value="saved"]').checked;
-    let method;
-    if (useSaved) {
-      const email = document.getElementById("pay-email").value.trim();
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        showError("Indiquez un e-mail valide.");
-        return;
-      }
-      method = Object.assign({}, saved, { email });
-    } else {
-      const err = validateNew();
-      if (err) {
-        showError(err);
-        return;
-      }
-      const digits = number.value.replace(/\D/g, "");
-      method = {
-        brand: brandOf(digits),
-        last4: digits.slice(-4),
-        exp: document.getElementById("pay-exp").value,
-        holder: document.getElementById("pay-holder").value.trim(),
-        email: document.getElementById("pay-email").value.trim(),
-        address: document.getElementById("pay-address").value.trim(),
-        city: document.getElementById("pay-city").value.trim(),
-        zip: document.getElementById("pay-zip").value.trim(),
-        country: document.getElementById("pay-country").value,
-      };
-      localStorage.setItem(savedKey, JSON.stringify(method));
-    }
-    if (needLogin()) return;
     const btn = document.getElementById("pay-submit");
+    const status = document.getElementById("pay-status");
     btn.disabled = true;
-    const label = btn.textContent;
-    btn.textContent = "Paiement en cours…";
-    activate()
-      .then((invoice) => receipt(method, invoice))
-      .catch((err) => {
-        showError(err.message || "Activation impossible");
-        btn.disabled = false;
-        btn.textContent = label;
+    status.hidden = false;
+    status.textContent = "Traitement…";
+    showError("");
+    try {
+      if (!invoice) {
+        const prepared = await HireLinkAPI.api("/billing/subscribe", { method: "POST", body: { cycle } });
+        invoice = prepared.invoice;
+        if (!invoice) throw new Error("Aucune facture n'a été émise.");
+        paint(invoice);
+      }
+      sessionStorage.setItem("hirelink.checkout." + plan, idempotencyKey);
+      const paid = await HireLinkAPI.api("/billing/payments", {
+        method: "POST",
+        body: { invoiceId: invoice.id, scenario: document.getElementById("pay-scenario").value, idempotencyKey },
       });
-  });
-
-  document.getElementById("pay-change").addEventListener("click", () => {
-    document.getElementById("pay-receipt").hidden = true;
-    document.getElementById("pay-panel").hidden = false;
-    savedBox.hidden = false;
-    const again = JSON.parse(localStorage.getItem(savedKey) || "null");
-    if (again) {
-      document.getElementById("pay-saved-label").textContent =
-        again.brand + " ···· " + again.last4 + "  exp. " + again.exp;
-      saved = again;
-      savedBox.querySelector('input[value="saved"]').checked = true;
-      syncMethod();
+      if (paid.status !== "SUCCEEDED") {
+        idempotencyKey = newKey();
+        showError(paid.failureReason || "Paiement refusé. La facture reste non payée. Vous pouvez réessayer.");
+        btn.disabled = false;
+        status.hidden = true;
+        return;
+      }
+      finish(paid);
+    } catch (err) {
+      showError(err.message);
+      btn.disabled = false;
+      status.hidden = true;
     }
-    const btn = document.getElementById("pay-submit");
-    btn.disabled = false;
-    paintSummary();
   });
 
-  paintSummary();
+  function finish(paid) {
+    const ok = paid.status === "SUCCEEDED";
+    document.getElementById("pay-panel").hidden = true;
+    const receipt = document.getElementById("pay-receipt");
+    receipt.hidden = false;
+    document.querySelector("#pay-receipt .pay-kicker").textContent = ok ? "Paiement confirmé" : "Paiement refusé";
+    document.querySelector("#pay-receipt h2").textContent = ok ? "Facture payée" : "Facture toujours non payée";
+    const inv = paid.invoice || invoice;
+    document.getElementById("pay-receipt-body").innerHTML =
+      "<div><dt>Facture</dt><dd>" + (inv && inv.number ? inv.number : "—") + "</dd></div>" +
+      "<div><dt>Montant</dt><dd>" + money(inv && inv.amountTtc) + "</dd></div>" +
+      "<div><dt>Référence</dt><dd>" + (paid.reference || "—") + "</dd></div>" +
+      "<div><dt>Résultat</dt><dd>" + (ok ? "Réussi" : (paid.failureReason || "Refusé")) + "</dd></div>";
+    if (ok && paid.planTier) HireLinkAPI.setPlanTier(paid.planTier);
+    const pdf = document.getElementById("pay-pdf");
+    if (pdf && inv && inv.id) pdf.onclick = () => HireLinkAPI.openFile("/billing/invoices/" + inv.id + "/pdf");
+  }
 })();

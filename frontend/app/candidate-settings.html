@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
   <link rel="stylesheet" href="../css/premium.css?v=20261107b" />
+  <link rel="stylesheet" href="../css/pay-sim.css?v=20261109a" />
   <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -167,9 +168,13 @@
                   </details>
                 </div>
                 <footer class="card-footer">
-                  <button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Revenir à Essentiel</button>
+                  <button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Résilier mon abonnement</button>
                   <button type="button" class="btn btn-primary" id="btn-billing-premium">Activer Performance</button>
                 </footer>
+              </article>
+              <article class="settings-card">
+                <header class="card-header"><h2>Mes factures</h2><p>Uniquement les factures dont vous êtes le débiteur.</p></header>
+                <div class="card-body" id="my-invoices"></div>
               </article>
               <article class="settings-card">
                 <header class="card-header"><h2>Conseil à partir de votre dossier</h2><p id="credits-line">La synthèse s’appuie sur le CV déjà déposé.</p></header>
@@ -216,6 +221,7 @@
   <script defer src="../js/app-shell.js?v=20261107d"></script>
   <script defer src="../js/growth.js?v=20261106g"></script>
   <script defer src="../js/suggest.js?v=20261103g"></script>
-  <script defer src="../js/candidate-settings.js?v=20261105w"></script>
+  <script defer src="../js/invoices.js?v=20261109a"></script>
+  <script defer src="../js/candidate-settings.js?v=20261109b"></script>
 </body>
 </html>

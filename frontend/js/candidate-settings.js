@@ -171,15 +171,20 @@
     if (window.HireLinkGrowth) HireLinkGrowth.showPremium("candidate");
   };
   document.getElementById("btn-billing-cancel").onclick = async () => {
+    const ok = window.HireLink && HireLink.openModal
+      ? await HireLink.openModal({ title: "Résilier mon abonnement ?", description: "L'accès déjà payé reste ouvert jusqu'à la fin de période enregistrée. Aucun remboursement n'est émis.", confirmLabel: "Résilier" })
+      : true;
+    if (!ok) return;
     try {
       const r = await HireLinkAPI.api("/billing/subscription", { method: "DELETE" });
-      HireLinkAPI.setPlanTier(r.planTier);
-      HireLink.toast("Plan", "Essentiel réactivé", "info");
+      HireLink.toast("Plan", r.message || "Résiliation enregistrée", "info");
       refreshBilling();
     } catch (err) {
       HireLink.toast("Plan", err.message, "danger");
     }
   };
+
+  if (window.HireLinkInvoices) HireLinkInvoices.mount(document.getElementById("my-invoices"), "mine");
 
   HireLinkCredits.load(true).then((c) => {
     const line = document.getElementById("credits-line");
