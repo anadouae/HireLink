@@ -302,6 +302,7 @@ public class JobOfferService {
         JobOffer src = requireManaged(recruiter, id);
         JobOffer copy = new JobOffer();
         copy.setRecruiter(recruiter);
+        copy.setOrganization(src.getOrganization());
         copy.setTitle(src.getTitle());
         copy.setDescription(src.getDescription());
         copy.setRequiredSkills(src.getRequiredSkills());

@@ -223,6 +223,16 @@ html:not([data-theme="dark"]) .topbar {
   padding: 0.6rem;
 }
 .cv-stage .cv-doc-view { min-height: 480px; background: var(--surface, #fff); }
+.cv-stage.is-text { min-height: 0; background: transparent; }
+.cv-stage.is-text .ocr-preview {
+  min-height: 220px;
+  max-height: 520px;
+  color: var(--ink, #1a1214);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  background: #fff;
+}
 #cv-scale { transform-origin: top center; }
 .cv-upload-bar {
   display: flex;

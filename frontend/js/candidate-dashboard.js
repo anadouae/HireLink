@@ -14,7 +14,7 @@
     SUBMITTED: "Le recruteur va étudier votre dossier.",
     SCREENING: "Votre dossier est en cours d’étude.",
     SHORTLISTED: "Vous êtes présélectionné : un entretien peut vous être proposé.",
-    INTERVIEW: "Préparez votre entretien.",
+    INTERVIEW: "Étape entretien.",
     OFFER: "Une proposition est en préparation.",
     HIRED: "Félicitations, vous êtes recruté !",
     REJECTED: "Candidature non retenue.",
@@ -38,6 +38,16 @@
       '</small></span><span class="db-go" aria-hidden="true">' + ico("right") + "</span></a>";
   }
 
+  /** L’étape « Entretien » n’est pas un créneau : le texte suit l’état réel du rendez-vous. */
+  function suivi(a) {
+    if (a.status !== "INTERVIEW") return NEXT[a.status] || "";
+    if (a.interviewStatus === "CANCELLED") return "Étape entretien : le créneau a été annulé.";
+    if (!a.interviewAt) return "Étape entretien : aucun créneau n’est encore fixé.";
+    const when = new Date(a.interviewAt).getTime();
+    if (when > Date.now() - 3600e3) return "Entretien planifié le " + RC.fmtDateTime(a.interviewAt) + ".";
+    return "Étape entretien : le créneau prévu est passé.";
+  }
+
   function tracker(a) {
     const closed = CLOSED.includes(a.status);
     let idx = STEPS.findIndex((s) => s[0] === a.status);
@@ -48,7 +58,7 @@
       '<div class="db-trk-head"><strong>' + esc(a.jobTitle || "Candidature") + '</strong><span class="rc-pill' + (closed ? " rc-pill--danger" : a.status === "INTERVIEW" || a.status === "HIRED" ? " rc-pill--ok" : "") + '">' +
       esc(RC.STATUS_FR[a.status] || a.status) + "</span></div>" +
       (closed ? "" : '<ol class="db-steps">' + dots + "</ol>") +
-      '<small class="db-trk-next">' + esc(NEXT[a.status] || "") + " · envoyée " + esc(RC.ago(a.submittedAt)) + "</small></a>";
+      '<small class="db-trk-next">' + esc(suivi(a)) + " · envoyée " + esc(RC.ago(a.submittedAt)) + "</small></a>";
   }
 
   function render(me, apps, offers) {
@@ -74,8 +84,8 @@
 
     $("db-actions").innerHTML = [
       { icon: "calendar", title: "Entretiens à venir", count: upcoming.length, tone: "info", sub: next ? "Le " + RC.fmtDateTime(next.interviewAt) : "",
-        calm: "Aucun entretien prévu", href: next ? "candidate-applications.html?id=" + next.id : "candidate-applications.html?status=INTERVIEW" },
-      { icon: "hourglass", title: "Réponses attendues", count: active.length, sub: "Dossiers en cours d’étude", calm: "Aucune candidature en cours", href: "candidate-applications.html?status=active" },
+        calm: "Aucun créneau à venir", href: next ? "candidate-applications.html?id=" + next.id : "candidate-applications.html?status=INTERVIEW" },
+      { icon: "hourglass", title: "Dossiers ouverts", count: active.length, sub: "Encore en cours, entretien compris", calm: "Aucune candidature en cours", href: "candidate-applications.html?status=active" },
       { icon: "user", title: "Profil complété", big: pct + " %", count: missing.length, tone: "warn", sub: missing[0] ? missing[0][1] : "", calm: "Profil complet, bravo", href: missing[0] ? missing[0][2] : "candidate-profile.html" },
       { icon: "target", title: "Offres pour vous", count: reco.length, sub: "Pas encore postulées", calm: "Revenez bientôt", href: "candidate.html" },
     ].map(tile).join("");

@@ -269,6 +269,84 @@ class FinalisationCoverageIntegrationTest {
         assertTrue(journal.getBody().contains("APPLICATION_REFUSED"));
     }
 
+    @Test
+    void chaqueMotifCatalogueEstEnregistreNotifieEtHistorise() {
+        User owner = compte(Role.RECRUTEUR, "Nadia Catalogue");
+        Organization org = organizations.createOwned(owner, "Atlas Catalogue " + owner.getId(), "001122334455668");
+        org.setVerified(true);
+        org.setVerificationStatus("ADMIN_APPROVED");
+        organisations.saveAndFlush(org);
+        owner.setCompanyVerified(true);
+        users.saveAndFlush(owner);
+        String ownerToken = token(users.findById(owner.getId()).orElseThrow());
+        ResponseEntity<Map> offre = http.exchange("/api/v1/offers", HttpMethod.POST, json(ownerToken, Map.of(
+                "title", "Catalogue " + owner.getId(),
+                "description", "Conception et maintien d'applications web. Poste basé à Tétouan, en hybride.",
+                "contractType", "CDI",
+                "published", true)), Map.class);
+        assertEquals(HttpStatus.OK, offre.getStatusCode(), () -> String.valueOf(offre.getBody()));
+        Number offerId = (Number) offre.getBody().get("id");
+        boolean casesVerifiees = false;
+
+        for (String code : new String[]{"REF01", "REF02", "REF03", "REF04", "REF05"}) {
+            User candidate = compte(Role.CANDIDAT, "Candidat " + code);
+            String candidateToken = token(candidate);
+            ResponseEntity<Map> candidature = http.exchange("/api/v1/applications", HttpMethod.POST, json(candidateToken, Map.of(
+                    "jobOfferId", offerId, "cvSource", "UPLOAD", "cvFileName", "cv-" + code + ".txt")), Map.class);
+            assertEquals(HttpStatus.OK, candidature.getStatusCode(), () -> code + " " + candidature.getBody());
+            Number appId = (Number) candidature.getBody().get("id");
+
+            ResponseEntity<String> interdit = http.exchange("/api/v1/applications/" + appId + "/status", HttpMethod.PATCH,
+                    json(candidateToken, Map.of(
+                            "status", "REJECTED", "rejectionReason", code,
+                            "confirmIdentity", true, "confirmCvReviewed", true, "confirmSlaAware", true)), String.class);
+            assertEquals(HttpStatus.FORBIDDEN, interdit.getStatusCode(), code);
+
+            if (!casesVerifiees) {
+                ResponseEntity<String> sansCases = http.exchange("/api/v1/applications/" + appId + "/status", HttpMethod.PATCH,
+                        json(ownerToken, Map.of("status", "REJECTED", "rejectionReason", code)), String.class);
+                assertEquals(HttpStatus.BAD_REQUEST, sansCases.getStatusCode(), code);
+                casesVerifiees = true;
+            }
+
+            ResponseEntity<Map> refus = http.exchange("/api/v1/applications/" + appId + "/status", HttpMethod.PATCH,
+                    json(ownerToken, Map.of(
+                            "status", "REJECTED", "rejectionReason", code,
+                            "confirmIdentity", true, "confirmCvReviewed", true, "confirmSlaAware", true)), Map.class);
+            assertEquals(HttpStatus.OK, refus.getStatusCode(), () -> code + " " + refus.getBody());
+            assertEquals("REJECTED", refus.getBody().get("status"));
+            assertEquals(code, refus.getBody().get("refusalReasonCode"));
+
+            ResponseEntity<String> historique = http.exchange("/api/v1/applications/" + appId + "/timeline",
+                    HttpMethod.GET, auth(ownerToken), String.class);
+            assertEquals(HttpStatus.OK, historique.getStatusCode(), code);
+            assertTrue(historique.getBody().contains("REJECTED"), code);
+
+            ResponseEntity<String> cloche = http.exchange("/api/v1/notifications", HttpMethod.GET, auth(candidateToken), String.class);
+            assertEquals(HttpStatus.OK, cloche.getStatusCode(), code);
+            assertTrue(cloche.getBody().contains("Candidature non retenue"), code);
+        }
+
+        User autre = compte(Role.CANDIDAT, "Candidat Autre");
+        String autreToken = token(autre);
+        ResponseEntity<Map> dossier = http.exchange("/api/v1/applications", HttpMethod.POST, json(autreToken, Map.of(
+                "jobOfferId", offerId, "cvSource", "UPLOAD", "cvFileName", "cv-autre.txt")), Map.class);
+        assertEquals(HttpStatus.OK, dossier.getStatusCode(), () -> String.valueOf(dossier.getBody()));
+        Number autreId = (Number) dossier.getBody().get("id");
+        ResponseEntity<String> nu = http.exchange("/api/v1/applications/" + autreId + "/status", HttpMethod.PATCH,
+                json(ownerToken, Map.of(
+                        "status", "REJECTED", "rejectionReason", "REF06",
+                        "confirmIdentity", true, "confirmCvReviewed", true, "confirmSlaAware", true)), String.class);
+        assertEquals(HttpStatus.BAD_REQUEST, nu.getStatusCode());
+        ResponseEntity<Map> precis = http.exchange("/api/v1/applications/" + autreId + "/status", HttpMethod.PATCH,
+                json(ownerToken, Map.of(
+                        "status", "REJECTED", "rejectionReason", "REF06:motif libre de recette",
+                        "confirmIdentity", true, "confirmCvReviewed", true, "confirmSlaAware", true)), Map.class);
+        assertEquals(HttpStatus.OK, precis.getStatusCode(), () -> String.valueOf(precis.getBody()));
+        assertEquals("REF06", precis.getBody().get("refusalReasonCode"));
+        assertEquals("motif libre de recette", precis.getBody().get("rejectionReason"));
+    }
+
     private Number souscrire(String token) {
         ResponseEntity<Map> prepared = http.exchange("/api/v1/billing/subscribe", HttpMethod.POST, json(token, Map.of("cycle", "month")), Map.class);
         assertEquals(HttpStatus.OK, prepared.getStatusCode(), () -> String.valueOf(prepared.getBody()));

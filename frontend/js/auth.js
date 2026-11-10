@@ -248,8 +248,15 @@
   function nextTarget(authRole) {
     const n = params.get("next");
     if (!n || !/^[a-z0-9-]+\.html([?#].*)?$/i.test(n)) return null;
+    const file = n.split(/[?#]/)[0].toLowerCase();
     const prefix = authRole === "RECRUTEUR" ? "recruiter" : authRole === "ADMINISTRATEUR" ? "admin" : "candidate";
-    return n.indexOf(prefix) === 0 ? "app/" + n : null;
+    const shared = {
+      RECRUTEUR: ["notifications.html", "security.html"],
+      CANDIDAT: ["notifications.html", "security.html"],
+      ADMINISTRATEUR: ["account.html", "security.html"],
+    };
+    const ok = file.indexOf(prefix) === 0 || (shared[authRole] || []).indexOf(file) >= 0;
+    return ok ? "app/" + n : null;
   }
 
   if (params.get("expired") === "1") {

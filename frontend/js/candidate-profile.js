@@ -218,14 +218,21 @@
     const frame = document.getElementById("cv-frame");
     const image = document.getElementById("cv-image");
     const raw = document.getElementById("cv-raw");
+    const stage = document.getElementById("cv-workbench");
     frame.hidden = kind !== "pdf";
     image.hidden = kind !== "image";
     raw.hidden = kind !== "text";
-      if (kind === "pdf") frame.src = url;
-      if (kind === "image") image.src = url;
-      if (kind === "text") raw.textContent = url;
-      const open = document.getElementById("cv-open");
-      if (open && kind !== "text") open.href = url;
+    if (kind === "pdf") frame.src = url;
+    if (kind === "image") image.src = url;
+    if (kind === "text") raw.textContent = url || "";
+    if (stage) stage.classList.toggle("is-text", kind === "text");
+    const open = document.getElementById("cv-open");
+    if (open) {
+      open.hidden = kind === "text";
+      if (kind !== "text") open.href = url;
+    }
+    const zoom = document.querySelector(".cv-zoom");
+    if (zoom) zoom.hidden = kind === "text";
   }
 
   /** Sans CV déposé, le serveur refuse la confirmation : le bouton reste désactivé avec une explication. */
@@ -624,7 +631,8 @@
     pushCoach("Vous", message, true);
     try {
       const data = await HireLinkCredits.run("/ai/coach", { message: message, cvText: text });
-      pushCoach("Coach", data.content || "Pas de réponse.", true);
+      const local = data.provider && String(data.provider).toLowerCase().indexOf("local") === 0;
+      pushCoach(local ? "Coach local" : "Coach", data.content || "Pas de réponse.", true);
     } catch (err) {
       if (!err.handled) HireLink.toast("Coach", err.message, "danger");
     } finally {
@@ -641,7 +649,8 @@
     if (send) send.disabled = true;
     try {
       const data = await HireLinkCredits.run("/ai/cv-summary", { cvText: text });
-      pushCoach("Synthèse", data.content || "Pas de synthèse.");
+      const local = data.provider && String(data.provider).toLowerCase().indexOf("local") === 0;
+      pushCoach(local ? "Synthèse locale" : "Synthèse", data.content || "Pas de synthèse.");
     } catch (err) {
       if (!err.handled) HireLink.toast("Synthèse", err.message, "danger");
     } finally {

@@ -224,6 +224,7 @@
     title.className = "timeline-title";
     title.textContent = "Votre entretien";
     box.append(title, HireLinkInterview.card(app, { role: "readonly" }));
+    if (app.interviewStatus === "CANCELLED") return;
     const prep = document.createElement("button");
     prep.type = "button";
     prep.className = "btn btn-ghost btn-sm";
@@ -299,7 +300,9 @@
       if (submitted != null) {
         const note = document.createElement("p");
         note.className = "muted";
-        note.textContent = "Score enregistré au dépôt : " + submitted + " %. Il n'est pas recalculé.";
+        note.textContent = submitted != null && pct != null && submitted !== pct
+          ? "Score au dépôt : " + submitted + " %, figé à l’envoi. Score actuel : " + pct + " %, recalculé avec le profil d’aujourd’hui."
+          : "Score au dépôt : " + submitted + " %. Il reste figé, même si le profil change ensuite.";
         why.appendChild(note);
       }
       const panel = window.HireLinkMatch && app.matchBreakdown ? HireLinkMatch.panel(app.matchBreakdown, { audience: "candidate", compact: true }) : null;

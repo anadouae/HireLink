@@ -91,6 +91,21 @@
       list.appendChild(li);
     });
     root.appendChild(list);
+    const how = document.createElement("details");
+    how.className = "hm-toggle";
+    const sum = document.createElement("summary");
+    sum.textContent = "Comment ce pourcentage est obtenu";
+    const body = document.createElement("div");
+    body.appendChild(el("p", "hm-detail",
+      "Chaque ligne est un critère demandé par l’offre. Un critère absent de l’offre est retiré, et les autres se partagent 100 %."));
+    body.appendChild(el("p", "hm-detail",
+      "Si le profil ne dit rien sur un critère demandé, ce critère compte pour moitié : ni puni, ni favorisé."));
+    body.appendChild(el("p", "hm-detail",
+      "Si moins de la moitié des compétences obligatoires sont couvertes, le total est plafonné. Les points affichés sur chaque ligne restent ceux d’avant le plafond."));
+    body.appendChild(el("p", "hm-detail",
+      "Le score au dépôt est figé au moment de la candidature. Le score actuel est recalculé si le profil change. Aucun des deux n’est une décision."));
+    how.append(sum, body);
+    root.appendChild(how);
     root.appendChild(el("p", "hm-foot", cand
       ? "Ce score sert uniquement à classer les offres. Le recruteur lit chaque dossier : aucune décision n’est automatique."
       : "Aide au tri uniquement : aucune décision automatique. Lisez le dossier avant de trancher."));
