@@ -1,15 +1,15 @@
-/* Espace administration — tableau de bord, entreprises, comptes, plans & factures, motifs de refus */
+/* Espace administration — tableau de bord, entreprises, comptes, plans et factures */
 (function () {
   const App = HireLinkApp;
   const session = App.mount({});
   if (!session) return;
 
   const esc = App.esc;
-  const VIEWS = ["dash", "orgs", "users", "moderation", "offers", "plans", "refusals", "audit", "emails"];
-  /** Un seul fichier pour neuf vues : l'onglet doit dire laquelle est ouverte, sinon les captures ne correspondent à rien. */
+  const VIEWS = ["dash", "orgs", "users", "moderation", "offers", "plans", "audit", "emails"];
+  /** Un seul fichier pour huit vues : l'onglet doit dire laquelle est ouverte, sinon les captures ne correspondent à rien. */
   const VIEW_TITLE = {
     dash: "Tableau de bord", orgs: "Entreprises", users: "Comptes", moderation: "Modération", offers: "Offres",
-    plans: "Plans & factures", refusals: "Motifs de refus", audit: "Journal d’audit", emails: "Journal des e-mails",
+    plans: "Plans & factures", audit: "Journal d’audit", emails: "Journal des e-mails",
   };
   const STATUS_FR = App.STATUS_FR;
   const PAY_FR = { NON_PAYEE: "Non payée", PAYEE: "Payée", ANNULEE: "Annulée", AVOIR: "Avoir historique", EMISE: "Non payée", REGLEE: "Payée", OFFERTE: "Payée" };
@@ -23,7 +23,7 @@
     return u.role === f;
   }
 
-  const state = { orgs: [], plans: [], invoices: [], users: [], aiUsage: [], stats: {}, charts: {}, orgFilter: "all", userFilter: "all", reasons: null, offers: [], reports: { queue: [], handled: [] }, offerFilter: "all", invoiceFilter: "all" };
+  const state = { orgs: [], plans: [], invoices: [], users: [], aiUsage: [], stats: {}, charts: {}, orgFilter: "all", userFilter: "all", offers: [], reports: { queue: [], handled: [] }, offerFilter: "all", invoiceFilter: "all" };
   const loaded = {};
 
   const money = (n) => Number(n || 0).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MAD";
@@ -45,7 +45,6 @@
     VIEWS.forEach((id) => { $("view-" + id).hidden = id !== view; });
     document.title = (VIEW_TITLE[view] || "Administration") + " · Administration — HireLink";
     App.setActive(view);
-    if (view === "refusals") loadRefusals();
     if (view === "audit") loadAudit();
     if (view === "emails") loadEmails();
     window.scrollTo(0, 0);
@@ -681,54 +680,6 @@
       HireLink.openModal({ title: mail.subject, bodyHtml: '<div id="mail-slot"></div>', confirmLabel: "Fermer", hideCancel: true, large: true,
         onReady: (api) => api.root.querySelector("#mail-slot").appendChild(frame) });
     } catch (err) { fail("E-mail", err); }
-  });
-
-  /* ---------------------------------------------------------- motifs de refus */
-  async function loadRefusals(force) {
-    const body = $("rr-body");
-    if (state.reasons && !force) return;
-    try {
-      state.reasons = await HireLinkAPI.api("/refusal-reasons?all=true");
-      body.innerHTML = state.reasons.length
-        ? state.reasons.map((r) =>
-            "<tr><td><code>" + esc(r.code) + "</code></td><td>" + esc(r.label) + '</td><td><span class="rc-pill ' + (r.active ? "rc-pill--ok" : "") + '">' + (r.active ? "Actif" : "Historique") +
-            "</span></td></tr>").join("")
-        : '<tr><td colspan="3" class="rc-muted" style="text-align:center;padding:1.6rem">Aucun motif.</td></tr>';
-    } catch (err) {
-      body.innerHTML = '<tr><td colspan="4" class="rc-muted">' + esc(err.message) + "</td></tr>";
-    }
-  }
-  $("rr-body").addEventListener("click", async (e) => {
-    const btn = e.target.closest("[data-rr]");
-    const r = btn && (state.reasons || []).find((x) => String(x.id) === btn.dataset.id);
-    if (!r) return;
-    const act = btn.dataset.rr;
-    try {
-      if (act === "edit") {
-        const ok = await HireLink.openModal({ title: "Renommer le motif", confirmLabel: "Enregistrer",
-          bodyHtml: "<div class='rc-field'><label for='rr-edit-label'>Libellé</label><input id='rr-edit-label' value='" + esc(r.label) + "' /></div>" });
-        const label = ok && $("rr-edit-label").value.trim();
-        if (!label) return;
-        await HireLinkAPI.api("/refusal-reasons/" + r.id, { method: "PUT", body: { label, active: r.active } });
-      } else if (act === "toggle") {
-        await HireLinkAPI.api("/refusal-reasons/" + r.id, { method: "PUT", body: { label: r.label, active: !r.active } });
-      } else {
-        const ok = await Mascotte.confirm({ title: "Supprimer « " + r.code + " » ?", description: "Les refus déjà enregistrés conservent leur libellé.", confirmLabel: "Supprimer", danger: true });
-        if (!ok) return;
-        await HireLinkAPI.api("/refusal-reasons/" + r.id, { method: "DELETE" });
-      }
-      App.toast("Motifs de refus", "Catalogue mis à jour", "ok");
-      loadRefusals(true);
-    } catch (err) { fail("Motifs de refus", err); }
-  });
-  $("rr-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    try {
-      await HireLinkAPI.api("/refusal-reasons", { method: "POST", body: { code: $("rr-code").value.trim(), label: $("rr-label").value.trim(), active: true } });
-      e.target.reset();
-      App.toast("Motifs de refus", "Motif ajouté", "ok");
-      loadRefusals(true);
-    } catch (err) { fail("Motifs de refus", err); }
   });
 
   /* ------------------------------------------------------------------ données */

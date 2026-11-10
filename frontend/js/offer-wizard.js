@@ -214,12 +214,26 @@
       });
     }
 
+    function infoMark(id, label, text) {
+      const tipId = id + "-info";
+      const btn = h("button", { type: "button", class: "ow-info", "aria-label": "Explication : " + label, "aria-describedby": tipId, text: "i" });
+      const tip = h("span", { id: tipId, class: "ow-info-tip", role: "tooltip", text });
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const open = tip.classList.toggle("is-open");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      return h("span", { class: "ow-info-wrap" }, [btn, tip]);
+    }
+
     function field(key, label, control, opts) {
       const o = opts || {};
       const id = "ow-" + key;
       const wrap = h("div", { class: "ow-field" + (o.wide ? " is-wide" : ""), "data-field": key });
       const lab = h("label", { for: id, text: label });
       if (o.required) lab.append(h("span", { class: "ow-req", "aria-hidden": "true", text: " *" }));
+      if (o.info) lab.append(infoMark(id, label, o.info));
       wrap.append(lab, control);
       if (o.hint) wrap.append(h("p", { class: "ow-hint", id: id + "-hint", text: o.hint }));
       wrap.append(h("p", { class: "ow-error", id: id + "-error", role: "alert" }));
@@ -279,8 +293,8 @@
           contract,
         ]),
         section("Lieu et organisation", null, [
-          field("location", "Ville du poste", place, { required: state.workMode !== "REMOTE", hint: "Une ville, jamais un pays : le drapeau et le pays sont déduits de cette ville. En télétravail, indiquez la ville de rattachement de l’équipe." }),
-          field("workMode", "Mode de travail", mode),
+          field("location", "Ville du poste", place, { required: state.workMode !== "REMOTE", hint: "Une ville, jamais un pays : le drapeau et le pays sont déduits de cette ville. En télétravail, indiquez la ville de rattachement de l’équipe.", info: "La ville sert à comparer le poste aux lieux que le candidat a indiqués. Ce n’est pas un pays." }),
+          field("workMode", "Mode de travail", mode, { info: "Sur site, à distance ou hybride. Ce choix entre dans le score de correspondance avec les préférences du candidat." }),
         ]),
       ];
     }
@@ -404,14 +418,20 @@
       const exp = select("experienceLevel", [["", "Non précisé"]].concat(Object.keys(O.LABELS.experience).map((k) => [k, O.LABELS.experience[k]])));
       const edu = select("educationLevel", [["", "Non précisé"]].concat(Object.keys(O.LABELS.education).map((k) => [k, O.LABELS.education[k]])));
       const skills = h("div", { class: "ow-field is-wide", "data-field": "requiredSkills" }, [
-        h("label", { for: "ow-requiredSkills", text: "Compétences et langues demandées" }),
+        h("label", { for: "ow-requiredSkills" }, [
+          document.createTextNode("Compétences et langues demandées"),
+          infoMark("ow-requiredSkills", "Compétences et langues demandées", "Compétences indispensables. Elles pèsent le plus dans le score (45 sur 100 au départ). Les langues saisies ici sont notées à part."),
+        ]),
         picker,
         h("p", { class: "ow-error", role: "alert" }),
       ]);
       skills.querySelector("label").append(h("span", { class: "ow-req", "aria-hidden": "true", text: " *" }));
       const nicePicker = h("div", { id: "ow-niceToHaveSkills" });
       const nice = h("div", { class: "ow-field is-wide", "data-field": "niceToHaveSkills" }, [
-        h("label", { for: "ow-niceToHaveSkills", text: "Compétences appréciées (facultatif)" }),
+        h("label", { for: "ow-niceToHaveSkills" }, [
+          document.createTextNode("Compétences appréciées (facultatif)"),
+          infoMark("ow-niceToHaveSkills", "Compétences appréciées", "Utiles, pas obligatoires. Poids de départ 10 sur 100. Si vous n’en indiquez aucune, cette ligne ne compte pas et les autres critères sont répartis sur 100."),
+        ]),
         nicePicker,
         h("p", { class: "ow-hint", text: "Un plus, pas un prérequis : elles pèsent moins que les compétences demandées dans le score de compatibilité." }),
       ]);
@@ -428,7 +448,7 @@
       return [
         h("section", { class: "ow-section" }, [h("h3", { text: "Compétences" }), h("div", { class: "ow-grid" }, [skills, nice])]),
         section("Profil", null, [
-          field("experienceLevel", "Niveau d’expérience", exp),
+          field("experienceLevel", "Niveau d’expérience", exp, { info: "Niveau attendu pour le poste. Exemple : Junior pour un premier emploi, Confirmé pour plusieurs années de pratique. Comparé au niveau indiqué dans le profil du candidat. Poids de départ 15 sur 100." }),
           field("educationLevel", "Niveau d’études", edu),
           field("positions", "Nombre de postes", number("positions", { min: 1, max: 500 })),
         ]),

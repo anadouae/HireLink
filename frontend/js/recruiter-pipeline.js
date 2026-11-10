@@ -594,7 +594,50 @@
     }
   }
 
+  function reasonLabel(code) {
+    const row = refusalCatalog.find((r) => r && r.code === code);
+    return (row && row.label) || code;
+  }
+
+  function refusalSelectHtml() {
+    const options = refusalCatalog
+      .filter((r) => r && r.code && r.active !== false)
+      .map((r) => '<option value="' + esc(r.code) + '">' + esc(r.label || r.code) + "</option>")
+      .join("");
+    return (
+      '<div class="hl-dossier-section">' +
+      '<label for="reject-reason"><strong>Motif de refus</strong></label>' +
+      '<select id="reject-reason" class="input">' +
+      '<option value="">Choisir un motif</option>' +
+      options +
+      "</select>" +
+      '<div id="reject-other-wrap" hidden style="margin-top:.55rem">' +
+      '<label for="reject-other">Précisez le motif</label>' +
+      '<input id="reject-other" class="input" maxlength="240" placeholder="Quelques mots, visibles par le candidat" />' +
+      "</div>" +
+      '<label for="reject-message" style="display:block;margin-top:.7rem">Message au candidat <small>facultatif</small></label>' +
+      '<textarea id="reject-message" rows="4" maxlength="2000" placeholder="Vous pouvez rédiger vous-même, ou demander un brouillon puis le modifier."></textarea>' +
+      '<p id="reject-ai-hint" class="muted" style="margin:.4rem 0"></p>' +
+      '<div class="rc-row" style="gap:.4rem;flex-wrap:wrap">' +
+      '<button type="button" class="btn btn-ghost btn-sm" id="reject-ai">Aide IA</button>' +
+      '<button type="button" class="btn btn-ghost btn-sm" id="reject-clear">Effacer le message</button>' +
+      "</div></div>"
+    );
+  }
+
   async function rejectFlow(c) {
+    if (!refusalCatalog.length) {
+      try {
+        refusalCatalog = (await HireLinkAPI.api("/refusal-reasons")) || [];
+      } catch (err) {
+        HireLink.toast("Motifs indisponibles", err.message, "danger");
+        return;
+      }
+    }
+    if (!refusalCatalog.length) {
+      HireLink.toast("Motifs indisponibles", "Aucun motif de refus n’est disponible.", "danger");
+      return;
+    }
     const body =
       dossierHtml(c, { refuse: true, hideLetter: true, showNote: false }) +
       refusalSelectHtml() +
@@ -617,7 +660,7 @@
           const otherWrap = document.getElementById("reject-other-wrap");
           if (otherWrap) otherWrap.hidden = reason !== "REF06";
           const other = ((document.getElementById("reject-other") || {}).value || "").trim();
-          const motifOk = !!reason;
+          const motifOk = reason === "REF06" ? other.length > 0 : !!reason;
           api.setConfirmEnabled(motifOk && syncChecks());
           if (hint) {
             hint.textContent = reason
@@ -645,8 +688,8 @@
             }
             const label =
               code === "REF06"
-                ? ((document.getElementById("reject-other") || {}).value || "").trim() || "Autre"
-                : (FIXED_REASONS.find((r) => r[0] === code) || [, code])[1];
+                ? ((document.getElementById("reject-other") || {}).value || "").trim() || reasonLabel(code)
+                : reasonLabel(code);
             if (!HireLinkCredits.preflight()) return;
             RC.busy(aiBtn, true);
             try {

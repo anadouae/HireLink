@@ -78,7 +78,12 @@
 
 .ow-field { display: grid; gap: 0.3rem; align-content: start; min-width: 0; }
 .ow-field.is-wide { grid-column: 1 / -1; }
-.ow-field > label, .ow-label { font-size: var(--text-xs); font-weight: 700; color: var(--ink, #1a1214); }
+.ow-field > label, .ow-label { font-size: var(--text-xs); font-weight: 700; color: var(--ink, #1a1214); display: flex; align-items: center; gap: .35rem; flex-wrap: wrap; }
+.ow-info-wrap { position: relative; display: inline-flex; }
+.ow-info { width: 1.15rem; height: 1.15rem; border-radius: 999px; border: 1px solid var(--line, #e4ddd8); background: #fff; color: #7a2032; font: 700 .7rem/1 inherit; cursor: pointer; }
+.ow-info:focus-visible { outline: 2px solid #7a2032; outline-offset: 2px; }
+.ow-info-tip { display: none; position: absolute; z-index: 6; left: 0; top: 1.45rem; width: min(18rem, 70vw); padding: .5rem .65rem; border: 1px solid var(--line, #e4ddd8); border-radius: 8px; background: #fff; color: var(--ink-soft, #5e5558); font-weight: 500; box-shadow: 0 8px 24px rgba(26, 18, 20, .08); }
+.ow-info-tip.is-open, .ow-info:hover + .ow-info-tip, .ow-info:focus + .ow-info-tip, .ow-info:focus-visible + .ow-info-tip { display: block; }
 .ow-field input[type="text"], .ow-field input[type="number"], .ow-field input[type="date"], .ow-field select, .ow-field textarea, .ow-extra {
   width: 100%;
   padding: 0.65rem 0.8rem;

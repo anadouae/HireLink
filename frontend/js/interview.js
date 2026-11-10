@@ -233,7 +233,7 @@
     if (app.interviewType === "ONSITE") {
       dl.append(row("Adresse", app.interviewLocation || "—"));
       if (app.interviewMapUrl) dl.append(row("Plan", link(app.interviewMapUrl, "Ouvrir l’itinéraire")));
-    } else if (app.interviewType === "VISIO" && app.interviewVideoUrl) {
+    } else if (!cancelled && app.interviewType === "VISIO" && app.interviewVideoUrl) {
       dl.append(row("Lien", link(app.interviewVideoUrl, "Rejoindre la visioconférence")));
     } else if (app.interviewType === "PHONE") {
       dl.append(row("Numéro", app.interviewLocation || "—"));

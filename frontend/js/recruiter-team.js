@@ -490,11 +490,11 @@
       const roleFr = m.roleLabel || RC.ROLE_FR[m.orgRole] || m.orgRole;
       if (fb) {
         fb.className = "rc-banner rc-banner--ok";
-        fb.innerHTML = "<div><strong>Invitation envoyée</strong><span>" + esc(m.email) + " recevra le rôle " + esc(roleFr) +
-          " dès qu’il aura accepté l’invitation, reçue par e-mail et valable trois jours. Suivez-la ici, dans « Invitations en attente ».</span></div>";
+        fb.innerHTML = "<div><strong>Invitation enregistrée</strong><span>" + esc(m.email) + " aura le rôle " + esc(roleFr) +
+          " après acceptation. Elle est valable trois jours. L’e-mail part seulement si la messagerie est active ; sinon il est journalisé, pas présenté comme reçu.</span></div>";
         fb.hidden = false;
       }
-      RC.toast("Invitation envoyée", m.email + " · " + roleFr, "ok");
+      RC.toast("Invitation enregistrée", m.email + " · " + roleFr, "ok");
       newMemberId = m.userId;
       emailInput.value = "";
       RC.cacheClear("members");

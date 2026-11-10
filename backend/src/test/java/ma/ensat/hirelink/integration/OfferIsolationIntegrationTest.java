@@ -183,6 +183,54 @@ class OfferIsolationIntegrationTest {
         assertEquals(HttpStatus.FORBIDDEN, put.getStatusCode(), () -> "corps reçu : " + put.getBody());
     }
 
+    @Test
+    void leMenuTroisPointsSuitLeCycleDeVie() {
+        Equipe atlas = entreprise("Atlas Cycle");
+        Long id = publier(atlas, "Offre à faire vivre");
+
+        Map<String, Object> masquee = geste(atlas, id, "/unpublish", null);
+        assertEquals(false, masquee.get("published"));
+        Map<String, Object> republiee = geste(atlas, id, "/publish", null);
+        assertEquals(true, republiee.get("published"));
+        Map<String, Object> prolongee = geste(atlas, id, "/extend", Map.of("days", 14));
+        assertNotNull(prolongee.get("deadline"));
+        Map<String, Object> cloturee = geste(atlas, id, "/close", null);
+        assertNotNull(cloturee.get("closedAt"));
+        Map<String, Object> rouverte = geste(atlas, id, "/reopen", null);
+        assertEquals(null, rouverte.get("closedAt"));
+        Map<String, Object> archivee = geste(atlas, id, "/archive", null);
+        assertNotNull(archivee.get("archivedAt"));
+        Map<String, Object> restauree = geste(atlas, id, "/unarchive", null);
+        assertEquals(null, restauree.get("archivedAt"));
+
+        Map<String, Object> copie = geste(atlas, id, "/duplicate", null);
+        assertEquals(false, copie.get("published"));
+        Long copieId = ((Number) copie.get("id")).longValue();
+        assertEquals(atlas.orgId(), jobOfferRepository.findById(copieId).orElseThrow().getOrganization().getId());
+        ResponseEntity<Map> supprimee = http.exchange("/api/v1/offers/" + copieId, HttpMethod.DELETE, bearer(atlas), Map.class);
+        assertEquals(HttpStatus.OK, supprimee.getStatusCode(), () -> String.valueOf(supprimee.getBody()));
+
+        User candidate = atlasEquipeMember(atlas, "cand");
+        candidate.setRole(Role.CANDIDAT);
+        userRepository.save(candidate);
+        String candidateToken = jwtService.generate(candidate, sessionService.create(candidate, new ClientInfo("127.0.0.1", "itest")).session().getId().toString());
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(candidateToken);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        ResponseEntity<Map> candidature = http.exchange("/api/v1/applications", HttpMethod.POST,
+                new HttpEntity<>(Map.of("jobOfferId", id, "cvSource", "UPLOAD", "cvFileName", "cv.txt"), headers), Map.class);
+        assertEquals(HttpStatus.OK, candidature.getStatusCode(), () -> String.valueOf(candidature.getBody()));
+        ResponseEntity<String> bloquee = http.exchange("/api/v1/offers/" + id, HttpMethod.DELETE, bearer(atlas), String.class);
+        assertEquals(HttpStatus.CONFLICT, bloquee.getStatusCode(), () -> bloquee.getBody());
+    }
+
+    private Map<String, Object> geste(Equipe e, Long id, String path, Object body) {
+        ResponseEntity<Map> res = http.exchange("/api/v1/offers/" + id + path, HttpMethod.POST,
+                body == null ? bearer(e) : bearer(e, body), Map.class);
+        assertEquals(HttpStatus.OK, res.getStatusCode(), () -> path + " " + res.getBody());
+        return res.getBody();
+    }
+
     private User atlasEquipeMember(Equipe atlas, String prefix) {
         String graine = Long.toHexString(System.nanoTime());
         User u = new User();

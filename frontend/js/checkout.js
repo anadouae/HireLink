@@ -9,8 +9,10 @@
   const backFile = params.get("back") || "";
   const backHref = /^[\w.-]+\.html$/.test(backFile)
     ? "app/" + backFile
+    : session && session.role === "ADMINISTRATEUR" ? "app/admin.html"
     : session && session.role === "RECRUTEUR" ? "app/recruiter.html"
-    : session && session.role === "CANDIDAT" ? "app/candidate.html" : "index.html";
+    : session && session.role === "CANDIDAT" ? "app/candidate-dashboard.html"
+    : "index.html";
   document.getElementById("pay-back").href = backHref;
   document.getElementById("pay-done").href = backHref;
 

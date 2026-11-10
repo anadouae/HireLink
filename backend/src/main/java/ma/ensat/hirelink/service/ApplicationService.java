@@ -368,12 +368,18 @@ public class ApplicationService {
         }
         String reason = reasonRaw.trim();
         int split = reason.indexOf(':');
+        if ("REF06".equalsIgnoreCase(reason) || "OTHER".equalsIgnoreCase(reason)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Précisez le motif libre pour Autre.");
+        }
         if (split > 0 && (reason.regionMatches(true, 0, "OTHER:", 0, 6) || reason.regionMatches(true, 0, "REF06:", 0, 6))) {
             String note = reason.substring(split + 1).trim();
+            if (note.isBlank()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Précisez le motif libre pour Autre.");
+            }
             if (note.length() > 500) note = note.substring(0, 500);
             String code = reason.regionMatches(true, 0, "REF06:", 0, 6) ? "REF06" : "OTHER_CATALOG";
             app.setRefusalReasonCode(code);
-            app.setRejectionReason(note.isBlank() ? "Autre" : note);
+            app.setRejectionReason(note);
             return;
         }
         RefusalReason catalog = refusalReasonRepository.findByCode(reason)
