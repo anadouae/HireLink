@@ -2,6 +2,7 @@ package ma.ensat.hirelink.controller;
 
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.UserRepository;
+import ma.ensat.hirelink.service.CvSectionParser;
 import ma.ensat.hirelink.service.OcrService;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -53,7 +54,11 @@ public class OcrController {
             if (!applySkills) {
                 body.put("text", result.text());
             }
-            body.put("sections", ocrService.sections(result.text(), result.suggestedSkills()));
+            CvSectionParser.Parsed parsed = ocrService.analyze(result.text(), result.suggestedSkills(), result.textLayer(), result.note());
+            body.put("sections", parsed.sections());
+            body.put("experiences", parsed.experiences());
+            body.put("extractionNote", parsed.note());
+            body.put("textLayer", result.textLayer());
             body.put("skillsApplied", applySkills);
             return body;
         } catch (IllegalArgumentException e) {

@@ -24,7 +24,9 @@ public class OcrService {
             "power bi", "etl", "kafka", "redis", "graphql", "ci/cd"
     );
 
-    public record OcrResult(String text, List<String> suggestedSkills, String filename, int chars) {}
+    public record OcrResult(String text, List<String> suggestedSkills, String filename, int chars, boolean textLayer, String note) {}
+
+    private final CvSectionParser sectionParser = new CvSectionParser();
 
     public OcrResult extract(MultipartFile file) throws Exception {
         if (file == null || file.isEmpty()) {
@@ -42,86 +44,51 @@ public class OcrService {
         String name = raw.replaceAll("[^\\p{L}\\p{N}._ -]", "_");
         if (name.length() > 80) name = name.substring(name.length() - 80);
         String text;
+        boolean textLayer = true;
+        String note = null;
         if (kind == FileSignature.PDF) {
             text = extractPdf(data);
+            if (letterCount(text) < 20) {
+                textLayer = false;
+                note = "Ce PDF n'a pas de texte sélectionnable. Aucun moteur OCR n'est installé, donc aucune expérience n'a été déduite.";
+                text = note;
+            }
         } else if (kind == FileSignature.TEXT) {
             text = new String(data, StandardCharsets.UTF_8);
         } else {
-            text = "[Image reçue — la lecture automatique des images n'est pas installée. "
-                    + "Collez le texte du CV ou déposez un PDF / fichier texte.]\n"
-                    + "Fichier: " + name + " (" + file.getSize() + " octets)";
+            textLayer = false;
+            note = "Image reçue. Aucun moteur OCR n'est installé. Déposez un PDF textuel ou un fichier TXT.";
+            text = note;
         }
         text = text == null ? "" : text.replace('\u0000', ' ').trim();
-        List<String> skills = suggestSkills(text);
+        List<String> skills = textLayer ? suggestSkills(text) : List.of();
         String kept = text.length() > 12000 ? text.substring(0, 12000) : text;
-        return new OcrResult(kept, skills, name, text.length());
+        return new OcrResult(kept, skills, name, textLayer ? text.length() : 0, textLayer, note);
+    }
+
+    public CvSectionParser.Parsed analyze(String text, List<String> skills, boolean textLayer, String note) {
+        if (!textLayer) return new CvSectionParser.Parsed(emptySections(), List.of(), note);
+        CvSectionParser.Parsed parsed = sectionParser.parse(text, skills);
+        String merged = parsed.note() != null ? parsed.note() : note;
+        return new CvSectionParser.Parsed(parsed.sections(), parsed.experiences(), merged);
+    }
+
+    private static Map<String, String> emptySections() {
+        Map<String, String> out = new LinkedHashMap<>();
+        for (String key : List.of("identity", "experience", "education", "skills", "languages", "projects")) out.put(key, "");
+        return out;
+    }
+
+    private static int letterCount(String text) {
+        if (text == null) return 0;
+        int n = 0;
+        for (int i = 0; i < text.length(); i++) if (Character.isLetter(text.charAt(i))) n++;
+        return n;
     }
 
     /** Découpe un CV déjà lu en sections familières. Le candidat confirme avant enregistrement. */
     public Map<String, String> sections(String text, List<String> skills) {
-        String src = text == null ? "" : text.trim();
-        Map<String, Integer> marks = new LinkedHashMap<>();
-        marks.put("experience", indexOf(src, "(?i)(expériences?\\s+professionnelles?|expérience\\s+professionnelle|parcours\\s+professionnel|work\\s+experience)"));
-        marks.put("education", indexOf(src, "(?i)(formations?|études|education|diplômes?|scolarité)"));
-        marks.put("skills", indexOf(src, "(?i)(compétences|competences|skills|technologies|outils)"));
-        marks.put("languages", indexOf(src, "(?i)(langues?|languages)"));
-
-        List<Map.Entry<String, Integer>> found = marks.entrySet().stream()
-                .filter(e -> e.getValue() >= 0)
-                .sorted(Comparator.comparingInt(Map.Entry::getValue))
-                .toList();
-
-        Map<String, String> out = new LinkedHashMap<>();
-        int first = found.isEmpty() ? src.length() : found.get(0).getValue();
-        String identity = clip(src.substring(0, first));
-        String contacts = contacts(src);
-        if (!contacts.isBlank() && !identity.toLowerCase(Locale.ROOT).contains(contacts.toLowerCase(Locale.ROOT).substring(0, Math.min(12, contacts.length())))) {
-            identity = clip((identity + "\n" + contacts).trim());
-        }
-        out.put("identity", identity.isBlank() ? contacts : identity);
-
-        for (int i = 0; i < found.size(); i++) {
-            int start = found.get(i).getValue();
-            int end = i + 1 < found.size() ? found.get(i + 1).getValue() : src.length();
-            String body = src.substring(start, end);
-            body = body.replaceFirst("(?s)^[^\\n]{0,40}\\n?", "").trim();
-            out.put(found.get(i).getKey(), clip(body));
-        }
-        out.putIfAbsent("experience", "");
-        out.putIfAbsent("education", "");
-        String skillLine = skills == null ? "" : String.join(", ", skills);
-        if (out.getOrDefault("skills", "").isBlank()) out.put("skills", clip(skillLine));
-        if (out.getOrDefault("languages", "").isBlank()) out.put("languages", clip(knownLanguages(src)));
-        return out;
-    }
-
-    private int indexOf(String text, String regex) {
-        Matcher m = Pattern.compile(regex).matcher(text);
-        return m.find() ? m.start() : -1;
-    }
-
-    private String contacts(String text) {
-        List<String> bits = new ArrayList<>();
-        Matcher email = Pattern.compile("[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}", Pattern.CASE_INSENSITIVE).matcher(text);
-        if (email.find()) bits.add(email.group());
-        Matcher phone = Pattern.compile("(?:\\+212|0)[\\s.-]*[5-7](?:[\\s.-]*\\d){8}").matcher(text);
-        if (phone.find()) bits.add(phone.group().replaceAll("\\s+", " ").trim());
-        return String.join(" · ", bits);
-    }
-
-    private String knownLanguages(String text) {
-        String[] langs = {"Français", "Arabe", "Anglais", "Espagnol", "Amazigh", "Allemand"};
-        List<String> hit = new ArrayList<>();
-        for (String lang : langs) {
-            if (text.toLowerCase(Locale.ROOT).contains(lang.toLowerCase(Locale.ROOT))) hit.add(lang);
-        }
-        return String.join(", ", hit);
-    }
-
-    private String clip(String value) {
-        if (value == null) return "";
-        String clean = value.replace('\u0000', ' ').trim();
-        return clean.length() > 1500 ? clean.substring(0, 1500) : clean;
+        return sectionParser.parse(text, skills).sections();
     }
 
     private String extractPdf(byte[] bytes) throws Exception {

@@ -95,6 +95,7 @@ public class SecurityConfig {
                     }
                     auth.requestMatchers("/error").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/offers/public").permitAll()
+                            .requestMatchers(HttpMethod.GET, "/api/v1/external-offers").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/organizations/public").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/organizations/public/company").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/v1/notifications/stream").permitAll() // authentifié par ticket à usage unique
