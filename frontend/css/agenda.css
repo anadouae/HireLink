@@ -26,6 +26,8 @@ html[data-theme="dark"] .rc-content { --ag-visio: #e07a8e; --ag-onsite: #e2c98a;
 .ag-views button[aria-pressed="true"] { background: var(--surface); color: var(--burgundy); box-shadow: var(--shadow-sm), 0 0 0 1px var(--line); }
 html[data-theme="dark"] .ag-views button[aria-pressed="true"] { color: #f0b8c4; }
 .ag-filters { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; padding: .65rem 1.1rem; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.ag-filters--compact { padding: .45rem .9rem; gap: .4rem; }
+.ag-filters--compact .rc-select { min-width: 0; max-width: 11.5rem; }
 .ag-check { display: inline-flex; align-items: center; gap: .35rem; font-size: var(--text-xs); color: var(--ink-soft); cursor: pointer; }
 .ag-legend { margin-left: auto; display: flex; gap: .8rem; font-size: var(--text-xs); color: var(--ink-soft); }
 .ag-legend span { display: inline-flex; align-items: center; gap: .35rem; }

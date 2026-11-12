@@ -124,7 +124,7 @@
       root.append(
         h("div", { class: "iv-field is-wide" }, [h("span", { class: "iv-label", text: "Mode de l’entretien" }), types]),
         h("div", { class: "iv-grid" }, [
-          field("kind", "Nature de l’entretien", select("kind", KINDS)),
+          field("kind", "Type d’entretien", select("kind", KINDS)),
           field("duration", "Durée", select("duration", DURATIONS.map((d) => [String(d), d + " min"]))),
           field("date", "Date", input("date", "date", { min: global.HireLinkApp.localDate() })),
           field("time", "Heure", input("time", "time", { step: 300 })),

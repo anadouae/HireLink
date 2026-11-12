@@ -31,6 +31,21 @@
   let ownedOffersReady = false;
   const ACTIVE = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"]);
   const RENDERED = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"]);
+  const LIST_GROUPS = {
+    active: (a) => ACTIVE.has(a.status),
+    interview: (a) => a.status === "INTERVIEW",
+    hired: (a) => a.status === "HIRED",
+    rejected: (a) => a.status === "REJECTED",
+    withdrawn: (a) => a.status === "WITHDRAWN",
+    all: () => true,
+  };
+  const LIST_TONE = { SUBMITTED: "", SCREENING: "warn", SHORTLISTED: "info", INTERVIEW: "ok", OFFER: "ok", HIRED: "ok", REJECTED: "danger", WITHDRAWN: "" };
+  const urlBoot = new URLSearchParams(location.search);
+  let uiView = urlBoot.get("view") === "list" || urlBoot.get("layout") === "list" ? "list" : "kanban";
+  let listStatus = ["active", "interview", "hired", "rejected", "withdrawn", "all"].includes(urlBoot.get("status"))
+    ? urlBoot.get("status")
+    : (urlBoot.get("view") && LIST_GROUPS[urlBoot.get("view")] ? urlBoot.get("view") : "active");
+  if (LIST_GROUPS[urlBoot.get("view")]) uiView = "list";
 
   function selectedOfferId() {
     const v = (document.getElementById("pipe-offer") || {}).value || "all";
@@ -820,10 +835,98 @@
     });
   }
 
+  function applyViewChrome() {
+    const kanban = document.getElementById("kanban");
+    const listPanel = document.getElementById("pipe-list-panel");
+    const funnel = document.getElementById("funnel-strip");
+    const pipeChips = document.getElementById("pipe-chips");
+    const listChips = document.getElementById("list-chips");
+    const listSort = document.getElementById("list-sort");
+    const isList = uiView === "list";
+    if (kanban) kanban.classList.toggle("is-hidden", isList);
+    if (listPanel) listPanel.classList.toggle("is-hidden", !isList);
+    if (funnel) funnel.classList.toggle("is-hidden", isList);
+    if (pipeChips) pipeChips.classList.toggle("is-hidden", isList);
+    if (listChips) listChips.classList.toggle("is-hidden", !isList);
+    if (listSort) listSort.classList.toggle("is-hidden", !isList);
+    document.querySelectorAll("#pipe-view-seg [data-view]").forEach((b) => {
+      const on = b.getAttribute("data-view") === uiView;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+  }
+
+  function paintList(q) {
+    const scoped = appsForScope();
+    const chips = document.getElementById("list-chips");
+    if (chips) {
+      chips.querySelectorAll("button[data-v]").forEach((b) => {
+        const k = b.dataset.v;
+        b.classList.toggle("is-on", k === listStatus);
+        let em = b.querySelector("em");
+        if (!em) { em = document.createElement("em"); b.appendChild(em); }
+        em.textContent = String(scoped.filter(LIST_GROUPS[k] || LIST_GROUPS.all).length);
+      });
+    }
+    let list = scoped.filter(LIST_GROUPS[listStatus] || LIST_GROUPS.all);
+    list = HireLinkSearch.rank(list, q, [
+      { get: (a) => a.candidateName, weight: 3 }, { get: (a) => a.jobTitle, weight: 2 },
+      { get: (a) => a.candidateSkills, weight: 2 }, { get: (a) => a.candidateEmail, weight: 1 },
+    ]);
+    const sort = (document.getElementById("list-sort") || {}).value || "recent";
+    if (!q) {
+      list.sort((a, b) => {
+        if (sort === "match") {
+          if (a.matchScore == null && b.matchScore == null) return 0;
+          if (a.matchScore == null) return 1;
+          if (b.matchScore == null) return -1;
+          return b.matchScore - a.matchScore;
+        }
+        if (sort === "sla") return (a.slaRemainingDays == null ? 999 : a.slaRemainingDays) - (b.slaRemainingDays == null ? 999 : b.slaRemainingDays);
+        if (sort === "name") return String(a.candidateName || "").localeCompare(String(b.candidateName || ""), "fr");
+        return new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0);
+      });
+    }
+    const body = document.getElementById("pipe-list-body");
+    const totalEl = document.getElementById("kanban-total");
+    if (totalEl) totalEl.textContent = RC.plural(list.length, "candidature");
+    if (!body) return;
+    if (!list.length) {
+      body.innerHTML = '<tr><td colspan="7"></td></tr>';
+      const cell = body.firstChild.firstChild;
+      if (q) HireLinkSearch.emptyState(cell, q, { onClear: () => { const s = document.getElementById("rc-search"); if (s) s.value = ""; paint(); } });
+      else RC.empty(cell, allApps.length
+        ? { title: "Aucun dossier ne correspond", text: "Changez de filtre ou d’offre." }
+        : { title: "Aucune candidature reçue", text: "Les dossiers apparaîtront ici dès qu’un candidat postule." });
+      return;
+    }
+    body.innerHTML = list.map((a) => {
+      const sla = a.slaRemainingDays;
+      const late = a.slaBreached || (sla != null && sla < 0);
+      const open = ACTIVE.has(a.status);
+      const slaCell = !open ? "—" : late ? '<span class="rc-pill rc-pill--danger">En retard</span>' : sla == null ? "—" : '<span class="rc-pill' + (sla <= 2 ? " rc-pill--warn" : "") + '">' + (sla === 0 ? "Dernier jour" : sla + " j") + "</span>";
+      const m = a.matchScore != null ? Math.round(a.matchScore) : null;
+      return '<tr class="rc-fade"><td><div class="rc-person"><div class="rc-avatar">' + esc(RC.initials(a.candidateName)) + '</div><div><span class="rc-cell-main">' + esc(a.candidateName) +
+        '</span><span class="rc-cell-sub">' + esc(a.candidateEmail || "") + "</span></div></div></td><td>" + esc(a.jobTitle || "—") +
+        '</td><td><span class="rc-pill' + (LIST_TONE[a.status] ? " rc-pill--" + LIST_TONE[a.status] : "") + '">' + esc(RC.STATUS_FR[a.status] || a.status) + "</span></td><td>" +
+        (m != null ? '<span class="badge ' + (m >= 80 ? "badge-ok" : m >= 55 ? "badge-info" : "badge-rose") + '">' + m + " %</span>" : "Non disponible") +
+        "</td><td>" + slaCell + "</td><td>" + RC.fmtDate(a.submittedAt) +
+        '</td><td><div class="rc-row-actions"><button type="button" class="btn btn-soft btn-sm" data-open-app="' + a.id + '">Voir le dossier</button></div></td></tr>';
+    }).join("");
+    body.querySelectorAll("[data-open-app]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const app = allApps.find((x) => String(x.id) === String(btn.getAttribute("data-open-app")));
+        if (app) openDossier(app);
+      });
+    });
+    HireLinkSearch.mark(body, q);
+  }
+
   function paint() {
     // « loaded » et non « allApps.length » : un recruteur sans aucun dossier doit quand même
     // voir l'offre qu'il a filtrée dans l'URL et dans la puce de contexte.
     if (loaded || allApps.length) { syncPipeUrl(); paintCtxChip(); }
+    applyViewChrome();
     const root = document.getElementById("kanban");
     const filter = (document.getElementById("pipe-filter") || {}).value || "all";
     const scope = appsForScope().filter((a) => RENDERED.has(a.status));
@@ -866,6 +969,10 @@
     const offerSel = document.getElementById("pipe-offer");
     if (offerSel) offerSel.classList.toggle("is-filtered", offerSel.value !== "all");
     refreshFunnel();
+    if (uiView === "list") {
+      paintList(q);
+      return;
+    }
     root.innerHTML = "";
     COLUMNS.forEach((col) => {
       const cards = filtered
@@ -967,6 +1074,14 @@
     const oid = selectedOfferId();
     if (oid != null && !Number.isNaN(oid)) u.searchParams.set("offer", oid); else u.searchParams.delete("offer");
     u.searchParams.delete("offerId");
+    if (uiView === "list") {
+      u.searchParams.set("view", "list");
+      if (listStatus && listStatus !== "active") u.searchParams.set("status", listStatus);
+      else u.searchParams.delete("status");
+    } else {
+      if (u.searchParams.get("view") === "list") u.searchParams.delete("view");
+      u.searchParams.delete("status");
+    }
     const f = (document.getElementById("pipe-filter") || {}).value || "all";
     if (f !== "all") u.searchParams.set("view", f); else u.searchParams.delete("view");
     history.replaceState(history.state, "", u.pathname + u.search + u.hash);
@@ -1095,5 +1210,30 @@
   if (offerFilt) offerFilt.addEventListener("change", paint);
   const viewParam = params.get("view");
   if (viewParam && filt && Array.from(filt.options).some((o) => o.value === viewParam)) filt.value = viewParam;
+  const viewSeg = document.getElementById("pipe-view-seg");
+  if (viewSeg) {
+    viewSeg.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-view]");
+      if (!btn) return;
+      uiView = btn.getAttribute("data-view") === "list" ? "list" : "kanban";
+      paint();
+    });
+  }
+  const listChips = document.getElementById("list-chips");
+  if (listChips) {
+    listChips.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-v]");
+      if (!btn) return;
+      listStatus = btn.dataset.v;
+      paint();
+    });
+  }
+  const listSort = document.getElementById("list-sort");
+  if (listSort) listSort.addEventListener("change", paint);
+  if (params.get("q")) {
+    const search = document.getElementById("rc-search");
+    if (search) search.value = params.get("q");
+  }
+  applyViewChrome();
   load();
 })();

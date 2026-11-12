@@ -37,6 +37,7 @@
   let groupBy = ["date", "kind", "offer"].includes(qp.get("group")) ? qp.get("group") : "date";
   let mode = ["VISIO", "ONSITE"].includes(qp.get("type")) ? qp.get("type") : "all";
   let offerFilter = qp.get("offer") || null;
+  let period = ["7", "30", "past", "all"].includes(qp.get("period")) ? qp.get("period") : "all";
   if (["upcoming", "todo", "past"].includes(qp.get("tab"))) tab = qp.get("tab");
   const ico = (n) => (global.HLIcons ? HLIcons.svg(n) : "");
   const initials = (n) => String(n || "?").split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0].toUpperCase()).join("");
@@ -111,8 +112,32 @@
   function syncUrl() {
     const u = new URL(location.href);
     const set = (k, v, def) => (v && v !== def ? u.searchParams.set(k, v) : u.searchParams.delete(k));
-    set("tab", tab, "upcoming"); set("group", groupBy, "date"); set("type", mode, "all"); set("offer", offerFilter, null);
+    set("tab", tab, "upcoming"); set("group", groupBy, "date"); set("type", mode, "all"); set("offer", offerFilter, null); set("period", period, "all");
     history.replaceState(history.state, "", u.pathname + u.search + u.hash);
+  }
+
+  function rebuildOfferFilter() {
+    const sel = $("iv-offer");
+    if (!sel) return;
+    const map = new Map();
+    apps.forEach((a) => {
+      if (a.jobOfferId != null && a.interviewAt) map.set(String(a.jobOfferId), a.jobTitle || "Offre #" + a.jobOfferId);
+    });
+    const prev = offerFilter || "all";
+    sel.innerHTML = '<option value="all">Toutes les offres</option>' +
+      Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1], "fr"))
+        .map(([id, t]) => '<option value="' + id + '">' + RC.esc(t) + "</option>").join("");
+    sel.value = map.has(String(prev)) ? String(prev) : "all";
+  }
+
+  function inPeriod(a) {
+    if (period === "all") return true;
+    const t = new Date(a.interviewAt).getTime();
+    const now = Date.now();
+    if (period === "past") return t < now;
+    if (period === "7") return t >= now && t <= now + 7 * 86400000;
+    if (period === "30") return t >= now && t <= now + 30 * 86400000;
+    return true;
   }
 
   $("iv-toolbar").addEventListener("click", (e) => {
@@ -122,14 +147,28 @@
     else return;
     paint();
   });
+  const ivOffer = $("iv-offer");
+  if (ivOffer) ivOffer.addEventListener("change", () => {
+    offerFilter = ivOffer.value === "all" ? null : ivOffer.value;
+    paint();
+  });
+  const ivPeriod = $("iv-period");
+  if (ivPeriod) {
+    ivPeriod.value = period;
+    ivPeriod.addEventListener("change", () => { period = ivPeriod.value || "all"; paint(); });
+  }
 
   function paint() {
     if (!loaded) return;
     syncUrl(); chips();
     $("iv-toolbar").querySelectorAll("button[data-g]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.g === groupBy)));
     $("iv-toolbar").querySelectorAll("button[data-m]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.m === mode)));
+    if (ivOffer) ivOffer.value = offerFilter || "all";
+    if (ivPeriod) ivPeriod.value = period;
     const g0 = groups();
-    const keep = (a) => (mode === "all" || (mode === "ONSITE") === (a.interviewType === "ONSITE")) && (!offerFilter || String(a.jobOfferId) === String(offerFilter));
+    const keep = (a) => (mode === "all" || (mode === "ONSITE") === (a.interviewType === "ONSITE"))
+      && (!offerFilter || String(a.jobOfferId) === String(offerFilter))
+      && inPeriod(a);
     const g = { upcoming: g0.upcoming.filter(keep), todo: g0.todo.filter(keep), past: g0.past.filter(keep) };
     $("iv-tabs").querySelectorAll("button").forEach((b) => {
       b.classList.toggle("is-on", b.dataset.t === tab);
@@ -207,6 +246,7 @@
     RC.data.pipeline(
       (a) => {
         apps = a || [];
+        rebuildOfferFilter();
         loaded = true;
         paint();
       },

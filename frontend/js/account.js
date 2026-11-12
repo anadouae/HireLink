@@ -27,14 +27,16 @@
   }
 
   async function load() {
-    const p = await HireLinkAPI.api("/account/profile");
+    const [p, rows] = await Promise.all([
+      HireLinkAPI.api("/account/profile"),
+      HireLinkAPI.api("/account/logins"),
+    ]);
     $("acc-first").value = p.firstName || "";
     $("acc-last").value = p.lastName || "";
     $("acc-email").value = p.email || "";
     originalEmail = p.email || "";
     $("acc-fallback").textContent = ((p.firstName || "A").charAt(0) + (p.lastName || "")).slice(0, 2);
     paintPhoto();
-    const rows = await HireLinkAPI.api("/account/logins");
     $("acc-logins").innerHTML = rows.length
       ? rows.map((r) => "<tr><td>" + r.at + "</td><td>" + r.result + "</td><td>" + (r.ip || "—") + "</td></tr>").join("")
       : '<tr><td colspan="3">Aucune connexion enregistrée pour ce compte.</td></tr>';

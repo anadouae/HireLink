@@ -501,19 +501,11 @@
     }
   }
 
-  function paintStats(list) {
-    const now = Date.now();
-    const t0 = startOfDay(new Date()).getTime();
-    const live = list.filter((e) => !e.cancelled);
-    const today = live.filter((e) => e.start.getTime() >= t0 && e.start.getTime() < t0 + DAY).length;
-    const week = live.filter((e) => e.start.getTime() >= now && e.start.getTime() < now + 7 * DAY).length;
-    const next = live.find((e) => e.end.getTime() >= now);
-    $("ag-stats").innerHTML =
-      stat(today, "aujourd’hui") + stat(week, "sur 7 jours") +
-      '<div class="ag-stat is-next"><span>Prochain</span><strong>' +
-      (next ? esc(next.a.candidateName || "Candidat") + " · " + esc(cap(fmt(next.start, { weekday: "short", day: "numeric" }))) + " " + hhmm(next.start) : "—") + "</strong></div>";
+  function paintStats() {
+    /* Stats secondaires retirées : le calendrier a la priorité visuelle. */
+    const el = $("ag-stats");
+    if (el) { el.hidden = true; el.innerHTML = ""; }
   }
-  const stat = (n, l) => '<div class="ag-stat"><strong>' + n + "</strong><span>" + l + "</span></div>";
 
   /* ------------------------------------------------------------ mois */
   function renderMonth(stage, list) {

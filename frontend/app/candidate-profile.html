@@ -31,11 +31,17 @@
         <div class="page-title">
           <div>
             <p class="eyebrow">Profil</p>
-            <h1>Mon profil</h1>
-            <p class="muted">Le score utilise les compétences confirmées, puis le niveau, le contrat et le lieu. Le CV n’est pas obligatoire pour ce score. Un PDF image ou une photo n’est pas lu automatiquement : saisissez les compétences.</p>
+            <h1>Profil &amp; CV</h1>
+            <p class="muted">Deux espaces distincts : vos informations de recherche, puis votre CV. L’extraction lit le texte PDF ; une image ou un PDF scanné n’ajoute pas de compétences automatiquement. Le DOCX n’est pas accepté.</p>
           </div>
         </div>
 
+        <div class="rc-seg profile-view-seg" role="tablist" aria-label="Vue Profil ou CV" id="profile-view-seg">
+          <button type="button" class="rc-seg-btn is-on" data-profile-view="profile" aria-selected="true">Mon profil</button>
+          <button type="button" class="rc-seg-btn" data-profile-view="cv" aria-selected="false">Mon CV</button>
+        </div>
+
+        <div id="view-profile">
         <section class="panel">
           <div class="panel-body profile-hero" id="profile-identity">
             <div>
@@ -104,13 +110,15 @@
             </div>
           </div>
         </form>
+        </div>
 
+        <div id="view-cv" class="is-hidden">
         <section class="cv-board" id="cv-section">
           <div class="cv-preview-col">
             <header class="cv-col-head">
               <div>
-                <h2>Prévisualisation CV</h2>
-                <p class="muted">Visualisez et gérez votre CV</p>
+                <h2>Espace CV</h2>
+                <p class="muted">Importer, prévisualiser, remplacer. L’analyse affiche clairement ce qui est extrait du texte et ce qui reste incertain.</p>
               </div>
             </header>
             <div class="cv-toolbar">
@@ -133,7 +141,7 @@
               <label class="btn btn-primary">Upload CV
                 <input type="file" id="cv-file" accept=".pdf,.txt,.md,image/*" hidden />
               </label>
-              <span id="cv-file-label" class="muted">PDF texte, TXT ou image. Le DOCX n’est pas accepté. Une image ou un PDF scanné n’extrait pas de compétences.</span>
+              <span id="cv-file-label" class="muted">Formats : PDF (couche texte), TXT, image (aperçu seulement). Pas de DOCX. Pas d’OCR automatique sur image ou PDF scanné.</span>
             </div>
             <details class="cv-edit">
               <summary>Sections lues — à confirmer</summary>
@@ -162,7 +170,7 @@
                 <strong id="cv-score">—</strong>
               </div>
               <div class="score-track" aria-hidden="true"><span id="cv-score-bar"></span></div>
-              <p class="cv-score-legend" id="cv-score-legend">Le score lit les sections du CV (identité, expériences, formation, compétences, langues). Il ne remplace pas un recruteur.</p>
+              <p class="cv-score-legend" id="cv-score-legend">Score indicatif basé sur les sections confirmées (identité, expériences, formation, compétences, langues). Ce n’est pas une extraction certifiée ni une décision de recrutement.</p>
             </div>
             <h3>Éléments à améliorer</h3>
             <p class="muted" id="cv-analysis-lead">Erreurs et manques lus dans les sections du CV.</p>
@@ -178,6 +186,7 @@
             </form>
           </aside>
         </section>
+        </div>
       
       </main>
     </div>

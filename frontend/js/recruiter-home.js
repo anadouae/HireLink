@@ -108,7 +108,7 @@
     const total = counts.reduce((a, b) => a + b, 0);
     $("chart-bars").innerHTML = keys.map((k, i) => {
       const reached = counts.slice(i).reduce((a, b) => a + b, 0), prev = i ? counts.slice(i - 1).reduce((a, b) => a + b, 0) : 0;
-      return '<a class="db-stage" href="' + (k === "HIRED" ? "recruiter-candidates.html?view=hired" : "recruiter-pipeline.html?focus=stage:" + (k === "OFFER" || k === "HIRED" ? "INTERVIEW" : k)) + '">' +
+      return '<a class="db-stage" href="' + (k === "HIRED" ? "recruiter-pipeline.html?view=list&status=hired" : "recruiter-pipeline.html?focus=stage:" + (k === "OFFER" || k === "HIRED" ? "INTERVIEW" : k)) + '">' +
         "<small>" + labels[i] + "</small><b>" + counts[i] + '</b><span class="db-stage-bar"><i style="--w:' + Math.max(4, Math.round((counts[i] / max) * 100)) + '%"></i></span>' +
         // Le pourcentage porte sur TOUS les dossiers, sinon « 55 % » se lirait comme une part du total alors
         // qu'il ne s'agit que de l'étape précédente.
@@ -128,10 +128,10 @@
     const week = apps.filter((a) => isLive(a) && new Date(a.interviewAt) >= start && new Date(a.interviewAt) < end).length;
     const hired30 = apps.filter((a) => a.status === "HIRED" && a.updatedAt && Date.now() - new Date(a.updatedAt) < 30 * 864e5).length;
     const k = [
-      { t: "Candidatures actives", v: active.length, s: "Tous postes confondus", h: "recruiter-candidates.html?view=active" },
+      { t: "Candidatures actives", v: active.length, s: "Tous postes confondus", h: "recruiter-pipeline.html?view=list&status=active" },
       { t: "Entretiens cette semaine", v: week, s: "Du lundi au dimanche", h: "recruiter-agenda.html?view=week&date=" + ymd(now) },
       { t: "Délais de réponse tenus", v: slaPct + " %", s: watched.length - onTime ? (watched.length - onTime) + " en retard" : "Aucun retard", h: "recruiter-pipeline.html?view=breached" },
-      { t: "Embauches (30 jours)", v: hired30, s: "Dossiers finalisés", h: "recruiter-candidates.html?view=hired" },
+      { t: "Embauches (30 jours)", v: hired30, s: "Dossiers finalisés", h: "recruiter-pipeline.html?view=list&status=hired" },
     ];
     if (RC.canManage()) k.splice(1, 0, { t: "Offres en ligne", v: offers.filter(RC.isLiveOffer).length, s: RC.plural(offers.length, "offre") + " au total", h: "recruiter-offers.html" });
     $("db-kpis").innerHTML = k.map((x) => '<a class="db-kpi" href="' + x.h + '"><small>' + esc(x.t) + "</small><b>" + esc(String(x.v)) + "</b><span>" + esc(x.s) + "</span></a>").join("");

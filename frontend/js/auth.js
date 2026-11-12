@@ -19,6 +19,9 @@
   ];
   let phoneDial = "212";
   let phoneCountryName = "Maroc";
+  const LEGAL_DRAFT = { termsVersion: "cgu:2026-11-12", privacyVersion: "privacy:2026-11-12" };
+  let legalVersions = Object.assign({}, LEGAL_DRAFT);
+  const CONSENT_STORE = "hirelink.auth.draft";
 
   const pill = document.getElementById("tabs-pill");
   const pipe = document.getElementById("pipe-steps");
@@ -227,11 +230,100 @@
     if (profileStep !== "role") paintProfile();
   }
 
+  function persistAuthDraft() {
+    try {
+      const draft = {
+        email: (document.getElementById("email") || {}).value || pendingEmail || "",
+        role,
+        acceptTerms: !!(document.getElementById("accept-terms") || {}).checked
+          || !!(document.getElementById("accept-terms-profile") || {}).checked,
+        acceptPrivacy: !!(document.getElementById("accept-privacy") || {}).checked
+          || !!(document.getElementById("accept-privacy-profile") || {}).checked,
+        termsVersion: legalVersions.termsVersion,
+        privacyVersion: legalVersions.privacyVersion,
+      };
+      sessionStorage.setItem(CONSENT_STORE, JSON.stringify(draft));
+    } catch (_) { /* ignore quota */ }
+  }
+
+  function restoreAuthDraft() {
+    try {
+      const raw = sessionStorage.getItem(CONSENT_STORE);
+      if (!raw) return;
+      const draft = JSON.parse(raw);
+      if (draft.email && document.getElementById("email") && !document.getElementById("email").value) {
+        document.getElementById("email").value = draft.email;
+      }
+      ["accept-terms", "accept-terms-profile"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = !!draft.acceptTerms;
+      });
+      ["accept-privacy", "accept-privacy-profile"].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = !!draft.acceptPrivacy;
+      });
+    } catch (_) { /* ignore */ }
+  }
+
+  function consentPayload(requireChecked) {
+    const termsOk = !!(document.getElementById("accept-terms") || {}).checked
+      || !!(document.getElementById("accept-terms-profile") || {}).checked;
+    const privacyOk = !!(document.getElementById("accept-privacy") || {}).checked
+      || !!(document.getElementById("accept-privacy-profile") || {}).checked;
+    if (requireChecked && (!termsOk || !privacyOk)) {
+      HireLink.toast("Accords requis", "Cochez les Conditions générales et la Politique de confidentialité.", "warn");
+      return null;
+    }
+    if (!termsOk || !privacyOk) return null;
+    return {
+      acceptTermsVersion: legalVersions.termsVersion,
+      acceptPrivacyVersion: legalVersions.privacyVersion,
+    };
+  }
+
+  function wireConsentUi() {
+    document.querySelectorAll(".auth-consent").forEach((row) => {
+      const link = row.querySelector("a[data-legal]");
+      if (link) {
+        link.addEventListener("click", () => persistAuthDraft());
+        link.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") persistAuthDraft();
+        });
+      }
+      const toggleTip = () => {
+        const open = row.classList.contains("is-open");
+        document.querySelectorAll(".auth-consent.is-open").forEach((r) => r.classList.remove("is-open"));
+        if (!open) row.classList.add("is-open");
+      };
+      row.addEventListener("click", (e) => {
+        if (e.target.closest("a") || e.target.closest("input")) return;
+        if (window.matchMedia("(hover: none)").matches) toggleTip();
+      });
+      row.addEventListener("focusin", () => row.classList.add("is-open"));
+    });
+    ["accept-terms", "accept-privacy", "accept-terms-profile", "accept-privacy-profile"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("change", persistAuthDraft);
+    });
+  }
+
+  async function loadLegalVersions() {
+    try {
+      const cfg = await HireLinkAPI.api("/auth/legal");
+      if (cfg && cfg.termsVersion) legalVersions.termsVersion = cfg.termsVersion;
+      if (cfg && cfg.privacyVersion) legalVersions.privacyVersion = cfg.privacyVersion;
+    } catch (_) {
+      legalVersions = Object.assign({}, LEGAL_DRAFT);
+    }
+  }
+
   function applyMode() {
     const isReg = mode === "register";
     document.getElementById("tab-register").classList.toggle("is-active", isReg);
     document.getElementById("tab-login").classList.toggle("is-active", !isReg);
     if (pill) pill.classList.toggle("is-login", !isReg);
+    const consents = document.getElementById("reg-consents");
+    if (consents) consents.hidden = !isReg;
     if (isReg) {
       title.textContent = "Créer un compte";
       sub.textContent = "Avec Google, ou avec votre email puis un code.";
@@ -590,10 +682,12 @@
       HireLink.toast("Email requis", "Indiquez une adresse valide.", "warn");
       return;
     }
+    if (mode === "register" && !consentPayload(true)) return;
     pendingEmail = email;
     otpPurpose = "REGISTER";
     otpHostPanel = panels.email;
     viaGoogle = false;
+    persistAuthDraft();
     try {
       await sendOtp(email, "REGISTER");
       setPipe(2);
@@ -610,11 +704,17 @@
     e.preventDefault();
     const code = document.getElementById("otp").value.trim();
     try {
+      let body;
+      if (otpPurpose === "LOGIN") {
+        body = { email: pendingEmail, code };
+      } else {
+        const consents = consentPayload(true);
+        if (!consents) return;
+        body = Object.assign({ email: pendingEmail, code, role: "CANDIDAT" }, consents);
+      }
       const auth = await HireLinkAPI.api(otpPurpose === "LOGIN" ? "/auth/verify-login-otp" : "/auth/verify-register-otp", {
         method: "POST",
-        body: otpPurpose === "LOGIN"
-          ? { email: pendingEmail, code }
-          : { email: pendingEmail, code, role: "CANDIDAT" },
+        body,
       });
       afterAuth(auth);
     } catch (err) {
@@ -703,10 +803,12 @@
       return;
     }
     const localPhone = document.getElementById("reg-phone").value.replace(/\D/g, "").replace(/^0/, "");
+    const consents = consentPayload(true);
+    if (!consents) return;
     try {
       const auth = await HireLinkAPI.api("/auth/complete-profile", {
         method: "POST",
-        body: {
+        body: Object.assign({
           role,
           firstName,
           lastName,
@@ -720,8 +822,9 @@
           company: role === "RECRUTEUR" ? fieldValue("companyName") : null,
           contracts: role === "RECRUTEUR" ? selectedMissions().join(", ") : null,
           password: viaGoogle ? null : document.getElementById("reg-password").value,
-        },
+        }, consents),
       });
+      try { sessionStorage.removeItem(CONSENT_STORE); } catch (_) {}
       enterApp(auth);
     } catch (err) {
       HireLink.toast("Profil", err.message, "danger");
@@ -776,9 +879,15 @@
 
   async function finishGoogle(idToken, extra) {
     viaGoogle = true;
+    const body = Object.assign({ idToken: idToken || null, role: null }, extra || {});
+    if (mode === "register") {
+      const consents = consentPayload(true);
+      if (!consents) throw new Error("Cochez les accords avant de continuer avec Google.");
+      Object.assign(body, consents);
+    }
     const auth = await HireLinkAPI.api("/auth/google", {
       method: "POST",
-      body: Object.assign({ idToken: idToken || null, role: null }, extra || {}),
+      body,
     });
     afterAuth(auth);
   }
@@ -923,6 +1032,9 @@
   });
 
   selectRole(role);
+  wireConsentUi();
+  restoreAuthDraft();
+  loadLegalVersions();
   if (params.get("mode") === "reset" && params.get("token")) {
     mode = "login";
     document.getElementById("tab-login").classList.add("is-active");

@@ -74,11 +74,86 @@
   font-size: 0.92rem;
 }
 
+.legal-draft-banner {
+  margin: 0 0 1.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, #b45309 35%, var(--line));
+  background: color-mix(in srgb, #f59e0b 12%, var(--surface, #fff));
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
 .legal-block {
   margin-top: 1.5rem;
   padding: 1.25rem 1.35rem;
   background: var(--paper-2);
   border-radius: var(--radius);
+}
+
+/* Accords d’inscription (auth) */
+.auth-consents {
+  margin: 1rem 0 0.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface, #fff);
+  display: grid;
+  gap: 0.65rem;
+}
+.auth-consents h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+.auth-consent {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem 0.65rem;
+  align-items: start;
+}
+.auth-consent input {
+  margin-top: 0.2rem;
+}
+.auth-consent label {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.auth-consent a {
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.auth-consent-tip {
+  grid-column: 2;
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+  line-height: 1.35;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.2s ease, opacity 0.2s ease, margin 0.2s ease;
+}
+.auth-consent.is-open .auth-consent-tip,
+.auth-consent:focus-within .auth-consent-tip {
+  max-height: 6rem;
+  opacity: 1;
+  margin-top: -0.15rem;
+}
+@media (hover: hover) {
+  .auth-consent:hover .auth-consent-tip {
+    max-height: 6rem;
+    opacity: 1;
+    margin-top: -0.15rem;
+  }
+}
+.auth-consents-note {
+  margin: 0;
+  font-size: 0.78rem;
+  color: var(--ink-soft);
 }
 
 .legal-block h2 {

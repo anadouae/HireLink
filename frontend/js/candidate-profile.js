@@ -798,6 +798,30 @@
     });
   }
 
+  function setProfileView(view) {
+    const isCv = view === "cv";
+    const vp = document.getElementById("view-profile");
+    const vc = document.getElementById("view-cv");
+    if (vp) vp.classList.toggle("is-hidden", isCv);
+    if (vc) vc.classList.toggle("is-hidden", !isCv);
+    document.querySelectorAll("#profile-view-seg [data-profile-view]").forEach((b) => {
+      const on = b.getAttribute("data-profile-view") === view;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    try {
+      history.replaceState(null, "", isCv ? "#cv" : "#profil");
+    } catch (_) {}
+  }
+  const viewSeg = document.getElementById("profile-view-seg");
+  if (viewSeg) {
+    viewSeg.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-profile-view]");
+      if (btn) setProfileView(btn.getAttribute("data-profile-view"));
+    });
+  }
+  if (location.hash === "#cv") setProfileView("cv");
+
   bindDirty();
   setDirty(false);
   load();
