@@ -21,6 +21,7 @@
     <java.version>21</java.version>
     <jjwt.version>0.12.6</jjwt.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <buildDirectory>${project.basedir}/target</buildDirectory>
   </properties>
 
   <dependencies>
@@ -106,6 +107,7 @@
   </dependencies>
 
   <build>
+    <directory>${buildDirectory}</directory>
     <resources>
       <!-- Les secrets locaux (application-local.properties) restent sur le disque : ils ne doivent
            jamais être copiés dans target/classes ni embarqués dans le JAR. Le classpath ne les voit
