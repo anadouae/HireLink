@@ -120,7 +120,7 @@
       const place = HireLinkPlaces.placeLabel(o.location, o.companyCity);
       const score = o.matchScore != null ? '<span class="badge ' + (o.matchScore >= 60 ? "badge-ok" : "badge-info") + '">' + Math.round(o.matchScore) + " %</span>" : "";
       return '<div class="rc-item"><div class="rc-item-main"><strong>' + esc(o.title) + "</strong><span>" + '<a class="db-co-link" href="candidate-companies.html?name=' + encodeURIComponent(o.companyName || "") + '">' + esc(o.companyName || "Entreprise") + "</a>" + (place ? " · " + esc(place) : "") +
-        (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div>" + score + '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler</a></div>';
+        (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div>" + score + '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler sur HireLink</a></div>';
     }).join("");
     else $("reco-list").innerHTML = scoring
       ? '<div class="db-empty">' + ico("target") + "<strong>Aucune nouvelle offre</strong><span>De nouvelles offres sont publiées chaque semaine.</span></div>"

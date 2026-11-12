@@ -35,6 +35,7 @@
   }
 
   function cityOf(o) {
+    if (o.external) return o.location || "";
     return HireLinkPlaces.cityOf(o.location, o.companyCity) || "Lieu à préciser";
   }
 
@@ -51,7 +52,15 @@
   function filtered() {
     const city = document.getElementById("q-city").value.trim();
     const contract = document.getElementById("q-contract").value;
+    const origin = (document.getElementById("q-origin") || {}).value || "";
+    const since = Number((document.getElementById("q-since") || {}).value || 0);
     const pool = offers.filter(function (o) {
+      if (origin === "external" && !o.external) return false;
+      if (origin === "hirelink" && o.external) return false;
+      if (since) {
+        const at = new Date(o.publishedAt || o.createdAt || "").getTime();
+        if (!at || Date.now() - at > since * 86400000) return false;
+      }
       if (city && HireLinkSearch.score(city, cityOf(o)) <= 0) return false;
       return !contract || String(o.contractType || "") === contract;
     });
@@ -69,8 +78,9 @@
     next.forEach(function (o) {
       root.appendChild(HireLinkOffer.card(o, {
         variant: "showcase",
-        footText: ago(o.createdAt),
-        href: function () { return "auth.html?mode=login"; },
+        badge: o.external ? "Offre externe" : "Offre HireLink",
+        footText: o.external ? "Postuler sur le site d'origine" : ("Postuler sur HireLink" + (ago(o.createdAt) ? " · " + ago(o.createdAt) : "")),
+        href: function () { return o.external ? (o.applyUrl || o.originUrl) : "auth.html?mode=login"; },
       }));
     });
     shown += next.length;
@@ -96,7 +106,10 @@
       HireLinkSearch.emptyState(root, document.getElementById("q-text").value.trim(), {
         emptyTitle: "Aucune offre pour cette recherche",
         onClear: function () {
-          ["q-text", "q-city", "q-contract"].forEach(function (id) { document.getElementById(id).value = ""; });
+          ["q-text", "q-city", "q-contract", "q-origin", "q-since"].forEach(function (id) {
+            const el = document.getElementById(id);
+            if (el) el.value = "";
+          });
           paintOffers(filtered());
         },
       });
@@ -313,18 +326,24 @@
       timer = setTimeout(function () { paintOffers(filtered()); }, 200);
     });
   });
+  ["q-origin", "q-since", "q-contract"].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", function () { paintOffers(filtered()); });
+  });
   HireLinkPlaces.ready().then(function () { if (offers.length) paintOffers(filtered()); });
-  fetch(base + "/offers/public")
-    .then(function (r) {
-      if (!r.ok) throw new Error("offres");
-      return r.json();
-    })
-    .then(function (data) {
-      offers = (Array.isArray(data) ? data : []).sort(function (a, b) {
-        return String(b.createdAt || "").localeCompare(String(a.createdAt || ""));
+  function asList(value) { return Array.isArray(value) ? value : []; }
+  Promise.all([
+    fetch(base + "/offers/public").then(function (r) { if (!r.ok) throw new Error("offres"); return r.json(); }),
+    fetch(base + "/external-offers").then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
+  ])
+    .then(function (parts) {
+      const internal = asList(parts[0]).map(function (o) { o.external = false; return o; });
+      const external = asList(parts[1]).map(function (o) { o.external = true; return o; });
+      offers = internal.concat(external).sort(function (a, b) {
+        return String(b.publishedAt || b.createdAt || "").localeCompare(String(a.publishedAt || a.createdAt || ""));
       });
       const count = document.getElementById("offer-count");
-      if (count) count.textContent = offers.length ? String(offers.length) : "nos";
+      if (count) count.textContent = internal.length ? String(internal.length) : "nos";
       const cities = [];
       const contracts = Array.from(new Set(offers.map(function (o) { return o.contractType; }).filter(Boolean)));
       fillSelect("q-city", cities, "Lieu");

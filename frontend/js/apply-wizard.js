@@ -637,7 +637,7 @@
       overlay.innerHTML =
         '<div class="hl-apply-card" role="dialog" aria-modal="true">' +
         '<div class="hl-apply-top">' +
-        "<h2>Postuler</h2>" +
+        "<h2>Postuler sur HireLink</h2>" +
         '<p class="sub">' +
         esc(o.title) +
         "</p>" +

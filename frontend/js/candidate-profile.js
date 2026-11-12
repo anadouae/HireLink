@@ -195,22 +195,128 @@
     return value == null ? "" : String(value);
   }
 
-  function fillSections(sections) {
+  const EXP_KINDS = [
+    ["STAGE", "Stage"],
+    ["ALTERNANCE", "Alternance"],
+    ["EMPLOI", "Emploi"],
+    ["PROJET", "Projet académique"]
+  ];
+
+  function fillSections(sections, experiences, note) {
     document.getElementById("cv-identity").value = sectionValue(sections, "identity");
     document.getElementById("cv-experience").value = sectionValue(sections, "experience");
     document.getElementById("cv-education").value = sectionValue(sections, "education");
     document.getElementById("cv-skills-read").value = sectionValue(sections, "skills");
     document.getElementById("cv-languages").value = sectionValue(sections, "languages");
+    const projects = document.getElementById("cv-projects");
+    if (projects) projects.value = sectionValue(sections, "projects");
+    const rows = Array.isArray(experiences) ? experiences : (sections && Array.isArray(sections.experiences) ? sections.experiences : []);
+    renderExperiences(rows, note || (sections && sections.extractionNote) || "");
+    paintAnalysis();
+  }
+
+  function experienceSummary(rows) {
+    return rows.filter(function (row) { return row.kind !== "PROJET"; }).map(function (row) {
+      return [row.kind, row.title, row.organization, row.start ? (row.start + (row.end ? "–" + row.end : row.datesIncomplete ? " (dates incomplètes)" : "")) : ""]
+        .filter(Boolean).join(" · ");
+    }).join("\n");
+  }
+
+  function readExperienceRows() {
+    return Array.from(document.querySelectorAll("#cv-exp-list .cv-exp-row")).map(function (row) {
+      const value = function (name) { return (row.querySelector("[data-field='" + name + "']") || {}).value || ""; };
+      return {
+        title: value("title").trim(),
+        organization: value("organization").trim(),
+        kind: value("kind") || "EMPLOI",
+        start: value("start").trim(),
+        end: value("end").trim(),
+        datesIncomplete: !value("start").trim() || (!value("end").trim() && !/depuis|présent|present/i.test(value("start")))
+      };
+    }).filter(function (row) { return row.title || row.organization; });
+  }
+
+  function renderExperiences(rows, note) {
+    const list = document.getElementById("cv-exp-list");
+    const noteEl = document.getElementById("cv-exp-note");
+    if (!list) return;
+    list.innerHTML = "";
+    (rows || []).forEach(function (row) { list.appendChild(experienceRow(row)); });
+    if (noteEl) noteEl.textContent = note || "";
+    syncExperienceText();
+  }
+
+  function experienceRow(row) {
+    const box = document.createElement("div");
+    box.className = "cv-exp-row";
+    const field = function (name, label, value) {
+      const wrap = document.createElement("label");
+      wrap.textContent = label;
+      const input = document.createElement("input");
+      input.dataset.field = name;
+      input.value = value || "";
+      input.maxLength = 160;
+      input.addEventListener("input", syncExperienceText);
+      wrap.appendChild(input);
+      return wrap;
+    };
+    box.appendChild(field("title", "Poste", row.title));
+    box.appendChild(field("organization", "Entreprise", row.organization));
+    const kindWrap = document.createElement("label");
+    kindWrap.appendChild(document.createTextNode("Type"));
+    const kind = document.createElement("select");
+    kind.dataset.field = "kind";
+    EXP_KINDS.forEach(function (item) {
+      const option = document.createElement("option");
+      option.value = item[0];
+      option.textContent = item[1];
+      if (item[0] === (row.kind || "EMPLOI")) option.selected = true;
+      kind.appendChild(option);
+    });
+    kind.addEventListener("change", syncExperienceText);
+    kindWrap.appendChild(kind);
+    box.appendChild(kindWrap);
+    box.appendChild(field("start", "Début", row.start));
+    box.appendChild(field("end", "Fin", row.end));
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "btn btn-ghost btn-sm";
+    remove.textContent = "Retirer";
+    remove.addEventListener("click", function () { box.remove(); syncExperienceText(); });
+    box.appendChild(remove);
+    if (!row.organization) {
+      const warn = document.createElement("p");
+      warn.className = "muted cv-exp-warn";
+      warn.textContent = "Entreprise non lue : à compléter, ou à retirer si la détection est fausse.";
+      box.appendChild(warn);
+    } else if (row.datesIncomplete) {
+      const warn = document.createElement("p");
+      warn.className = "muted cv-exp-warn";
+      warn.textContent = "Dates incomplètes : rien n'a été inventé.";
+      box.appendChild(warn);
+    }
+    return box;
+  }
+
+  function syncExperienceText() {
+    const summary = experienceSummary(readExperienceRows());
+    const field = document.getElementById("cv-experience");
+    if (field && summary) field.value = summary;
     paintAnalysis();
   }
 
   function readSections() {
+    const experiences = readExperienceRows();
+    const summary = experienceSummary(experiences);
+    if (summary) document.getElementById("cv-experience").value = summary;
     return {
       identity: document.getElementById("cv-identity").value.trim(),
       experience: document.getElementById("cv-experience").value.trim(),
       education: document.getElementById("cv-education").value.trim(),
       skills: document.getElementById("cv-skills-read").value.trim(),
       languages: document.getElementById("cv-languages").value.trim(),
+      projects: (document.getElementById("cv-projects") || {}).value ? document.getElementById("cv-projects").value.trim() : "",
+      experiences: experiences
     };
   }
 
@@ -394,7 +500,7 @@
       document.getElementById("cv-workbench").hidden = false;
       document.getElementById("cv-empty").innerHTML = "";
       document.getElementById("cv-file-label").textContent = file.name + " · " + (data.chars || 0) + " caractères lus";
-      fillSections(data.sections || {});
+      fillSections(data.sections || {}, data.experiences || [], data.extractionNote || "");
       if (cvObjectUrl) URL.revokeObjectURL(cvObjectUrl);
       cvObjectUrl = URL.createObjectURL(file);
       const name = file.name.toLowerCase();
@@ -408,8 +514,16 @@
       }
       HireLink.toast("CV lu", "Relisez les sections ci-dessous, puis confirmez", "ok");
     } catch (err) {
+      document.getElementById("cv-file-label").textContent = file.name + " · " + err.message;
       HireLink.toast("Import CV", err.message, "danger");
     }
+  });
+
+  const addExperience = document.getElementById("cv-exp-add");
+  if (addExperience) addExperience.addEventListener("click", function () {
+    const list = document.getElementById("cv-exp-list");
+    if (list) list.appendChild(experienceRow({ kind: "EMPLOI", datesIncomplete: true }));
+    syncExperienceText();
   });
 
   document.getElementById("cv-sections").addEventListener("submit", async (e) => {
@@ -559,7 +673,8 @@
       legend.innerHTML =
         "<strong>Comment le score est calculé</strong>" +
         "Identité " + parts.identity + "/15 · Expériences " + parts.experience + "/25 · Formation " + parts.education + "/20 · " +
-        "Compétences " + parts.skills + "/25 · Langues " + parts.languages + "/15.<br/>" +
+        "Compétences " + parts.skills + "/25 · Langues " + parts.languages + "/15. " +
+        "Ce score mesure la lecture du CV, pas la correspondance avec une offre.<br/>" +
         (score < 55
           ? "Niveau C : complétez les sections Expériences et Formation dans « Voir le détail », puis confirmez. La synthèse lit ces textes."
           : score < 80

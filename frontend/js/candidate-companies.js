@@ -160,7 +160,7 @@
         esc(o.title) + "</strong><span>" + esc(HireLinkPlaces.cityOf(o.location, o.companyCity)) +
         (o.contractType ? " · " + esc(o.contractType) : "") + "</span></div>" + score +
         '<a class="btn btn-soft btn-sm" href="candidate.html?offer=' + encodeURIComponent(o.id) + '">Voir</a>' +
-        '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler</a></div>';
+        '<a class="btn btn-primary btn-sm" href="candidate.html?apply=' + encodeURIComponent(o.id) + '">Postuler sur HireLink</a></div>';
     }).join("");
     const since = followSince(selected);
     // Fiche sans identifiant d'organisation (offre d'un recruteur sorti de son equipe) : rien a suivre cote serveur.

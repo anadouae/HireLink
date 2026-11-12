@@ -5,11 +5,12 @@
   if (!session) return;
 
   const esc = App.esc;
-  const VIEWS = ["dash", "orgs", "users", "moderation", "offers", "plans", "audit", "emails"];
+  const VIEWS = ["dash", "orgs", "users", "moderation", "offers", "external", "plans", "audit", "emails"];
   /** Un seul fichier pour huit vues : l'onglet doit dire laquelle est ouverte, sinon les captures ne correspondent à rien. */
   const VIEW_TITLE = {
     dash: "Tableau de bord", orgs: "Entreprises", users: "Comptes", moderation: "Modération", offers: "Offres",
     plans: "Plans & factures", audit: "Journal d’audit", emails: "Journal des e-mails",
+    external: "Sources externes",
   };
   const STATUS_FR = App.STATUS_FR;
   const PAY_FR = { NON_PAYEE: "Non payée", PAYEE: "Payée", ANNULEE: "Annulée", AVOIR: "Avoir historique", EMISE: "Non payée", REGLEE: "Payée", OFFERTE: "Payée" };
@@ -47,6 +48,7 @@
     App.setActive(view);
     if (view === "audit") loadAudit();
     if (view === "emails") loadEmails();
+    if (view === "external") loadExternal();
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", () => show((location.hash || "").slice(1)));
@@ -680,6 +682,63 @@
       HireLink.openModal({ title: mail.subject, bodyHtml: '<div id="mail-slot"></div>', confirmLabel: "Fermer", hideCancel: true, large: true,
         onReady: (api) => api.root.querySelector("#mail-slot").appendChild(frame) });
     } catch (err) { fail("E-mail", err); }
+  });
+
+  async function loadExternal() {
+    const box = $("ext-status");
+    const body = $("ext-body");
+    if (!box || !body) return;
+    try {
+      const data = await HireLinkAPI.api("/admin/external-offers/status");
+      const last = data.last;
+      box.replaceChildren();
+      const p = document.createElement("p");
+      p.textContent = (data.enabled ? "Import activé. " : "Import désactivé : aucune requête automatique. ")
+        + "Annonces visibles : " + (data.availableCount || 0) + ". Masquées par l'administration : " + (data.hiddenCount || 0) + ". "
+        + (last ? "Dernière synchronisation : " + last.message + " Créées " + last.created + ", mises à jour " + last.updated + ", retirées après sept jours d'absence " + last.withdrawn + "." : "Aucune synchronisation enregistrée.");
+      box.appendChild(p);
+      body.replaceChildren();
+      const rows = data.offers || [];
+      if (!rows.length) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 4;
+        td.textContent = "Aucune annonce externe visible.";
+        tr.appendChild(td);
+        body.appendChild(tr);
+      }
+      rows.forEach((o) => {
+        const tr = document.createElement("tr");
+        [o.title, o.companyName, o.sourceLabel].forEach((text) => {
+          const td = document.createElement("td");
+          td.textContent = text || "";
+          tr.appendChild(td);
+        });
+        const td = document.createElement("td");
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn btn-ghost btn-sm";
+        btn.textContent = "Masquer";
+        btn.addEventListener("click", async () => {
+          try {
+            await HireLinkAPI.api("/admin/external-offers/" + encodeURIComponent(o.id) + "/hide", { method: "POST" });
+            loadExternal();
+          } catch (err) { fail("Masquage", err); }
+        });
+        td.appendChild(btn);
+        tr.appendChild(td);
+        body.appendChild(tr);
+      });
+    } catch (err) { fail("Sources externes", err); }
+  }
+  const extRefresh = $("ext-refresh");
+  const extSync = $("ext-sync");
+  if (extRefresh) extRefresh.addEventListener("click", loadExternal);
+  if (extSync) extSync.addEventListener("click", async () => {
+    try {
+      await HireLinkAPI.api("/external-offers/sync", { method: "POST" });
+      loadExternal();
+    } catch (err) { fail("Synchronisation", err); }
   });
 
   /* ------------------------------------------------------------------ données */

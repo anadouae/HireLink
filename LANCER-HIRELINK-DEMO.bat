@@ -24,6 +24,8 @@ if errorlevel 1 (
     if exist "%USERPROFILE%\apache-maven\bin\mvn.cmd" set "PATH=%USERPROFILE%\apache-maven\bin;%PATH%"
 )
 
+if "%HIRELINK_PORT%"=="" set "HIRELINK_PORT=8081"
+
 java -version >nul 2>&1
 if errorlevel 1 (
     echo ERREUR : Java 21 ou plus introuvable.
@@ -37,5 +39,24 @@ if errorlevel 1 (
     exit /b 1
 )
 
+call :port_occupe %HIRELINK_PORT%
+if not errorlevel 1 (
+    echo ERREUR : le port %HIRELINK_PORT% repond deja.
+    echo Aucun processus n'a ete arrete et aucune configuration n'a ete modifiee.
+    if /I not "%HIRELINK_CHECK_ONLY%"=="1" pause
+    exit /b 2
+)
+
+if /I "%HIRELINK_CHECK_ONLY%"=="1" (
+    echo Verification terminee : Java, Maven et le port %HIRELINK_PORT% sont prets. Aucun service n'est demarre.
+    exit /b 0
+)
+
 cd /d "%~dp0backend"
 call mvn.cmd -B spring-boot:run -Dspring-boot.run.jvmArguments="-Dspring.mail.host= -Dhirelink.otp.log-to-console=false"
+exit /b %ERRORLEVEL%
+
+:port_occupe
+powershell -NoProfile -Command "try { $c = New-Object System.Net.Sockets.TcpClient; $c.ReceiveTimeout = 1500; $c.SendTimeout = 1500; $c.Connect('127.0.0.1', %1); $c.Close(); exit 0 } catch { exit 1 }"
+if errorlevel 1 exit /b 1
+exit /b 0

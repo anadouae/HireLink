@@ -231,6 +231,7 @@
 .offer-card--showcase:hover .offer-card__reveal,
 .offer-card--showcase:focus-within .offer-card__reveal { opacity: 1; transform: none; }
 
+.offer-card__source { display: block; padding: 0 1rem .85rem; font-size: .78rem; }
 .offer-card__foot {
   display: flex;
   align-items: center;

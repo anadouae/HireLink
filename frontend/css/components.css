@@ -224,6 +224,14 @@ html:not([data-theme="dark"]) .topbar {
 }
 .cv-stage .cv-doc-view { min-height: 480px; background: var(--surface, #fff); }
 .cv-stage.is-text { min-height: 0; background: transparent; }
+.cv-exp-list { display: grid; gap: .55rem; margin: .4rem 0 .7rem; }
+.cv-exp-row { display: grid; grid-template-columns: 1.2fr 1fr .8fr .7fr .7fr auto; gap: .4rem; align-items: end; }
+.cv-exp-row label { display: flex; flex-direction: column; gap: .15rem; font-size: var(--text-2xs, .75rem); }
+.cv-exp-row input, .cv-exp-row select { width: 100%; min-height: 2.2rem; }
+.cv-exp-warn { grid-column: 1 / -1; margin: 0; }
+@media (max-width: 800px) {
+  .cv-exp-row { grid-template-columns: 1fr 1fr; }
+}
 .cv-stage.is-text .ocr-preview {
   min-height: 220px;
   max-height: 520px;
