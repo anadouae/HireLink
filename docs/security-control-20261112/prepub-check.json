@@ -1,0 +1,21 @@
+{
+  "pass": 3,
+  "fail": 0,
+  "results": [
+    {
+      "id": "API-offer-158-absent",
+      "status": "PASS",
+      "note": "absente du public"
+    },
+    {
+      "id": "UI-orphan-offer-158",
+      "status": "PASS",
+      "note": "Offre indisponible Cette offre n’est plus publiée ou a été retirée. La notification reste dans votre historique ; choisissez une autre offre dans la liste. Voir les offres disponibles"
+    },
+    {
+      "id": "UI-checkout-vat-disclaimer",
+      "status": "PASS",
+      "note": "Montant catalogue 299,00 MAD TVA non configurée — Total affiché (simulation) 299,00 MAD | La TVA n’est pas configurée sur le serveur : ce total n’est pas un TTC fiscal définitif. Aucun paiement réel n’est effectué."
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "mode": "DEMO_READ",
+  "api": "http://127.0.0.1:8081",
+  "web": "http://127.0.0.1:5500",
+  "total": 1382,
+  "PASS": 1374,
+  "FAIL": 0,
+  "BLOCKED": 2,
+  "NOT_TESTED": 6,
+  "consoleErrors": [
+    "DEMO_READ console:Failed to load resource: the server responded with a status of 403 ()",
+    "DEMO_READ console:[GSI_LOGGER]: The given origin is not allowed for the given client ID.",
+    "DEMO_READ console:Failed to load resource: the server responded with a status of 400 ()"
+  ],
+  "networkErrors": [],
+  "generatedAt": "2026-11-12T10:08:32.972Z",
+  "writeAudit": {
+    "mode": "ISO_WRITE",
+    "total": 22,
+    "PASS": 22,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "NOT_TESTED": 0,
+    "errors": [],
+    "generatedAt": "2026-11-12T10:12:34.060Z"
+  }
+}

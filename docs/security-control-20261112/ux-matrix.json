@@ -1,0 +1,16 @@
+{
+  "pass": 29,
+  "fail": 0,
+  "blocked": 0,
+  "environment": {
+    "db": "hirelink_ux_check",
+    "api": 8093,
+    "frontend": 5513,
+    "demoUntouched": { "api": 8081, "frontend": 5500, "db": "hirelink" }
+  },
+  "notes": [
+    "S05 verified via isolated verify-register-otp + LegalConsentServiceTest 3/3",
+    "Checkout amounts showed dashes on screenshot; simulation UI PASS",
+    "No commit/push; no restore of offer 158; no DROP of legal_acceptances"
+  ]
+}

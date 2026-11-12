@@ -1,0 +1,234 @@
+{
+  "summary": {
+    "mode": "ISO_WRITE",
+    "total": 22,
+    "PASS": 22,
+    "FAIL": 0,
+    "BLOCKED": 0,
+    "NOT_TESTED": 0,
+    "errors": [],
+    "generatedAt": "2026-11-12T10:12:34.060Z"
+  },
+  "matrix": [
+    {
+      "role": "recruteur",
+      "page": "auth",
+      "element": "login",
+      "action": "connexion ISO",
+      "expected": "dashboard",
+      "observed": "http://127.0.0.1:5512/app/recruiter.html",
+      "status": "PASS",
+      "proof": "shots-write/001-rec-login.png"
+    },
+    {
+      "role": "recruteur",
+      "page": "offres",
+      "element": "page",
+      "action": "chargement",
+      "expected": "liste offres",
+      "observed": "Offres — HireLink",
+      "status": "PASS",
+      "proof": "shots-write/002-rec-offers.png"
+    },
+    {
+      "role": "recruteur",
+      "page": "API/UI",
+      "element": "POST /offers",
+      "action": "cr�ation",
+      "expected": "201/200",
+      "observed": "HTTP 200 id=54",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "recruteur",
+      "page": "API/UI",
+      "element": "publish",
+      "action": "publication",
+      "expected": "200",
+      "observed": "HTTP 200",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "recruteur",
+      "page": "offres",
+      "element": "liste",
+      "action": "voir offre cr��e",
+      "expected": "titre visible",
+      "observed": "visible",
+      "status": "PASS",
+      "proof": "shots-write/003-rec-offer-created.png"
+    },
+    {
+      "role": "candidat",
+      "page": "auth",
+      "element": "login ISO",
+      "action": "connexion",
+      "expected": "ok",
+      "observed": "http://127.0.0.1:5512/app/candidate-dashboard.html",
+      "status": "PASS",
+      "proof": "shots-write/004-cand-login.png"
+    },
+    {
+      "role": "candidat",
+      "page": "settings",
+      "element": "form profil",
+      "action": "affichage",
+      "expected": "champs visibles",
+      "observed": "ok",
+      "status": "PASS",
+      "proof": "shots-write/005-cand-settings.png"
+    },
+    {
+      "role": "candidat",
+      "page": "CV",
+      "element": "POST /me/cv",
+      "action": "upload",
+      "expected": "200",
+      "observed": "HTTP 200",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "candidat",
+      "page": "candidature",
+      "element": "POST apply",
+      "action": "soumission",
+      "expected": "200/201",
+      "observed": "HTTP 200",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "candidat",
+      "page": "candidature",
+      "element": "doublon",
+      "action": "garde RM01",
+      "expected": "409",
+      "observed": "HTTP 409",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "candidat",
+      "page": "candidatures",
+      "element": "liste",
+      "action": "suivi",
+      "expected": "candidature visible",
+      "observed": "ok",
+      "status": "PASS",
+      "proof": "shots-write/006-cand-apps.png"
+    },
+    {
+      "role": "recruteur",
+      "page": "pipeline",
+      "element": "transition",
+      "action": "SCREENING->SHORTLISTED",
+      "expected": "200",
+      "observed": "HTTP 200",
+      "status": "PASS",
+      "proof": "shots-write/007-rec-pipe.png"
+    },
+    {
+      "role": "recruteur",
+      "page": "entretiens",
+      "element": "planifier VISIO/HR",
+      "action": "convocation",
+      "expected": "200",
+      "observed": "HTTP 200",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "recruteur",
+      "page": "entretiens",
+      "element": "page",
+      "action": "affichage",
+      "expected": "onglets entretiens",
+      "observed": "ok",
+      "status": "PASS",
+      "proof": "shots-write/008-rec-iv.png"
+    },
+    {
+      "role": "admin",
+      "page": "external",
+      "element": "sources",
+      "action": "Remote OK off",
+      "expected": "d�sactiv�",
+      "observed": "HireLink\nVue d’ensemble\nComptes\nEntreprises\nOffres\nSources externes\nSignalements",
+      "status": "PASS",
+      "proof": "shots-write/009-adm-ext.png"
+    },
+    {
+      "role": "admin",
+      "page": "mod�ration",
+      "element": "suspend",
+      "action": "suspendre offre",
+      "expected": "200",
+      "observed": "HTTP 200",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "admin",
+      "page": "mod�ration",
+      "element": "restore",
+      "action": "r�tablir",
+      "expected": "200",
+      "observed": "HTTP 200",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "s�curit�",
+      "page": "admin",
+      "element": "acc�s candidat",
+      "action": "interdit",
+      "expected": "403",
+      "observed": "HTTP 403",
+      "status": "PASS",
+      "proof": ""
+    },
+    {
+      "role": "recruteur",
+      "page": "pipeline-desktop",
+      "element": "viewport",
+      "action": "responsive",
+      "expected": "pas de d�bordement critique",
+      "observed": "overflow=false",
+      "status": "PASS",
+      "proof": "shots-write/010-vp-desktop.png"
+    },
+    {
+      "role": "recruteur",
+      "page": "pipeline-laptop",
+      "element": "viewport",
+      "action": "responsive",
+      "expected": "pas de d�bordement critique",
+      "observed": "overflow=false",
+      "status": "PASS",
+      "proof": "shots-write/011-vp-laptop.png"
+    },
+    {
+      "role": "recruteur",
+      "page": "pipeline-tablet",
+      "element": "viewport",
+      "action": "responsive",
+      "expected": "pas de d�bordement critique",
+      "observed": "overflow=false",
+      "status": "PASS",
+      "proof": "shots-write/012-vp-tablet.png"
+    },
+    {
+      "role": "recruteur",
+      "page": "pipeline-mobile",
+      "element": "viewport",
+      "action": "responsive",
+      "expected": "pas de d�bordement critique",
+      "observed": "overflow=false",
+      "status": "PASS",
+      "proof": "shots-write/013-vp-mobile.png"
+    }
+  ]
+}

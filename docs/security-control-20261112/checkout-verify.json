@@ -1,0 +1,56 @@
+{
+  "pass": 10,
+  "fail": 0,
+  "results": [
+    {
+      "id": "Q-rec-month",
+      "status": "PASS",
+      "note": "HTTP 200 Premium month HT=299 TVA=n/c TTC=299"
+    },
+    {
+      "id": "Q-rec-year",
+      "status": "PASS",
+      "note": "HTTP 200 Premium year HT=2990 TVA=n/c TTC=2990"
+    },
+    {
+      "id": "Q-cand-month",
+      "status": "PASS",
+      "note": "HTTP 200 Performance month HT=39 TVA=n/c TTC=39"
+    },
+    {
+      "id": "Q-cand-year",
+      "status": "PASS",
+      "note": "HTTP 200 Performance year HT=390 TVA=n/c TTC=390"
+    },
+    {
+      "id": "UI-rec-month",
+      "status": "PASS",
+      "note": "Premium HT=299,00 MAD TTC=299,00 MAD"
+    },
+    {
+      "id": "UI-rec-year",
+      "status": "PASS",
+      "note": "HT=2 990,00 MAD TTC=2 990,00 MAD"
+    },
+    {
+      "id": "UI-cand-month",
+      "status": "PASS",
+      "note": "Performance HT=39,00 MAD TTC=39,00 MAD methods=2 badge=Simulation"
+    },
+    {
+      "id": "UI-cand-year",
+      "status": "PASS",
+      "note": "TTC=390,00 MAD"
+    },
+    {
+      "id": "UX-pipeline",
+      "status": "PASS",
+      "note": "http://127.0.0.1:5513/app/recruiter-pipeline.html"
+    },
+    {
+      "id": "UX-assistant",
+      "status": "PASS",
+      "note": "assistant"
+    }
+  ]
+}
