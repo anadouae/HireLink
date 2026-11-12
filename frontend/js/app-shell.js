@@ -197,12 +197,11 @@
   var ROLES = {
     RECRUTEUR: {
       home: "recruiter.html", label: "Espace recruteur", plans: "recruiter-settings.html#plans", premiumKey: "recruiter",
-      search: "Rechercher un candidat, une offre…", searchGo: function (q) { return "recruiter-candidates.html?q=" + encodeURIComponent(q); },
+      search: "Rechercher un candidat, une offre…", searchGo: function (q) { return "recruiter-pipeline.html?view=list&q=" + encodeURIComponent(q); },
       nav: [
         { id: "dashboard", href: "recruiter.html", label: "Tableau de bord", icon: "home" },
         { id: "offers", href: "recruiter-offers.html", label: "Mes offres", icon: "briefcase", manage: true },
         { id: "pipeline", href: "recruiter-pipeline.html", label: "Candidatures", icon: "columns" },
-        { id: "candidates", href: "recruiter-candidates.html", label: "Candidats", icon: "users" },
         { id: "interviews", href: "recruiter-interviews.html", label: "Entretiens", icon: "mic" },
         { id: "agenda", href: "recruiter-agenda.html", label: "Agenda", icon: "calendar" },
         { id: "assistant", href: "recruiter-assistant.html", label: "Assistant IA", icon: "spark" },

@@ -71,7 +71,9 @@
 .iv-type-ico { transition: transform .25s cubic-bezier(.22,1,.36,1); }
 
 /* ---------- Page Entretiens (recruteur) : groupes colorés, aucune superposition ---------- */
-.iv-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin: .2rem 0 1rem; }
+.iv-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .6rem 1rem; margin: .2rem 0 1rem; }
+.iv-filter { display: grid; gap: .25rem; font-size: var(--text-2xs); color: var(--ink-faint); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; }
+.iv-filter > span { padding-left: .15rem; }
 .iv-seg { display: inline-flex; align-items: center; gap: .2rem; padding: .2rem; border: 1px solid var(--line, rgba(0,0,0,.08)); border-radius: 999px; background: var(--surface, #fff); }
 .iv-seg > span { font-size: var(--text-2xs); color: var(--ink-faint); padding: 0 .5rem 0 .6rem; }
 .iv-seg button { border: 0; background: transparent; padding: .35rem .8rem; border-radius: 999px; font: inherit; font-size: var(--text-xs); color: var(--ink-soft); cursor: pointer; transition: background .2s, color .2s; }

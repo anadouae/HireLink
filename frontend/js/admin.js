@@ -265,6 +265,7 @@
           (st.key === "suspended"
             ? '<button type="button" class="btn btn-primary btn-sm" data-mod="restore" data-id="' + o.id + '">Rétablir l’offre</button>'
             : '<button type="button" class="btn btn-soft btn-sm" data-mod="suspend" data-id="' + o.id + '">Suspendre l’offre</button>') +
+          '<button type="button" class="btn btn-ghost btn-sm" data-mod="detail" data-id="' + o.id + '">Voir les détails</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" data-mod="dismiss" data-id="' + o.id + '">' +
           (o.reports.length > 1 ? "Écarter les signalements" : "Écarter le signalement") + "</button>" +
           "</div></div>";
@@ -285,6 +286,10 @@
     const offer = (state.reports.queue || []).find((o) => o.id === id);
     if (!offer) return;
     try {
+      if (btn.dataset.mod === "detail") {
+        openOfferDetail(offer);
+        return;
+      }
       if (btn.dataset.mod === "suspend") {
         const reason = await Mascotte.confirm({
           title: "Suspendre cette offre ?",
@@ -349,10 +354,36 @@
         (o.quarantineReason ? ' title="' + esc(o.quarantineReason) + '"' : "") + ">" + esc(st.label) + "</span></td>" +
         "<td>" + o.applications + "</td>" +
         "<td>" + (o.reportCount ? '<a class="rc-pill rc-pill--warn" href="#moderation">' + o.reportCount + "</a>" : "—") + "</td>" +
-        '<td><div class="rc-row-actions">' + acts + "</div></td></tr>";
+        '<td><div class="rc-row-actions"><button type="button" class="btn btn-soft btn-sm" data-offer="detail" data-id="' + o.id + '">Voir les détails</button>' + acts + "</div></td></tr>";
     }).join("");
     HireLinkSearch.mark(body, q);
   }
+
+  function openOfferDetail(offer) {
+    if (!offer) return;
+    const st = App.offerState(offer);
+    const html =
+      '<dl class="admin-detail">' +
+      "<div><dt>Titre</dt><dd>" + esc(offer.title) + "</dd></div>" +
+      "<div><dt>Entreprise</dt><dd>" + esc(offer.organization || "compte individuel") + "</dd></div>" +
+      "<div><dt>Recruteur</dt><dd>" + esc(offer.recruiter || "—") + "</dd></div>" +
+      "<div><dt>Lieu</dt><dd>" + esc(offer.location || "—") + "</dd></div>" +
+      "<div><dt>État</dt><dd>" + esc(st.label) + "</dd></div>" +
+      "<div><dt>Candidatures</dt><dd>" + esc(String(offer.applications || 0)) + "</dd></div>" +
+      "<div><dt>Signalements</dt><dd>" + esc(String(offer.reportCount || 0)) + "</dd></div>" +
+      (offer.quarantineReason ? "<div><dt>Motif de suspension</dt><dd>" + esc(offer.quarantineReason) + "</dd></div>" : "") +
+      (offer.description ? "<div><dt>Description</dt><dd class='admin-detail-body'>" + esc(offer.description).replace(/\n/g, "<br/>") + "</dd></div>" : "") +
+      "</dl>";
+    HireLink.openModal({
+      title: "Détail de l’offre",
+      description: "Lecture seule avant décision de modération.",
+      bodyHtml: html,
+      confirmLabel: "Fermer",
+      hideCancel: true,
+      large: true,
+    });
+  }
+
   $("offers-body").addEventListener("click", async (e) => {
     const btn = e.target.closest("[data-offer]");
     const id = btn && Number(btn.dataset.id);
@@ -360,6 +391,10 @@
     const offer = state.offers.find((o) => o.id === id);
     if (!offer) return;
     try {
+      if (btn.dataset.offer === "detail") {
+        openOfferDetail(offer);
+        return;
+      }
       if (btn.dataset.offer === "suspend") {
         const reason = await Mascotte.confirm({
           title: "Suspendre cette offre ?",
@@ -691,12 +726,26 @@
     try {
       const data = await HireLinkAPI.api("/admin/external-offers/status");
       const last = data.last;
-      box.replaceChildren();
-      const p = document.createElement("p");
-      p.textContent = (data.enabled ? "Import activé. " : "Import désactivé : aucune requête automatique. ")
-        + "Annonces visibles : " + (data.availableCount || 0) + ". Masquées par l'administration : " + (data.hiddenCount || 0) + ". "
-        + (last ? "Dernière synchronisation : " + last.message + " Créées " + last.created + ", mises à jour " + last.updated + ", retirées après sept jours d'absence " + last.withdrawn + "." : "Aucune synchronisation enregistrée.");
-      box.appendChild(p);
+      const enabled = !!data.enabled;
+      box.innerHTML =
+        '<div class="ext-status-grid">' +
+        '<div><span class="rc-muted">Source</span><strong>Remote OK</strong></div>' +
+        '<div><span class="rc-muted">État</span><strong>' + (enabled ? "Activée" : "Désactivée") + "</strong></div>" +
+        '<div><span class="rc-muted">Offres importées visibles</span><strong>' + (data.availableCount || 0) + "</strong></div>" +
+        '<div><span class="rc-muted">Masquées</span><strong>' + (data.hiddenCount || 0) + "</strong></div>" +
+        '<div><span class="rc-muted">Dernière synchronisation</span><strong>' +
+        (last ? esc(App.fmtDateTime(last.finishedAt || last.startedAt || "")) + (last.message ? " · " + esc(last.message) : "") : "Jamais") +
+        "</strong></div>" +
+        (!enabled
+          ? '<p class="rc-muted" style="grid-column:1/-1;margin:0">La synchronisation est désactivée par configuration. « Actualiser l’affichage » recharge uniquement ce tableau ; elle n’importe pas de nouvelles offres.</p>'
+          : '<p class="rc-muted" style="grid-column:1/-1;margin:0">« Synchroniser les offres » interroge la source. « Actualiser l’affichage » recharge seulement l’état local.</p>') +
+        "</div>";
+      if (extSync) {
+        extSync.disabled = !enabled;
+        extSync.title = enabled ? "Importer / mettre à jour les offres externes" : "Import désactivé dans la configuration";
+        extSync.textContent = enabled ? "Synchroniser les offres" : "Synchronisation indisponible";
+      }
+      if (extRefresh) extRefresh.textContent = "Actualiser l’affichage";
       body.replaceChildren();
       const rows = data.offers || [];
       if (!rows.length) {
@@ -735,6 +784,10 @@
   const extSync = $("ext-sync");
   if (extRefresh) extRefresh.addEventListener("click", loadExternal);
   if (extSync) extSync.addEventListener("click", async () => {
+    if (extSync.disabled) {
+      App.toast("Sources externes", "La synchronisation est désactivée dans la configuration.", "warn");
+      return;
+    }
     try {
       await HireLinkAPI.api("/external-offers/sync", { method: "POST" });
       loadExternal();

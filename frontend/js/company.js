@@ -90,10 +90,19 @@
         pace.badge ? '<span class="co-signal" title="' + esc(pace.title) + '">' + esc(pace.label) + "</span>" : "",
       ].join("");
 
+      const actions = [];
       if (org.website && /^https?:\/\//i.test(org.website)) {
-        view.actions.innerHTML =
-          '<a class="btn btn-soft btn-sm" href="' + esc(org.website) + '" target="_blank" rel="noopener">Site web</a>';
+        actions.push('<a class="btn btn-soft btn-sm" href="' + esc(org.website) + '" target="_blank" rel="noopener">Site web</a>');
       }
+      if (org.id != null) {
+        if (candidate) {
+          actions.push('<button type="button" class="btn btn-primary btn-sm" id="co-follow">Suivre</button>');
+        } else if (!session) {
+          actions.push('<a class="btn btn-primary btn-sm" href="auth.html?mode=login&next=' +
+            encodeURIComponent("company.html?name=" + name) + '">Suivre</a>');
+        }
+      }
+      view.actions.innerHTML = actions.join(" ");
 
       view.about.textContent = !sheet.organization && !offers.length
         ? "Aucune entreprise ne porte ce nom sur HireLink."
@@ -110,15 +119,57 @@
           ? "Aucune offre publiée sous le nom « " + name + " »."
           : "Aucune entreprise ne correspond à cette adresse.";
         view.offers.appendChild(p);
-        return;
+      } else {
+        offers.forEach((o) =>
+          view.offers.appendChild(
+            HireLinkOffer.card(o, {
+              href: (x) => (candidate ? "app/candidate.html?apply=" + encodeURIComponent(x.id) : space || "auth.html?mode=login"),
+            })
+          )
+        );
       }
-      offers.forEach((o) =>
-        view.offers.appendChild(
-          HireLinkOffer.card(o, {
-            href: (x) => (candidate ? "app/candidate.html?apply=" + encodeURIComponent(x.id) : space || "auth.html?mode=login"),
-          })
-        )
-      );
+
+      const followBtn = document.getElementById("co-follow");
+      if (followBtn && org.id != null && window.HireLinkAPI) {
+        let following = false;
+        let busy = false;
+        function paintFollow() {
+          followBtn.textContent = following ? "Ne plus suivre" : "Suivre";
+          followBtn.className = "btn btn-sm " + (following ? "btn-soft" : "btn-primary");
+        }
+        HireLinkAPI.api("/follows").then((rows) => {
+          following = (rows || []).some((r) => String(r.organizationId || r.id) === String(org.id));
+          paintFollow();
+        }).catch(() => {});
+        followBtn.addEventListener("click", async () => {
+          if (busy) return;
+          busy = true;
+          followBtn.disabled = true;
+          try {
+            if (following) {
+              await HireLinkAPI.api("/follows/" + org.id, { method: "DELETE" });
+              following = false;
+              if (window.HireLink) HireLink.toast("Suivi retiré", org.name || name, "ok");
+            } else {
+              await HireLinkAPI.api("/follows/" + org.id, { method: "POST" });
+              following = true;
+              if (window.HireLink) {
+                HireLink.toast(
+                  "Entreprise suivie",
+                  "Vous serez notifié des nouvelles offres publiées par cette entreprise (notifications in-app).",
+                  "ok"
+                );
+              }
+            }
+            paintFollow();
+          } catch (err) {
+            if (window.HireLink) HireLink.toast("Suivi", err.message || "Échec", "danger");
+          } finally {
+            busy = false;
+            followBtn.disabled = false;
+          }
+        });
+      }
     })
     .catch(() => {
       view.sub.textContent = "Impossible de charger cette entreprise.";

@@ -1,247 +1,124 @@
-/** Assistant IA recruteur : grille d'entretien, brouillon de refus, synthèse de CV — crédits partagés. */
+/** Assistant IA recruteur : synthèse structurée de CV (grille d’entretien retirée de l’UI ; API conservée). */
 (function () {
   const RC = HireLinkApp;
   const session = RC.mount({ active: "assistant", title: "Assistant IA" });
   if (!session) return;
   const $ = (id) => document.getElementById(id);
   const esc = RC.esc;
-  let offers = [];
   let apps = [];
 
-  function paintCredits(c) {
-    if (!c) return;
-    $("ai-credits").textContent = c.remaining + " / " + c.limit;
-    $("ai-plan").textContent =
-      "Formule " + (c.planLabel || (c.plan === "PREMIUM" ? "Premium" : "Accès")) +
-      (c.monthlyMad ? " · " + c.monthlyMad + " MAD / mois" : " · incluse dans votre formule") +
-      " · " + c.costPerAction + " crédit par action réussie";
-    $("ai-meter").style.width = Math.max(0, Math.min(100, Math.round((c.remaining / Math.max(1, c.limit)) * 100))) + "%";
-  }
-  function loadCredits() {
-    return HireLinkAPI.api("/ai/credits").then(paintCredits).catch(() => {
-      $("ai-credits").textContent = "—";
-    });
+  function splitSkills(raw) {
+    return String(raw || "")
+      .split(/[,;|/·•\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((s, i, arr) => arr.findIndex((x) => x.toLowerCase() === s.toLowerCase()) === i)
+      .slice(0, 24);
   }
 
-  const TABS = ["kit", "cv"];
-  function openTab(t) {
-    document.querySelectorAll(".rc-tab").forEach((b) => b.classList.toggle("is-on", b.dataset.t === t));
-    TABS.forEach((x) => ($("pane-" + x).hidden = x !== t));
-    history.replaceState(null, "", "#" + t);
-  }
-  document.querySelector(".rc-tabs").addEventListener("click", (e) => {
-    const b = e.target.closest(".rc-tab");
-    if (b) openTab(b.dataset.t);
-  });
-
-  function normalizeKitQuestions(raw) {
-    if (!Array.isArray(raw)) return [];
-    return raw
-      .map((item, i) => {
-        if (item && typeof item === "object") {
-          return {
-            category: String(item.category || "Question " + (i + 1)).trim(),
-            question: String(item.question || item.text || "").trim(),
-            lookFor: String(item.lookFor || item.guide || item.answer || "").trim(),
-          };
-        }
-        const s = String(item || "").trim();
-        if (!s) return null;
-        const parts = s.split(/\s+[—–-]\s+/);
-        if (parts.length >= 2) {
-          return { category: parts[0].trim(), question: parts.slice(1).join(" — ").trim(), lookFor: "" };
-        }
-        return { category: "Question " + (i + 1), question: s, lookFor: "" };
-      })
-      .filter((q) => q && q.question);
-  }
-
-  function kitPlainText(items) {
-    return items
-      .map((q, i) => {
-        let t = i + 1 + ". [" + q.category + "] " + q.question;
-        if (q.lookFor) t += "\n   → Écouter : " + q.lookFor;
-        return t;
-      })
-      .join("\n\n");
-  }
-
-  function showKit(outId, data) {
-    const out = $(outId);
-    out.hidden = false;
-    out.classList.add("rc-fade");
-    const items = normalizeKitQuestions(data.questions);
-    if (!items.length) {
-      showPlain(outId, data);
-      return;
-    }
-    out.innerHTML =
-      '<div class="hl-kit-grid" role="list">' +
-      items
-        .map((q, i) => {
-          const tone = "tone-" + (i % 7);
-          const guide = q.lookFor
-            ? '<div class="hl-kit-answer" hidden><p class="hl-kit-hint-label">Ce qu’il faut écouter</p><p>' +
-              esc(q.lookFor) +
-              "</p></div>"
-            : "";
-          return (
-            '<button type="button" class="hl-kit-card ' +
-            tone +
-            '" role="listitem" aria-expanded="false">' +
-            '<div class="hl-kit-top"><span class="hl-kit-cat">' +
-            esc(q.category) +
-            '</span><span class="hl-kit-n">' +
-            (i + 1) +
-            " / " +
-            items.length +
-            "</span></div>" +
-            '<strong class="hl-kit-q">' +
-            esc(q.question) +
-            "</strong>" +
-            guide +
-            (q.lookFor ? '<span class="hl-kit-toggle">Voir le guide de réponse</span>' : "") +
-            "</button>"
-          );
-        })
-        .join("") +
+  function paintExtracted(app) {
+    const skills = splitSkills(app.candidateSkills);
+    const missing = [];
+    if (!skills.length) missing.push("Compétences non renseignées dans le dossier");
+    if (!(app.coverLetter || "").trim()) missing.push("Lettre de motivation absente");
+    if (!(app.cvFileName || "").trim()) missing.push("Fichier CV non attaché côté plateforme");
+    const match = app.matchScore != null ? Math.round(app.matchScore) : null;
+    $("cv-extracted").innerHTML =
+      '<div class="ai-cv-meta"><strong>' + esc(app.candidateName || "Candidat") + "</strong>" +
+      '<span class="rc-muted">' + esc(app.jobTitle || "Offre") +
+      (match != null ? " · correspondance actuelle " + match + " %" : " · correspondance non calculée") +
+      "</span></div>" +
+      '<div class="ai-cv-block"><h3>Compétences identifiées (dossier)</h3>' +
+      (skills.length
+        ? '<div class="ai-cv-badges">' + skills.map((s) => '<span class="ai-cv-badge">' + esc(s) + "</span>").join("") + "</div>"
+        : '<p class="rc-muted">Aucune compétence structurée dans ce dossier.</p>') +
       "</div>" +
-      '<div class="hl-kit-foot">' +
-      '<button type="button" class="btn btn-ghost btn-sm" id="kit-copy">Copier la grille</button>' +
-      '<span class="rc-muted" style="font-size: var(--text-xs)">' +
-      esc(data.note || "Cliquez une carte pour afficher le guide. À relire avant l’entretien.") +
+      '<div class="ai-cv-block"><h3>Lettre / texte joint</h3><p class="ai-cv-quote">' +
+      esc((app.coverLetter || "").trim() || "—") +
+      "</p></div>" +
+      '<div class="ai-cv-block"><h3>Informations manquantes ou incertaines</h3><ul class="ai-cv-miss">' +
+      (missing.length ? missing.map((m) => "<li>" + esc(m) + "</li>").join("") : "<li>Rien d’évident côté champs plateforme.</li>") +
+      '</ul><p class="rc-muted" style="font-size:var(--text-xs)">Expériences, formations et technologies détaillées ne sont affichées ici que si présentes dans le texte envoyé à la synthèse — elles ne sont pas inventées.</p></div>';
+  }
+
+  function showSummary(data) {
+    const out = $("cv-out");
+    out.innerHTML =
+      '<p class="ai-cv-label">Interprétation IA</p>' +
+      '<div class="ai-cv-summary">' + esc(data.content || "").replace(/\n/g, "<br/>") + "</div>" +
+      '<div class="hl-kit-foot"><button type="button" class="btn btn-ghost btn-sm" id="cv-copy">Copier</button>' +
+      '<span class="rc-muted" style="font-size:var(--text-xs)">' +
+      esc(data.note || "Proposition à relire — la décision reste humaine.") +
       (data.provider ? " · " + esc(data.provider) : "") +
       "</span></div>";
-
-    out.querySelectorAll(".hl-kit-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        const open = card.classList.toggle("is-open");
-        card.setAttribute("aria-expanded", open ? "true" : "false");
-        const ans = card.querySelector(".hl-kit-answer");
-        const tog = card.querySelector(".hl-kit-toggle");
-        if (ans) ans.hidden = !open;
-        if (tog) tog.textContent = open ? "Masquer le guide" : "Voir le guide de réponse";
-      });
-    });
-    const copyBtn = out.querySelector("#kit-copy");
-    if (copyBtn) {
-      copyBtn.onclick = (e) => {
-        e.stopPropagation();
-        navigator.clipboard.writeText(kitPlainText(items)).then(
-          () => RC.toast("Copié", "Grille copiée dans le presse-papiers", "ok"),
+    const copy = out.querySelector("#cv-copy");
+    if (copy) {
+      copy.onclick = () =>
+        navigator.clipboard.writeText(String(data.content || "").trim()).then(
+          () => RC.toast("Copié", "Synthèse copiée", "ok"),
           () => RC.toast("Copie impossible", "Sélectionnez le texte manuellement", "warn")
         );
-      };
     }
   }
 
-  function showPlain(outId, data) {
-    const out = $(outId);
-    out.hidden = false;
-    out.classList.add("rc-fade");
-    out.innerHTML = esc(data.content || "").replace(/\n/g, "<br/>");
-    const copy = document.createElement("div");
-    copy.className = "hl-kit-foot";
-    copy.innerHTML =
-      '<button type="button" class="btn btn-ghost btn-sm">Copier le texte</button> <span class="rc-muted" style="font-size: var(--text-xs)">' +
-      esc(data.note || "À relire avant utilisation — la décision reste humaine.") +
-      (data.provider ? " · source : " + esc(data.provider) : "") +
-      "</span>";
-    copy.querySelector("button").onclick = () =>
-      navigator.clipboard.writeText(String(data.content || "").trim()).then(
-        () => RC.toast("Copié", "Texte copié dans le presse-papiers", "ok"),
-        () => RC.toast("Copie impossible", "Sélectionnez le texte manuellement", "warn")
-      );
-    out.appendChild(copy);
+  function showBoard(show) {
+    $("cv-empty").classList.toggle("is-hidden", show);
+    $("cv-board").classList.toggle("is-hidden", !show);
   }
 
-  function show(outId, data) {
-    if (outId === "kit-out" && Array.isArray(data.questions) && data.questions.length) {
-      showKit(outId, data);
+  $("cv-app").addEventListener("change", () => {
+    const a = apps.find((x) => String(x.id) === $("cv-app").value);
+    if (!a) {
+      showBoard(false);
+      $("cv-out").innerHTML = "";
       return;
     }
-    showPlain(outId, data);
-  }
-
-  async function run(btn, outId, path, body) {
-    if (!HireLinkCredits.preflight()) return;
-    RC.busy(btn, true);
-    const out = $(outId);
-    out.hidden = false;
-    out.innerHTML = Mascotte.waiting("Réflexion en cours…");
-    try {
-      const data = await HireLinkAPI.api(path, { method: "POST", body, timeoutMs: 60000 });
-      show(outId, data);
-      loadCredits();
-      HireLinkCredits.spend();
-    } catch (err) {
-      out.hidden = true;
-      if (!HireLinkCredits.guard(err)) RC.toast("Assistant IA", err.message, "danger");
-    } finally {
-      RC.busy(btn, false);
-    }
-  }
-
-  $("kit-go").addEventListener("click", (e) => {
-    const o = offers.find((x) => String(x.id) === $("kit-offer").value);
-    const title = ($("kit-title").value || (o && o.title) || "").trim();
-    if (!title) {
-      RC.toast("Poste requis", "Choisissez une offre ou saisissez un intitulé.", "warn");
-      return;
-    }
-    run(e.currentTarget, "kit-out", "/ai/interview-kit", {
-      jobTitle: title,
-      skills: ($("kit-skills").value || (o && o.requiredSkills) || "").trim(),
-    });
-  });
-  $("kit-offer").addEventListener("change", () => {
-    const o = offers.find((x) => String(x.id) === $("kit-offer").value);
-    if (o) {
-      $("kit-title").value = o.title || "";
-      $("kit-skills").value = o.requiredSkills || "";
-    }
+    showBoard(true);
+    paintExtracted(a);
+    $("cv-out").innerHTML = '<p class="rc-muted" style="margin:0">Cliquez sur « Générer la synthèse » pour obtenir une lecture assistée.</p>';
   });
 
-  $("cv-go").addEventListener("click", (e) => {
+  $("cv-go").addEventListener("click", async (e) => {
     const a = apps.find((x) => String(x.id) === $("cv-app").value);
     if (!a) {
       RC.toast("Candidat requis", "Choisissez un dossier.", "warn");
       return;
     }
-    // Ni le nom ni l'e-mail du candidat ne partent au fournisseur : uniquement ses compétences et sa lettre.
-    const cvText = [a.candidateSkills, a.coverLetter, a.cvFileName].filter(Boolean).join("\n");
-    run(e.currentTarget, "cv-out", "/ai/cv-summary", { cvText });
+    if (!HireLinkCredits.preflight()) return;
+    showBoard(true);
+    paintExtracted(a);
+    const btn = e.currentTarget;
+    RC.busy(btn, true);
+    $("cv-out").innerHTML = Mascotte.waiting("Synthèse en cours…");
+    try {
+      const cvText = [a.candidateSkills, a.coverLetter, a.cvFileName].filter(Boolean).join("\n");
+      const data = await HireLinkAPI.api("/ai/cv-summary", { method: "POST", body: { cvText }, timeoutMs: 60000 });
+      showSummary(data);
+      HireLinkCredits.spend();
+    } catch (err) {
+      $("cv-out").innerHTML = '<p class="rc-muted">Impossible de générer la synthèse.</p>';
+      if (!HireLinkCredits.guard(err)) RC.toast("Assistant IA", err.message, "danger");
+    } finally {
+      RC.busy(btn, false);
+    }
   });
 
   function fillSelects() {
-    const opts = offers.map((o) => '<option value="' + o.id + '">' + esc(o.title) + "</option>").join("");
-    $("kit-offer").innerHTML = '<option value="">— Saisie libre —</option>' + opts;
     $("cv-app").innerHTML =
       '<option value="">— Choisir un dossier —</option>' +
       apps.map((a) => '<option value="' + a.id + '">' + esc(a.candidateName) + " — " + esc(a.jobTitle || "") + "</option>").join("");
     const pre = new URLSearchParams(location.search).get("app");
     if (pre && apps.some((a) => String(a.id) === pre)) {
       $("cv-app").value = pre;
-      openTab("cv");
+      $("cv-app").dispatchEvent(new Event("change"));
     }
   }
 
-  /** swr() ne prévient personne sans second callback : sans option, le select doit dire pourquoi. */
-  function selectUnavailable(id, err) {
-    const s = document.getElementById(id);
-    if (s) s.innerHTML = '<option value="">Indisponible — ' + esc(err.message) + "</option>";
-  }
-
-  RC.data.offers((o) => {
-    offers = o || [];
-    fillSelects();
-  }, (err) => selectUnavailable("kit-offer", err));
   RC.data.pipeline((a) => {
     apps = a || [];
     fillSelects();
-  }, (err) => selectUnavailable("cv-app", err));
-  loadCredits();
+  }, (err) => {
+    $("cv-app").innerHTML = '<option value="">Indisponible — ' + esc(err.message) + "</option>";
+  });
   HireLinkCredits.paintCosts();
-  const h = location.hash.slice(1);
-  if (TABS.includes(h)) openTab(h);
 })();

@@ -197,20 +197,71 @@
     $("filter-summary").textContent = list.length + " offre" + (list.length > 1 ? "s" : "") + (active ? " · " + active + " filtre" + (active > 1 ? "s" : "") : "");
     offerList.replaceChildren();
     const detail = $("offer-detail");
+    const requestedId = selectedId;
     if (!list.length) {
       paintEmpty(query);
-      detail.replaceChildren();
-      const p = document.createElement("p");
-      p.className = "muted";
-      p.textContent = "Aucune offre à afficher.";
-      detail.appendChild(p);
+      if (requestedId != null && requestedId !== "") {
+        // Offre demandée absente et liste vide (ou filtrée) : message dédié, pas le placeholder HTML.
+        showMissingOffer(requestedId);
+      } else {
+        detail.replaceChildren();
+        const p = document.createElement("p");
+        p.className = "muted";
+        p.textContent = "Aucune offre à afficher.";
+        detail.appendChild(p);
+      }
       return;
     }
-    const current = list.find((o) => String(o.id) === String(selectedId)) || list[0];
+    const matched = requestedId != null && requestedId !== ""
+      ? list.find((o) => String(o.id) === String(requestedId))
+      : null;
+    if (requestedId != null && requestedId !== "" && !matched) {
+      // Lien notification / URL vers une offre absente (supprimée, dépubliée, etc.) : ne pas ouvrir une autre fiche en silence.
+      list.forEach((o) => offerList.appendChild(card(o, false)));
+      S.mark(offerList, query);
+      showMissingOffer(requestedId);
+      return;
+    }
+    const current = matched || list[0];
     selectedId = current.id;
     list.forEach((o) => offerList.appendChild(card(o, o.id === current.id)));
     S.mark(offerList, query);
     showDetail(current);
+  }
+
+  function showMissingOffer(id) {
+    const detail = $("offer-detail");
+    detail.replaceChildren();
+    const head = document.createElement("div");
+    head.className = "detail-head";
+    const h2 = document.createElement("h2");
+    h2.textContent = "Offre indisponible";
+    const p = document.createElement("p");
+    p.className = "muted";
+    p.textContent =
+      "Cette offre n’est plus publiée ou a été retirée. La notification reste dans votre historique ; choisissez une autre offre dans la liste.";
+    head.append(h2, p);
+    const actions = document.createElement("div");
+    actions.className = "row";
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "btn btn-soft";
+    clear.textContent = "Voir les offres disponibles";
+    clear.addEventListener("click", () => {
+      selectedId = null;
+      try {
+        const u = new URL(location.href);
+        u.searchParams.delete("offer");
+        history.replaceState(null, "", u.pathname + (u.search || ""));
+      } catch (_) {}
+      render();
+    });
+    actions.appendChild(clear);
+    detail.append(head, actions);
+    if (!showMissingOffer._told) {
+      showMissingOffer._told = true;
+      HireLink.toast("Offre indisponible", "L’offre demandée n’est plus accessible.", "info");
+    }
   }
 
   function card(o, selected) {

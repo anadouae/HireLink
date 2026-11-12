@@ -1617,8 +1617,10 @@
   overflow: hidden;
   box-shadow: 0 12px 32px rgba(26, 18, 20, 0.06);
 }
-.co-cover { height: 96px; background: linear-gradient(120deg, #7a2032, #c45a3a 55%, #e2c98a); }
-.co-id { display: grid; grid-template-columns: auto 1fr auto; gap: 0 1rem; align-items: end; padding: 0 1.25rem 1rem; }
+.co-cover { height: 140px; background: linear-gradient(125deg, #1f2933 0%, #7a2032 48%, #c45a3a 78%, #e2c98a 100%); }
+.co-profile { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--surface, #fff); box-shadow: var(--shadow-sm); }
+.co-id { display: grid; grid-template-columns: auto 1fr auto; gap: 0 1rem; align-items: end; padding: 0 1.35rem 1.2rem; margin-top: -2.2rem; }
+.co-actions { display: flex; flex-wrap: wrap; gap: 0.45rem; justify-content: flex-end; }
 .co-logo {
   width: 64px; height: 64px; border-radius: 14px; align-self: end; margin-top: -34px; flex: none;
   background: #1a1214; color: #fff; display: grid; place-items: center;

@@ -7,44 +7,63 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Paiement — HireLink</title>
   <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/tokens.css?v=20261103a" />
-  <link rel="stylesheet" href="css/checkout.css?v=20261103a" />
+  <link rel="stylesheet" href="css/checkout.css?v=20261112b" />
   <link rel="stylesheet" href="css/public-dark.css?v=20261107b" />
   <link rel="stylesheet" href="css/premium.css?v=20261107b" />
   <link rel="stylesheet" href="css/mascotte.css?v=20261105i" />
 </head>
-<body>
+<body class="pay-body">
   <header class="pay-top">
     <a id="pay-back" href="index.html">← Retour</a>
-    <strong>HireLink</strong>
-    <span>Paiement simulé</span>
+    <strong class="pay-brand">HireLink</strong>
+    <span class="pay-sim-badge">Simulation</span>
   </header>
 
   <main class="pay-wrap">
     <section class="pay-summary" aria-label="Récapitulatif">
       <p class="pay-kicker">Abonnement</p>
-      <h1 id="pay-plan">Premium</h1>
-      <p class="pay-sub" id="pay-sub">—</p>
+      <h1 id="pay-plan">—</h1>
+      <p class="pay-sub" id="pay-sub">Chargement du devis serveur…</p>
       <div class="pay-cycle" role="group" aria-label="Période">
         <button type="button" class="is-on" aria-pressed="true" data-cycle="month">Mensuel</button>
         <button type="button" data-cycle="year">Annuel · 2 mois offerts</button>
       </div>
       <ul class="pay-lines" id="pay-lines"></ul>
       <dl class="pay-totals">
-        <div><dt>Sous-total HT</dt><dd id="pay-ht">—</dd></div>
+        <div><dt>Montant catalogue</dt><dd id="pay-ht">—</dd></div>
         <div><dt id="pay-tva-label">TVA</dt><dd id="pay-tva">—</dd></div>
-        <div class="is-total"><dt>Total TTC</dt><dd id="pay-ttc">—</dd></div>
+        <div class="is-total"><dt>Total affiché (simulation)</dt><dd id="pay-ttc">—</dd></div>
       </dl>
-      <p class="pay-sim">Simulation. Aucune carte n’est débitée.</p>
+      <p class="pay-sim" id="pay-vat-note" hidden></p>
+      <p class="pay-sim">Paiement simulé à des fins pédagogiques. Aucune carte n’est débitée.</p>
     </section>
 
     <section class="pay-form-card" id="pay-panel">
       <div data-mascotte data-mascotte-pose="succes" data-mascotte-couronne="1"></div>
-      <h2>Paiement simulé</h2>
-      <p class="pay-sim">Mode démonstration — Aucun débit réel</p>
+      <h2>Paiement</h2>
+      <p class="pay-sim">Démonstration — moyens fictifs uniquement. Aucune donnée bancaire n’est collectée.</p>
       <form id="pay-form" novalidate>
-        <label>Scénario
+        <fieldset class="pay-methods" id="pay-methods">
+          <legend>Moyen de paiement</legend>
+          <button type="button" class="pay-method is-on" data-method="card" aria-pressed="true">
+            <span class="pay-method-icon pay-method-icon--card" aria-hidden="true"></span>
+            <span>
+              <strong>Carte de test</strong>
+              <small>Visa / Mastercard fictives</small>
+            </span>
+          </button>
+          <button type="button" class="pay-method" data-method="transfer" aria-pressed="false">
+            <span class="pay-method-icon pay-method-icon--bank" aria-hidden="true"></span>
+            <span>
+              <strong>Virement simulé</strong>
+              <small>Sans RIB réel</small>
+            </span>
+          </button>
+        </fieldset>
+        <p class="pay-hint" id="pay-method-hint">Carte de test : aucun numéro de carte n’est saisi ni transmis.</p>
+        <label>Scénario de test
           <select id="pay-scenario">
             <option value="SUCCESS">Paiement réussi</option>
             <option value="FAILURE">Paiement refusé</option>
@@ -68,7 +87,7 @@
   </main>
   <script src="js/api.js?v=20261109a"></script>
   <script src="js/mascotte.js?v=20261105i"></script>
-  <script src="js/checkout.js?v=20261110c"></script>
+  <script src="js/checkout.js?v=20261112c"></script>
 <script defer src="js/premium.js?v=20261106g"></script>
 </body>
 </html>

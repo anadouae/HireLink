@@ -39,6 +39,10 @@
           <div class="rc-head-actions"><button type="button" class="btn btn-ghost" id="btn-refresh">Actualiser</button></div>
         </div>
         <div class="rc-toolbar" role="toolbar" aria-label="Filtres des candidatures">
+          <div class="rc-seg" role="tablist" aria-label="Mode d’affichage" id="pipe-view-seg">
+            <button type="button" class="rc-seg-btn is-on" data-view="kanban" aria-selected="true">Kanban</button>
+            <button type="button" class="rc-seg-btn" data-view="list" aria-selected="false">Liste</button>
+          </div>
           <select id="pipe-offer" class="rc-select" aria-label="Filtrer par offre"><option value="all">Toutes les offres</option></select>
           <select id="pipe-filter" hidden><option value="all">Tous</option><option value="urgent">urgent</option><option value="breached">breached</option><option value="hot">hot</option><option value="interview">interview</option></select>
           <div class="rc-chips" id="pipe-chips" role="tablist" aria-label="Lecture des candidatures">
@@ -48,10 +52,25 @@
             <button type="button" class="rc-chip" data-pipe="hot">Match ≥ 75 %</button>
             <button type="button" class="rc-chip" data-pipe="interview">Entretiens</button>
           </div>
+          <div class="rc-chips is-hidden" id="list-chips" role="tablist" aria-label="Statuts en liste">
+            <button type="button" class="rc-chip is-on" data-v="active">En cours</button>
+            <button type="button" class="rc-chip" data-v="interview">Entretiens</button>
+            <button type="button" class="rc-chip" data-v="hired">Embauchés</button>
+            <button type="button" class="rc-chip" data-v="rejected">Refusés</button>
+            <button type="button" class="rc-chip" data-v="withdrawn">Retirés</button>
+            <button type="button" class="rc-chip" data-v="all">Tous</button>
+          </div>
+          <select id="list-sort" class="rc-select is-hidden" aria-label="Trier la liste"><option value="recent">Plus récents</option><option value="match">Meilleur match</option><option value="sla">Échéance de réponse</option><option value="name">Nom (A–Z)</option></select>
           <span class="rc-spacer"></span><span class="rc-pill" id="kanban-total">—</span>
         </div>
         <section class="rc-card" id="funnel-strip"><span class="rc-skel" style="height:62px;margin:.9rem 1.2rem"></span></section>
         <div class="rc-kanban" id="kanban"><span class="rc-skel" style="height:240px;grid-column:1/-1"></span></div>
+        <section class="rc-card is-flush is-hidden" id="pipe-list-panel">
+          <div class="rc-tablewrap"><table class="rc-table">
+            <thead><tr><th>Candidat</th><th>Offre</th><th>Étape</th><th>Match</th><th>Réponse</th><th>Reçue le</th><th></th></tr></thead>
+            <tbody id="pipe-list-body"></tbody>
+          </table></div>
+        </section>
       </main>
     </div>
   </div>

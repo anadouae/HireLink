@@ -36,7 +36,7 @@
 
   let companies = [];
   let selected = null;
-  let view = "all";
+  let view = "following";
   let followBusy = false;
   // Id d'organisation → date de l'abonnement, relue sur le serveur. Rien en localStorage :
   // sans persistance, la promesse du bouton « Suivre » serait fausse des le changement de machine.

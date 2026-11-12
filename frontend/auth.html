@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
   <link rel="stylesheet" href="css/components.css?v=20261104h" />
   <link rel="stylesheet" href="css/auth.css?v=20261105l" />
+  <link rel="stylesheet" href="css/legal.css?v=20261112a" />
   <link rel="stylesheet" href="css/motion.css?v=20261103a" />
   <link rel="stylesheet" href="css/mascotte.css?v=20261105i" />
   <link rel="stylesheet" href="css/search.css?v=20261103d" />
@@ -58,6 +59,20 @@
               <input id="email" type="email" required placeholder="Entrez votre adresse e-mail" autocomplete="email" />
             </div>
             <div class="auth-captcha" data-captcha hidden></div>
+            <section class="auth-consents" id="reg-consents" hidden aria-label="Accords et documents">
+              <h3>Accords</h3>
+              <div class="auth-consent" data-consent="terms">
+                <input type="checkbox" id="accept-terms" />
+                <label for="accept-terms">J’accepte les <a href="legal/cgu.html" target="_blank" rel="noopener" data-legal="terms">Conditions générales d’utilisation</a> <span aria-hidden="true">*</span></label>
+                <p class="auth-consent-tip" id="tip-terms">Règles d’usage du compte, des offres et des candidatures. Document pédagogique à valider.</p>
+              </div>
+              <div class="auth-consent" data-consent="privacy">
+                <input type="checkbox" id="accept-privacy" />
+                <label for="accept-privacy">J’ai pris connaissance de la <a href="legal/confidentialite.html" target="_blank" rel="noopener" data-legal="privacy">Politique de confidentialité</a> <span aria-hidden="true">*</span></label>
+                <p class="auth-consent-tip" id="tip-privacy">Traitements réellement implémentés : compte, CV, candidatures, notifications transactionnelles, export / effacement. Pas de marketing.</p>
+              </div>
+              <p class="auth-consents-note">Les liens s’ouvrent sans effacer ce formulaire. Les cases obligatoires sont vérifiées aussi côté serveur.</p>
+            </section>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Continuer</button>
             </div>
@@ -188,6 +203,19 @@
                 </div>
               </div>
 
+              <section class="auth-consents" id="reg-consents-profile" aria-label="Accords et documents">
+                <h3>Accords</h3>
+                <div class="auth-consent" data-consent="terms">
+                  <input type="checkbox" id="accept-terms-profile" />
+                  <label for="accept-terms-profile">J’accepte les <a href="legal/cgu.html" target="_blank" rel="noopener" data-legal="terms">Conditions générales d’utilisation</a> <span aria-hidden="true">*</span></label>
+                  <p class="auth-consent-tip">Règles d’usage du compte, des offres et des candidatures.</p>
+                </div>
+                <div class="auth-consent" data-consent="privacy">
+                  <input type="checkbox" id="accept-privacy-profile" />
+                  <label for="accept-privacy-profile">J’ai pris connaissance de la <a href="legal/confidentialite.html" target="_blank" rel="noopener" data-legal="privacy">Politique de confidentialité</a> <span aria-hidden="true">*</span></label>
+                  <p class="auth-consent-tip">Données de compte, CV, candidatures, notifications transactionnelles — sans e-mails promotionnels.</p>
+                </div>
+              </section>
               <div class="sheet-foot">
                 <p class="sheet-note">Vos informations restent confidentielles.</p>
                 <div class="sheet-actions">

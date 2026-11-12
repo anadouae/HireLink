@@ -34,18 +34,18 @@
           <div>
             <p class="rc-eyebrow">Recrutement</p>
             <h1>Agenda</h1>
-            <p id="ag-head-sub">Tous les entretiens de l’équipe dans un calendrier : mois, semaine, jour ou liste.</p>
+            <p id="ag-head-sub">Calendrier des entretiens et événements d’équipe. Les filtres restent actifs quand vous changez de vue.</p>
           </div>
           <div class="rc-head-actions">
             <button type="button" class="btn btn-secondary" id="ag-plan-interview">Planifier un entretien</button>
             <button type="button" class="btn btn-primary" id="ag-add-event"><svg class="hl-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>Nouvel événement</button>
           </div>
         </div>
-        <div class="ag-stats" id="ag-stats" aria-live="polite"></div>
+        <div class="ag-stats is-hidden" id="ag-stats" aria-live="polite" hidden></div>
         <section class="rc-card is-flush ag-shell">
           <div class="ag-workspace-tabs" role="tablist" aria-label="Espace de travail">
-            <button type="button" class="is-active" data-ag-workspace="calendar" role="tab" aria-selected="true"><svg class="hl-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15" rx="2.2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Agenda</button>
-            <button type="button" data-ag-workspace="notes" role="tab" aria-selected="false"><svg class="hl-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18.5 14.5V5.2A1.2 1.2 0 0 0 17.3 4H6.7A1.2 1.2 0 0 0 5.5 5.2v13.6A1.2 1.2 0 0 0 6.7 20h7.8z"/><path d="M18.5 14.5h-3.2a1.8 1.8 0 0 0-1.8 1.8v3.7"/><path d="M9 9h6M9 12.5h4"/></svg>Post-it</button>
+            <button type="button" class="is-active" data-ag-workspace="calendar" role="tab" aria-selected="true">Calendrier</button>
+            <button type="button" data-ag-workspace="notes" role="tab" aria-selected="false">Notes</button>
           </div>
           <div id="ag-notes" class="ag-notes" hidden></div>
           <div class="ag-bar">
@@ -64,14 +64,14 @@
               <button type="button" data-view="list" title="Liste (L)">Liste</button>
             </div>
           </div>
-          <div class="ag-filters" id="ag-filters">
-            <select id="ag-f-type" class="rc-select" aria-label="Mode">
-              <option value="all">Tous les modes</option>
+          <div class="ag-filters ag-filters--compact" id="ag-filters">
+            <select id="ag-f-type" class="rc-select" aria-label="Mode d’entretien">
+              <option value="all">Mode · tous</option>
               <option value="VISIO">Visioconférence</option>
               <option value="ONSITE">Sur site</option>
             </select>
             <select id="ag-f-kind" class="rc-select" aria-label="Type d’événement">
-              <option value="all">Tous les types</option>
+              <option value="all">Type · tous</option>
               <option value="HR">Entretien RH</option>
               <option value="TECHNICAL">Technique</option>
               <option value="MANAGER">Manager</option>
@@ -79,12 +79,9 @@
               <option value="TEAM">Rencontre d’équipe</option>
               <option value="FINAL">Final</option>
             </select>
-            <select id="ag-f-offer" class="rc-select" aria-label="Offre"><option value="all">Toutes les offres</option></select>
-            <label class="ag-check"><input type="checkbox" id="ag-f-cancelled" /> Afficher les annulés</label>
+            <select id="ag-f-offer" class="rc-select" aria-label="Offre concernée"><option value="all">Offre · toutes</option></select>
+            <label class="ag-check"><input type="checkbox" id="ag-f-cancelled" /> Annulés</label>
             <button type="button" class="btn btn-ghost btn-sm" id="ag-f-reset">Réinitialiser</button>
-            <div class="ag-legend" aria-label="Légende">
-              <span><i class="t-visio"></i>Visio</span><span><i class="t-onsite"></i>Sur site</span><span><i class="t-phone"></i>Téléphone</span><span><i class="t-event"></i>Événement</span>
-            </div>
           </div>
           <div id="ag-cal" class="ag-cal"></div>
         </section>

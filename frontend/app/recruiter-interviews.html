@@ -33,29 +33,45 @@
           <div>
             <p class="rc-eyebrow">Recrutement</p>
             <h1>Entretiens</h1>
-            <p>Gérez les échanges planifiés : kit, report, annulation et historique.</p>
+            <p>Liste des entretiens planifiés : report, annulation et historique. Les filtres et le regroupement sont séparés.</p>
           </div>
           <div class="rc-head-actions">
             <a class="btn btn-ghost" href="recruiter-agenda.html">Voir l’agenda</a>
             <a class="btn btn-secondary" href="recruiter-pipeline.html">Planifier depuis le pipeline</a>
           </div>
         </div>
-        <div class="rc-tabs" id="iv-tabs" role="tablist">
+        <div class="rc-tabs" id="iv-tabs" role="tablist" aria-label="Statut">
           <button type="button" class="rc-tab is-on" data-t="upcoming">À venir</button>
           <button type="button" class="rc-tab" data-t="todo">À replanifier</button>
           <button type="button" class="rc-tab" data-t="past">Passés</button>
         </div>
         <div class="iv-toolbar" id="iv-toolbar">
+          <label class="iv-filter">
+            <span>Mode d’entretien</span>
+            <div class="iv-seg" role="group" aria-label="Mode d’entretien">
+              <button type="button" data-m="all" aria-pressed="true">Tous</button>
+              <button type="button" data-m="VISIO" aria-pressed="false">Visioconférence</button>
+              <button type="button" data-m="ONSITE" aria-pressed="false">Sur site</button>
+            </div>
+          </label>
+          <label class="iv-filter">
+            <span>Offre concernée</span>
+            <select id="iv-offer" class="rc-select" aria-label="Offre concernée"><option value="all">Toutes les offres</option></select>
+          </label>
+          <label class="iv-filter">
+            <span>Période</span>
+            <select id="iv-period" class="rc-select" aria-label="Période">
+              <option value="all">Toutes</option>
+              <option value="7">7 prochains jours</option>
+              <option value="30">30 prochains jours</option>
+              <option value="past">Passés uniquement</option>
+            </select>
+          </label>
           <div class="iv-seg" role="group" aria-label="Regrouper par">
             <span>Regrouper par</span>
             <button type="button" data-g="date" aria-pressed="true">Date</button>
-            <button type="button" data-g="kind" aria-pressed="false">Nature</button>
+            <button type="button" data-g="kind" aria-pressed="false">Type</button>
             <button type="button" data-g="offer" aria-pressed="false">Offre</button>
-          </div>
-          <div class="iv-seg" role="group" aria-label="Mode">
-            <button type="button" data-m="all" aria-pressed="true">Tous</button>
-            <button type="button" data-m="VISIO" aria-pressed="false">Visio</button>
-            <button type="button" data-m="ONSITE" aria-pressed="false">Sur site</button>
           </div>
           <div id="iv-chips" class="iv-chips"></div>
         </div>
