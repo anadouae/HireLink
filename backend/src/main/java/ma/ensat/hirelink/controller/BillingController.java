@@ -46,6 +46,14 @@ public class BillingController {
         return out;
     }
 
+    /** Devis catalogue (HT / TVA / TTC) sans créer de facture. */
+    @GetMapping("/quote")
+    @Transactional(readOnly = true)
+    public Map<String, Object> quote(@AuthenticationPrincipal User user,
+                                     @RequestParam(defaultValue = "month") String cycle) {
+        return payments.quote(user, cycle);
+    }
+
     @PostMapping("/subscribe")
     public Map<String, Object> subscribe(@AuthenticationPrincipal User user, @RequestBody(required = false) Map<String, Object> body) {
         String cycle = body != null && "year".equals(String.valueOf(body.get("cycle"))) ? "year" : "month";

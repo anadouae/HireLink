@@ -57,6 +57,28 @@ public class PaymentService {
         this.pdf = pdf;
     }
 
+    /** Devis catalogue pour le rôle connecté (sans créer de facture). */
+    @Transactional(readOnly = true)
+    public Map<String, Object> quote(User user, String cycle) {
+        user = users.findById(user.getId()).orElseThrow();
+        PlanTier target = targetPaidTier(user);
+        Map<String, Object> quote = billing.quote(target, cycle);
+        quote.put("role", user.getRole().name());
+        return quote;
+    }
+
+    private PlanTier targetPaidTier(User user) {
+        if (user.getRole() == Role.CANDIDAT) return PlanTier.PERFORMANCE;
+        if (user.getRole() == Role.RECRUTEUR) {
+            Membership m = organizations.requireMembership(user);
+            if (m.getOrgRole() != OrgRole.OWNER) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace règle la formule.");
+            }
+            return PlanTier.PREMIUM;
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Non disponible pour ce rôle.");
+    }
+
     @Transactional
     public Map<String, Object> prepare(User user, String cycle) {
         expireIfDue(user);

@@ -52,6 +52,7 @@ public class AuthService {
     private final MailService mail;
     private final WebAuthnService webAuthn;
     private final EventNotifier notifier;
+    private final LegalConsentService legalConsent;
     private final String dummyHash;
 
     /** Le profil de démonstration ne doit pas exiger d'application d'authentification ; true durcit le compte admin. */
@@ -74,7 +75,8 @@ public class AuthService {
             NotificationService notifications,
             MailService mail,
             WebAuthnService webAuthn,
-            EventNotifier notifier
+            EventNotifier notifier,
+            LegalConsentService legalConsent
     ) {
         this.userRepository = userRepository;
         this.otpService = otpService;
@@ -92,6 +94,7 @@ public class AuthService {
         this.mail = mail;
         this.webAuthn = webAuthn;
         this.notifier = notifier;
+        this.legalConsent = legalConsent;
         this.dummyHash = passwordEncoder.encode("hirelink-dummy-password-for-constant-time");
     }
 
@@ -137,6 +140,7 @@ public class AuthService {
         }
         User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
         if (user == null) {
+            legalConsent.assertSignupConsents(req.acceptTermsVersion(), req.acceptPrivacyVersion());
             user = new User();
             user.setEmail(email);
             user.setFullName(displayName(req));
@@ -148,11 +152,16 @@ public class AuthService {
             applySignupProfile(user, req);
             applyCompanyIfRecruiter(user, role, req.company(), req.companyIce());
             userRepository.save(user);
+            legalConsent.recordSignupConsents(user, req.acceptTermsVersion(), req.acceptPrivacyVersion(), "REGISTER");
             audit.ok("REGISTER", user, "USER", user.getId(), "Rôle " + role);
             notifier.welcome(user);
         } else {
             user.setEmailVerified(true);
             userRepository.save(user);
+            if (!legalConsent.hasCurrentMandatory(user)
+                    && req.acceptTermsVersion() != null && !req.acceptTermsVersion().isBlank()) {
+                legalConsent.recordSignupConsents(user, req.acceptTermsVersion(), req.acceptPrivacyVersion(), "REGISTER");
+            }
         }
         return complete(user, "otp", ci);
     }
@@ -478,6 +487,9 @@ public class AuthService {
                 && (user.getGoogleSub() == null || user.getGoogleSub().isBlank())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choisissez un mot de passe pour vous reconnecter");
         }
+        if (!legalConsent.hasCurrentMandatory(user)) {
+            legalConsent.recordSignupConsents(user, req.acceptTermsVersion(), req.acceptPrivacyVersion(), "COMPLETE_PROFILE");
+        }
         user.setProfileComplete(true);
         userRepository.save(user);
         if (role == Role.RECRUTEUR) {
@@ -563,6 +575,7 @@ public class AuthService {
             }
         }
         if (user == null) {
+            legalConsent.assertSignupConsents(req.acceptTermsVersion(), req.acceptPrivacyVersion());
             Role role = req.role() == null ? Role.CANDIDAT : req.role();
             if (role == Role.ADMINISTRATEUR) {
                 role = Role.CANDIDAT;
@@ -578,6 +591,7 @@ public class AuthService {
             user.setProfileComplete(false);
             applyCompanyIfRecruiter(user, role, req.company(), req.companyIce());
             userRepository.save(user);
+            legalConsent.recordSignupConsents(user, req.acceptTermsVersion(), req.acceptPrivacyVersion(), "GOOGLE");
             notifier.welcome(user);
         } else {
             if (user.getGoogleSub() == null) {
