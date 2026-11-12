@@ -1,6 +1,10 @@
 @startuml activite_pipeline_v5
 skinparam ActivityDiamondBackgroundColor #FFFFFF
-title Cycle de vie d'une candidature (table `applications.status`)
+title Cycle de vie d'une candidature interne (table `applications.status`)
+note
+  Une offre externe n'entre pas dans ce cycle :
+  le candidat est renvoyé vers le site d'origine.
+end note
 
 start
 :Le candidat postule\nSUBMITTED;

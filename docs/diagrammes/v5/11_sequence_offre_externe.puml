@@ -1,0 +1,25 @@
+@startuml sequence_offre_externe
+title Découverte d'une offre externe
+
+actor "Source autorisée\nRemote OK" as S
+participant "Synchronisation\n(admin ou tâche)" as Sync
+participant HireLink as H
+actor Candidat as C
+actor "Site d'origine" as O
+
+S -> Sync : flux JSON public
+Sync -> H : créer ou mettre à jour\n(source + identifiant externe)
+note right of H
+  Une réponse vide ou illisible
+  ne retire aucune annonce.
+  Une absence isolée non plus :
+  le masquage attend sept jours.
+end note
+C -> H : consulter le catalogue
+H --> C : offre externe, source, lien https
+C -> O : Postuler sur le site d'origine
+note right of C
+  HireLink ne crée pas de candidature,
+  de pipeline, d'entretien ni de suivi.
+end note
+@enduml
