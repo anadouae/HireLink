@@ -77,6 +77,44 @@ public class BillingCatalogService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Plan introuvable"));
     }
 
+    /**
+     * Devis sans écriture : montants calculés côté serveur à partir du catalogue et du taux TVA configuré.
+     * Ne crée pas de facture. Le navigateur n'invente ni prix ni TVA.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> quote(PlanTier tier, String cycle) {
+        CommercialPlan plan = require(tier);
+        String period = "year".equalsIgnoreCase(cycle) ? "year" : "month";
+        int ttc = "year".equals(period) ? plan.getYearlyMad() : plan.getMonthlyMad();
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("plan", plan.getCode());
+        row.put("planLabel", plan.getLabel());
+        row.put("audience", plan.getAudience());
+        row.put("cycle", period);
+        row.put("cycleLabel", "year".equals(period) ? "Annuel" : "Mensuel");
+        row.put("currency", "MAD");
+        row.put("features", plan.getFeatures() == null ? "" : plan.getFeatures());
+        row.put("credits", plan.getCredits());
+        row.put("payable", ttc > 0);
+        if (ttc <= 0) {
+            row.put("amountHt", 0);
+            row.put("tva", 0);
+            row.put("amountTtc", 0);
+            row.put("vatConfigured", vatRate != null && !vatRate.isBlank());
+            row.put("message", "Formule gratuite : aucun paiement.");
+            return row;
+        }
+        Amounts amounts = amounts(ttc);
+        row.put("amountHt", amounts.ht());
+        row.put("tva", amounts.tva());
+        row.put("amountTtc", ttc);
+        row.put("vatConfigured", amounts.configured());
+        if (!amounts.configured()) {
+            row.put("message", "TVA non configurée sur le serveur : le total TTC du catalogue est affiché ; le détail HT/TVA reste non ventilé.");
+        }
+        return row;
+    }
+
     private static final Set<String> OPEN = Set.of("NON_PAYEE", "EMISE");
 
     /**

@@ -13,6 +13,7 @@ import ma.ensat.hirelink.service.AuditService;
 import ma.ensat.hirelink.service.AuthService;
 import ma.ensat.hirelink.service.CaptchaService;
 import ma.ensat.hirelink.service.GoogleTokenService;
+import ma.ensat.hirelink.service.LegalConsentService;
 import ma.ensat.hirelink.service.PasswordResetService;
 import ma.ensat.hirelink.service.SessionService;
 import org.springframework.beans.factory.annotation.Value;
@@ -31,6 +32,7 @@ public class AuthController {
 
     private final AuthService authService;
     private final GoogleTokenService googleTokenService;
+    private final LegalConsentService legalConsent;
     private final PasswordResetService passwordReset;
     private final RefreshCookies cookies;
     private final SessionService sessions;
@@ -40,10 +42,12 @@ public class AuthController {
     @Value("${hirelink.google.client-id:}")
     private String googleClientId;
 
-    public AuthController(AuthService authService, GoogleTokenService googleTokenService, PasswordResetService passwordReset,
-                          RefreshCookies cookies, SessionService sessions, AuditService audit, CaptchaService captcha) {
+    public AuthController(AuthService authService, GoogleTokenService googleTokenService, LegalConsentService legalConsent,
+                          PasswordResetService passwordReset, RefreshCookies cookies, SessionService sessions,
+                          AuditService audit, CaptchaService captcha) {
         this.authService = authService;
         this.googleTokenService = googleTokenService;
+        this.legalConsent = legalConsent;
         this.passwordReset = passwordReset;
         this.cookies = cookies;
         this.sessions = sessions;
@@ -64,7 +68,19 @@ public class AuthController {
         m.put("googleDevBypass", googleTokenService.isDevBypass());
         m.put("frictionless", true);
         m.put("methods", new String[]{"email_otp", "password", "google", "passkey", "totp"});
+        m.putAll(legalConsent.publicVersions());
         return m;
+    }
+
+    @GetMapping("/legal")
+    public Map<String, Object> legal() {
+        return legalConsent.publicVersions();
+    }
+
+    @GetMapping("/legal-acceptances")
+    public java.util.List<Map<String, Object>> myLegalAcceptances(@AuthenticationPrincipal User user) {
+        if (user == null) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Non authentifié");
+        return legalConsent.listFor(user);
     }
 
     /** Épreuve anti-robot fabriquée par le serveur : pas de service externe, donc utilisable hors ligne. */

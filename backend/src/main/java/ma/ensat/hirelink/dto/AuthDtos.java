@@ -29,7 +29,9 @@ public class AuthDtos {
             @Size(max = 40) String workMode,
             @Size(max = 120) String contracts,
             @Size(max = 400) String metier,
-            @Size(max = 120) String jobTitle
+            @Size(max = 120) String jobTitle,
+            @Size(max = 64) String acceptTermsVersion,
+            @Size(max = 64) String acceptPrivacyVersion
     ) {}
 
     public record CompleteProfile(
@@ -50,7 +52,9 @@ public class AuthDtos {
             @Size(max = 120) String jobTitle,
             @Size(max = 120) String company,
             @Size(max = 40) String companyIce,
-            @Size(max = 200) String password
+            @Size(max = 200) String password,
+            @Size(max = 64) String acceptTermsVersion,
+            @Size(max = 64) String acceptPrivacyVersion
     ) {}
 
     public record VerifyLoginOtp(
@@ -75,7 +79,9 @@ public class AuthDtos {
             @Size(max = 160) String devName,
             Role role,
             @Size(max = 40) String companyIce,
-            @Size(max = 120) String company
+            @Size(max = 120) String company,
+            @Size(max = 64) String acceptTermsVersion,
+            @Size(max = 64) String acceptPrivacyVersion
     ) {}
 
     public record ForgotPassword(
