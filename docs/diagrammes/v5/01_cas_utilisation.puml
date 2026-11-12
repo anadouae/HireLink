@@ -39,6 +39,8 @@ et recevoir ses nouvelles offres"
   usecase UC_ia as "Aide IA : réécrire son profil,
 préparer un entretien"
   usecase UC_signaler as "Signaler une offre abusée"
+  usecase UC_externe as "Ouvrir une offre externe
+sur le site d'origine"
 }
 
 rectangle "Espace entreprise" {
@@ -90,6 +92,8 @@ et la facturation"
   usecase UC_retention as "Purger les données mortes (rétention)"
   usecase UC_audit as "Consulter et exporter
 le journal d'audit"
+  usecase UC_sync as "Synchroniser ou masquer
+une source externe autorisée"
 }
 
 V --> UC_visu_offres
@@ -109,6 +113,7 @@ C --> UC_securite
 C --> UC_rgpd
 C --> UC_ia
 C --> UC_signaler
+C --> UC_externe
 
 R --> UC_new
 R --> UC_duplicate
@@ -141,6 +146,7 @@ A --> UC_emails
 A --> UC_search_admin
 A --> UC_retention
 A --> UC_audit
+A --> UC_sync
 
 UC_postuler ..> UC_ocr : <<include>>
 UC_postuler ..> UC_profil : <<include>>

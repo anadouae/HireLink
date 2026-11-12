@@ -10,6 +10,7 @@ Vingt et un fichiers livrables — dix sources `.puml`, dix PNG et l'export BPMN
 | `01_cas_utilisation.png` | UML cas d'utilisation | **une seule vue pour tous les acteurs** : les 6 acteurs (visiteur, candidat, recruteur, responsable de poste, administrateur, système de planification) et les 46 cas, regroupés dans cinq espaces |
 | `02_classes.png` | UML classes | les 25 entités, leurs champs réels et 34 associations nommées avec leurs cardinalités JPA |
 | `03_sequence_candidature.png` | UML séquence | `POST /applications` : filtre JWT, anti-doublon 409, score, notification |
+| `11_sequence_offre_externe.puml` | UML séquence | source autorisée, consultation, redirection. PNG `11_sequence_offre_externe.png` généré depuis ce fichier. |
 | `04_sequence_entretien.png` | UML séquence | planification, réponse du candidat, rappel J-1, export `.ics` |
 | `05_sequence_authentification.png` | UML séquence | mot de passe, CAPTCHA après 2 échecs, `POST /auth/mfa/verify`, Google, passkey, sessions |
 | `06_activite_pipeline.png` | UML activité | `applications.status` : SUBMITTED → SCREENING → SHORTLISTED → INTERVIEW, REJECTED, WITHDRAWN |

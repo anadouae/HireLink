@@ -6,7 +6,7 @@
 
 ## Description de l’application
 
-HireLink n’est pas un simple jobboard : c’est un **ATS (Applicant Tracking System)** qui pilote le cycle de sélection **après** le dépôt de candidature.
+HireLink est une plateforme de gestion du recrutement pour les PME marocaines, complétée par un catalogue d'offres externes provenant uniquement de sources autorisées. Le cœur du produit reste l'**ATS** : une entreprise inscrite publie ses offres, reçoit les candidatures et les fait avancer. Une offre externe s'affiche avec sa source et s'ouvre sur le site d'origine. Elle ne crée ni candidature, ni pipeline, ni recruteur HireLink.
 
 L’application relie deux publics :
 
@@ -68,7 +68,7 @@ Sans outil structuré, le suivi dépend de la rigueur manuelle du recruteur : pa
 
 Détails : [`docs/API.md`](docs/API.md) pour les routes et les champs, [`docs/GUIDE_INSTALLATION_ET_TEST.md`](docs/GUIDE_INSTALLATION_ET_TEST.md) §5.1 (SMTP) et §18 (scénarios).
 
-**Base existante** : au démarrage, Hibernate (`ddl-auto=update`) ajoute les nouvelles colonnes et les étapes `OFFER` / `HIRED` de `applications.status` ; aucune commande SQL n'est nécessaire (voir le guide, §3, pour le cas particulier).
+**Base existante** : au démarrage, Hibernate (`ddl-auto=update`) ajoute les colonnes manquantes et les tables `external_job_offers` / `external_sync_runs`. Le script `database/migrate_external_offers.sql` fait cette création de façon explicite et peut être relancé. L'import Remote OK reste désactivé. Voir le guide, §3.
 
 ### Transversal
 - **Matching local (F14)** : score Jaccard compétences / offre, gratuit, déterministe, sans API externe

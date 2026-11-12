@@ -1,6 +1,6 @@
 # Offres externes — sources autorisées
 
-État au 10 novembre 2026 : **aucune intégration n’est branchée**. HireLink n’affiche que les offres publiées dans `job_offers`. Il n’y a pas de champ d’URL source, pas d’importateur, et aucun scraping de sites carrière.
+État au 10 novembre 2026 : **Remote OK est la seule source branchée**. Les offres vivent dans `external_job_offers`, séparées de `job_offers`. L'import est désactivé par défaut (`hirelink.external-jobs.remoteok.enabled=false`) : aucune requête ne part tant que ce réglage n'est pas vrai. Le bouton mène au lien d'origine et une candidature HireLink n'est pas créée.
 
 Une source n’est utilisable que si son contrat autorise l’affichage, impose la citation, et donne un lien pour postuler chez l’émetteur. Les offres ne doivent pas être inventées, ni transformées en candidatures HireLink.
 
@@ -15,15 +15,36 @@ Une source n’est utilisable que si son contrat autorise l’affichage, impose la c
 
 Les sites carrière d’entreprises (Greenhouse, Lever, pages HTML) ne sont pas une source autorisée tant que l’entreprise n’a pas donné un flux ou une API. Les lire automatiquement serait du scraping.
 
-## Architecture proposée, non réalisée
+## Remote OK, source retenue
 
-1. Table séparée `external_job_offers` : source, identifiant externe, URL d’origine, titre, employeur, lieu, contrat, compétences seulement si la source les fournit, date de fraîcheur, date de retrait. Pas de mélange avec `job_offers`.
-2. Service serveur `ExternalJobImportService`, clé uniquement dans la configuration locale, jamais dans le navigateur. Mise à jour planifiée, suppression des offres absentes du flux.
-3. Affichage public avec badge de la source, citation exigée par le contrat, et bouton « Postuler sur le site de l’entreprise » vers l’URL d’origine. Pas de dossier HireLink, pas de score si les compétences ne sont pas fournies par la source.
-4. Aucune offre n’est créée à la main pour « remplir » le flux.
+Le flux public `https://remoteok.com/api` ne demande pas de clé. Son premier objet et la page d'aide demandent de citer Remote OK et de lier chaque annonce d'origine, sans `nofollow`. Le logo n'est pas utilisé. Les conditions générales du 26 octobre 2026 demandent aussi un lien vers le site là où les données sont affichées. HireLink montre « Source : Remote OK » vers `https://remoteok.com` et le bouton « Postuler sur le site d'origine ».
+
+Ce flux couvre des emplois à distance internationaux, pas le marché marocain. France Travail et Adzuna restent inutilisables ici : pas de clé, pas d'accord. Aucune offre n'est ajoutée à la main.
+
+## Ce qui est en place
+
+1. Table `external_job_offers`, distincte de `job_offers`.
+2. `RemoteOkParser`, `RemoteOkClient` et `ExternalJobImportService`. Un flux vide, illisible ou en erreur réseau ne retire pas les offres déjà acceptées. Une annonce absente d'un flux valide reste visible sept jours. Un second appel pendant qu'une synchronisation tient le verrou est refusé, sans retirer d'annonces. Le HTML et les scripts de la source sont retirés avant l'enregistrement.
+3. Liste publique `GET /api/v1/external-offers`. La synchronisation `POST /api/v1/external-offers/sync` est réservée à l'administrateur et ne part que si l'import est activé. L'écran administrateur est `GET /api/v1/admin/external-offers/status` et le masquage `POST /api/v1/admin/external-offers/{id}/hide`.
+4. Badge « Offre externe », lien « Source : Remote OK » et bouton « Postuler sur le site d'origine ». L'offre HireLink affiche « Postuler sur HireLink ». Le détail externe indique que HireLink ne gère pas cette candidature. Pas de dossier HireLink. La correspondance n'est calculée que si l'annonce publie des compétences et si le candidat en a confirmé.
+
+## Règles
+
+- RG-EXT-01 — Une offre externe a une source identifiable.
+- RG-EXT-02 — Elle n'appartient pas à une organisation HireLink.
+- RG-EXT-03 — La candidature se fait sur le site d'origine.
+- RG-EXT-04 — Aucune candidature HireLink n'est créée.
+- RG-EXT-05 — Le pipeline ne concerne que les candidatures internes.
+- RG-EXT-06 — L'entreprise annoncée n'est pas marquée vérifiée.
+- RG-EXT-07 — Seule une source autorisée est branchée. Remote OK l'est. France Travail, Adzuna, LinkedIn, Indeed et les sites d'entreprises, dont OCP, ne le sont pas.
+- RG-EXT-08 — Un flux vide, illisible ou en erreur ne retire rien. Une annonce absente d'un flux valide reste visible sept jours, parce que l'API ne renvoie qu'une fenêtre récente.
+- RG-EXT-09 — Le chiffre affiché, lorsqu'il existe, ne reprend que les compétences citées. Ce n'est pas le score à six critères, et l'entreprise externe ne le valide pas.
+- RG-EXT-10 — HireLink ne sait pas si le candidat a réellement postulé dehors.
+
+L'identifiant public est `ext-` suivi du numéro interne, pour qu'il ne se confonde pas avec une offre HireLink. L'API de candidature refuse cet identifiant.
 
 ## Ce qui reste bloqué
 
-- Aucune clé ni accord écrit n’est en place.
-- Aucune source marocaine officielle équivalente n’a été identifiée.
-- Le code d’import, la table et l’écran ne sont pas écrits.
+- Aucune source marocaine officielle n'est disponible.
+- France Travail et Adzuna ne sont pas connectés.
+- L'import Remote OK reste éteint sur la démonstration tant que `hirelink.external-jobs.remoteok.enabled` n'est pas passé à `true`.

@@ -202,6 +202,30 @@ package "Recrutement" {
     archivedAt: Instant
     createdAt: Instant
   }
+  class ExternalJobOffer {
+    id: Long
+    source: String
+    externalId: String
+    originUrl: String
+    applyUrl: String
+    company: String
+    title: String
+    location: String
+    contractLabel: String
+    skills: String
+    publishedAt: Instant
+    lastSeenAt: Instant
+    available: boolean
+    hiddenByAdmin: boolean
+  }
+  class ExternalSyncRun {
+    source: String
+    createdCount: int
+    updatedCount: int
+    withdrawnCount: int
+    message: String
+    finishedAt: Instant
+  }
   class Application {
     id: Long
     status: ApplicationStatus
@@ -365,6 +389,10 @@ Organization "1" -- "0..*" Membership : compte les membres
 User "1" -- "0..*" Membership : adhère à
 User "0..*" -- "0..1" Organization : est possédée par
 User "0..*" -- "0..1" Organization : est rattachée à
+note bottom of ExternalJobOffer
+  Aucune association avec User, Organization ou Application.
+  La clé stable est (source, externalId).
+end note
 User "1" -- "0..*" JobOffer : publie
 User "1" -- "0..*" Application : dépose
 JobOffer "1" -- "0..*" Application : reçoit
