@@ -63,3 +63,12 @@ tmp/
 backend/target-e2e/
 backend/target-demo/
 backend/target-verify/
+backend/target-ux/
+backend/target-ux-check/
+backend/target-validate-lab/
+backend/target-*/
+
+# Captures de contrôle / audit avec données de démo / PII — ne pas publier telles quelles
+docs/security-control-*/shots/
+docs/audit-ui-*/shots/
+docs/audit-ui-*/shots-write/
