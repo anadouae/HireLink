@@ -215,8 +215,15 @@
     const root = el("article", "offer-card" + (opts.selected ? " is-selected" : ""));
     root.dataset.offerId = o.id;
     const link = el("a", "offer-card__link");
-    link.href = opts.href ? opts.href(o) : "#";
-    link.setAttribute("aria-label", o.title + " — " + companyOf(o));
+    const externalUrl = o.applyUrl || o.originUrl || "";
+    const safeExternal = o.external && /^https:\/\//i.test(externalUrl);
+    link.href = o.external ? (safeExternal ? externalUrl : "#") : (opts.href ? opts.href(o) : "#");
+    if (o.external && !safeExternal) link.removeAttribute("href");
+    link.setAttribute("aria-label", (o.external ? (safeExternal ? "Postuler sur le site d'origine : " : "Lien d'origine indisponible : ") : "") + o.title + " — " + companyOf(o));
+    if (safeExternal) {
+      link.target = "_blank";
+      link.rel = "noopener";
+    }
     if (opts.selected) link.setAttribute("aria-current", "true");
     if (opts.onOpen) {
       link.addEventListener("click", function (e) {
@@ -236,9 +243,9 @@
     titles.append(company, el("h3", "offer-card__title", o.title));
     const logoBox = logo(o, opts);
     head.append(logoBox, titles);
-    if (opts.companyHref) {
+    if (opts.companyHref && !o.external) {
       const target = opts.companyHref(o);
-      [logoBox, company].forEach(function (node) {
+      if (target) [logoBox, company].forEach(function (node) {
         node.classList.add("oc-co-link");
         node.title = "Voir la page de " + companyOf(o);
         node.addEventListener("click", function (e) {
@@ -257,7 +264,7 @@
     const chips = el("ul", "offer-card__chips");
     const type = o.durationMonths && o.contractType !== "CDI" ? o.contractType + " · " + o.durationMonths + " mois" : o.contractType;
     if (type) chips.appendChild(chip("briefcase", type, "oc-chip--type"));
-    const place = placeWithCountry(o);
+    const place = o.external ? (o.location || "Non précisée") : placeWithCountry(o);
     if (place) {
       const li = el("li", "oc-chip");
       const flag = flagOf(place);
@@ -287,6 +294,14 @@
     }
     appendEnd(link, opts);
     root.appendChild(link);
+    if (o.external && /^https:\/\//i.test(o.sourceHome || "")) {
+      const credit = el("a", "offer-card__source");
+      credit.href = o.sourceHome;
+      credit.target = "_blank";
+      credit.rel = "noopener";
+      credit.textContent = "Source : " + (o.sourceLabel || "Remote OK");
+      root.appendChild(credit);
+    }
     return root;
   }
 

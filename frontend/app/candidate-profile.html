@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
   <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
   <link rel="stylesheet" href="../css/app.css?v=20261105l" />
-  <link rel="stylesheet" href="../css/components.css?v=20261110f" />
+  <link rel="stylesheet" href="../css/components.css?v=20261110g" />
   <link rel="stylesheet" href="../css/search.css?v=20261103d" />
   <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
   <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
@@ -140,6 +140,10 @@
               <form id="cv-sections">
                 <div class="cv-section-field"><label for="cv-identity">Identité</label><textarea id="cv-identity"></textarea></div>
                 <div class="cv-section-field"><label for="cv-experience">Expériences</label><textarea id="cv-experience"></textarea></div>
+                <div id="cv-exp-list" class="cv-exp-list" aria-live="polite"></div>
+                <p class="muted" id="cv-exp-note"></p>
+                <button type="button" class="btn btn-ghost btn-sm" id="cv-exp-add">Ajouter une expérience</button>
+                <div class="cv-section-field"><label for="cv-projects">Projets académiques</label><textarea id="cv-projects"></textarea></div>
                 <div class="cv-section-field"><label for="cv-education">Formation</label><textarea id="cv-education"></textarea></div>
                 <div class="cv-section-field"><label for="cv-skills-read">Compétences</label><textarea id="cv-skills-read"></textarea></div>
                 <div class="cv-section-field"><label for="cv-languages">Langues</label><textarea id="cv-languages"></textarea></div>
@@ -190,6 +194,6 @@
   <script defer src="../js/app-shell.js?v=20261110b"></script>
   <script defer src="../js/growth.js?v=20261106g"></script>
   <script defer src="../js/skills.js?v=20261101r"></script>
-  <script defer src="../js/candidate-profile.js?v=20261110f"></script>
+  <script defer src="../js/candidate-profile.js?v=20261110g"></script>
 </body>
 </html>

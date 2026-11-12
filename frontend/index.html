@@ -17,8 +17,8 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
   <link rel="stylesheet" href="css/search.css?v=20261103d" />
-  <link rel="stylesheet" href="css/offer-card.css?v=20261105a" />
-  <link rel="stylesheet" href="css/home.css?v=20261101r" />
+  <link rel="stylesheet" href="css/offer-card.css?v=20261110g" />
+  <link rel="stylesheet" href="css/home.css?v=20261110g" />
   <link rel="stylesheet" href="css/public-dark.css?v=20261107b" />
   <link rel="stylesheet" href="css/premium.css?v=20261107b" />
 </head>
@@ -67,6 +67,20 @@
             <select id="q-contract" aria-label="Type de contrat"><option value="">Type de contrat</option></select>
             <button type="submit" id="q-submit">Rechercher</button>
           </div>
+          <div class="search-filters">
+            <select id="q-origin" aria-label="Provenance">
+              <option value="">Toutes les provenances</option>
+              <option value="hirelink">Offres HireLink</option>
+              <option value="external">Offres externes</option>
+            </select>
+            <select id="q-since" aria-label="Date de publication">
+              <option value="">Toute date</option>
+              <option value="7">7 derniers jours</option>
+              <option value="30">30 derniers jours</option>
+              <option value="90">90 derniers jours</option>
+            </select>
+          </div>
+          <p class="search-hint">Les offres externes viennent de sources autorisées, aujourd'hui Remote OK : des emplois à distance internationaux. Elles ne sont pas des offres situées au Maroc, et HireLink ne suit pas leur candidature.</p>
           <div class="quick-row">
             <span>Recherche rapide</span>
             <div id="quick-chips"></div>
@@ -401,9 +415,9 @@
   <script src="js/public-nav.js?v=20261106a"></script>
   <script src="js/search.js?v=20261101r"></script>
   <script src="js/places.js?v=20261103h"></script>
-  <script src="js/offer-card.js?v=20261105o"></script>
+  <script src="js/offer-card.js?v=20261110g"></script>
   <script src="js/suggest.js?v=20261103g"></script>
-  <script src="js/landing-offers.js?v=20261103k"></script>
+  <script src="js/landing-offers.js?v=20261110g"></script>
   <script src="js/footer-year.js?v=20261101r"></script>
   <script src="js/home-motion.js?v=20261103k"></script>
 <script defer src="js/premium.js?v=20261106g"></script>

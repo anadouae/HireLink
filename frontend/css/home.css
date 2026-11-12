@@ -174,6 +174,8 @@ html.lenis, html.lenis body { height: auto; }
 .search-tabs button.is-on { background: #fff; color: var(--burgundy); box-shadow: 0 4px 14px -4px rgba(26, 18, 20, 0.2); }
 .search-hint { margin: 0.9rem 0.25rem 0.9rem; font-size: 0.92rem; color: var(--ink-soft); }
 .search-row { display: grid; grid-template-columns: 1.5fr 0.7fr 0.8fr auto; gap: 0.5rem; }
+.search-filters { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .65rem; }
+.search-filters select { flex: 1 1 12rem; padding: .7rem 1rem; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: #fff; }
 .search-row input,
 .search-row select { width: 100%; padding: 0.85rem 1.1rem; border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: #fff; font-size: 0.95rem; transition: border-color 0.25s, box-shadow 0.25s; }
 .search-row input:focus,
@@ -394,6 +396,7 @@ html.lenis, html.lenis body { height: auto; }
   .hero { padding-top: calc(var(--header-h) + 1.5rem); }
   .search-card { border-radius: 22px; padding: 0.9rem; }
   .search-row { grid-template-columns: minmax(0, 1fr); }
+  .search-filters select { flex-basis: 100%; }
   .city-row { grid-template-columns: minmax(0, 1fr); }
   .scene-foot .btn { width: 100%; }
 }

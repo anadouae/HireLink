@@ -12,11 +12,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="../css/tokens.css?v=20261103a" />
   <link rel="stylesheet" href="../css/design-system.css?v=20261106b" />
-  <link rel="stylesheet" href="../css/app.css?v=20261105l" />
+  <link rel="stylesheet" href="../css/app.css?v=20261110g" />
   <link rel="stylesheet" href="../css/components.css?v=20261104h" />
   <link rel="stylesheet" href="../css/search.css?v=20261103d" />
   <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
-  <link rel="stylesheet" href="../css/offer-card.css?v=20261105a" />
+  <link rel="stylesheet" href="../css/offer-card.css?v=20261110g" />
   <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
   <link rel="stylesheet" href="../css/match.css?v=20261103a" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
@@ -54,6 +54,21 @@
             <label>Contrat
               <select id="f-contract"><option value="">Tous</option></select>
             </label>
+            <label>Provenance
+              <select id="f-origin">
+                <option value="">Toutes</option>
+                <option value="hirelink">HireLink</option>
+                <option value="external">Externes</option>
+              </select>
+            </label>
+            <label>Date
+              <select id="f-since">
+                <option value="">Toutes</option>
+                <option value="7">7 jours</option>
+                <option value="30">30 jours</option>
+                <option value="90">90 jours</option>
+              </select>
+            </label>
             <label>Compatibilité min.
               <select id="f-match">
                 <option value="0">Toutes</option>
@@ -71,6 +86,7 @@
               </select>
             </label>
           </div>
+          <p class="muted">Une offre externe vient d'une source autorisée. Remote OK publie des emplois à distance internationaux, pas des postes situés au Maroc. Le bouton ouvre le site d'origine et HireLink ne crée pas de suivi.</p>
           <details class="filter-more">
             <summary>Plus de filtres</summary>
             <div class="offer-advanced">
@@ -123,11 +139,11 @@
   <script defer src="../js/app-shell.js?v=20261110b"></script>
   <script defer src="../js/growth.js?v=20261106g"></script>
   <script defer src="../js/skills.js?v=20261101r"></script>
-  <script defer src="../js/offer-card.js?v=20261105o"></script>
+  <script defer src="../js/offer-card.js?v=20261110g"></script>
   <script defer src="../js/apply-wizard.js?v=20261110e"></script>
   <script defer src="../js/apply-profile-gate.js?v=20261106f"></script>
   <script defer src="../js/suggest.js?v=20261103g"></script>
   <script defer src="../js/match.js?v=20261110e"></script>
-  <script defer src="../js/candidate-home.js?v=20261109c"></script>
+  <script defer src="../js/candidate-home.js?v=20261110g"></script>
 </body>
 </html>

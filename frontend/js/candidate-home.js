@@ -7,7 +7,7 @@
   const S = HireLinkSearch;
   const offerList = document.getElementById("offer-list");
   const matchToggle = document.getElementById("match-only");
-  const FILTERS = ["f-city", "f-company", "f-skill", "f-contract", "f-mode", "f-pace", "f-sent", "f-match"];
+  const FILTERS = ["f-city", "f-company", "f-skill", "f-contract", "f-origin", "f-since", "f-mode", "f-pace", "f-sent", "f-match"];
   const MATCH_KEY = "hirelink.matchOnly." + (session.userId || session.id || "me");
 
   let cached = [];
@@ -32,6 +32,7 @@
   }
 
   function openApply(o) {
+    if (o && o.external) return;
     if (!isOpenToApply(o.id)) {
       HireLink.toast("Déjà envoyée", "Ouvrez-la dans Mes candidatures. Le statut Retirée est le seul qui permet de renvoyer.", "info");
       return;
@@ -89,9 +90,17 @@
     const city = val("f-city"), company = val("f-company"), skill = val("f-skill"), contract = val("f-contract");
     const mode = val("f-mode"), sentFilter = val("f-sent");
     const pace = val("f-pace"), minMatch = Number(val("f-match") || 0);
+    const origin = val("f-origin");
+    const since = Number(val("f-since") || 0);
     const kept = cached.filter((o) => {
       const score = o.matchScore;
       const st = appState(o.id);
+      if (origin === "external" && !o.external) return false;
+      if (origin === "hirelink" && o.external) return false;
+      if (since) {
+        const at = new Date(o.publishedAt || o.createdAt || "").getTime();
+        if (!at || Date.now() - at > since * 86400000) return false;
+      }
       if (matchOnly && !o.matchesProfile) return false;
       if (minMatch && (score == null || score < minMatch)) return false;
       if (city && O.placeOf(o) !== city) return false;
@@ -214,10 +223,10 @@
     return O.card(o, {
       selected,
       badge,
-      href: (x) => "candidate.html?offer=" + encodeURIComponent(x.id),
-      companyHref: (x) => "candidate-companies.html?name=" + encodeURIComponent(companyOf(x)),
+      href: (x) => x.external ? (x.applyUrl || x.originUrl) : "candidate.html?offer=" + encodeURIComponent(x.id),
+      companyHref: (x) => x.external ? "" : "candidate-companies.html?name=" + encodeURIComponent(companyOf(x)),
       onOpen: (x) => { selectedId = x.id; offerList.querySelectorAll(".offer-card").forEach((n) => n.classList.toggle("is-selected", n.dataset.offerId === String(x.id))); showDetail(x); },
-      statusChip: st ? (st.status === "WITHDRAWN" ? "Candidature retirée" : "Candidature envoyée") : "",
+      statusChip: o.external ? "Offre externe" : (st ? (st.status === "WITHDRAWN" ? "Candidature retirée" : "Candidature envoyée") : "Offre HireLink"),
     });
   }
 
@@ -232,18 +241,25 @@
     const titles = document.createElement("div");
     const h2 = document.createElement("h2");
     h2.textContent = o.title || "Offre";
-    const company = document.createElement("a");
+    const company = document.createElement(o.external ? "p" : "a");
     company.className = "detail-company";
-    company.href = "candidate-companies.html?name=" + encodeURIComponent(companyOf(o));
-    company.title = "Voir la page de l’entreprise";
+    if (!o.external) {
+      company.href = "candidate-companies.html?name=" + encodeURIComponent(companyOf(o));
+      company.title = "Voir la page de l’entreprise";
+    }
     company.textContent = companyOf(o);
-    const place = O.placeWithCountry(o);
+    const place = o.external ? (o.location || "Non précisée") : O.placeWithCountry(o);
     const where = document.createElement("p");
     where.className = "muted";
     where.textContent = [(HireLinkPlaces.flagOf(place) + " " + place).trim(), o.contractType, O.paceOf(o).label].filter(Boolean).join(" · ");
     titles.append(h2, company, where);
     head.appendChild(titles);
-    if (o.matchScore != null) {
+    if (o.external && !(o.matchAvailable && o.matchScore != null)) {
+      const missing = document.createElement("p");
+      missing.className = "match-why";
+      missing.textContent = o.matchLabel || "Correspondance non disponible";
+      head.appendChild(missing);
+    } else if (o.matchScore != null) {
       const meter = document.createElement("div");
       meter.className = "match-meter";
       meter.setAttribute("role", "img");
@@ -256,7 +272,7 @@
       fill.style.width = Math.min(100, Math.round(o.matchScore)) + "%";
       bar.appendChild(fill);
       const label = document.createElement("small");
-      label.textContent = "compatible avec votre profil";
+      label.textContent = o.external ? (o.matchLabel || "Indicatif") : "compatible avec votre profil";
       meter.append(pct, bar, label);
       head.appendChild(meter);
     }
@@ -281,7 +297,32 @@
 
     const actions = document.createElement("div");
     actions.className = "row";
-    if (sent) {
+    if (o.external) {
+      const href = o.applyUrl || o.originUrl || "";
+      if (/^https:\/\//i.test(href)) {
+        const a = document.createElement("a");
+        a.className = "btn btn-primary";
+        a.href = href;
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.textContent = "Postuler sur le site d'origine";
+        actions.appendChild(a);
+      } else {
+        const unavailable = document.createElement("p");
+        unavailable.className = "muted";
+        unavailable.textContent = "Lien d'origine indisponible.";
+        actions.appendChild(unavailable);
+      }
+      if (/^https:\/\//i.test(o.sourceHome || "")) {
+        const source = document.createElement("a");
+        source.className = "btn btn-ghost";
+        source.href = o.sourceHome;
+        source.target = "_blank";
+        source.rel = "noopener";
+        source.textContent = "Source : " + (o.sourceLabel || "Remote OK");
+        actions.appendChild(source);
+      }
+    } else if (sent) {
       const a = document.createElement("a");
       a.className = "btn btn-primary";
       a.href = "candidate-applications.html?id=" + st.appId;
@@ -291,17 +332,19 @@
       const b = document.createElement("button");
       b.type = "button";
       b.className = "btn btn-primary";
-      b.textContent = st && st.status === "WITHDRAWN" ? "Postuler à nouveau" : "Postuler";
+      b.textContent = st && st.status === "WITHDRAWN" ? "Postuler à nouveau sur HireLink" : "Postuler sur HireLink";
       b.addEventListener("click", () => openApply(o));
       actions.appendChild(b);
     }
-    const flag = document.createElement("button");
-    flag.type = "button";
-    flag.className = "btn btn-ghost";
-    flag.textContent = "Signaler cette offre";
-    flag.title = "Alerter la modération sur cette offre";
-    flag.addEventListener("click", () => openReport(o));
-    actions.appendChild(flag);
+    if (!o.external) {
+      const flag = document.createElement("button");
+      flag.type = "button";
+      flag.className = "btn btn-ghost";
+      flag.textContent = "Signaler cette offre";
+      flag.title = "Alerter la modération sur cette offre";
+      flag.addEventListener("click", () => openReport(o));
+      actions.appendChild(flag);
+    }
     const extra = [];
     if (o.niceToHaveSkills) {
       const niceTitle = document.createElement("h3");
@@ -318,7 +361,12 @@
       whyTitle.textContent = "Pourquoi ce score ?";
       extra.push(whyTitle, why);
     }
-    detail.append(head, O.facts(o), body, skillsTitle, boxes, ...extra, actions);
+    const notice = o.external ? document.createElement("p") : null;
+    if (notice) {
+      notice.className = "match-why";
+      notice.textContent = "Cette offre est publiée sur un site externe. Pour postuler, vous serez redirigé vers le site d'origine. HireLink ne gère pas cette candidature ni son suivi.";
+    }
+    detail.append(head, O.facts(o), body, skillsTitle, boxes, ...extra, ...(notice ? [notice] : []), actions);
     S.mark(detail, val("rc-search").trim());
   }
 
@@ -327,15 +375,17 @@
   async function load(quiet) {
     if (!quiet) { offerList.replaceChildren(); const sk = document.createElement("div"); sk.className = "skeleton"; sk.style.height = "120px"; offerList.appendChild(sk); }
     try {
-      const [offers, mine] = await Promise.all([
+      const [offers, external, mine] = await Promise.all([
         HireLinkAPI.api("/offers/public"),
+        HireLinkAPI.api("/external-offers").catch(() => []),
         HireLinkAPI.api("/applications/mine").catch(() => []),
         HireLinkPlaces.ready(),
       ]);
-      const stamp = (offers || []).map((o) => o.id + ":" + (o.matchScore == null ? "" : o.matchScore)).join("|") + "~" + (mine || []).map((a) => a.id + ":" + a.status).join("|");
+      const outside = (external || []).map((o) => Object.assign({ external: true, matchesProfile: o.matchAvailable === true && Number(o.matchScore) >= 50 }, o));
+      const stamp = (offers || []).map((o) => o.id + ":" + (o.matchScore == null ? "" : o.matchScore)).join("|") + "~" + outside.map((o) => o.id).join(",") + "~" + (mine || []).map((a) => a.id + ":" + a.status).join("|");
       if (quiet && stamp === offerStamp) return;
       offerStamp = stamp;
-      cached = offers || [];
+      cached = (offers || []).concat(outside);
       appliedByOffer = new Map((mine || []).map((a) => [a.jobOfferId, { appId: a.id, status: a.status }]));
       matchToggle.checked = matchOnly;
       rebuildFacets();

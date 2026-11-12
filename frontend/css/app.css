@@ -1106,6 +1106,9 @@ html[data-theme="dark"] .hl-fact {
 @media (max-width: 800px) {
   .offer-advanced { grid-template-columns: 1fr 1fr; }
 }
+@media (max-width: 520px) {
+  .offer-advanced { grid-template-columns: 1fr; }
+}
 .match-why { margin: 0.35rem 0 0; font-size: var(--text-xs); line-height: 1.35; }
 .profile-hero { display: flex; gap: 1.1rem; align-items: center; }
 .coach-log { display: grid; gap: 0.55rem; max-height: 320px; overflow: auto; margin-bottom: 0.8rem; }
