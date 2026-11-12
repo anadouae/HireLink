@@ -1,6 +1,9 @@
 # Build
 target/
 backend/target/
+backend/target-isolated/
+backend/target-browser/
+backend/target-install/
 backend/bin/
 backend/BOOT-INF/
 backend/tmp_jar_check/
@@ -57,3 +60,6 @@ tools/
 backup-db/
 tmp/
 *.zip
+backend/target-e2e/
+backend/target-demo/
+backend/target-verify/

@@ -109,6 +109,14 @@ public class NotificationStreamService {
             }
         } catch (IOException | IllegalStateException e) {
             close(userId, stream);
+        } catch (RuntimeException e) {
+            // Client parti (onglet fermé) pendant un envoi SSE — retirer le flux sans remonter en 500.
+            if (e.getClass().getName().contains("AsyncRequestNotUsable")
+                    || e.getClass().getName().endsWith("ClientAbortException")) {
+                close(userId, stream);
+                return;
+            }
+            throw e;
         }
     }
 
@@ -118,7 +126,7 @@ public class NotificationStreamService {
         try {
             stream.emitter().complete();
         } catch (Exception e) {
-            log.debug("Flux déjà fermé");
+            log.debug("Flux déjà fermé : {}", e.toString());
         }
     }
 }

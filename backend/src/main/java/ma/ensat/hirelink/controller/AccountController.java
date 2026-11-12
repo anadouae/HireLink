@@ -43,8 +43,13 @@ public class AccountController {
 
     @GetMapping("/avatar")
     public ResponseEntity<byte[]> avatar(@AuthenticationPrincipal User user) {
-        var photo = profile.avatar(user);
-        return ResponseEntity.ok().header("Cache-Control", "private, no-store").contentType(org.springframework.http.MediaType.parseMediaType(photo.getContentType())).body(photo.getData());
+        // 204 = pas de photo (comportement attendu) ; évite un 404 bruyant dans la console du navigateur.
+        return profile.findAvatar(user)
+                .map(photo -> ResponseEntity.ok()
+                        .header("Cache-Control", "private, no-store")
+                        .contentType(org.springframework.http.MediaType.parseMediaType(photo.getContentType()))
+                        .body(photo.getData()))
+                .orElseGet(() -> ResponseEntity.noContent().header("Cache-Control", "private, no-store").build());
     }
 
     @PostMapping(value = "/avatar", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
