@@ -14,7 +14,7 @@
     try {
       const res = await HireLinkAPI.authFetch("/account/avatar?t=" + Date.now());
       if (gen !== photoGen) return;
-      if (!res.ok) throw new Error("none");
+      if (!res.ok || res.status === 204) throw new Error("none");
       img.src = URL.createObjectURL(await res.blob());
       img.hidden = false;
       fb.hidden = true;

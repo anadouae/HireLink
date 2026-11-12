@@ -237,6 +237,7 @@
         { id: "users", href: "admin.html#users", label: "Comptes", icon: "users" },
         { id: "orgs", href: "admin.html#orgs", label: "Entreprises", icon: "building" },
         { id: "offers", href: "admin.html#offers", label: "Offres", icon: "briefcase" },
+        { id: "external", href: "admin.html#external", label: "Sources externes", icon: "file" },
         { id: "moderation", href: "admin.html#moderation", label: "Signalements", icon: "flag" },
         { section: "Référentiel" },
         { id: "plans", href: "admin.html#plans", label: "Plans & factures", icon: "card" },
@@ -349,7 +350,7 @@
     b.textContent = initials(session.fullName);
     if (!global.HireLinkAPI || !HireLinkAPI.authFetch) return;
     HireLinkAPI.authFetch("/account/avatar").then(function (res) {
-      if (!res.ok) return null;
+      if (!res.ok || res.status === 204) return null;
       return res.blob();
     }).then(function (blob) {
       if (!blob || !blob.size) return;

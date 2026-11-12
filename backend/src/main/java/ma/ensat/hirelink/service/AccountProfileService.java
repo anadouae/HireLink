@@ -120,8 +120,14 @@ public class AccountProfileService {
 
     @Transactional(readOnly = true)
     public UserAvatar avatar(User user) {
-        return avatars.findById(user.getId())
+        return findAvatar(user)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Aucune photo."));
+    }
+
+    /** Photo de profil si présente ; vide sinon (le contrôleur répond 204). */
+    @Transactional(readOnly = true)
+    public java.util.Optional<UserAvatar> findAvatar(User user) {
+        return avatars.findById(user.getId());
     }
 
     @Transactional(readOnly = true)

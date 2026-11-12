@@ -17,6 +17,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
@@ -120,10 +121,40 @@ public class GlobalExceptionHandler {
         return body(HttpStatus.BAD_REQUEST, "Une valeur est trop longue ou déjà utilisée.", null);
     }
 
+    /**
+     * Déconnexion client (fermeture d'onglet, EventSource coupé) : pas une erreur métier.
+     * Écrire un JSON d'erreur sur un flux {@code text/event-stream} provoquerait une seconde exception.
+     */
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public void clientDisconnected(AsyncRequestNotUsableException e) {
+        log.debug("Connexion client interrompue : {}", e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> unexpected(Exception e) {
+        if (isClientAbort(e)) {
+            log.debug("Connexion client interrompue : {}", e.toString());
+            return null;
+        }
         String ref = UUID.randomUUID().toString().substring(0, 8);
         log.error("Erreur interne [{}] : {}", ref, e.toString(), e);
         return body(HttpStatus.INTERNAL_SERVER_ERROR, "Une erreur interne est survenue. Communiquez la référence au support.", ref);
+    }
+
+    private static boolean isClientAbort(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            String name = t.getClass().getName();
+            if (t instanceof AsyncRequestNotUsableException
+                    || name.endsWith("ClientAbortException")
+                    || name.endsWith("EofException")) {
+                return true;
+            }
+            String msg = t.getMessage();
+            if (msg != null && (msg.contains("Broken pipe") || msg.contains("Connection reset")
+                    || msg.contains("AsyncRequestNotUsable"))) {
+                return true;
+            }
+        }
+        return false;
     }
 }

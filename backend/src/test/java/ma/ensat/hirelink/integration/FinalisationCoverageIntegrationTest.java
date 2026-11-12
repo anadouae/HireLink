@@ -95,7 +95,7 @@ class FinalisationCoverageIntegrationTest {
         assertEquals(HttpStatus.OK, photo.getStatusCode());
         assertEquals(seconde.length, photo.getBody().length);
         assertEquals(HttpStatus.OK, http.exchange("/api/v1/account/avatar", HttpMethod.DELETE, auth(courant), String.class).getStatusCode());
-        assertEquals(HttpStatus.NOT_FOUND, http.exchange("/api/v1/account/avatar", HttpMethod.GET, auth(courant), String.class).getStatusCode());
+        assertEquals(HttpStatus.NO_CONTENT, http.exchange("/api/v1/account/avatar", HttpMethod.GET, auth(courant), String.class).getStatusCode());
 
         ResponseEntity<String> changement = http.exchange("/api/v1/account/password", HttpMethod.POST,
                 json(courant, Map.of("currentPassword", MOT_DE_PASSE, "newPassword", MOT_DE_PASSE_SUIVANT, "confirmPassword", MOT_DE_PASSE_SUIVANT)), String.class);
