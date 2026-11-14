@@ -1,0 +1,29 @@
+{
+  "totalCount": 2,
+  "jobs": [
+    {
+      "title": "Developpeur Java Casablanca",
+      "location": "Casablanca",
+      "snippet": "Stack Spring Boot, MySQL. CDI.",
+      "salary": "",
+      "source": "jooble.org",
+      "type": "CDI",
+      "link": "https://ma.jooble.org/desc/12345",
+      "company": "Atlas Soft",
+      "updated": "2026-11-01T10:00:00Z",
+      "id": 12345
+    },
+    {
+      "title": "Data Analyst Rabat",
+      "location": "Rabat, Maroc",
+      "snippet": "Python, SQL, Power BI",
+      "salary": "",
+      "source": "jooble.org",
+      "type": "CDD",
+      "link": "https://ma.jooble.org/desc/67890",
+      "company": "Maghreb Analytics",
+      "updated": "01/11/2026",
+      "id": 67890
+    }
+  ]
+}

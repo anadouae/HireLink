@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 /**
- * Acceptation versionnée d'un document légal (CGU, confidentialité).
- * Distinct des consentements marketing (non implémentés tant qu'aucune finalité promo n'existe).
+ * Acceptation versionnee d'un document legal (CGU, confidentialite).
+ * Distinct des consentements marketing (non implementes tant qu'aucune finalite promo n'existe).
  */
 @Entity
 @Table(name = "legal_acceptances", indexes = {

@@ -1,0 +1,23 @@
+{
+  "jobs": [
+    {
+      "id": 127817,
+      "title": "Vault Designer",
+      "updated_at": "2026-01-14T10:55:28-05:00",
+      "first_published": "2026-01-10T10:00:00-05:00",
+      "absolute_url": "https://boards.greenhouse.io/acme-gh/jobs/127817",
+      "company_name": "Acme GH",
+      "location": { "name": "Casablanca, Morocco" },
+      "content": "&lt;p&gt;Design vault systems.&lt;/p&gt;"
+    },
+    {
+      "id": 2,
+      "title": "Homepage Trap",
+      "absolute_url": "https://www.acme-gh.example/",
+      "company_name": "Acme GH",
+      "location": { "name": "Remote" },
+      "content": "Should quarantine"
+    }
+  ],
+  "meta": { "total": 2 }
+}

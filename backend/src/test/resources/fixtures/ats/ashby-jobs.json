@@ -1,0 +1,36 @@
+{
+  "apiVersion": "1",
+  "jobs": [
+    {
+      "id": "ashby-job-1",
+      "title": "Product Engineer",
+      "location": "Casablanca",
+      "isListed": true,
+      "employmentType": "FullTime",
+      "workplaceType": "Hybrid",
+      "descriptionPlain": "Ship product.",
+      "publishedAt": "2026-11-01T12:00:00.000Z",
+      "jobUrl": "https://jobs.ashbyhq.com/acme-ashby/ashby-job-1",
+      "applyUrl": "https://jobs.ashbyhq.com/acme-ashby/ashby-job-1/application",
+      "address": {
+        "postalAddress": {
+          "addressLocality": "Casablanca",
+          "addressCountry": "MA"
+        }
+      }
+    },
+    {
+      "id": "ashby-unlisted",
+      "title": "Secret Role",
+      "isListed": false,
+      "jobUrl": "https://jobs.ashbyhq.com/acme-ashby/ashby-unlisted",
+      "descriptionPlain": "Should be skipped"
+    },
+    {
+      "id": "ashby-minimal",
+      "title": "Ops",
+      "isListed": true,
+      "jobUrl": "https://jobs.ashbyhq.com/acme-ashby/ashby-minimal"
+    }
+  ]
+}

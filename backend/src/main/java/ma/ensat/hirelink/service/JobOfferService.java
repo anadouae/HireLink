@@ -56,6 +56,7 @@ public class JobOfferService {
     private final PlaceCatalogService placeCatalog;
     private final CompanyFollowService companyFollowService;
     private final AuditService audit;
+    private final CatalogListingIndexer catalogIndexer;
 
     public JobOfferService(
             JobOfferRepository jobOfferRepository,
@@ -73,7 +74,8 @@ public class JobOfferService {
             PlaceCatalogService placeCatalog,
             ResponsivenessService responsiveness,
             CompanyFollowService companyFollowService,
-            AuditService audit
+            AuditService audit,
+            CatalogListingIndexer catalogIndexer
     ) {
         this.tagRepository = tagRepository;
         this.skillCatalog = skillCatalog;
@@ -91,6 +93,7 @@ public class JobOfferService {
         this.offerReportRepository = offerReportRepository;
         this.notificationService = notificationService;
         this.audit = audit;
+        this.catalogIndexer = catalogIndexer;
     }
 
     @Transactional(readOnly = true)
@@ -161,6 +164,7 @@ public class JobOfferService {
         o.setOrganization(organizationService.currentOrganization(recruiter));
         applyWithFraudGate(o, req, wantPublish);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         audit.ok(wantPublish ? "OFFER_PUBLISHED" : "OFFER_CREATED", recruiter, "OFFER", o.getId(), o.getTitle());
         if (o.isPublished()) companyFollowService.announceNewOffer(o);
         return toDto(o, null);
@@ -184,6 +188,7 @@ public class JobOfferService {
         }
         applyWithFraudGate(o, req, wantPublish);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         audit.ok("OFFER_UPDATED", recruiter, "OFFER", o.getId(), o.getTitle());
         if (o.isPublished() && !wasPublished) companyFollowService.announceNewOffer(o);
         return toDto(o, null);
@@ -198,6 +203,7 @@ public class JobOfferService {
                     "Cette offre a déjà des candidatures : archivez-la pour la retirer de votre espace sans effacer l'historique des candidats.");
         }
         String titre = o.getTitle();
+        catalogIndexer.removeByOriginRef(ma.ensat.hirelink.model.CatalogListing.ORIGIN_INTERNAL, id);
         jobOfferRepository.delete(o);
         audit.ok("OFFER_DELETED", recruiter, "OFFER", id, titre);
     }
@@ -225,11 +231,13 @@ public class JobOfferService {
         if (scan.softFlag()) {
             o.setQuarantineReason(scan.reasonCode() + ": " + String.join(", ", scan.hits()));
             jobOfferRepository.save(o);
+            syncCatalog(o);
             return toDto(o, null);
         }
         o.setPublished(true);
         o.setQuarantineReason(null);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         audit.ok("OFFER_PUBLISHED", recruiter, "OFFER", o.getId(), o.getTitle());
         companyFollowService.announceNewOffer(o);
         return toDto(o, null);
@@ -241,6 +249,7 @@ public class JobOfferService {
         boolean etaitPubliee = o.isPublished();
         o.setPublished(false);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         if (etaitPubliee) {
             audit.ok("OFFER_UNPUBLISHED", recruiter, "OFFER", o.getId(), o.getTitle());
         }
@@ -257,6 +266,7 @@ public class JobOfferService {
         boolean etaitOuverte = o.getClosedAt() == null;
         if (etaitOuverte) o.setClosedAt(Instant.now());
         jobOfferRepository.save(o);
+        syncCatalog(o);
         if (etaitOuverte) {
             audit.ok("OFFER_CLOSED", recruiter, "OFFER", o.getId(), o.getTitle());
         }
@@ -271,6 +281,7 @@ public class JobOfferService {
         }
         o.setClosedAt(null);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         audit.ok("OFFER_REOPENED", recruiter, "OFFER", o.getId(), o.getTitle());
         return toDto(o, null);
     }
@@ -281,6 +292,7 @@ public class JobOfferService {
         boolean etaitActive = o.getArchivedAt() == null;
         if (etaitActive) o.setArchivedAt(Instant.now());
         jobOfferRepository.save(o);
+        syncCatalog(o);
         if (etaitActive) {
             audit.ok("OFFER_ARCHIVED", recruiter, "OFFER", o.getId(), o.getTitle());
         }
@@ -292,6 +304,7 @@ public class JobOfferService {
         JobOffer o = requireManaged(recruiter, id);
         o.setArchivedAt(null);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         audit.ok("OFFER_UNARCHIVED", recruiter, "OFFER", o.getId(), o.getTitle());
         return toDto(o, null);
     }
@@ -348,6 +361,7 @@ public class JobOfferService {
         LocalDate base = o.getDeadline() != null && o.getDeadline().isAfter(BusinessTime.today()) ? o.getDeadline() : BusinessTime.today();
         o.setDeadline(base.plusDays(add));
         jobOfferRepository.save(o);
+        syncCatalog(o);
         audit.ok("OFFER_DEADLINE_EXTENDED", recruiter, "OFFER", o.getId(), "+" + add + " j → " + o.getDeadline());
         return toDto(o, null);
     }
@@ -364,6 +378,7 @@ public class JobOfferService {
         o.setPublished(false);
         o.setQuarantineReason("MODERATION: " + why);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         resolveReports(o.getId(), "FONDE", admin.getEmail());
         notificationService.push("offer:" + o.getId(), o.getRecruiter().getId(), "Offre suspendue",
                 "« " + o.getTitle() + " » a été suspendue par la modération : " + why, "MODERATION");
@@ -377,6 +392,7 @@ public class JobOfferService {
         o.setSuspended(false);
         o.setQuarantineReason(null);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         resolveReports(o.getId(), "ECARTE", admin.getEmail());
         notificationService.push("offer:" + o.getId(), o.getRecruiter().getId(), "Offre rétablie",
                 "« " + o.getTitle() + " » n'est plus suspendue. Publiez-la de nouveau pour la remettre en vitrine.", "MODERATION");
@@ -389,6 +405,7 @@ public class JobOfferService {
         JobOffer o = requireModeration(admin, id);
         o.setPublished(false);
         jobOfferRepository.save(o);
+        syncCatalog(o);
         notificationService.push("offer:" + o.getId(), o.getRecruiter().getId(), "Offre retirée de la vitrine",
                 "« " + o.getTitle() + " » n'apparaît plus dans la recherche. Vous pouvez la publier à nouveau.", "MODERATION");
         return toDto(o, null);
@@ -477,6 +494,7 @@ public class JobOfferService {
                     "MODERATION");
         }
         jobOfferRepository.save(o);
+        syncCatalog(o);
 
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("offerId", offerId);
@@ -538,6 +556,18 @@ public class JobOfferService {
             if (wantPublish) {
                 o.setQuarantineReason(null);
             }
+        }
+    }
+
+
+    /** Projection catalogue : ne doit jamais faire echouer la transaction metier. */
+    private void syncCatalog(JobOffer o) {
+        try {
+            catalogIndexer.syncInternal(o);
+        } catch (RuntimeException ex) {
+            // La vitrine peut etre reconciliee ; l'ecriture offre reste prioritaire.
+            org.slf4j.LoggerFactory.getLogger(JobOfferService.class)
+                    .warn("Catalogue : sync interne echouee pour offre {}: {}", o != null ? o.getId() : null, ex.toString());
         }
     }
 

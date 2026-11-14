@@ -9,6 +9,7 @@ import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +20,7 @@ import java.nio.file.Path;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 
-/** Facture A4. Les accents français passent par une police Unicode lorsqu'elle est disponible. */
+/** Facture A4. Logo HireLink en haut à gauche. Accents via police Unicode si disponible. */
 @Service
 public class InvoicePdfService {
 
@@ -30,6 +31,10 @@ public class InvoicePdfService {
             "C:\\Windows\\Fonts\\segoeui.ttf",
             "C:\\Windows\\Fonts\\tahoma.ttf",
             "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    };
+    private static final String[] LOGO_CANDIDATES = {
+            "branding/logo-hirelink.png",
+            "static/branding/logo-hirelink.png"
     };
 
     @Value("${hirelink.billing.issuer-name:HireLink}")
@@ -49,8 +54,22 @@ public class InvoicePdfService {
             PDFont bold = font;
             try (PDPageContentStream cs = new PDPageContentStream(doc, page)) {
                 float y = 800;
-                y = line(cs, bold, 16, 48, y, safe(issuerName));
-                y = line(cs, font, 10, 48, y - 4, legalLine());
+                float textX = 48;
+
+                PDImageXObject logo = loadLogo(doc);
+                if (logo != null) {
+                    float logoH = 36;
+                    float logoW = logo.getWidth() * (logoH / Math.max(1f, logo.getHeight()));
+                    cs.drawImage(logo, 48, y - logoH + 8, logoW, logoH);
+                    textX = 48 + logoW + 12;
+                    y = line(cs, bold, 16, textX, y, safe(issuerName));
+                    y = line(cs, font, 10, textX, y - 2, legalLine());
+                    y = Math.min(y, 800 - logoH - 8);
+                } else {
+                    y = line(cs, bold, 16, 48, y, safe(issuerName));
+                    y = line(cs, font, 10, 48, y - 4, legalLine());
+                }
+
                 y -= 18;
                 y = line(cs, bold, 18, 48, y, "Facture " + invoice.getNumber());
                 y = line(cs, font, 11, 48, y - 6, "Émise le " + WHEN.format(invoice.getIssuedAt())
@@ -80,7 +99,7 @@ public class InvoicePdfService {
                     y = line(cs, font, 11, 48, y, "Aucun règlement : montant nul.");
                 }
                 y -= 28;
-                line(cs, font, 9, 48, y, "Document de démonstration. Aucun débit bancaire réel n'est associé à cette facture.");
+                line(cs, font, 9, 48, y, "Merci pour votre confiance. Document généré par HireLink.");
             }
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             doc.save(out);
@@ -88,6 +107,28 @@ public class InvoicePdfService {
         } catch (Exception e) {
             throw new IllegalStateException("PDF impossible", e);
         }
+    }
+
+    private PDImageXObject loadLogo(PDDocument doc) {
+        for (String path : LOGO_CANDIDATES) {
+            try (InputStream in = InvoicePdfService.class.getResourceAsStream("/" + path)) {
+                if (in == null) continue;
+                byte[] bytes = in.readAllBytes();
+                if (bytes.length == 0) continue;
+                return PDImageXObject.createFromByteArray(doc, bytes, "hirelink-logo");
+            } catch (Exception ignored) {
+                // essayer le candidat suivant
+            }
+        }
+        // Repli fichier frontend local (dev Windows)
+        try {
+            Path local = Path.of("..", "frontend", "assets", "logo-hirelink-icon.png").toAbsolutePath().normalize();
+            if (Files.isRegularFile(local)) {
+                return PDImageXObject.createFromFile(local.toString(), doc);
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     private String legalLine() {

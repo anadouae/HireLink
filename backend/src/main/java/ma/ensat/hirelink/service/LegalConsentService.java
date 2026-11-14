@@ -46,24 +46,24 @@ public class LegalConsentService {
         m.put("termsPath", "legal/cgu.html");
         m.put("privacyPath", "legal/confidentialite.html");
         m.put("marketingEnabled", false);
-        m.put("draftNotice", "Documents pédagogiques — textes à valider avant usage juridique définitif.");
+        m.put("draftNotice", "Documents pedagogiques - textes a valider avant usage juridique definitif.");
         return m;
     }
 
-    /** Refuse la création de compte si les versions obligatoires ne correspondent pas aux versions courantes. */
+    /** Refuse la creation de compte si les versions obligatoires ne correspondent pas aux versions courantes. */
     public void assertSignupConsents(String acceptTermsVersion, String acceptPrivacyVersion) {
         if (acceptTermsVersion == null || acceptTermsVersion.isBlank()
                 || acceptPrivacyVersion == null || acceptPrivacyVersion.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Acceptez les Conditions générales et la Politique de confidentialité pour créer un compte.");
+                    "Acceptez les Conditions generales et la Politique de confidentialite pour creer un compte.");
         }
         if (!termsVersion.equals(acceptTermsVersion.trim())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Version des CGU incorrecte ou obsolète. Rouvrez le document et réessayez.");
+                    "Version des CGU incorrecte ou obsolete. Rouvrez le document et reessayez.");
         }
         if (!privacyVersion.equals(acceptPrivacyVersion.trim())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Version de la Politique de confidentialité incorrecte ou obsolète. Rouvrez le document et réessayez.");
+                    "Version de la Politique de confidentialite incorrecte ou obsolete. Rouvrez le document et reessayez.");
         }
     }
 

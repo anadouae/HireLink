@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "boards": [
+    {
+      "provider": "GREENHOUSE",
+      "boardKey": "acme-gh",
+      "companyName": "Acme GH",
+      "referenceUrl": "https://boards.greenhouse.io/acme-gh",
+      "regionHint": "TEST",
+      "enabled": true,
+      "attributionNotes": "fixture",
+      "verificationNotes": "test only"
+    },
+    {
+      "provider": "LEVER",
+      "boardKey": "acme-lever",
+      "companyName": "Acme Lever",
+      "referenceUrl": "https://jobs.lever.co/acme-lever",
+      "regionHint": "TEST",
+      "enabled": true,
+      "attributionNotes": "fixture",
+      "verificationNotes": "test only"
+    },
+    {
+      "provider": "ASHBY",
+      "boardKey": "acme-ashby",
+      "companyName": "Acme Ashby",
+      "referenceUrl": "https://jobs.ashbyhq.com/acme-ashby",
+      "regionHint": "TEST",
+      "enabled": true,
+      "attributionNotes": "fixture",
+      "verificationNotes": "test only"
+    },
+    {
+      "provider": "GREENHOUSE",
+      "boardKey": "disabled-gh",
+      "companyName": "Disabled",
+      "referenceUrl": "https://boards.greenhouse.io/disabled-gh",
+      "regionHint": "TEST",
+      "enabled": false,
+      "attributionNotes": "fixture",
+      "verificationNotes": "disabled"
+    }
+  ]
+}

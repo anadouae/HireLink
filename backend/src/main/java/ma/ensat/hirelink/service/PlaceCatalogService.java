@@ -28,41 +28,73 @@ public class PlaceCatalogService {
 
     static {
         for (String c : ("MA:Maroc,FR:France,ES:Espagne,PT:Portugal,BE:Belgique,GB:Royaume-Uni,DE:Allemagne,IT:Italie,NL:Pays-Bas,"
-                + "CH:Suisse,LU:Luxembourg,CA:Canada,US:États-Unis,AE:Émirats arabes unis,SA:Arabie saoudite,QA:Qatar,TR:Turquie,"
-                + "TN:Tunisie,DZ:Algérie,EG:Égypte,SN:Sénégal,CI:Côte d'Ivoire,ML:Mali,MR:Mauritanie").split(",")) {
-            COUNTRIES.put(c.substring(0, 2), c.substring(3));
+                + "CH:Suisse,LU:Luxembourg,IE:Irlande,AT:Autriche,SE:Suède,NO:Norvège,DK:Danemark,PL:Pologne,CZ:Tchéquie,"
+                + "CA:Canada,US:États-Unis,MX:Mexique,BR:Brésil,AR:Argentine,CL:Chili,"
+                + "AE:Émirats arabes unis,SA:Arabie saoudite,QA:Qatar,KW:Koweït,BH:Bahreïn,OM:Oman,TR:Turquie,IL:Israël,"
+                + "TN:Tunisie,DZ:Algérie,EG:Égypte,SN:Sénégal,CI:Côte d'Ivoire,ML:Mali,MR:Mauritanie,MA:Maroc,"
+                + "CN:Chine,JP:Japon,KR:Corée du Sud,IN:Inde,SG:Singapour,HK:Hong Kong,AU:Australie,NZ:Nouvelle-Zélande,"
+                + "ZA:Afrique du Sud,NG:Nigeria,KE:Kenya,GH:Ghana").split(",")) {
+            COUNTRIES.putIfAbsent(c.substring(0, 2), c.substring(3));
         }
         cities("MA", "Casablanca,Rabat,Tanger,Tétouan,Fès,Marrakech,Agadir,Oujda,Meknès,Kénitra,Témara,Salé,El Jadida,Safi,Nador,"
                 + "Mohammedia,Béni Mellal,Khouribga,Settat,Berrechid,Larache,Ksar El Kébir,Taza,Essaouira,Dakhla,Laâyoune,Guelmim,"
                 + "Errachidia,Ouarzazate,Ifrane,Al Hoceïma,Tiznit,Taroudant,Chefchaouen,Martil,M'diq,Fnideq,Asilah,Khémisset,Berkane,"
-                + "Tanger Med,Benguerir,Skhirat,Bouznika,Nouaceur");
-        cities("FR", "Paris,Lyon,Marseille,Toulouse,Lille,Bordeaux,Nantes");
-        cities("ES", "Madrid,Barcelone,Séville,Malaga");
-        cities("PT", "Lisbonne,Porto");
-        cities("BE", "Bruxelles");
-        cities("GB", "Londres");
-        cities("DE", "Berlin,Munich");
-        cities("IT", "Rome,Milan");
-        cities("NL", "Amsterdam");
-        cities("CH", "Genève,Zurich");
+                + "Tanger Med,Benguerir,Skhirat,Bouznika,Nouaceur,Khemisset,Sidi Slimane,Youssoufia,Midelt,Azrou");
+        cities("FR", "Paris,Lyon,Marseille,Toulouse,Lille,Bordeaux,Nantes,Nice,Strasbourg,Rennes,Montpellier,Grenoble");
+        cities("ES", "Madrid,Barcelone,Séville,Malaga,Valence,Bilbao");
+        cities("PT", "Lisbonne,Porto,Faro");
+        cities("BE", "Bruxelles,Anvers,Liège,Gand");
+        cities("GB", "Londres,Manchester,Édimbourg,Birmingham");
+        cities("IE", "Dublin");
+        cities("DE", "Berlin,Munich,Francfort,Hambourg,Cologne");
+        cities("IT", "Rome,Milan,Turin,Naples");
+        cities("NL", "Amsterdam,Rotterdam,La Haye");
+        cities("CH", "Genève,Zurich,Lausanne,Bâle");
         cities("LU", "Luxembourg");
-        cities("CA", "Montréal,Toronto");
-        cities("US", "New York");
-        cities("AE", "Dubaï,Abou Dabi");
-        cities("SA", "Riyad");
+        cities("AT", "Vienne");
+        cities("SE", "Stockholm");
+        cities("NO", "Oslo");
+        cities("DK", "Copenhague");
+        cities("PL", "Varsovie,Cracovie");
+        cities("CA", "Montréal,Toronto,Vancouver,Ottawa,Québec");
+        cities("US", "New York,San Francisco,Boston,Seattle,Chicago,Austin,Los Angeles,Washington");
+        cities("MX", "Mexico");
+        cities("BR", "São Paulo,Rio de Janeiro");
+        cities("AR", "Buenos Aires");
+        cities("CL", "Santiago");
+        cities("AE", "Dubaï,Abou Dabi,Charjah");
+        cities("SA", "Riyad,Djeddah");
         cities("QA", "Doha");
-        cities("TR", "Istanbul");
-        cities("TN", "Tunis");
-        cities("DZ", "Alger");
-        cities("EG", "Le Caire");
+        cities("KW", "Koweït");
+        cities("BH", "Manama");
+        cities("OM", "Mascate");
+        cities("TR", "Istanbul,Ankara");
+        cities("TN", "Tunis,Sfax");
+        cities("DZ", "Alger,Oran");
+        cities("EG", "Le Caire,Alexandrie");
         cities("SN", "Dakar");
         cities("CI", "Abidjan");
+        cities("NG", "Lagos,Abuja");
+        cities("KE", "Nairobi");
+        cities("GH", "Accra");
+        cities("ZA", "Le Cap,Johannesburg");
+        cities("CN", "Pékin,Shanghai,Shenzhen");
+        cities("JP", "Tokyo,Osaka");
+        cities("KR", "Séoul");
+        cities("IN", "Bangalore,Mumbai,Hyderabad,New Delhi");
+        cities("SG", "Singapour");
+        cities("HK", "Hong Kong");
+        cities("AU", "Sydney,Melbourne");
+        cities("NZ", "Auckland");
         COUNTRIES.forEach((code, name) -> PLACES.add(new Place("", name, code, flag(code))));
         for (String n : ("MA:Marocaine,FR:Française,ES:Espagnole,PT:Portugaise,BE:Belge,GB:Britannique,DE:Allemande,IT:Italienne,"
                 + "NL:Néerlandaise,CH:Suisse,CA:Canadienne,US:Américaine,AE:Émiratie,TN:Tunisienne,DZ:Algérienne,SN:Sénégalaise,"
-                + "EG:Égyptienne,CI:Ivoirienne,ML:Malienne,MR:Mauritanienne,TR:Turque,SA:Saoudienne").split(",")) {
+                + "EG:Égyptienne,CI:Ivoirienne,ML:Malienne,MR:Mauritanienne,TR:Turque,SA:Saoudienne,BR:Brésilienne,IN:Indienne,"
+                + "CN:Chinoise,JP:Japonaise,KR:Sud-coréenne,AU:Australienne,ZA:Sud-africaine,NG:Nigériane,SN:Sénégalaise").split(",")) {
             String code = n.substring(0, 2);
-            NATIONALITIES.add(new Nationality(n.substring(3), COUNTRIES.get(code), flag(code)));
+            if (COUNTRIES.containsKey(code)) {
+                NATIONALITIES.add(new Nationality(n.substring(3), COUNTRIES.get(code), flag(code)));
+            }
         }
     }
 
@@ -128,6 +160,21 @@ public class PlaceCatalogService {
             if (!p.city().isEmpty() && TextMatcher.fold(p.city()).equals(needle)) return p.country();
         }
         return "";
+    }
+
+    /**
+     * Ville canonique du catalogue (ex. Tetouan → Tétouan) pour filtres accent-insensibles.
+     * Si inconnue, renvoie le libellé trimé tel quel.
+     */
+    public String canonicalCity(String label) {
+        if (label == null) return null;
+        String raw = label.trim();
+        if (raw.isEmpty()) return null;
+        String needle = TextMatcher.fold(raw);
+        for (Place p : PLACES) {
+            if (!p.city().isEmpty() && TextMatcher.fold(p.city()).equals(needle)) return p.city();
+        }
+        return raw;
     }
 
     public boolean isCountry(String label) {

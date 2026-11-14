@@ -66,7 +66,9 @@ public class DataSeeder {
             SkillMatchingService matching,
             CompanyVerificationService companyVerificationService,
             ma.ensat.hirelink.service.OrgLogoStorage orgLogoStorage,
-            ma.ensat.hirelink.repository.CompanyFollowRepository follows
+            ma.ensat.hirelink.repository.CompanyFollowRepository follows,
+            ma.ensat.hirelink.repository.CatalogListingRepository catalogListings,
+            ma.ensat.hirelink.service.CatalogListingIndexer catalogIndexer
     ) {
         return args -> {
             PasswordEncoder encoder = memoizing(realEncoder);
@@ -74,6 +76,7 @@ public class DataSeeder {
             bootstrapAdmin(users, realEncoder);
             if (!seedEnabled) {
                 log.info("Données de démonstration désactivées (hirelink.seed.enabled=false).");
+                ensureCatalogBootstrap(offers, catalogListings, catalogIndexer);
                 return;
             }
 
@@ -109,7 +112,32 @@ public class DataSeeder {
             enrichCompanies(organizations, companyVerificationService);
             ensureFollows(users, organizations, follows);
             logAccounts();
+            // Après seed effectif uniquement si projection vide (idempotent, pas à chaque boot).
+            ensureCatalogBootstrap(offers, catalogListings, catalogIndexer);
         };
+    }
+
+    /**
+     * Initialise catalog_listings une seule fois quand la projection est vide alors que des offres
+     * internes existent (cas install neuve / seed). N'importe pas les fixtures externes ; le rebuild
+     * exclut déjà MAROC_EMPLOI. Si le catalogue a déjà des lignes, aucun travail.
+     */
+    private void ensureCatalogBootstrap(
+            JobOfferRepository offers,
+            ma.ensat.hirelink.repository.CatalogListingRepository catalogListings,
+            ma.ensat.hirelink.service.CatalogListingIndexer catalogIndexer) {
+        long listingCount = catalogListings.count();
+        if (listingCount > 0) {
+            log.info("Catalogue déjà peuplé ({} lignes) — pas de reconstruction automatique.", listingCount);
+            return;
+        }
+        long offerCount = offers.count();
+        if (offerCount == 0) {
+            log.info("Catalogue vide et aucune offre — rien à indexer.");
+            return;
+        }
+        int n = catalogIndexer.rebuild();
+        log.info("Catalogue initialisé après seed : {} listings (à partir de {} offres sources).", n, offerCount);
     }
 
     /**

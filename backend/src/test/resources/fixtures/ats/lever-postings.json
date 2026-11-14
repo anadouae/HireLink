@@ -1,0 +1,18 @@
+[
+  {
+    "id": "posting-uuid-001",
+    "text": "Backend Engineer",
+    "categories": { "location": "Rabat", "commitment": "Full-time", "team": "Eng", "department": "Product" },
+    "hostedUrl": "https://jobs.lever.co/acme-lever/posting-uuid-001",
+    "applyUrl": "https://jobs.lever.co/acme-lever/posting-uuid-001/apply",
+    "descriptionPlain": "Build APIs.",
+    "createdAt": 1730000000000
+  },
+  {
+    "id": "posting-no-apply",
+    "text": "Designer",
+    "categories": { "location": "Casablanca" },
+    "hostedUrl": "https://jobs.lever.co/acme-lever/posting-no-apply",
+    "descriptionPlain": "Design systems."
+  }
+]

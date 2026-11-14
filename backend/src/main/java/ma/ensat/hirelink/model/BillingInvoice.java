@@ -15,8 +15,9 @@ public class BillingInvoice {
     private String number;
 
     /** Nul pour une facture personnelle (candidat). Les factures d'entreprise restent rattachées à l'organisation. */
+    /** Null pour une facture candidat (pas d'organisation). */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "organization_id")
+    @JoinColumn(name = "organization_id", nullable = true)
     private Organization organization;
 
     /** Débiteur autorisé à payer. Figé à l'émission : un autre membre de l'entreprise ne le devient pas. */
