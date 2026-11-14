@@ -68,7 +68,7 @@ Sans outil structuré, le suivi dépend de la rigueur manuelle du recruteur : pa
 
 Détails : [`docs/API.md`](docs/API.md) pour les routes et les champs, [`docs/GUIDE_INSTALLATION_ET_TEST.md`](docs/GUIDE_INSTALLATION_ET_TEST.md) §5.1 (SMTP) et §18 (scénarios).
 
-**Base existante** : au démarrage, Hibernate (`ddl-auto=update`) ajoute les colonnes manquantes et les tables `external_job_offers` / `external_sync_runs`. Le script `database/migrate_external_offers.sql` fait cette création de façon explicite et peut être relancé. L'import Remote OK reste désactivé. Voir le guide, §3.
+**Schéma** : migrations explicites `database/migrations/V000`…`V006` via `database/apply-migrations.ps1` (install propre : `-Fresh`). En démo locale, Hibernate (`ddl-auto=update`) reste tolérant. L’import Remote OK / Jooble / ATS reste **désactivé** par défaut. Après seed sur base neuve, le catalogue unifié est initialisé automatiquement. Voir `docs/HIRELINK_INSTALL_WINDOWS.md` et `docs/MIGRATIONS.md`.
 
 ### Transversal
 - **Matching local (F14)** : score Jaccard compétences / offre, gratuit, déterministe, sans API externe
