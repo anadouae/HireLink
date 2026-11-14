@@ -6,14 +6,18 @@ import ma.ensat.hirelink.repository.ExternalJobOfferRepository;
 import ma.ensat.hirelink.repository.ExternalSyncRunRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,29 +29,54 @@ public class ExternalJobImportService {
 
     private static final Logger log = LoggerFactory.getLogger(ExternalJobImportService.class);
 
-    /** Le flux Remote OK ne montre qu'une fenêtre récente. Une absence isolée n'est pas une suppression. */
+    /** Le flux Remote OK ne montre qu'une fenetre recente. Une absence isolee n'est pas une suppression. */
     public static final Duration ABSENCE_BEFORE_HIDE = Duration.ofDays(7);
 
-    public record SyncReport(String source, int created, int updated, int withdrawn, int rejected, int duplicates, boolean keptPrevious, String message) {}
+    public record SyncReport(
+            String source,
+            int created,
+            int updated,
+            int withdrawn,
+            int rejected,
+            int duplicates,
+            int quarantined,
+            boolean keptPrevious,
+            String message
+    ) {}
 
     private final ExternalJobOfferRepository offers;
     private final ExternalSyncRunRepository runs;
+    private final UrlQualityService urlQuality;
+    private final boolean enforceUrlQuality;
+    private final int maxAgeDays;
+    private final CatalogListingIndexer catalogIndexer;
     private final ReentrantLock syncLock = new ReentrantLock();
 
-    public ExternalJobImportService(ExternalJobOfferRepository offers, ExternalSyncRunRepository runs) {
+    public ExternalJobImportService(
+            ExternalJobOfferRepository offers,
+            ExternalSyncRunRepository runs,
+            UrlQualityService urlQuality,
+            CatalogListingIndexer catalogIndexer,
+            @Value("${hirelink.external-jobs.url-quality.enforce:true}") boolean enforceUrlQuality,
+            @Value("${hirelink.external-jobs.url-quality.max-age-days:180}") int maxAgeDays) {
         this.offers = offers;
         this.runs = runs;
+        this.urlQuality = urlQuality;
+        this.catalogIndexer = catalogIndexer;
+        this.enforceUrlQuality = enforceUrlQuality;
+        this.maxAgeDays = Math.max(1, maxAgeDays);
     }
 
     /**
      * Un flux vide, illisible ou sans offre acceptable ne retire rien.
-     * Une annonce absente d'un flux valide reste visible tant qu'elle a été vue depuis moins de sept jours.
-     * Un masquage administrateur n'est pas annulé par la synchronisation.
+     * Une annonce absente d'un flux valide reste visible tant qu'elle a ete vue depuis moins de sept jours.
+     * Un masquage administrateur n'est pas annule par la synchronisation.
+     * Les offres suspectes sont mises en quarantaine (conservees), jamais effacees ici.
      */
     @Transactional
-    public SyncReport importSnapshot(String source, List<RemoteOkParser.ParsedJob> jobs) {
+    public SyncReport importSnapshot(String source, List<ParsedExternalJob> jobs) {
         if (!syncLock.tryLock()) {
-            return new SyncReport(source, 0, 0, 0, 0, 0, true, "Une synchronisation est deja en cours.");
+            return new SyncReport(source, 0, 0, 0, 0, 0, 0, true, "Une synchronisation est deja en cours.");
         }
         boolean releaseAfterCommit = false;
         try {
@@ -67,10 +96,10 @@ public class ExternalJobImportService {
         }
     }
 
-    private SyncReport importLocked(String source, List<RemoteOkParser.ParsedJob> jobs) {
+    private SyncReport importLocked(String source, List<ParsedExternalJob> jobs) {
         if (jobs == null || jobs.isEmpty()) {
             log.info("Import {} : flux vide, offres precedentes conservees", source);
-            return remember(new SyncReport(source, 0, 0, 0, 0, 0, true, "Flux vide : les offres deja importees sont conservees."));
+            return remember(new SyncReport(source, 0, 0, 0, 0, 0, 0, true, "Flux vide : les offres deja importees sont conservees."));
         }
         Map<String, ExternalJobOffer> existing = new LinkedHashMap<>();
         for (ExternalJobOffer row : offers.findBySource(source)) existing.put(row.getExternalId(), row);
@@ -79,9 +108,10 @@ public class ExternalJobImportService {
         int updated = 0;
         int rejected = 0;
         int duplicates = 0;
+        int quarantined = 0;
         Instant now = Instant.now();
-        for (RemoteOkParser.ParsedJob job : jobs) {
-            if (!acceptable(job)) {
+        for (ParsedExternalJob job : jobs) {
+            if (!structurallyAcceptable(job)) {
                 rejected++;
                 continue;
             }
@@ -97,17 +127,20 @@ public class ExternalJobImportService {
                 updated++;
             }
             copy(row, job, now);
+            if (row.isQuarantined()) quarantined++;
             offers.save(row);
+            catalogIndexer.syncExternal(row);
             existing.put(job.externalId(), row);
         }
         int withdrawn = 0;
         if (!seen.isEmpty()) withdrawn = hideLongAbsences(source, seen, now);
         if (created == 0 && updated == 0) {
             log.info("Import {} : aucune offre acceptable, offres precedentes conservees", source);
-            return remember(new SyncReport(source, 0, 0, 0, rejected, duplicates, true, "Aucune offre acceptable : rien n'a ete retire."));
+            return remember(new SyncReport(source, 0, 0, 0, rejected, duplicates, quarantined, true, "Aucune offre acceptable : rien n'a ete retire."));
         }
-        log.info("Import {} : creees={}, maj={}, retirees={}, rejetees={}", source, created, updated, withdrawn, rejected);
-        return remember(new SyncReport(source, created, updated, withdrawn, rejected, duplicates, false, "Synchronisation termin\u00e9e."));
+        log.info("Import {} : creees={}, maj={}, retirees={}, rejetees={}, quarantaine={}",
+                source, created, updated, withdrawn, rejected, quarantined);
+        return remember(new SyncReport(source, created, updated, withdrawn, rejected, duplicates, quarantined, false, "Synchronisation termin\u00e9e."));
     }
 
     private int hideLongAbsences(String source, Set<String> seen, Instant now) {
@@ -119,6 +152,7 @@ public class ExternalJobImportService {
             if (seenAt != null && seenAt.isBefore(limit)) {
                 row.setAvailable(false);
                 offers.save(row);
+                catalogIndexer.syncExternal(row);
                 withdrawn++;
             }
         }
@@ -134,25 +168,45 @@ public class ExternalJobImportService {
         run.setRejectedCount(report.rejected());
         run.setDuplicateCount(report.duplicates());
         run.setKeptPrevious(report.keptPrevious());
-        run.setMessage(report.message());
+        String msg = report.message();
+        if (report.quarantined() > 0) {
+            String note = " quarantaine=" + report.quarantined();
+            msg = msg.length() + note.length() <= 300 ? msg + note : msg;
+        }
+        run.setMessage(msg);
         run.setFinishedAt(Instant.now());
         runs.save(run);
         return report;
     }
 
-    private static boolean acceptable(RemoteOkParser.ParsedJob job) {
+    /** Identite minimale : pas de validation " l'annonce existe encore ". */
+    private static boolean structurallyAcceptable(ParsedExternalJob job) {
         return job != null
                 && job.externalId() != null && !job.externalId().isBlank()
                 && job.title() != null && !job.title().isBlank()
                 && job.company() != null && !job.company().isBlank()
-                && job.originUrl() != null && job.originUrl().startsWith("https://");
+                && job.originUrl() != null && !job.originUrl().isBlank();
     }
 
-    private static void copy(ExternalJobOffer row, RemoteOkParser.ParsedJob job, Instant now) {
+    private void copy(ExternalJobOffer row, ParsedExternalJob job, Instant now) {
+        UrlQualityService.Assessment origin = urlQuality.classifyOrigin(job.originUrl());
+        String applyRaw = blankToNull(job.applyUrl());
+        // Ne jamais inventer un lien de candidature a partir de l'origine.
+        if (applyRaw != null) {
+            UrlQualityService.Assessment apply = urlQuality.classifyApply(applyRaw);
+            if (apply.quality() == UrlQuality.INVALID) {
+                applyRaw = null;
+            }
+        }
+
         row.setTitle(job.title());
         row.setCompany(job.company());
-        row.setOriginUrl(job.originUrl());
-        row.setApplyUrl(job.applyUrl() == null ? job.originUrl() : job.applyUrl());
+        row.setOriginUrl(job.originUrl().trim());
+        row.setApplyUrl(applyRaw);
+        row.setBoardKey(blankToNull(job.boardKey()));
+        row.setCountryCode(blankToNull(job.countryCode()));
+        row.setUrlQuality(origin.quality().name());
+        row.setUrlQualityReason(clip(origin.reason(), 240));
         row.setLocation(job.location());
         row.setContractLabel(job.contractLabel());
         row.setDescription(job.description());
@@ -162,6 +216,59 @@ public class ExternalJobImportService {
         row.setPublishedAt(job.publishedAt());
         row.setLastSyncedAt(now);
         row.setLastSeenAt(now);
-        row.setAvailable(!row.isHiddenByAdmin());
+        row.setContentHash(hashOf(job));
+
+        String quarantineWhy = quarantineReason(origin, job, now);
+        if (enforceUrlQuality && quarantineWhy != null) {
+            row.setQuarantined(true);
+            row.setQuarantineReason(clip(quarantineWhy, 240));
+            row.setAvailable(false);
+        } else if (!row.isHiddenByAdmin()) {
+            row.setQuarantined(false);
+            row.setQuarantineReason(null);
+            row.setAvailable(origin.quality().isPubliclyListable());
+        } else {
+            row.setAvailable(false);
+        }
+    }
+
+    private String quarantineReason(UrlQualityService.Assessment origin, ParsedExternalJob job, Instant now) {
+        if (origin.quality().isQuarantineCandidate()) {
+            return origin.quality().name() + ": " + origin.reason();
+        }
+        if (job.publishedAt() != null && job.publishedAt().isBefore(now.minus(Duration.ofDays(maxAgeDays)))) {
+            return "EXPIRED: publication anterieure a " + maxAgeDays + " jours (presomption, non preuve HTTP)";
+        }
+        return null;
+    }
+
+    private static String hashOf(ParsedExternalJob job) {
+        String raw = String.join("|",
+                nullToEmpty(job.externalId()),
+                nullToEmpty(job.title()),
+                nullToEmpty(job.company()),
+                nullToEmpty(job.originUrl()),
+                nullToEmpty(job.applyUrl()));
+        try {
+            byte[] dig = MessageDigest.getInstance("SHA-256").digest(raw.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(dig);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static String blankToNull(String value) {
+        if (value == null) return null;
+        String t = value.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private static String nullToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    private static String clip(String value, int max) {
+        if (value == null) return null;
+        return value.length() <= max ? value : value.substring(0, max);
     }
 }

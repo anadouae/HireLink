@@ -1,0 +1,56 @@
+{
+  "version": 1,
+  "notes": "Allowlist technique de boards publics. enabled=false par defaut. Ce n'est PAS un partenariat. L'API Job Board de chaque editeur est documentee pour le site carriere de l'employeur ; l'agregation multi-boards reste sous reserve juridique.",
+  "boards": [
+    {
+      "provider": "GREENHOUSE",
+      "boardKey": "gitlab",
+      "companyName": "GitLab",
+      "referenceUrl": "https://boards.greenhouse.io/gitlab",
+      "regionHint": "GLOBAL",
+      "enabled": false,
+      "attributionNotes": "Greenhouse Job Board API publique (GET). Afficher la provenance Greenhouse/GitLab. Pas de POST apply. Docs: https://docs.greenhouse.io/job-board.html",
+      "verificationNotes": "Board public historique boards.greenhouse.io/gitlab. A revalider (HTTP 200) avant activation. Pas de partenariat HireLink."
+    },
+    {
+      "provider": "GREENHOUSE",
+      "boardKey": "stripe",
+      "companyName": "Stripe",
+      "referenceUrl": "https://boards.greenhouse.io/stripe",
+      "regionHint": "GLOBAL",
+      "enabled": false,
+      "attributionNotes": "Greenhouse Job Board API. Attribution employeur + lien absolute_url. Docs officielles Greenhouse.",
+      "verificationNotes": "Observe comme repondant sur boards-api.greenhouse.io dans references techniques publiques 2026. Volume eleve : activer seulement en canary. Pas de partenariat."
+    },
+    {
+      "provider": "LEVER",
+      "boardKey": "leverdemo",
+      "companyName": "Lever Demo",
+      "referenceUrl": "https://jobs.lever.co/leverdemo",
+      "regionHint": "DEMO",
+      "enabled": false,
+      "attributionNotes": "Lever Postings API officielle (demo documentee). Diriger vers hostedUrl/applyUrl. Issue #86 (usage tiers) ouverte sans reponse officielle — rester desactive jusqu'a clarification.",
+      "verificationNotes": "Site et exemples API : github.com/lever/postings-api README (leverdemo)."
+    },
+    {
+      "provider": "ASHBY",
+      "boardKey": "Ashby",
+      "companyName": "Ashby",
+      "referenceUrl": "https://jobs.ashbyhq.com/Ashby",
+      "regionHint": "GLOBAL",
+      "enabled": false,
+      "attributionNotes": "Ashby Job Postings API documentee pour peupler le site carriere de l'organisation. Afficher jobUrl/applyUrl. Docs: developers.ashbyhq.com/docs/public-job-posting-api",
+      "verificationNotes": "Exemple officiel de la documentation Ashby (jobs.ashbyhq.com/Ashby). Pas de partenariat HireLink."
+    },
+    {
+      "provider": "LEVER",
+      "boardKey": "yassir",
+      "companyName": "Yassir",
+      "referenceUrl": "https://jobs.lever.co/yassir",
+      "regionHint": "MA/MENA",
+      "enabled": false,
+      "attributionNotes": "Board Lever public ; candidats renvoyes vers jobs.lever.co. Usage multi-board a confirmer juridiquement.",
+      "verificationNotes": "URL publique jobs.lever.co/yassir observee dans le plan d'architecture. Revalider HTTP avant activation. Pas de partenariat declare."
+    }
+  ]
+}

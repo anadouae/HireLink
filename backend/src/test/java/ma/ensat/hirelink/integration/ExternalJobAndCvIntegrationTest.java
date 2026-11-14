@@ -12,6 +12,7 @@ import ma.ensat.hirelink.repository.UserRepository;
 import ma.ensat.hirelink.security.ClientInfo;
 import ma.ensat.hirelink.security.JwtService;
 import ma.ensat.hirelink.service.ExternalJobImportService;
+import ma.ensat.hirelink.service.ParsedExternalJob;
 import ma.ensat.hirelink.service.RemoteOkParser;
 import ma.ensat.hirelink.service.SessionService;
 import org.junit.jupiter.api.BeforeEach;
@@ -113,7 +114,7 @@ class ExternalJobAndCvIntegrationTest {
         assertEquals(HttpStatus.FORBIDDEN, denied.getStatusCode());
         ResponseEntity<String> disabled = http.exchange("/api/v1/external-offers/sync", HttpMethod.POST, auth(token(admin)), String.class);
         assertEquals(HttpStatus.CONFLICT, disabled.getStatusCode());
-        assertTrue(disabled.getBody().contains("désactivé"));
+        assertTrue(disabled.getBody().toLowerCase().contains("desactiv"));
 
         imports.importSnapshot(RemoteOkParser.SOURCE, new RemoteOkParser().parse("""
                 [{"id":9,"position":"Java Developer","company":"Northwind","url":"https://remoteok.com/remote-jobs/9","location":"Worldwide","tags":["java"]},
@@ -132,7 +133,10 @@ class ExternalJobAndCvIntegrationTest {
         assertTrue(String.valueOf(offer.get("id")).startsWith("ext-"));
         assertEquals(Boolean.TRUE, offer.get("matchAvailable"));
         assertTrue(String.valueOf(offer.get("matchLabel")).contains("Indicatif"));
-        assertTrue(offer.get("applyUrl").toString().startsWith("https://"));
+        // applyUrl peut être null (pas d'invention) ; originUrl reste le lien d'annonce.
+        assertTrue(offer.get("originUrl").toString().startsWith("https://"));
+        assertEquals("DEEP", offer.get("urlQuality"));
+        assertEquals(Boolean.TRUE, offer.get("linkReliable"));
         Map bare = null;
         for (Object item : list.getBody()) {
             Map row = (Map) item;
@@ -221,7 +225,7 @@ class ExternalJobAndCvIntegrationTest {
         assertTrue(refused.keptPrevious());
         assertTrue(refused.message().contains("deja en cours"));
 
-        List<RemoteOkParser.ParsedJob> jobs = new RemoteOkParser().parse("""
+        List<ParsedExternalJob> jobs = new RemoteOkParser().parse("""
                 [{"id":"race-1","position":"Java","company":"Acme","url":"https://remoteok.com/remote-jobs/race-1"}]
                 """);
         ExecutorService pool = Executors.newFixedThreadPool(2);

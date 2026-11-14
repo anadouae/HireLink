@@ -15,7 +15,7 @@ class RemoteOkParserTest {
 
     @Test
     void uneOffreCompleteIgnoreLeBandeauLegal() {
-        List<RemoteOkParser.ParsedJob> jobs = parser.parse("""
+        List<ParsedExternalJob> jobs = parser.parse("""
                 [
                   {"legal":"Please link back to Remote OK"},
                   {"id":42,"position":"Java Developer","company":"Northwind","url":"https://remoteok.com/remote-jobs/42",
@@ -24,7 +24,7 @@ class RemoteOkParserTest {
                 ]
                 """);
         assertEquals(1, jobs.size());
-        RemoteOkParser.ParsedJob job = jobs.get(0);
+        ParsedExternalJob job = jobs.get(0);
         assertEquals("42", job.externalId());
         assertEquals("Java Developer", job.title());
         assertEquals("Northwind", job.company());
@@ -34,7 +34,7 @@ class RemoteOkParserTest {
         assertEquals("full-time", job.contractLabel());
         assertEquals("java", job.skills());
         assertEquals("Build APIs", job.description());
-        RemoteOkParser.ParsedJob marked = parser.parse("""
+        ParsedExternalJob marked = parser.parse("""
                 [{"id":43,"position":"Java","company":"Acme","url":"https://remoteok.com/remote-jobs/43",
                   "description":"<script>alert(1)</script><p>Bonjour &#39;equipe&#39;</p>"}]
                 """).get(0);
@@ -54,7 +54,7 @@ class RemoteOkParserTest {
 
     @Test
     void uneUrlInvalideEstEcartee() {
-        List<RemoteOkParser.ParsedJob> jobs = parser.parse("""
+        List<ParsedExternalJob> jobs = parser.parse("""
                 [{"id":7,"position":"Designer","company":"Acme","url":"javascript:alert(1)"}]
                 """);
         assertTrue(jobs.isEmpty());
@@ -68,7 +68,7 @@ class RemoteOkParserTest {
 
     @Test
     void unChampAbsentResteAbsent() {
-        RemoteOkParser.ParsedJob job = parser.parse("""
+        ParsedExternalJob job = parser.parse("""
                 [{"id":"abc","position":"Support","company":"Acme","url":"https://remoteok.com/remote-jobs/abc"}]
                 """).get(0);
         assertNull(job.location());
@@ -76,6 +76,6 @@ class RemoteOkParserTest {
         assertNull(job.skills());
         assertNull(job.publishedAt());
         assertNull(job.salaryMin());
-        assertEquals(job.originUrl(), job.applyUrl());
+        assertNull(job.applyUrl());
     }
 }

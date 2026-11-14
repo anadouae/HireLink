@@ -1,0 +1,109 @@
+{
+  "source": "MAROC_EMPLOI",
+  "version": 1,
+  "attribution": "Flux partenaires HireLink — offres localisées Maroc, lien d'origine obligatoire.",
+  "jobs": [
+    {
+      "id": "ma-casa-java-01",
+      "title": "Développeur·se Java Spring",
+      "company": "Atlas Digital",
+      "location": "Casablanca",
+      "contract": "CDI",
+      "skills": "Java, Spring Boot, SQL, Git",
+      "salaryMin": 12000,
+      "salaryMax": 18000,
+      "url": "https://www.rekrute.com/",
+      "applyUrl": "https://www.rekrute.com/",
+      "publishedAt": "2026-11-10T09:00:00Z",
+      "description": "Conception et maintenance d'APIs Spring Boot pour une PME casablancaise. Travail en équipe agile, code review et livraison continue."
+    },
+    {
+      "id": "ma-rabat-frontend-02",
+      "title": "Ingénieur·e Frontend React",
+      "company": "TechValley Maroc",
+      "location": "Rabat",
+      "contract": "CDI",
+      "skills": "React, TypeScript, CSS, UX",
+      "salaryMin": 11000,
+      "salaryMax": 16000,
+      "url": "https://www.emploi.ma/",
+      "applyUrl": "https://www.emploi.ma/",
+      "publishedAt": "2026-11-09T14:30:00Z",
+      "description": "Développement d'interfaces recruteur et candidat. Exigence de qualité visuelle et d'accessibilité."
+    },
+    {
+      "id": "ma-tanger-data-03",
+      "title": "Analyste données RH",
+      "company": "Nord Logistique",
+      "location": "Tanger",
+      "contract": "CDD",
+      "skills": "Excel, Power BI, SQL, RH",
+      "url": "https://www.rekrute.com/",
+      "applyUrl": "https://www.rekrute.com/",
+      "publishedAt": "2026-11-08T11:00:00Z",
+      "description": "Suivi des indicateurs de recrutement et reporting pour la direction des opérations à Tanger Med."
+    },
+    {
+      "id": "ma-marrakech-stage-04",
+      "title": "Stage PFE — Développement web",
+      "company": "Oasis Soft",
+      "location": "Marrakech",
+      "contract": "Stage",
+      "skills": "HTML, CSS, JavaScript, Git",
+      "url": "https://www.emploi.ma/",
+      "applyUrl": "https://www.emploi.ma/",
+      "publishedAt": "2026-11-07T08:15:00Z",
+      "description": "Stage de fin d'études sur une application de gestion d'offres. Encadrement technique assuré."
+    },
+    {
+      "id": "ma-fes-qa-05",
+      "title": "Testeur·se QA manuel",
+      "company": "Medina Apps",
+      "location": "Fès",
+      "contract": "CDI",
+      "skills": "Tests, Recette, Jira, API",
+      "url": "https://www.rekrute.com/",
+      "applyUrl": "https://www.rekrute.com/",
+      "publishedAt": "2026-11-06T16:45:00Z",
+      "description": "Écriture et exécution de scénarios de recette sur un ATS. Collaboration étroite avec les développeurs."
+    },
+    {
+      "id": "ma-agadir-rh-06",
+      "title": "Chargé·e de recrutement",
+      "company": "Souss Talent",
+      "location": "Agadir",
+      "contract": "CDI",
+      "skills": "Recrutement, Entretiens, LinkedIn, Soft skills",
+      "url": "https://www.emploi.ma/",
+      "applyUrl": "https://www.emploi.ma/",
+      "publishedAt": "2026-11-05T10:20:00Z",
+      "description": "Sourcing et entretiens pour des profils hôtellerie et tech. Maîtrise du marché local requise."
+    },
+    {
+      "id": "ma-casa-devops-07",
+      "title": "Ingénieur·e DevOps",
+      "company": "Cloud Maghreb",
+      "location": "Casablanca",
+      "contract": "CDI",
+      "skills": "Docker, Kubernetes, CI/CD, Linux",
+      "salaryMin": 16000,
+      "salaryMax": 24000,
+      "url": "https://www.rekrute.com/",
+      "applyUrl": "https://www.rekrute.com/",
+      "publishedAt": "2026-11-04T13:00:00Z",
+      "description": "Industrialisation des déploiements et supervision des environnements de production."
+    },
+    {
+      "id": "ma-rabat-product-08",
+      "title": "Product Owner junior",
+      "company": "Capitale Digitale",
+      "location": "Rabat",
+      "contract": "CDI",
+      "skills": "Product, Agile, User stories, Priorisation",
+      "url": "https://www.emploi.ma/",
+      "applyUrl": "https://www.emploi.ma/",
+      "publishedAt": "2026-11-03T09:40:00Z",
+      "description": "Animation du backlog d'un produit RH. Interface entre métier et équipe technique."
+    }
+  ]
+}

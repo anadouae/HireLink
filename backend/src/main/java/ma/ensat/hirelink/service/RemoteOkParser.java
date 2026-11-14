@@ -19,26 +19,13 @@ public final class RemoteOkParser {
     public static final String SOURCE_LABEL = "Remote OK";
     public static final String SOURCE_HOME = "https://remoteok.com";
 
-    public record ParsedJob(
-            String externalId,
-            String title,
-            String company,
-            String originUrl,
-            String applyUrl,
-            String location,
-            String contractLabel,
-            String description,
-            String skills,
-            Integer salaryMin,
-            Integer salaryMax,
-            Instant publishedAt
-    ) {}
+    /* moved to ParsedExternalJob.java */
 
     private static final Set<String> CONTRACTS = Set.of("full-time", "full time", "part-time", "part time", "contract", "internship", "freelance");
     private static final Set<String> SKIP_TAGS = Set.of("remote", "worldwide", "senior", "junior", "mid", "entry");
     private final ObjectMapper json = new ObjectMapper();
 
-    public List<ParsedJob> parse(String body) {
+    public List<ParsedExternalJob> parse(String body) {
         JsonNode root;
         try {
             root = json.readTree(body == null ? "" : body);
@@ -46,7 +33,7 @@ public final class RemoteOkParser {
             throw new IllegalArgumentException("Format inattendu");
         }
         if (root == null || !root.isArray()) throw new IllegalArgumentException("Format inattendu");
-        List<ParsedJob> jobs = new ArrayList<>();
+        List<ParsedExternalJob> jobs = new ArrayList<>();
         for (JsonNode node : root) {
             if (node == null || !node.isObject() || node.hasNonNull("legal") || !node.hasNonNull("id")) continue;
             String id = node.get("id").asText("").trim();
@@ -55,13 +42,14 @@ public final class RemoteOkParser {
             String company = text(node, "company");
             String origin = https(text(node, "url"));
             if (id.isBlank() || title.isBlank() || company.isBlank() || origin == null) continue;
+            // Ne pas inventer apply_url : s'il est absent, il reste null (originUrl reste séparé).
             String apply = https(text(node, "apply_url"));
-            jobs.add(new ParsedJob(
+            jobs.add(new ParsedExternalJob(
                     id,
                     clip(title, 200),
                     clip(company, 200),
                     origin,
-                    apply == null ? origin : apply,
+                    apply,
                     blankToNull(text(node, "location"), 160),
                     contract(node),
                     blankToNull(stripHtml(text(node, "description")), 4000),
@@ -173,3 +161,4 @@ public final class RemoteOkParser {
         return clean.length() > max ? clean.substring(0, max) : clean;
     }
 }
+
