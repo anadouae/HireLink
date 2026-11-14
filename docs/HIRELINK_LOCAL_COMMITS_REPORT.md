@@ -3,7 +3,7 @@
 **Date :** 2026-11-14  
 **Branche :** `main`  
 **Remote :** `origin/main` (`https://github.com/anadouae/HireLink.git`)  
-**État :** **5 commits locaux** — **aucun push**  
+**État :** **6 commits locaux** — **aucun push**  
 **CDC :** v6.3  
 **Services démo :** `8081`/`5500` non redémarrés (UP au moment du commit)
 
@@ -24,8 +24,9 @@ Commits locaux **créés et vérifiés**. Prêts pour revue humaine avant `git p
 | 3 | `92615e45282e4cfbc89d12f151a1a978920f2142` | `feat(backend): ship unified catalog Phases 1-3 with safe defaults` |
 | 4 | `aab0a074ab914df48a421e9c1a8cdf562270a11e` | `feat(frontend): wire catalog UX and fix landing offers syntax` |
 | 5 | `5ef806063f20976ab7130b27769930fd3760862b` | `docs: add delivery guides and Phase 0-3 catalog reports` |
+| 6 | `b99d8d60853b8602bd97c8ef4fb6a7bdda690711` | `docs: record local commits report before GitHub push` |
 
-`git rev-list --count origin/main..HEAD` = **5**  
+`git rev-list --count origin/main..HEAD` = **6**  
 Base : `466ba1f` (origin/main)
 
 ---
@@ -90,7 +91,7 @@ Non rejoué pendant les commits (services démo non redémarrés).
 ## 6. État Git final
 
 ```text
-## main...origin/main [ahead 5]
+## main...origin/main [ahead 6]
 ?? docs/audit-browser-recette.mjs
 ?? package.json
 ```
@@ -101,13 +102,7 @@ Non rejoué pendant les commits (services démo non redémarrés).
 
 ## 7. Réserves avant publication (`git push`)
 
-1. Relire les 5 messages/hashs ci-dessus.  
+1. Relire les 6 messages/hashs ci-dessus.  
 2. Optionnel : retirer le Google Client ID par défaut au profit d’un placeholder env-only (P1).  
 3. Confirmer que `docs/audit-browser-recette.mjs` et `package.json` restent hors dépôt.  
 4. **Push uniquement** après autorisation explicite séparée.
-
----
-
-## 8. Ce rapport
-
-Fichier ajouté après les 5 commits ; s’il est commités dans un 6ᵉ commit local, son hash figurera dans `git log`. Sinon il reste untracked jusqu’à votre prochain ordre.
