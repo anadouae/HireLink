@@ -3,9 +3,11 @@
 **Date :** 2026-11-14  
 **Branche :** `main`  
 **Remote :** `origin/main` (`https://github.com/anadouae/HireLink.git`)  
-**État :** **6 commits locaux** — **aucun push**  
+**État :** **commits locaux ahead of origin** — **aucun push**  
 **CDC :** v6.3  
 **Services démo :** `8081`/`5500` non redémarrés (UP au moment du commit)
+
+Vérifier le compte exact avec : `git rev-list --count origin/main..HEAD` et `git log --oneline origin/main..HEAD`.
 
 ---
 
@@ -15,7 +17,7 @@ Commits locaux **créés et vérifiés**. Prêts pour revue humaine avant `git p
 
 ---
 
-## 1. Commits créés
+## 1. Commits créés (ordre chronologique)
 
 | # | Hash | Message |
 |---|---|---|
@@ -25,30 +27,27 @@ Commits locaux **créés et vérifiés**. Prêts pour revue humaine avant `git p
 | 4 | `aab0a074ab914df48a421e9c1a8cdf562270a11e` | `feat(frontend): wire catalog UX and fix landing offers syntax` |
 | 5 | `5ef806063f20976ab7130b27769930fd3760862b` | `docs: add delivery guides and Phase 0-3 catalog reports` |
 | 6 | `b99d8d60853b8602bd97c8ef4fb6a7bdda690711` | `docs: record local commits report before GitHub push` |
+| 7 | `7066715b78950b253509f987eaa760511c1503c3` | `docs: complete local commits report with sixth hash` |
 
-`git rev-list --count origin/main..HEAD` = **6**  
-Base : `466ba1f` (origin/main)
+Base : `466ba1f` (origin/main).  
+Un éventuel commit supplémentaire peaufinant **ce** fichier peut apparaître au-dessus de la liste ; se fier à `git log`.
 
 ---
 
-## 2. Contenu inclus (par commit)
+## 2. Contenu inclus
 
-### 1 — `.gitignore`
-Exclusion `docs/deploy-prep/`, `docs/audit-screenshots/`, props iso/cutover, `data/`, backups.
+### Produit (1–4)
+- `.gitignore` livraison
+- Migrations `V003`–`V006` + runner
+- Backend catalogue Phases 1–3, seed bootstrap catalogue, connecteurs **OFF**
+- Frontend catalogue + fix `landing-offers.js`
+- Scripts `LANCER-*.bat` déjà présents sur `main` (non modifiés)
 
-### 2 — Migrations
-`apply-migrations.ps1`, `V003`–`V006`, `database/migrations/README.md`, `docs/MIGRATIONS.md`.
-
-### 3 — Backend Phases 1–3 + P0-3
-Catalogue, UrlQuality, ATS (OFF), feeds/branding, `DataSeeder.ensureCatalogBootstrap`, `application.properties` (connecteurs OFF), tests isolation.
-
-### 4 — Frontend
-`landing-offers.js` (fix `}));`), `candidate-home` catalogue, CSP, checkout, pipeline/agenda, etc.
-
-### 5 — Docs livraison
-Guides install/professeur/checklist, audits Phase 0–3, conformité, README (migrations + catalogue auto).
-
-**Déjà sur `main` (inchangés) :** `LANCER-HIRELINK.bat`, `LANCER-HIRELINK-DEMO.bat`, `LANCER-FRONTEND.bat`.
+### Documentation (5–7)
+- Guides install Windows, plan professeur, checklists Git
+- Rapports Phase 0–3 / conformité / P0
+- README (migrations + catalogue auto)
+- Ce rapport de commits locaux
 
 ---
 
@@ -59,50 +58,47 @@ Guides install/professeur/checklist, audits Phase 0–3, conformité, README (mi
 | `docs/deploy-prep/` | Dumps SQL / PII / logs (gitignored) |
 | `docs/audit-screenshots/` | Captures runtime (gitignored) |
 | `backend/data/`, `jwt.key`, `application-local.properties` | Secrets / uploads |
-| `backend/application-*-iso.properties`, cutover-runtime | Config machine |
+| Props iso / cutover-runtime | Config machine |
 | `package.json` (racine) | Stub Node non requis |
-| `docs/audit-browser-recette.mjs` | Script local avec mots de passe démo en dur |
+| `docs/audit-browser-recette.mjs` | Script local + mots de passe démo en dur |
 | `backup-db/`, `tmp/` | Artéfacts locaux |
 
-Aucune utilisation de `git add .` / `git add -A` / `--no-verify` / `--amend` / force.
+Pas de `git add .` / `-A` / `--no-verify` / `--amend` / force / **push**.
 
 ---
 
-## 4. Vérifications anti-fuite
+## 4. Anti-fuite
 
 | Contrôle | Résultat |
 |---|---|
-| `git check-ignore` deploy-prep / screenshots / jwt / local props | OK |
-| `git ls-files` sensibles déjà suivis | Aucun dump/jwt/local |
-| Scan staged `gsk_` / `AIzaSy` / clés privées / e-mails perso | **0 hit** |
-| Google Client ID dans `application.properties` | **Public OAuth Client ID** (pas un client secret) ; déjà présent sur `origin/main` ; surchargeable via `HIRELINK_GOOGLE_CLIENT_ID` — **publication acceptable** avec réserve « projet auteur » |
-| Mots de passe SMTP / LLM | Uniquement placeholders `${HIRELINK_*}` ou vides |
-| Connecteurs | `startup-sync` / Jooble / ATS / Maroc / RemoteOK = **false** |
+| Ignore deploy-prep / screenshots / jwt / local | OK |
+| Aucun dump/jwt déjà suivi | OK |
+| Scan clés API / SMTP réels / e-mails perso | OK (0 fuite) |
+| Google Client ID | **Client ID OAuth public** (pas un secret) ; déjà sur `origin/main` ; overridable `HIRELINK_GOOGLE_CLIENT_ID` — **publiable** avec réserve projet auteur |
+| Connecteurs dans properties commités | tous `false` + `startup-sync=false` |
 
 ---
 
-## 5. Contrôle fonctionnel (référence P0)
+## 5. Tests
 
-Validé précédemment (isolé) : migrations V000–V006, seed + catalogue auto, landing fix, parcours candidat/recruteur/admin, quote OWNER — voir `HIRELINK_P0_DELIVERY_FIX_REPORT.md`.  
-Non rejoué pendant les commits (services démo non redémarrés).
+Référence : `HIRELINK_P0_DELIVERY_FIX_REPORT.md` (clone & run isolé PASS).  
+Non rejoués pendant les commits (démo `8081`/`5500` intacte).
 
 ---
 
-## 6. État Git final
+## 6. État Git attendu après revue
 
 ```text
-## main...origin/main [ahead 6]
+## main...origin/main [ahead N]
 ?? docs/audit-browser-recette.mjs
 ?? package.json
 ```
 
-(Working tree propre hors 2 untracked exclus.)
-
 ---
 
-## 7. Réserves avant publication (`git push`)
+## 7. Réserves avant `git push`
 
-1. Relire les 6 messages/hashs ci-dessus.  
-2. Optionnel : retirer le Google Client ID par défaut au profit d’un placeholder env-only (P1).  
-3. Confirmer que `docs/audit-browser-recette.mjs` et `package.json` restent hors dépôt.  
-4. **Push uniquement** après autorisation explicite séparée.
+1. Relire `git log --oneline origin/main..HEAD`.  
+2. Optionnel P1 : neutraliser le Google Client ID par défaut.  
+3. Garder `package.json` et `audit-browser-recette.mjs` hors dépôt.  
+4. **Push seulement** après autorisation explicite.
