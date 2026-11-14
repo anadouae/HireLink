@@ -1,13 +1,19 @@
 /** Offres côté candidat : recherche intelligente, filtres, option « correspond à mon profil », cartes et détail. */
 (function () {
-  const session = HireLinkApp.mount({ search: { placeholder: "Entreprise, poste, ville, compétence, contrat…", onQuery: () => render() } });
+  const session = HireLinkApp.mount({ search: { placeholder: "Entreprise, poste, ville, compétence, contrat…", onQuery: () => { if (typeof reloadFromFilters === "function") reloadFromFilters(); else render(); } } });
   if (!session) return;
 
   const O = HireLinkOffer;
   const S = HireLinkSearch;
   const offerList = document.getElementById("offer-list");
   const matchToggle = document.getElementById("match-only");
-  const FILTERS = ["f-city", "f-company", "f-skill", "f-contract", "f-origin", "f-since", "f-mode", "f-pace", "f-sent", "f-match"];
+  const FILTERS = ["f-country", "f-city", "f-company", "f-skill", "f-contract", "f-origin", "f-since", "f-mode", "f-pace", "f-sent", "f-match"];
+  const PAGE_SIZE = 20;
+  let page = 0;
+  let totalElements = 0;
+  let totalPages = 0;
+  let loading = false;
+  let loadError = "";
   const MATCH_KEY = "hirelink.matchOnly." + (session.userId || session.id || "me");
 
   let cached = [];
@@ -85,29 +91,17 @@
     fillSelect("f-skill", uniq(cached.flatMap((o) => tokenize(o.requiredSkills))));
   }
 
-  /** Filtres précis (listes), puis recherche libre classée par pertinence. */
+  /** Filtres residuels client (candidature / reactivite) sur la page deja filtree serveur. */
   function filtered(query) {
-    const city = val("f-city"), company = val("f-company"), skill = val("f-skill"), contract = val("f-contract");
-    const mode = val("f-mode"), sentFilter = val("f-sent");
+    const company = val("f-company"), skill = val("f-skill");
+    const sentFilter = val("f-sent");
     const pace = val("f-pace"), minMatch = Number(val("f-match") || 0);
-    const origin = val("f-origin");
-    const since = Number(val("f-since") || 0);
     const kept = cached.filter((o) => {
       const score = o.matchScore;
       const st = appState(o.id);
-      if (origin === "external" && !o.external) return false;
-      if (origin === "hirelink" && o.external) return false;
-      if (since) {
-        const at = new Date(o.publishedAt || o.createdAt || "").getTime();
-        if (!at || Date.now() - at > since * 86400000) return false;
-      }
-      if (matchOnly && !o.matchesProfile) return false;
-      if (minMatch && (score == null || score < minMatch)) return false;
-      if (city && O.placeOf(o) !== city) return false;
+      if (minMatch && !matchOnly && (score == null || score < minMatch)) return false;
       if (company && companyOf(o) !== company) return false;
       if (skill && !tokenize(o.requiredSkills).some((s) => s.toLowerCase() === skill.toLowerCase())) return false;
-      if (contract && (o.contractType || "") !== contract) return false;
-      if (mode && modeKey(o) !== mode) return false;
       if (pace === "answers" && !o.responsiveness) return false;
       if (pace === "fast" && o.responsiveness !== "REACTIF") return false;
       if (sentFilter === "open" && st && st.status !== "WITHDRAWN") return false;
@@ -125,25 +119,45 @@
         { get: (o) => o.description, weight: 1 },
       ]);
     }
-    const scoring = cached.some((o) => o.matchScore != null);
-    return kept.sort((a, b) =>
-      (isOpenToApply(b.id) - isOpenToApply(a.id))
-      || (scoring ? (b.matchScore || 0) - (a.matchScore || 0) : 0)
-      || String(a.title || "").localeCompare(String(b.title || ""), "fr"));
+    return kept;
+  }
+
+  function buildCatalogQuery(pageNum) {
+    const params = new URLSearchParams();
+    params.set("page", String(pageNum));
+    params.set("size", String(PAGE_SIZE));
+    params.set("country", val("f-country") || "MA");
+    params.set("forYou", matchOnly ? "true" : "false");
+    const qParts = [];
+    const search = val("rc-search").trim();
+    if (search) qParts.push(search);
+    if (val("f-company")) qParts.push(val("f-company"));
+    if (val("f-skill")) qParts.push(val("f-skill"));
+    if (qParts.length) params.set("q", qParts.join(" "));
+    if (val("f-city")) params.set("city", val("f-city"));
+    if (val("f-contract")) params.set("contract", val("f-contract"));
+    if (val("f-mode")) params.set("workMode", val("f-mode"));
+    if (val("f-origin")) params.set("origin", val("f-origin") === "hirelink" ? "internal" : val("f-origin"));
+    if (val("f-since")) params.set("sinceDays", val("f-since"));
+    return params.toString();
   }
 
   function clearAll() {
-    FILTERS.forEach((id) => { if ($(id)) $(id).value = id === "f-match" ? "0" : ""; });
+    FILTERS.forEach((id) => {
+      if (!$(id)) return;
+      if (id === "f-match") $(id).value = "0";
+      else if (id === "f-country") $(id).value = "MA";
+      else $(id).value = "";
+    });
     const search = $("rc-search");
     if (search) search.value = "";
-    render();
   }
 
   function setMatchOnly(on) {
     matchOnly = on;
     matchToggle.checked = on;
-    try { localStorage.setItem(MATCH_KEY, on ? "1" : "0"); } catch (_) { /* stockage refusé : le choix vaut pour cette page seulement */ }
-    render();
+    try { localStorage.setItem(MATCH_KEY, on ? "1" : "0"); } catch (_) { /* stockage refuse */ }
+    reloadFromFilters();
   }
 
   function paintEmpty(query) {
@@ -179,22 +193,26 @@
   }
 
   function updateHint() {
-    const scoring = cached.some((o) => o.matchScore != null);
-    if (!scoring) {
-      $("match-hint").textContent = "Correspondance non disponible : ajoutez au moins une compétence dans votre profil.";
+    if (matchOnly) {
+      $("match-hint").textContent = totalElements
+        ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " pour vous (score >= 50 %, pagination serveur)."
+        : "Aucune offre n'atteint 50 % avec votre profil actuel.";
       return;
     }
-    const n = cached.filter((o) => o.matchesProfile).length;
-    $("match-hint").textContent = n
-      ? n + " offre" + (n > 1 ? "s" : "") + " sur " + cached.length + " correspondent à votre profil (score ≥ 50 %)."
-      : "Aucune offre n'atteint 50 % avec votre profil actuel.";
+    const scoring = cached.some((o) => o.matchScore != null);
+    if (!scoring) {
+      $("match-hint").textContent = "Correspondance non disponible : ajoutez au moins une competence dans votre profil.";
+      return;
+    }
+    $("match-hint").textContent = totalElements + " offre" + (totalElements > 1 ? "s" : "") + " au catalogue (page serveur).";
   }
 
   function render() {
     const query = val("rc-search").trim();
     const list = filtered(query);
     const active = FILTERS.filter((id) => val(id) && val(id) !== "0").length;
-    $("filter-summary").textContent = list.length + " offre" + (list.length > 1 ? "s" : "") + (active ? " · " + active + " filtre" + (active > 1 ? "s" : "") : "");
+    const countryLabel = val("f-country") === "ALL" ? "tous pays" : "Maroc";
+    $("filter-summary").textContent = totalElements + " offre" + (totalElements > 1 ? "s" : "") + " · " + countryLabel + " · page " + (page + 1) + (active ? " · " + active + " filtre" + (active > 1 ? "s" : "") : "");
     offerList.replaceChildren();
     const detail = $("offer-detail");
     const requestedId = selectedId;
@@ -269,12 +287,19 @@
     const badge = o.matchScore != null ? document.createElement("span") : null;
     if (badge) {
       badge.textContent = Math.round(o.matchScore) + " %";
-      badge.title = "Score pondéré : compétences obligatoires et appréciées, langues, expérience, contrat et lieu.";
+      badge.title = o.matchLabel
+        || (o.external
+          ? "Indicatif : compétences citées par la source uniquement."
+          : "Compatibilité multicritère HireLink (compétences, langues, expérience, contrat, lieu).");
     }
     return O.card(o, {
       selected,
       badge,
-      href: (x) => x.external ? (x.applyUrl || x.originUrl) : "candidate.html?offer=" + encodeURIComponent(x.id),
+      href: (x) => {
+        if (!x.external) return "candidate.html?offer=" + encodeURIComponent(x.id);
+        const p = O.externalLinkPolicy(x);
+        return p.trusted ? p.href : "#";
+      },
       companyHref: (x) => x.external ? "" : "candidate-companies.html?name=" + encodeURIComponent(companyOf(x)),
       onOpen: (x) => { selectedId = x.id; offerList.querySelectorAll(".offer-card").forEach((n) => n.classList.toggle("is-selected", n.dataset.offerId === String(x.id))); showDetail(x); },
       statusChip: o.external ? "Offre externe" : (st ? (st.status === "WITHDRAWN" ? "Candidature retirée" : "Candidature envoyée") : "Offre HireLink"),
@@ -323,7 +348,8 @@
       fill.style.width = Math.min(100, Math.round(o.matchScore)) + "%";
       bar.appendChild(fill);
       const label = document.createElement("small");
-      label.textContent = o.external ? (o.matchLabel || "Indicatif") : "compatible avec votre profil";
+      label.textContent = o.matchLabel
+        || (o.external ? "Indicatif" : "Compatibilité multicritère HireLink");
       meter.append(pct, bar, label);
       head.appendChild(meter);
     }
@@ -349,19 +375,31 @@
     const actions = document.createElement("div");
     actions.className = "row";
     if (o.external) {
-      const href = o.applyUrl || o.originUrl || "";
-      if (/^https:\/\//i.test(href)) {
+      const policy = O.externalLinkPolicy(o);
+      if (policy.trusted && policy.href) {
         const a = document.createElement("a");
         a.className = "btn btn-primary";
-        a.href = href;
+        a.href = policy.href;
         a.target = "_blank";
         a.rel = "noopener";
-        a.textContent = "Postuler sur le site d'origine";
+        a.textContent = policy.label;
         actions.appendChild(a);
+      } else if (policy.href && o.urlQuality === "UNKNOWN") {
+        const a = document.createElement("a");
+        a.className = "btn btn-ghost";
+        a.href = policy.href;
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = policy.label;
+        actions.appendChild(a);
+        const note = document.createElement("p");
+        note.className = "muted";
+        note.textContent = "Ce lien n’est pas garanti comme l’annonce exacte. HireLink n’invente pas de candidature.";
+        actions.appendChild(note);
       } else {
         const unavailable = document.createElement("p");
         unavailable.className = "muted";
-        unavailable.textContent = "Lien d'origine indisponible.";
+        unavailable.textContent = "Lien d’annonce insuffisamment fiable — candidature directe désactivée.";
         actions.appendChild(unavailable);
       }
       if (/^https:\/\//i.test(o.sourceHome || "")) {
@@ -370,7 +408,7 @@
         source.href = o.sourceHome;
         source.target = "_blank";
         source.rel = "noopener";
-        source.textContent = "Source : " + (o.sourceLabel || "Remote OK");
+        source.textContent = "Source : " + (o.sourceLabel || o.source || "Web");
         actions.appendChild(source);
       }
     } else if (sent) {
@@ -423,45 +461,117 @@
 
   let offerStamp = "";
 
-  async function load(quiet) {
-    if (!quiet) { offerList.replaceChildren(); const sk = document.createElement("div"); sk.className = "skeleton"; sk.style.height = "120px"; offerList.appendChild(sk); }
+  async function load(quiet, append) {
+    if (loading) return;
+    loading = true;
+    loadError = "";
+    if (!quiet && !append) {
+      offerList.replaceChildren();
+      const sk = document.createElement("div");
+      sk.className = "skeleton";
+      sk.style.height = "120px";
+      offerList.appendChild(sk);
+    }
     try {
-      const [offers, external, mine] = await Promise.all([
-        HireLinkAPI.api("/offers/public"),
-        HireLinkAPI.api("/external-offers").catch(() => []),
+      if (!append) page = 0;
+      const qs = buildCatalogQuery(page);
+      const [data, mine] = await Promise.all([
+        HireLinkAPI.api("/catalog/offers?" + qs).catch(() => null),
         HireLinkAPI.api("/applications/mine").catch(() => []),
         HireLinkPlaces.ready(),
       ]);
-      const outside = (external || []).map((o) => Object.assign({ external: true, matchesProfile: o.matchAvailable === true && Number(o.matchScore) >= 50 }, o));
-      const stamp = (offers || []).map((o) => o.id + ":" + (o.matchScore == null ? "" : o.matchScore)).join("|") + "~" + outside.map((o) => o.id).join(",") + "~" + (mine || []).map((a) => a.id + ":" + a.status).join("|");
-      if (quiet && stamp === offerStamp) return;
+      let items;
+      if (data && Array.isArray(data.items)) {
+        items = data.items;
+        totalElements = Number(data.totalElements || 0);
+        totalPages = Number(data.totalPages || 0);
+      } else {
+        // Compat demo : backend sans Phase 3 — repli legacy (charge complete, pagination locale).
+        const [offers, external] = await Promise.all([
+          HireLinkAPI.api("/offers/public"),
+          HireLinkAPI.api("/external-offers").catch(() => []),
+        ]);
+        const outside = (external || []).map((o) => Object.assign({ external: true, matchesProfile: o.matchAvailable === true && Number(o.matchScore) >= 50 }, o));
+        let all = (offers || []).concat(outside);
+        if (matchOnly) all = all.filter((o) => o.matchesProfile);
+        totalElements = all.length;
+        totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
+        const start = page * PAGE_SIZE;
+        items = all.slice(start, start + PAGE_SIZE);
+      }
+      const stamp = items.map((o) => o.id).join(",") + "~" + totalElements + "~" + (mine || []).map((a) => a.id + ":" + a.status).join("|") + "~" + matchOnly + "~" + qs;
+      if (quiet && !append && stamp === offerStamp) { loading = false; return; }
       offerStamp = stamp;
-      cached = (offers || []).concat(outside);
+      cached = append ? cached.concat(items) : items;
       appliedByOffer = new Map((mine || []).map((a) => [a.jobOfferId, { appId: a.id, status: a.status }]));
       matchToggle.checked = matchOnly;
-      rebuildFacets();
+      if (!append) rebuildFacets();
       updateHint();
       render();
+      paintPager();
       const applyId = new URLSearchParams(location.search).get("apply");
-      if (applyId && !quiet) {
+      if (applyId && !quiet && !append) {
         history.replaceState(null, "", location.pathname);
         const target = cached.find((o) => String(o.id) === String(applyId));
         if (target) openApply(target);
       }
     } catch (err) {
+      loadError = (err && err.message) || "Erreur reseau";
       if (!quiet) {
         offerList.replaceChildren();
         const p = document.createElement("p");
         p.className = "muted";
-        p.textContent = err.message;
+        p.textContent = "Impossible de charger le catalogue : " + loadError;
         offerList.appendChild(p);
       }
+    } finally {
+      loading = false;
     }
   }
 
+  function paintPager() {
+    let box = document.getElementById("catalog-pager");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "catalog-pager";
+      box.className = "row";
+      box.style.marginTop = "12px";
+      if (offerList.parentNode) offerList.parentNode.appendChild(box);
+    }
+    box.replaceChildren();
+    if (totalPages <= 1) { box.hidden = true; return; }
+    box.hidden = false;
+    const label = document.createElement("span");
+    label.className = "muted";
+    label.textContent = "Page " + (page + 1) + " / " + totalPages + " · " + totalElements + " offre(s)";
+    box.appendChild(label);
+    if (page + 1 < totalPages) {
+      const more = document.createElement("button");
+      more.type = "button";
+      more.className = "btn btn-soft btn-sm";
+      more.textContent = "Afficher la suite";
+      more.addEventListener("click", () => { page += 1; load(true, true); });
+      box.appendChild(more);
+    }
+  }
+
+  function reloadFromFilters() {
+    page = 0;
+    load(false, false);
+  }
+
   matchToggle.addEventListener("change", () => setMatchOnly(matchToggle.checked));
-  $("btn-clear-filters").addEventListener("click", clearAll);
-  FILTERS.forEach((id) => $(id).addEventListener("change", render));
+  $("btn-clear-filters").addEventListener("click", () => { clearAll(); reloadFromFilters(); });
+  FILTERS.forEach((id) => {
+    const el = $(id);
+    if (!el) return;
+    el.addEventListener("change", reloadFromFilters);
+  });
+  const searchInput = $("rc-search");
+  if (searchInput) {
+    let timer = 0;
+    searchInput.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(reloadFromFilters, 280); });
+  }
   load();
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(true); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) load(true, false); });
 })();

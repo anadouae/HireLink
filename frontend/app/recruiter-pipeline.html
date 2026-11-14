@@ -54,10 +54,12 @@
           </div>
           <div class="rc-chips is-hidden" id="list-chips" role="tablist" aria-label="Statuts en liste">
             <button type="button" class="rc-chip is-on" data-v="active">En cours</button>
-            <button type="button" class="rc-chip" data-v="interview">Entretiens</button>
-            <button type="button" class="rc-chip" data-v="hired">Embauchés</button>
-            <button type="button" class="rc-chip" data-v="rejected">Refusés</button>
-            <button type="button" class="rc-chip" data-v="withdrawn">Retirés</button>
+            <button type="button" class="rc-chip" data-v="SUBMITTED">Reçues</button>
+            <button type="button" class="rc-chip" data-v="SCREENING">Présélection</button>
+            <button type="button" class="rc-chip" data-v="SHORTLISTED">Shortlist</button>
+            <button type="button" class="rc-chip" data-v="INTERVIEW">Entretien</button>
+            <button type="button" class="rc-chip" data-v="REJECTED">Refusés</button>
+            <button type="button" class="rc-chip" data-v="WITHDRAWN">Retirés</button>
             <button type="button" class="rc-chip" data-v="all">Tous</button>
           </div>
           <select id="list-sort" class="rc-select is-hidden" aria-label="Trier la liste"><option value="recent">Plus récents</option><option value="match">Meilleur match</option><option value="sla">Échéance de réponse</option><option value="name">Nom (A–Z)</option></select>
@@ -87,6 +89,6 @@
   <script defer src="../js/credits.js?v=20261105v"></script>
   <script defer src="../js/app-shell.js?v=20261110b"></script>
   <script defer src="../js/match.js?v=20261110e"></script>
-  <script defer src="../js/recruiter-pipeline.js?v=20261110d"></script>
+  <script defer src="../js/recruiter-pipeline.js?v=20261112f"></script>
 </body>
 </html>

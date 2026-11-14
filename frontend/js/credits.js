@@ -14,9 +14,16 @@
     coach: "Coach CV",
   };
 
-  const PLANS_HREF = { RECRUTEUR: "recruiter-settings.html#plans", CANDIDAT: "candidate-settings.html#plans", ADMIN: "admin.html#plans" };
   /** Repli si le catalogue n'est pas joignable : le palier payant de chaque espace. */
   const NEXT_PLAN = { RECRUTEUR: "Premium · 299 MAD / mois", CANDIDAT: "Performance · 39 MAD / mois" };
+
+  function plansHrefFor(role) {
+    const file = (location.pathname.split("/").pop() || "").split("?")[0];
+    const back = /^[\w.-]+\.html$/.test(file) ? "&back=" + encodeURIComponent(file) : "";
+    if (role === "CANDIDAT") return "../checkout.html?plan=candidate" + back;
+    if (role === "RECRUTEUR") return "../checkout.html?plan=recruiter" + back;
+    return "admin.html#plans";
+  }
 
   let status = null;
   let plans = null;
@@ -183,7 +190,7 @@
   function wirePanel() {
     const link = panel.querySelector("[data-credits-plans]");
     if (!link) return;
-    link.href = PLANS_HREF[roleNow()] || PLANS_HREF.RECRUTEUR;
+    link.href = plansHrefFor(roleNow());
   }
 
   /* ------------------------------------------------------------------ appels */
@@ -234,7 +241,7 @@
       confirmLabel: "Voir les formules",
       cancelLabel: "Plus tard",
       onConfirm: function () {
-        location.href = PLANS_HREF[role] || PLANS_HREF.RECRUTEUR;
+        location.href = plansHrefFor(role);
         return false;
       },
     });

@@ -37,6 +37,7 @@
     // Lien contextuel : #orgs/pending, #users/CANDIDAT… ouvre l'onglet déjà filtré.
     const sub = String(view || "").split("/")[1];
     view = String(view || "").split("/")[0];
+    if (view === "reports") view = "moderation";
     if (VIEWS.indexOf(view) < 0) view = "dash";
     if (sub) setTimeout(() => {
       const bar = $(({ orgs: "org-filter", users: "user-filter", offers: "offer-filter" })[view] || "");
@@ -727,18 +728,28 @@
       const data = await HireLinkAPI.api("/admin/external-offers/status");
       const last = data.last;
       const enabled = !!data.enabled;
+      const sources = data.sources || [];
+      const sourceLines = sources.length
+        ? sources.map((s) => {
+            const on = !!s.enabled;
+            const run = s.last;
+            return '<div><span class="rc-muted">' + esc(s.label || s.code) + "</span><strong>" +
+              (on ? "Activée" : "Désactivée") +
+              (run ? " · " + esc(App.fmtDateTime(run.finishedAt || "")) : "") +
+              "</strong></div>";
+          }).join("")
+        : '<div><span class="rc-muted">Sources</span><strong>Aucune configurée</strong></div>';
       box.innerHTML =
         '<div class="ext-status-grid">' +
-        '<div><span class="rc-muted">Source</span><strong>Remote OK</strong></div>' +
-        '<div><span class="rc-muted">État</span><strong>' + (enabled ? "Activée" : "Désactivée") + "</strong></div>" +
+        sourceLines +
         '<div><span class="rc-muted">Offres importées visibles</span><strong>' + (data.availableCount || 0) + "</strong></div>" +
         '<div><span class="rc-muted">Masquées</span><strong>' + (data.hiddenCount || 0) + "</strong></div>" +
         '<div><span class="rc-muted">Dernière synchronisation</span><strong>' +
         (last ? esc(App.fmtDateTime(last.finishedAt || last.startedAt || "")) + (last.message ? " · " + esc(last.message) : "") : "Jamais") +
         "</strong></div>" +
         (!enabled
-          ? '<p class="rc-muted" style="grid-column:1/-1;margin:0">La synchronisation est désactivée par configuration. « Actualiser l’affichage » recharge uniquement ce tableau ; elle n’importe pas de nouvelles offres.</p>'
-          : '<p class="rc-muted" style="grid-column:1/-1;margin:0">« Synchroniser les offres » interroge la source. « Actualiser l’affichage » recharge seulement l’état local.</p>') +
+          ? '<p class="rc-muted" style="grid-column:1/-1;margin:0">Aucune source n’est activée. « Actualiser l’affichage » recharge uniquement ce tableau.</p>'
+          : '<p class="rc-muted" style="grid-column:1/-1;margin:0">« Synchroniser les offres » interroge chaque source activée. Les annonces Remote OK restent masquées tant que cette source est désactivée.</p>') +
         "</div>";
       if (extSync) {
         extSync.disabled = !enabled;

@@ -45,7 +45,8 @@
   let openMenuId = null;
   let justCreated = null;
   const penIds = new Set();
-  const filters = { type: "all", kind: "all", offer: "all", cancelled: false };
+  // nature = type d'événement calendrier (entretiens inclus) ; type = mode visi/site/tél.
+  const filters = { type: "all", nature: "all", offer: "all", cancelled: false };
 
   /* ------------------------------------------------------------ dates */
   function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
@@ -58,11 +59,11 @@
 
   /* ------------------------------------------------------------ données */
   function eventsAll() {
-    const interviews = apps
+    const wantInterviews = filters.nature === "all" || filters.nature === "INTERVIEW";
+    const interviews = !wantInterviews ? [] : apps
       .filter((a) => a.interviewAt && !Number.isNaN(new Date(a.interviewAt).getTime()))
       .filter((a) => filters.cancelled || a.interviewStatus !== "CANCELLED")
       .filter((a) => filters.type === "all" || a.interviewType === filters.type)
-      .filter((a) => filters.kind === "all" || (a.interviewKind || "HR") === filters.kind)
       .filter((a) => filters.offer === "all" || String(a.jobOfferId) === String(filters.offer))
       .map((a) => {
         const start = new Date(a.interviewAt);
@@ -70,8 +71,10 @@
         return { a, start, end, cancelled: a.interviewStatus === "CANCELLED", past: end.getTime() < Date.now() };
       })
       .sort((x, y) => x.start - y.start);
-    const otherEvents = orgEvents
+    const wantOrg = filters.nature !== "INTERVIEW";
+    const otherEvents = !wantOrg ? [] : orgEvents
       .filter((e) => e.startsAt && !Number.isNaN(new Date(e.startsAt).getTime()))
+      .filter((e) => filters.nature === "all" || String(e.category || "OTHER").toUpperCase() === filters.nature)
       .map((e) => {
         const start = new Date(e.startsAt);
         const end = new Date(start.getTime() + (e.durationMinutes || 60) * 60000);
@@ -941,18 +944,22 @@
   }
   function syncUrl() {
     const u = new URL(location.href);
-    ["type", "kind", "offer"].forEach((k) => { if (filters[k] && filters[k] !== "all") u.searchParams.set(k, filters[k]); else u.searchParams.delete(k); });
+    ["type", "nature", "offer"].forEach((k) => { if (filters[k] && filters[k] !== "all") u.searchParams.set(k, filters[k]); else u.searchParams.delete(k); });
+    u.searchParams.delete("kind");
     u.searchParams.set("view", view);
     u.searchParams.set("date", cursor.getFullYear() + "-" + String(cursor.getMonth() + 1).padStart(2, "0") + "-" + String(cursor.getDate()).padStart(2, "0"));
     history.replaceState(history.state, "", u.pathname + u.search + u.hash);
   }
-  ["type", "kind"].forEach((k) => { const v = qp.get(k); if (v) { filters[k] = v; $("ag-f-" + k).value = v; } });
+  ["type", "nature"].forEach((k) => {
+    const v = qp.get(k) || (k === "nature" ? qp.get("kind") : null);
+    if (v && $("ag-f-" + k)) { filters[k] = v; $("ag-f-" + k).value = v; }
+  });
   if (qp.get("offer")) $("ag-f-offer").dataset.pending = qp.get("offer");
-  ["ag-f-type", "ag-f-kind", "ag-f-offer"].forEach((id) => $(id).addEventListener("change", () => { filters[id.replace("ag-f-", "")] = $(id).value || "all"; render(); }));
+  ["ag-f-type", "ag-f-nature", "ag-f-offer"].forEach((id) => $(id).addEventListener("change", () => { filters[id.replace("ag-f-", "")] = $(id).value || "all"; render(); }));
   $("ag-f-cancelled").addEventListener("change", (e) => { filters.cancelled = e.target.checked; render(); });
   $("ag-f-reset").addEventListener("click", () => {
-    Object.assign(filters, { type: "all", kind: "all", offer: "all", cancelled: false });
-    $("ag-f-type").value = $("ag-f-kind").value = $("ag-f-offer").value = "all";
+    Object.assign(filters, { type: "all", nature: "all", offer: "all", cancelled: false });
+    $("ag-f-type").value = $("ag-f-nature").value = $("ag-f-offer").value = "all";
     $("ag-f-cancelled").checked = false;
     render();
   });
@@ -964,8 +971,8 @@
     const a = apps.find((x) => String(x.id) === id);
     if (!a || !a.interviewAt) return false;
     if (a.interviewStatus === "CANCELLED" && !filters.cancelled) { filters.cancelled = true; $("ag-f-cancelled").checked = true; }
-    filters.type = filters.kind = filters.offer = "all";
-    $("ag-f-type").value = $("ag-f-kind").value = $("ag-f-offer").value = "all";
+    filters.type = filters.nature = filters.offer = "all";
+    $("ag-f-type").value = $("ag-f-nature").value = $("ag-f-offer").value = "all";
     if ($("rc-search")) $("rc-search").value = "";
     cursor = startOfDay(new Date(a.interviewAt));
     view = view === "list" || view === "month" ? (mobile() ? "day" : "week") : view;

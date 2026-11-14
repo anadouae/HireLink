@@ -2,92 +2,163 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <script src="js/public-theme.js?v=20261101r"></script>
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:8095 http://127.0.0.1:8095; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:8095 http://127.0.0.1:8095 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Paiement — HireLink</title>
   <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/tokens.css?v=20261103a" />
-  <link rel="stylesheet" href="css/checkout.css?v=20261112b" />
-  <link rel="stylesheet" href="css/public-dark.css?v=20261107b" />
-  <link rel="stylesheet" href="css/premium.css?v=20261107b" />
-  <link rel="stylesheet" href="css/mascotte.css?v=20261105i" />
+  <link rel="stylesheet" href="css/checkout.css?v=20261112f" />
 </head>
-<body class="pay-body">
-  <header class="pay-top">
-    <a id="pay-back" href="index.html">← Retour</a>
-    <strong class="pay-brand">HireLink</strong>
-    <span class="pay-sim-badge">Simulation</span>
+<body class="ck-body">
+  <header class="ck-top">
+    <a class="ck-back" href="index.html" id="ck-back-top">← Retour</a>
+    <a class="ck-brand" href="index.html" id="ck-brand">
+      <img src="assets/logo-hirelink-icon.png" alt="" width="28" height="28" />
+      <span>HireLink</span>
+    </a>
+    <span class="ck-top-spacer" aria-hidden="true"></span>
   </header>
 
-  <main class="pay-wrap">
-    <section class="pay-summary" aria-label="Récapitulatif">
-      <p class="pay-kicker">Abonnement</p>
-      <h1 id="pay-plan">—</h1>
-      <p class="pay-sub" id="pay-sub">Chargement du devis serveur…</p>
-      <div class="pay-cycle" role="group" aria-label="Période">
-        <button type="button" class="is-on" aria-pressed="true" data-cycle="month">Mensuel</button>
-        <button type="button" data-cycle="year">Annuel · 2 mois offerts</button>
+  <main class="ck-shell">
+    <ol class="ck-progress" id="ck-progress" aria-label="Étapes du paiement">
+      <li class="is-active" data-step="1"><span class="ck-dot" aria-hidden="true">1</span><span class="ck-dot-label">Abonnement</span></li>
+      <li data-step="2"><span class="ck-dot" aria-hidden="true">2</span><span class="ck-dot-label">Paiement</span></li>
+      <li data-step="3"><span class="ck-dot" aria-hidden="true">3</span><span class="ck-dot-label">Confirmation</span></li>
+    </ol>
+
+    <!-- ÉTAPE 1 -->
+    <section class="ck-panel" id="ck-step-1" aria-labelledby="ck-s1-title">
+      <h1 id="ck-s1-title" class="ck-title">Choisissez votre abonnement</h1>
+      <p class="ck-lead">Sélectionnez la formule adaptée à vos besoins.</p>
+
+      <div class="ck-plans" id="ck-plans" role="listbox" aria-label="Formules"></div>
+
+      <div class="ck-cycle" role="group" aria-label="Période de facturation">
+        <button type="button" class="is-on" data-cycle="month" aria-pressed="true">Mensuel</button>
+        <button type="button" data-cycle="year" aria-pressed="false">Annuel <small id="ck-year-save"></small></button>
       </div>
-      <ul class="pay-lines" id="pay-lines"></ul>
-      <dl class="pay-totals">
-        <div><dt>Montant catalogue</dt><dd id="pay-ht">—</dd></div>
-        <div><dt id="pay-tva-label">TVA</dt><dd id="pay-tva">—</dd></div>
-        <div class="is-total"><dt>Total affiché (simulation)</dt><dd id="pay-ttc">—</dd></div>
-      </dl>
-      <p class="pay-sim" id="pay-vat-note" hidden></p>
-      <p class="pay-sim">Paiement simulé à des fins pédagogiques. Aucune carte n’est débitée.</p>
+
+      <div class="ck-total-bar">
+        <div>
+          <strong id="ck-total-label">Total à payer</strong>
+          <p class="ck-total-note" id="ck-total-note">Montant catalogue</p>
+        </div>
+        <strong class="ck-total-amount" id="ck-total-amount">—</strong>
+      </div>
+
+      <p class="ck-error" id="ck-error-1" hidden></p>
+      <button type="button" class="ck-btn ck-btn-primary ck-btn-block" id="ck-to-pay">
+        Continuer vers le paiement <span aria-hidden="true">→</span>
+      </button>
     </section>
 
-    <section class="pay-form-card" id="pay-panel">
-      <div data-mascotte data-mascotte-pose="succes" data-mascotte-couronne="1"></div>
-      <h2>Paiement</h2>
-      <p class="pay-sim">Démonstration — moyens fictifs uniquement. Aucune donnée bancaire n’est collectée.</p>
-      <form id="pay-form" novalidate>
-        <fieldset class="pay-methods" id="pay-methods">
-          <legend>Moyen de paiement</legend>
-          <button type="button" class="pay-method is-on" data-method="card" aria-pressed="true">
-            <span class="pay-method-icon pay-method-icon--card" aria-hidden="true"></span>
-            <span>
-              <strong>Carte de test</strong>
-              <small>Visa / Mastercard fictives</small>
+    <!-- ÉTAPE 2 -->
+    <section class="ck-panel" id="ck-step-2" hidden aria-labelledby="ck-s2-title">
+      <h1 id="ck-s2-title" class="ck-title">
+        <span class="ck-title-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.8"/></svg>
+        </span>
+        Paiement par carte bancaire
+      </h1>
+      <p class="ck-lead">Renseignez les informations de votre carte pour finaliser l’abonnement.</p>
+
+      <div class="ck-card-demo" aria-label="Paiement par carte">
+        <label class="ck-field">
+          <span>Numéro de carte</span>
+          <div class="ck-input-wrap">
+            <input type="text" id="ck-pan" name="cc-number" inputmode="numeric" autocomplete="cc-number" maxlength="19" placeholder="XXXX XXXX XXXX XXXX" />
+            <span class="ck-card-brands" aria-hidden="true">
+              <span class="ck-visa">VISA</span>
+              <span class="ck-mc">MC</span>
             </span>
-          </button>
-          <button type="button" class="pay-method" data-method="transfer" aria-pressed="false">
-            <span class="pay-method-icon pay-method-icon--bank" aria-hidden="true"></span>
-            <span>
-              <strong>Virement simulé</strong>
-              <small>Sans RIB réel</small>
-            </span>
-          </button>
-        </fieldset>
-        <p class="pay-hint" id="pay-method-hint">Carte de test : aucun numéro de carte n’est saisi ni transmis.</p>
-        <label>Scénario de test
-          <select id="pay-scenario">
-            <option value="SUCCESS">Paiement réussi</option>
-            <option value="FAILURE">Paiement refusé</option>
-          </select>
+          </div>
         </label>
-        <p class="pay-error" id="pay-error" hidden></p>
-        <p id="pay-status" class="pay-hint" hidden></p>
-        <button type="submit" class="pay-submit" id="pay-submit">Confirmer le paiement simulé</button>
-      </form>
+        <div class="ck-field-row">
+          <label class="ck-field">
+            <span>Date d’expiration</span>
+            <div class="ck-input-wrap">
+              <input type="text" id="ck-exp" name="cc-exp" inputmode="numeric" autocomplete="cc-exp" maxlength="7" placeholder="MM / AA" />
+            </div>
+          </label>
+          <label class="ck-field">
+            <span>Code de sécurité</span>
+            <div class="ck-input-wrap">
+              <input type="password" id="ck-cvc" name="cc-csc" inputmode="numeric" autocomplete="cc-csc" maxlength="3" placeholder="CVC" />
+            </div>
+          </label>
+        </div>
+        <label class="ck-field">
+          <span>Titulaire</span>
+          <input type="text" id="ck-holder" name="cc-name" autocomplete="cc-name" maxlength="80" placeholder="Nom sur la carte" />
+        </label>
+      </div>
+
+      <div class="ck-recap" id="ck-recap">
+        <h2>Récapitulatif</h2>
+        <dl>
+          <div><dt>Abonnement</dt><dd id="ck-recap-plan">—</dd></div>
+          <div><dt>Période</dt><dd id="ck-recap-cycle">—</dd></div>
+          <div><dt id="ck-recap-ht-label">Montant catalogue</dt><dd id="ck-recap-ht">—</dd></div>
+          <div><dt>TVA</dt><dd id="ck-recap-tva">Non configurée</dd></div>
+          <div class="is-total"><dt>Total à payer</dt><dd id="ck-recap-ttc">—</dd></div>
+        </dl>
+      </div>
+
+      <p class="ck-error" id="ck-error-2" hidden></p>
+      <p class="ck-status" id="ck-status" hidden></p>
+
+      <div class="ck-actions">
+        <button type="button" class="ck-btn ck-btn-ghost" id="ck-back">← Retour</button>
+        <button type="button" class="ck-btn ck-btn-primary" id="ck-confirm">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3" stroke="currentColor" stroke-width="2"/><rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="2"/></svg>
+          Confirmer le paiement
+        </button>
+      </div>
     </section>
 
-    <section class="pay-receipt" id="pay-receipt" hidden>
-      <p class="pay-kicker">Paiement accepté</p>
-      <h2>Reçu</h2>
-      <dl id="pay-receipt-body"></dl>
-      <div class="pay-receipt-actions">
-        <button type="button" class="pay-secondary" id="pay-pdf">Voir la facture</button>
-        <a class="pay-submit" id="pay-done" href="index.html">Continuer</a>
+    <!-- ÉTAPE 3 -->
+    <section class="ck-panel ck-panel-success" id="ck-step-3" hidden aria-labelledby="ck-s3-title">
+      <div class="ck-success-mark" aria-hidden="true">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <h1 id="ck-s3-title" class="ck-title ck-title-center">Paiement réussi !</h1>
+      <p class="ck-lead ck-lead-center" id="ck-success-lead">Votre abonnement a été activé avec succès.</p>
+
+      <div class="ck-details" id="ck-details">
+        <h2>Détails de l’abonnement</h2>
+        <dl>
+          <div><dt>Formule</dt><dd id="ck-ok-plan">—</dd></div>
+          <div><dt>Période</dt><dd id="ck-ok-cycle">—</dd></div>
+          <div><dt>Montant</dt><dd id="ck-ok-amount">—</dd></div>
+          <div><dt>Référence</dt><dd id="ck-ok-ref">—</dd></div>
+        </dl>
+      </div>
+
+      <div class="ck-active-box" id="ck-active-box">
+        L’abonnement est maintenant actif dans HireLink. Les fonctionnalités de votre espace sont disponibles.
+      </div>
+
+      <div class="ck-actions ck-actions-stack">
+        <a class="ck-btn ck-btn-primary ck-btn-block" id="ck-goto-app" href="app/recruiter.html">Accéder à mon espace recruteur</a>
+        <button type="button" class="ck-btn ck-btn-outline ck-btn-block" id="ck-pdf" hidden>Télécharger le récapitulatif (PDF)</button>
+      </div>
+    </section>
+
+    <!-- ÉTAPE 3bis — refus -->
+    <section class="ck-panel ck-panel-fail" id="ck-step-fail" hidden aria-labelledby="ck-fail-title">
+      <div class="ck-fail-mark" aria-hidden="true">!</div>
+      <h1 id="ck-fail-title" class="ck-title ck-title-center">Paiement refusé</h1>
+      <p class="ck-lead ck-lead-center" id="ck-fail-lead">Le paiement a été refusé. Aucun abonnement n’a été activé.</p>
+      <div class="ck-actions ck-actions-stack">
+        <button type="button" class="ck-btn ck-btn-primary ck-btn-block" id="ck-retry">Réessayer le paiement</button>
+        <button type="button" class="ck-btn ck-btn-ghost ck-btn-block" id="ck-fail-back">← Changer d’abonnement</button>
       </div>
     </section>
   </main>
+
+  <script src="js/config.js?v=20261109a"></script>
   <script src="js/api.js?v=20261109a"></script>
-  <script src="js/mascotte.js?v=20261105i"></script>
-  <script src="js/checkout.js?v=20261112c"></script>
-<script defer src="js/premium.js?v=20261106g"></script>
+  <script src="js/checkout.js?v=20261112h"></script>
 </body>
 </html>

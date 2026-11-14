@@ -210,16 +210,36 @@
     return box;
   }
 
+  /** Politique Phase 1 : ne présenter comme accès direct que si linkReliable / DEEP. */
+  function externalLinkPolicy(o) {
+    const reliable = !!(o && (o.linkReliable === true || o.directAccessTrusted === true || o.urlQuality === "DEEP"));
+    const apply = o && o.applyUrl && /^https:\/\//i.test(o.applyUrl) ? o.applyUrl : "";
+    const origin = o && o.originUrl && /^https:\/\//i.test(o.originUrl) ? o.originUrl : "";
+    if (reliable) {
+      return {
+        href: apply || origin || "",
+        trusted: !!(apply || origin),
+        label: apply ? "Postuler sur le site d'origine" : "Voir l'annonce d'origine",
+      };
+    }
+    // UNKNOWN / suspect : pas de CTA « postuler direct » ; lien optionnel non garanti uniquement sur origin.
+    if (origin && o.urlQuality === "UNKNOWN") {
+      return { href: origin, trusted: false, label: "Lien non vérifié (annonce possible)" };
+    }
+    return { href: "", trusted: false, label: "Lien d'annonce non fiable" };
+  }
+
   function card(o, options) {
     const opts = options || {};
     const root = el("article", "offer-card" + (opts.selected ? " is-selected" : ""));
     root.dataset.offerId = o.id;
     const link = el("a", "offer-card__link");
-    const externalUrl = o.applyUrl || o.originUrl || "";
-    const safeExternal = o.external && /^https:\/\//i.test(externalUrl);
+    const policy = o.external ? externalLinkPolicy(o) : null;
+    const safeExternal = !!(policy && policy.trusted && policy.href);
+    const externalUrl = policy ? policy.href : "";
     link.href = o.external ? (safeExternal ? externalUrl : "#") : (opts.href ? opts.href(o) : "#");
     if (o.external && !safeExternal) link.removeAttribute("href");
-    link.setAttribute("aria-label", (o.external ? (safeExternal ? "Postuler sur le site d'origine : " : "Lien d'origine indisponible : ") : "") + o.title + " — " + companyOf(o));
+    link.setAttribute("aria-label", (o.external ? ((safeExternal ? policy.label + " : " : "Lien d'origine non fiable : ")) : "") + o.title + " — " + companyOf(o));
     if (safeExternal) {
       link.target = "_blank";
       link.rel = "noopener";
@@ -299,7 +319,7 @@
       credit.href = o.sourceHome;
       credit.target = "_blank";
       credit.rel = "noopener";
-      credit.textContent = "Source : " + (o.sourceLabel || "Remote OK");
+      credit.textContent = "Source : " + (o.sourceLabel || o.source || "Partenaire");
       root.appendChild(credit);
     }
     return root;
@@ -398,5 +418,5 @@
     return Object.assign(body, overrides || {});
   }
 
-  global.HireLinkOffer = { toRequest: toRequest, card: card, companyCard: companyCard, mediaUrl: mediaUrl, facts: facts, compensation: compensation, icon: icon, placeOf: placeOf, placeWithCountry: placeWithCountry, paceOf: paceOf, workModeOf: workModeOf, dateFr: dateFr, LABELS: LABELS };
+  global.HireLinkOffer = { toRequest: toRequest, card: card, companyCard: companyCard, mediaUrl: mediaUrl, facts: facts, compensation: compensation, icon: icon, placeOf: placeOf, placeWithCountry: placeWithCountry, paceOf: paceOf, workModeOf: workModeOf, dateFr: dateFr, externalLinkPolicy: externalLinkPolicy, LABELS: LABELS };
 })(window);

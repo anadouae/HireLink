@@ -196,7 +196,8 @@
   /* ------------------------------------------------------------------- nav */
   var ROLES = {
     RECRUTEUR: {
-      home: "recruiter.html", label: "Espace recruteur", plans: "recruiter-settings.html#plans", premiumKey: "recruiter",
+      home: "recruiter.html", label: "Espace recruteur", plans: "recruiter-settings.html#plans",
+      checkout: "../checkout.html?plan=recruiter", premiumKey: "recruiter",
       search: "Rechercher un candidat, une offre…", searchGo: function (q) { return "recruiter-pipeline.html?view=list&q=" + encodeURIComponent(q); },
       nav: [
         { id: "dashboard", href: "recruiter.html", label: "Tableau de bord", icon: "home" },
@@ -214,7 +215,8 @@
       menu: [["recruiter-settings.html#compte", "user", "Mon compte"], ["recruiter-team.html", "building", "Entreprise & équipe"], ["security.html", "shield", "Sécurité"], ["recruiter-settings.html", "settings", "Paramètres"]],
     },
     CANDIDAT: {
-      home: "candidate-dashboard.html", label: "Espace candidat", plans: "candidate-settings.html#plans", premiumKey: "candidate",
+      home: "candidate-dashboard.html", label: "Espace candidat", plans: "candidate-settings.html#plans",
+      checkout: "../checkout.html?plan=candidate", premiumKey: "candidate",
       search: "Poste, entreprise, ville, compétence…", searchGo: function (q) { return "candidate.html?q=" + encodeURIComponent(q); },
       nav: [
         { id: "dashboard", href: "candidate-dashboard.html", label: "Tableau de bord", icon: "home" },
@@ -357,6 +359,12 @@
     }).catch(function () {});
   }
   function premiumOn() { return !!CFG.premiumKey && HireLinkAPI.isPremium(); }
+  function plansHref() {
+    if (premiumOn() || !CFG.checkout) return CFG.plans || "#";
+    var file = (location.pathname.split("/").pop() || "").split("?")[0];
+    var back = /^[\w.-]+\.html$/.test(file) ? "&back=" + encodeURIComponent(file) : "";
+    return CFG.checkout + back;
+  }
 
   function buildTopbar(opts) {
     var bar = document.getElementById("rc-topbar");
@@ -366,7 +374,7 @@
       '<button type="button" class="rc-iconbtn rc-burger" id="rc-burger" aria-label="Ouvrir le menu">' + svg("menu") + "</button>" +
       (CFG.noSearch ? '<span class="rc-spacer"></span>' : '<label class="rc-search">' + svg("search") + '<input type="search" id="rc-search" placeholder="' + esc((opts.search && opts.search.placeholder) || CFG.search) + '" autocomplete="off" aria-label="Rechercher" /></label>') +
       '<div class="rc-actions">' +
-      (CFG.plans ? '<a class="rc-crown' + (premiumOn() ? " is-on" : "") + '" href="' + CFG.plans + '" title="Formules">' + svg("crown") + "<span>" + (premiumOn() ? "Premium" : "Passer Premium") + "</span></a>" : "") +
+      (CFG.plans ? '<a class="rc-crown' + (premiumOn() ? " is-on" : "") + '" href="' + plansHref() + '" title="Formules">' + svg("crown") + "<span>" + (premiumOn() ? "Premium" : "Passer Premium") + "</span></a>" : "") +
       '<button type="button" class="rc-iconbtn" id="rc-theme" aria-label="Changer de thème">' + svg(dark ? "sun" : "moon") + "</button>" +
       (CFG.noBell ? "" : '<button type="button" class="rc-iconbtn" id="rc-bell" aria-label="Notifications" aria-haspopup="true">' + svg("bell") + '<span class="rc-dot" id="rc-bell-dot" hidden>0</span></button>') +
       '<button type="button" class="rc-profile" id="rc-profile" aria-label="Menu du compte" aria-haspopup="true"></button></div>';

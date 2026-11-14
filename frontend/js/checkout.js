@@ -4,244 +4,455 @@
   try { session = JSON.parse(localStorage.getItem("hirelink.session") || "null"); } catch (_) {}
 
   function audienceFromSession() {
-    if (params.get("plan") === "recruiter") return "recruiter";
-    if (params.get("plan") === "candidate") return "candidate";
-    if (session && session.role === "RECRUTEUR") return "recruiter";
-    if (session && session.role === "CANDIDAT") return "candidate";
-    return "candidate";
+    if (params.get("plan") === "recruiter") return "RECRUTEUR";
+    if (params.get("plan") === "candidate") return "CANDIDAT";
+    if (session && session.role === "RECRUTEUR") return "RECRUTEUR";
+    if (session && session.role === "CANDIDAT") return "CANDIDAT";
+    return "CANDIDAT";
   }
 
-  const plan = audienceFromSession();
+  const audience = audienceFromSession();
+  const storageKey = "hirelink.checkout." + audience.toLowerCase();
   let cycle = params.get("cycle") === "year" ? "year" : "month";
+  let plans = [];
+  let selectedCode = null;
   let quote = null;
   let invoice = null;
-  let payMethod = "card";
-  let idempotencyKey = (crypto.randomUUID ? crypto.randomUUID() : "idem" + Date.now()).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
+  let step = 1;
+  let paying = false;
+  let lastPayment = null;
+  let idempotencyKey = newKey();
 
   const backFile = params.get("back") || "";
-  const backHref = /^[\w.-]+\.html$/.test(backFile)
+  const appHref = /^[\w.-]+\.html$/.test(backFile)
     ? "app/" + backFile
+    : audience === "RECRUTEUR" ? "app/recruiter.html"
+    : audience === "CANDIDAT" ? "app/candidate-dashboard.html"
     : session && session.role === "ADMINISTRATEUR" ? "app/admin.html"
-    : session && session.role === "RECRUTEUR" ? "app/recruiter.html"
-    : session && session.role === "CANDIDAT" ? "app/candidate-dashboard.html"
     : "index.html";
-  document.getElementById("pay-back").href = backHref;
-  document.getElementById("pay-done").href = backHref;
+
+  const goto = document.getElementById("ck-goto-app");
+  if (goto) {
+    goto.href = appHref;
+    goto.textContent = audience === "CANDIDAT"
+      ? "Accéder à mon espace candidat"
+      : "Accéder à mon espace recruteur";
+  }
+  const backTop = document.getElementById("ck-back-top");
+  if (backTop) backTop.href = appHref;
+  const brand = document.getElementById("ck-brand");
+  if (brand) brand.href = appHref;
+
+  function newKey() {
+    return (crypto.randomUUID ? crypto.randomUUID() : "idem" + Date.now())
+      .replace(/[^A-Za-z0-9_-]/g, "")
+      .slice(0, 80);
+  }
 
   function money(n) {
     if (n == null || n === "") return "—";
     return Number(n).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " MAD";
   }
-  function showError(msg) {
-    const el = document.getElementById("pay-error");
+
+  function moneyInt(n) {
+    if (n == null || n === "") return "—";
+    const v = Number(n);
+    if (Number.isInteger(v)) return v.toLocaleString("fr-FR") + " MAD";
+    return money(n);
+  }
+
+  function showErr(id, msg) {
+    const el = document.getElementById(id);
+    if (!el) return;
     el.hidden = !msg;
     el.textContent = msg || "";
   }
-  function setCycleButtons() {
-    document.querySelectorAll(".pay-cycle button").forEach((b) => {
+
+  function setStep(n) {
+    step = n;
+    document.getElementById("ck-step-1").hidden = n !== 1;
+    document.getElementById("ck-step-2").hidden = n !== 2;
+    document.getElementById("ck-step-3").hidden = n !== 3;
+    document.getElementById("ck-step-fail").hidden = n !== "fail";
+    document.querySelectorAll("#ck-progress li").forEach((li) => {
+      const s = Number(li.getAttribute("data-step"));
+      li.classList.toggle("is-active", n === s || (n === "fail" && s === 2));
+      li.classList.toggle("is-done", typeof n === "number" && s < n);
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function iconFor(code) {
+    const c = String(code || "").toUpperCase();
+    if (c === "PREMIUM") {
+      return { cls: "ck-plan-icon ck-plan-icon--gold", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 8l4.5 3L12 4l4.5 7L21 8v10H3V8z"/></svg>' };
+    }
+    if (c === "PERFORMANCE") {
+      return { cls: "ck-plan-icon ck-plan-icon--rose", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 15v-4M12 15V8M16 15v-7"/></svg>' };
+    }
+    if (c === "ACCES") {
+      return { cls: "ck-plan-icon", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' };
+    }
+    return { cls: "ck-plan-icon", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-5 7-5s5.5 2 7 5"/></svg>' };
+  }
+
+  function paidCode() {
+    return audience === "RECRUTEUR" ? "PREMIUM" : "PERFORMANCE";
+  }
+
+  function selectedPlan() {
+    return plans.find((p) => p.code === selectedCode) || null;
+  }
+
+  function yearlySavePct(p) {
+    if (!p || !p.monthlyMad || !p.yearlyMad) return 0;
+    const full = p.monthlyMad * 12;
+    if (full <= 0 || p.yearlyMad >= full) return 0;
+    return Math.round((1 - p.yearlyMad / full) * 100);
+  }
+
+  function paintCycle() {
+    document.querySelectorAll(".ck-cycle button").forEach((b) => {
       const on = b.getAttribute("data-cycle") === cycle;
       b.classList.toggle("is-on", on);
       b.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    const paid = plans.find((p) => p.code === paidCode());
+    const save = yearlySavePct(paid);
+    const el = document.getElementById("ck-year-save");
+    if (el) el.textContent = save > 0 ? "(-" + save + "%)" : "";
   }
-  function paintQuote(q) {
-    quote = q;
-    const label = q && q.planLabel
-      ? q.planLabel
-      : (plan === "recruiter" ? "Premium" : "Performance");
-    document.getElementById("pay-plan").textContent = label;
-    const cycleLabel = q && q.cycleLabel ? q.cycleLabel : (cycle === "year" ? "Annuel" : "Mensuel");
-    document.getElementById("pay-sub").textContent = q && q.payable === false
-      ? (q.message || "Formule gratuite")
-      : ("Abonnement " + cycleLabel + " · montants issus du catalogue serveur");
-    const lines = document.getElementById("pay-lines");
-    lines.innerHTML = "";
-    const feats = (q && q.features ? String(q.features) : "").split(/\n+/).filter(Boolean);
-    feats.slice(0, 6).forEach((f) => {
-      const li = document.createElement("li");
-      li.textContent = f;
-      lines.appendChild(li);
+
+  function paintPlans() {
+    const root = document.getElementById("ck-plans");
+    root.innerHTML = "";
+    plans.forEach((p) => {
+      const price = cycle === "year" ? p.yearlyMad : p.monthlyMad;
+      const period = cycle === "year" ? "/ an" : "/ mois";
+      const feats = String(p.features || "").split(/\n+/).filter(Boolean).slice(0, 5);
+      const icon = iconFor(p.code);
+      const blurb = feats[0]
+        ? (p.credits ? p.credits + " usages IA · " + feats.slice(0, 2).join(" · ") : feats.slice(0, 2).join(" · "))
+        : (p.detail || "Formule HireLink");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ck-plan" + (p.code === selectedCode ? " is-selected" : "") + (price <= 0 ? " is-free-only" : "");
+      btn.setAttribute("role", "option");
+      btn.setAttribute("aria-selected", p.code === selectedCode ? "true" : "false");
+      btn.dataset.code = p.code;
+      btn.innerHTML =
+        '<span class="' + icon.cls + '">' + icon.svg + "</span>" +
+        '<span class="ck-plan-body"><h3></h3><p></p><ul class="ck-plan-feats"></ul></span>' +
+        '<span class="ck-plan-price"><strong></strong><span></span></span>';
+      btn.querySelector("h3").textContent = p.label || p.code;
+      btn.querySelector("p").textContent = blurb.length > 110 ? blurb.slice(0, 107) + "…" : blurb;
+      const ul = btn.querySelector(".ck-plan-feats");
+      feats.forEach((f) => {
+        const li = document.createElement("li");
+        li.textContent = f;
+        ul.appendChild(li);
+      });
+      const strong = btn.querySelector(".ck-plan-price strong");
+      const span = btn.querySelector(".ck-plan-price span");
+      if (price <= 0) {
+        strong.textContent = "Gratuit";
+        strong.classList.add("is-free");
+        span.textContent = "formule de base";
+      } else {
+        strong.textContent = moneyInt(price).replace(" MAD", "");
+        strong.insertAdjacentHTML("beforeend", ' <small style="font-size:0.75em;font-weight:600">MAD</small>');
+        span.textContent = period;
+      }
+      btn.addEventListener("click", () => {
+        selectedCode = p.code;
+        paintPlans();
+        loadQuote();
+      });
+      root.appendChild(btn);
     });
-    const htDt = document.querySelector('#pay-ht') && document.getElementById("pay-ht").closest("div")
-      ? document.getElementById("pay-ht").closest("div").querySelector("dt")
-      : null;
-    const ttcDt = document.querySelector('#pay-ttc') && document.getElementById("pay-ttc").closest("div")
-      ? document.getElementById("pay-ttc").closest("div").querySelector("dt")
-      : null;
-    const vatNote = document.getElementById("pay-vat-note");
+  }
+
+  function quoteFromPlan(plan, cyc) {
+    const amount = Number(cyc === "year" ? plan.yearlyMad : plan.monthlyMad) || 0;
+    return {
+      plan: plan.code,
+      planLabel: plan.label,
+      cycle: cyc,
+      cycleLabel: cyc === "year" ? "Annuel" : "Mensuel",
+      currency: "MAD",
+      features: plan.features || "",
+      credits: plan.credits,
+      payable: amount > 0,
+      amountHt: amount,
+      tva: 0,
+      amountTtc: amount,
+      vatConfigured: false,
+      message: amount > 0 ? "Montant catalogue" : "Formule gratuite : aucun paiement.",
+    };
+  }
+
+  function paintTotalsFromQuote(q) {
+    quote = q;
+    const amountEl = document.getElementById("ck-total-amount");
+    const noteEl = document.getElementById("ck-total-note");
+    const labelEl = document.getElementById("ck-total-label");
+    const toPay = document.getElementById("ck-to-pay");
     if (!q) {
-      if (htDt) htDt.textContent = "Montant catalogue";
-      if (ttcDt) ttcDt.textContent = "Total affiché";
-      document.getElementById("pay-ht").textContent = "—";
-      document.getElementById("pay-tva-label").textContent = "TVA";
-      document.getElementById("pay-tva").textContent = "—";
-      document.getElementById("pay-ttc").textContent = "—";
-      if (vatNote) vatNote.hidden = true;
+      amountEl.textContent = "—";
+      noteEl.textContent = "Devis indisponible";
+      toPay.disabled = true;
       return;
     }
-    const vatOk = q.vatConfigured === true;
-    if (htDt) htDt.textContent = vatOk ? "Sous-total HT" : "Montant catalogue";
-    if (ttcDt) ttcDt.textContent = vatOk ? "Total TTC" : "Total affiché (simulation)";
-    document.getElementById("pay-ht").textContent = money(q.amountHt);
-    if (!vatOk) {
-      document.getElementById("pay-tva-label").textContent = "TVA non configurée";
-      document.getElementById("pay-tva").textContent = "—";
-      if (vatNote) {
-        vatNote.hidden = false;
-        vatNote.textContent =
-          "La TVA n’est pas configurée sur le serveur : ce total n’est pas un TTC fiscal définitif. Aucun paiement réel n’est effectué.";
-      }
+    const payable = q.payable !== false && Number(q.amountTtc) > 0 && selectedCode === paidCode();
+    amountEl.textContent = money(q.amountTtc);
+    labelEl.textContent = payable ? "Total à payer" : "Montant";
+    if (q.vatConfigured === true) {
+      noteEl.textContent = "Sous-total HT " + money(q.amountHt) + " · TVA " + money(q.tva);
     } else {
-      document.getElementById("pay-tva-label").textContent = "TVA";
-      document.getElementById("pay-tva").textContent = money(q.tva);
-      if (vatNote) {
-        vatNote.hidden = false;
-        vatNote.textContent = "Montants calculés côté serveur. Paiement simulé — aucune carte n’est débitée.";
-      }
+      noteEl.textContent = Number(q.amountTtc) > 0 ? "Montant catalogue · TVA non configurée" : "Formule gratuite";
     }
-    document.getElementById("pay-ttc").textContent = money(q.amountTtc);
-    const submit = document.getElementById("pay-submit");
-    if (submit) submit.disabled = q.payable === false;
-  }
-  function paintInvoice(inv) {
-    invoice = inv;
-    document.getElementById("pay-plan").textContent = inv.planLabel || document.getElementById("pay-plan").textContent;
-    document.getElementById("pay-sub").textContent = "Facture " + inv.number + " · simulation";
-    const vatOk = inv.vatConfigured === true;
-    const htDt = document.getElementById("pay-ht").closest("div").querySelector("dt");
-    const ttcDt = document.getElementById("pay-ttc").closest("div").querySelector("dt");
-    if (htDt) htDt.textContent = vatOk ? "Sous-total HT" : "Montant catalogue";
-    if (ttcDt) ttcDt.textContent = vatOk ? "Total TTC" : "Total affiché (simulation)";
-    document.getElementById("pay-ht").textContent = money(inv.amountHt);
-    document.getElementById("pay-tva-label").textContent = vatOk ? "TVA" : "TVA non configurée";
-    document.getElementById("pay-tva").textContent = vatOk ? money(inv.tva) : "—";
-    document.getElementById("pay-ttc").textContent = money(inv.amountTtc);
-    const vatNote = document.getElementById("pay-vat-note");
-    if (vatNote) {
-      vatNote.hidden = false;
-      vatNote.textContent = vatOk
-        ? "Facture émise pour simulation. Aucun paiement réel."
-        : "TVA non configurée : ce total n’est pas un TTC fiscal définitif. Aucun paiement réel n’est effectué.";
+    toPay.disabled = !payable;
+    if (selectedCode !== paidCode()) {
+      showErr("ck-error-1", "Cette formule est gratuite : aucun paiement n’est requis. Choisissez " +
+        (audience === "RECRUTEUR" ? "Premium" : "Performance") + " pour continuer.");
+    } else {
+      showErr("ck-error-1", "");
     }
+
+    document.getElementById("ck-recap-plan").textContent = q.planLabel || "—";
+    document.getElementById("ck-recap-cycle").textContent = q.cycleLabel || (cycle === "year" ? "Annuel" : "Mensuel");
+    document.getElementById("ck-recap-ht-label").textContent = q.vatConfigured === true ? "Montant HT" : "Montant catalogue";
+    document.getElementById("ck-recap-ht").textContent = money(q.amountHt);
+    document.getElementById("ck-recap-tva").textContent = q.vatConfigured === true ? money(q.tva) : "Non configurée";
+    document.getElementById("ck-recap-ttc").textContent = money(q.amountTtc);
+
+    const holder = document.getElementById("ck-holder");
+    if (holder && !holder.value && session && session.fullName) holder.placeholder = session.fullName;
   }
 
-  setCycleButtons();
-  paintQuote(null);
+  async function loadPlans() {
+    const all = await HireLinkAPI.api("/billing/plans");
+    plans = (Array.isArray(all) ? all : []).filter((p) => String(p.audience).toUpperCase() === audience);
+    plans.sort((a, b) => Number(a.monthlyMad || 0) - Number(b.monthlyMad || 0));
+    selectedCode = plans.some((p) => p.code === paidCode()) ? paidCode() : (plans[0] && plans[0].code);
+    paintCycle();
+    paintPlans();
+  }
 
   async function loadQuote() {
-    showError("");
+    showErr("ck-error-1", "");
+    const free = selectedPlan();
+    if (selectedCode !== paidCode()) {
+      paintTotalsFromQuote({
+        plan: free && free.code,
+        planLabel: free && free.label,
+        cycle,
+        cycleLabel: cycle === "year" ? "Annuel" : "Mensuel",
+        amountHt: 0,
+        amountTtc: 0,
+        tva: 0,
+        vatConfigured: false,
+        payable: false,
+        features: free && free.features,
+      });
+      return;
+    }
     try {
+      // Le serveur ne facture que le palier payant de l'audience (Premium / Performance).
       const q = await HireLinkAPI.api("/billing/quote?cycle=" + encodeURIComponent(cycle));
-      paintQuote(q);
+      paintTotalsFromQuote(q);
     } catch (err) {
-      paintQuote(null);
-      showError(err.message || "Impossible de charger le devis.");
+      // Certains backends n'exposent pas encore /billing/quote : repli sur le catalogue /plans.
+      const paid = plans.find((p) => p.code === paidCode());
+      if (paid) {
+        paintTotalsFromQuote(quoteFromPlan(paid, cycle));
+        showErr("ck-error-1", "");
+      } else {
+        paintTotalsFromQuote(null);
+        showErr("ck-error-1", err.message || "Impossible de charger le devis.");
+      }
     }
   }
 
-  document.querySelector(".pay-cycle").addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-cycle]");
-    if (!btn || invoice) return;
-    cycle = btn.getAttribute("data-cycle");
-    setCycleButtons();
-    loadQuote();
-  });
+  function paintSuccess(paid) {
+    lastPayment = paid;
+    const inv = paid.invoice || invoice;
+    const label = (inv && inv.planLabel) || (quote && quote.planLabel) || paidCode();
+    const cycleLabel = inv && inv.cycle === "year" ? "Annuel" : (quote && quote.cycleLabel) || (cycle === "year" ? "Annuel" : "Mensuel");
+    document.getElementById("ck-success-lead").textContent =
+      "Votre abonnement " + label + " (" + cycleLabel + ") a été activé avec succès.";
+    document.getElementById("ck-ok-plan").textContent = label;
+    document.getElementById("ck-ok-cycle").textContent = cycleLabel;
+    document.getElementById("ck-ok-amount").textContent = money(inv && inv.amountTtc != null ? inv.amountTtc : quote && quote.amountTtc);
+    document.getElementById("ck-ok-ref").textContent = paid.reference || (inv && inv.number) || "—";
+    if (paid.planTier) HireLinkAPI.setPlanTier(paid.planTier);
 
-  const methods = document.getElementById("pay-methods");
-  if (methods) {
-    methods.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-method]");
-      if (!btn) return;
-      payMethod = btn.getAttribute("data-method");
-      methods.querySelectorAll("button[data-method]").forEach((b) => {
-        const on = b === btn;
-        b.classList.toggle("is-on", on);
-        b.setAttribute("aria-pressed", on ? "true" : "false");
-      });
-      const hint = document.getElementById("pay-method-hint");
-      if (hint) {
-        hint.textContent = payMethod === "transfer"
-          ? "Virement simulé : aucune RIB réelle n’est demandée."
-          : "Carte de test : aucun numéro de carte n’est saisi ni transmis.";
-      }
-    });
+    const pdfBtn = document.getElementById("ck-pdf");
+    if (pdfBtn && inv && inv.id) {
+      pdfBtn.hidden = false;
+      pdfBtn.onclick = async () => {
+        try {
+          const res = await HireLinkAPI.authFetch("/billing/invoices/" + inv.id + "/pdf");
+          if (!res.ok) throw new Error("PDF indisponible");
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "recapitulatif-" + (inv.number || inv.id) + ".pdf";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+        } catch (e) {
+          alert(e.message || "Impossible de télécharger le PDF.");
+        }
+      };
+    } else if (pdfBtn) {
+      pdfBtn.hidden = true;
+    }
+    setStep(3);
   }
 
-  function newKey() {
-    return (crypto.randomUUID ? crypto.randomUUID() : "idem" + Date.now()).replace(/[^A-Za-z0-9_-]/g, "").slice(0, 80);
-  }
-  const stored = sessionStorage.getItem("hirelink.checkout." + plan);
-  if (stored) {
-    HireLinkAPI.api("/billing/payments?idempotencyKey=" + encodeURIComponent(stored)).then((r) => {
-      if (r && r.status === "SUCCEEDED") finish(r);
-      else if (r && r.status === "FAILED") {
-        sessionStorage.removeItem("hirelink.checkout." + plan);
-        showError(r.failureReason || "Le dernier paiement simulé a été refusé. Vous pouvez réessayer.");
-      }
-    }).catch(() => {});
+  function cardLooksFilled() {
+    // Simulation : n'importe quelles valeurs passent ; on exige seulement que les champs ne soient pas vides.
+    const pan = String((document.getElementById("ck-pan") || {}).value || "").replace(/\D/g, "");
+    const exp = String((document.getElementById("ck-exp") || {}).value || "").trim();
+    const cvc = String((document.getElementById("ck-cvc") || {}).value || "").replace(/\D/g, "");
+    const holder = String((document.getElementById("ck-holder") || {}).value || "").trim();
+    if (!pan) return "Indiquez un numéro de carte.";
+    if (!exp) return "Indiquez la date d’expiration.";
+    if (!cvc) return "Indiquez le code de sécurité.";
+    if (!holder) return "Indiquez le nom du titulaire.";
+    return "";
   }
 
-  loadQuote();
-
-  document.getElementById("pay-form").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById("pay-submit");
-    const status = document.getElementById("pay-status");
+  async function confirmPay() {
+    if (paying) return;
+    const cardErr = cardLooksFilled();
+    if (cardErr) {
+      showErr("ck-error-2", cardErr);
+      return;
+    }
+    paying = true;
+    const btn = document.getElementById("ck-confirm");
+    const status = document.getElementById("ck-status");
     btn.disabled = true;
     status.hidden = false;
-    status.textContent = "Traitement simulé…";
-    showError("");
+    status.textContent = "Traitement du paiement…";
+    showErr("ck-error-2", "");
     try {
       if (!invoice) {
         const prepared = await HireLinkAPI.api("/billing/subscribe", { method: "POST", body: { cycle } });
         invoice = prepared.invoice;
-        if (!invoice) throw new Error("Aucune facture n'a été émise.");
-        paintInvoice(invoice);
+        if (!invoice) throw new Error("Aucune facture n’a été émise.");
       }
-      sessionStorage.setItem("hirelink.checkout." + plan, idempotencyKey);
+      sessionStorage.setItem(storageKey, idempotencyKey);
+      // Les champs carte restent locaux : jamais envoyés au serveur. Le paiement est toujours accepté côté API.
       const paid = await HireLinkAPI.api("/billing/payments", {
         method: "POST",
         body: {
           invoiceId: invoice.id,
-          scenario: document.getElementById("pay-scenario").value,
+          scenario: "SUCCESS",
           idempotencyKey,
-          method: payMethod,
         },
       });
       if (paid.status !== "SUCCEEDED") {
         idempotencyKey = newKey();
-        showError(paid.failureReason || "Paiement refusé. La facture reste non payée. Vous pouvez réessayer.");
-        btn.disabled = false;
-        status.hidden = true;
+        sessionStorage.removeItem(storageKey);
+        document.getElementById("ck-fail-lead").textContent =
+          paid.failureReason || "Le paiement a été refusé. Aucun abonnement n’a été activé.";
+        setStep("fail");
         return;
       }
-      finish(paid);
+      paintSuccess(paid);
     } catch (err) {
-      showError(err.message);
+      showErr("ck-error-2", err.message || "Erreur serveur. Réessayez.");
+      idempotencyKey = newKey();
+    } finally {
+      paying = false;
       btn.disabled = false;
       status.hidden = true;
     }
+  }
+
+  document.querySelector(".ck-cycle").addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-cycle]");
+    if (!btn || step !== 1) return;
+    cycle = btn.getAttribute("data-cycle");
+    invoice = null;
+    paintCycle();
+    paintPlans();
+    loadQuote();
   });
 
-  function finish(paid) {
-    const ok = paid.status === "SUCCEEDED";
-    document.getElementById("pay-panel").hidden = true;
-    const receipt = document.getElementById("pay-receipt");
-    receipt.hidden = false;
-    document.querySelector("#pay-receipt .pay-kicker").textContent = ok ? "Paiement confirmé" : "Paiement refusé";
-    document.querySelector("#pay-receipt h2").textContent = ok ? "Facture payée" : "Facture toujours non payée";
-    const inv = paid.invoice || invoice;
-    document.getElementById("pay-receipt-body").innerHTML =
-      "<div><dt>Abonnement</dt><dd>" + (inv && inv.planLabel ? inv.planLabel : "—") + "</dd></div>" +
-      "<div><dt>Période</dt><dd>" + (inv && inv.cycle === "year" ? "Annuel" : "Mensuel") + "</dd></div>" +
-      "<div><dt>Facture</dt><dd>" + (inv && inv.number ? inv.number : "—") + "</dd></div>" +
-      "<div><dt>" + (inv && inv.vatConfigured === true ? "HT" : "Montant catalogue") + "</dt><dd>" + money(inv && inv.amountHt) + "</dd></div>" +
-      "<div><dt>TVA</dt><dd>" + (inv && inv.vatConfigured === true ? money(inv.tva) : "non configurée") + "</dd></div>" +
-      "<div><dt>" + (inv && inv.vatConfigured === true ? "Total TTC" : "Total affiché (simulation)") + "</dt><dd>" + money(inv && inv.amountTtc) + "</dd></div>" +
-      "<div><dt>Référence</dt><dd>" + (paid.reference || "—") + "</dd></div>" +
-      "<div><dt>Résultat</dt><dd>" + (ok ? "Réussi (simulation)" : (paid.failureReason || "Refusé")) + "</dd></div>";
-    if (ok && paid.planTier) HireLinkAPI.setPlanTier(paid.planTier);
-    const pdf = document.getElementById("pay-pdf");
-    if (pdf && inv && inv.id) pdf.onclick = () => HireLinkAPI.openFile("/billing/invoices/" + inv.id + "/pdf");
+  document.getElementById("ck-to-pay").addEventListener("click", () => {
+    if (!quote || quote.payable === false || selectedCode !== paidCode()) return;
+    showErr("ck-error-2", "");
+    setStep(2);
+  });
+
+  document.getElementById("ck-back").addEventListener("click", () => {
+    invoice = null;
+    setStep(1);
+  });
+
+  document.getElementById("ck-confirm").addEventListener("click", confirmPay);
+
+  const panInput = document.getElementById("ck-pan");
+  if (panInput) {
+    panInput.addEventListener("input", () => {
+      // Carte classique : 16 chiffres max (affichés par groupes de 4).
+      const digits = panInput.value.replace(/\D/g, "").slice(0, 16);
+      panInput.value = digits.replace(/(\d{4})(?=\d)/g, "$1 ").trim();
+    });
   }
+  const expInput = document.getElementById("ck-exp");
+  if (expInput) {
+    expInput.addEventListener("input", () => {
+      const digits = expInput.value.replace(/\D/g, "").slice(0, 4);
+      expInput.value = digits.length <= 2 ? digits : digits.slice(0, 2) + " / " + digits.slice(2);
+    });
+  }
+  const cvcInput = document.getElementById("ck-cvc");
+  if (cvcInput) {
+    cvcInput.addEventListener("input", () => {
+      cvcInput.value = cvcInput.value.replace(/\D/g, "").slice(0, 3);
+    });
+  }
+
+  document.getElementById("ck-retry").addEventListener("click", () => {
+    invoice = null;
+    idempotencyKey = newKey();
+    setStep(2);
+  });
+
+  document.getElementById("ck-fail-back").addEventListener("click", () => {
+    invoice = null;
+    idempotencyKey = newKey();
+    setStep(1);
+  });
+
+  (async function init() {
+    try {
+      await loadPlans();
+      await loadQuote();
+
+      // Restauration après rechargement (idempotence) — avant d'afficher l'étape 1
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          const r = await HireLinkAPI.api("/billing/payments?idempotencyKey=" + encodeURIComponent(stored));
+          if (r && r.status === "SUCCEEDED") {
+            invoice = r.invoice || invoice;
+            paintSuccess(r);
+            return;
+          }
+          if (r && r.status === "FAILED") sessionStorage.removeItem(storageKey);
+        } catch (_) { /* ignore replay errors */ }
+      }
+      setStep(1);
+    } catch (err) {
+      showErr("ck-error-1", err.message || "Connexion requise pour afficher les formules.");
+    }
+  })();
 })();

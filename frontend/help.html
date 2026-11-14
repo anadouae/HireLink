@@ -84,26 +84,33 @@
       <a href="index.html#candidats">Candidats</a>
       <a href="index.html#metiers">Métiers</a>
       <a href="index.html#parcours">Parcours</a>
-      <a href="index.html#tarifs">Formules</a>
+      <a href="checkout.html">Formules</a>
     </nav>
     <a class="btn btn-primary btn-sm" href="auth.html?mode=login">Connexion</a>
   </header>
 
-  <main class="legal-main">
-    <p class="eyebrow">Centre d’aide</p>
-    <h1>Utiliser HireLink, sans zone d’ombre</h1>
-    <p class="lead">Les réponses écrites à partir de ce que l’application fait réellement : ce qui est automatique, ce qui dépend d’une décision humaine, et ce qui n’est jamais promis.</p>
+  <main class="legal-main help-main">
+    <p class="eyebrow">Centre d’aide unifié</p>
+    <h1>Tout HireLink, selon votre rôle</h1>
+    <p class="lead">Une seule page pour les visiteurs, les candidats et les recruteurs : guides, FAQ et règles réelles du produit — sans promesse marketing.</p>
+
+    <div class="help-audience" role="tablist" aria-label="Choisir votre profil">
+      <button type="button" class="is-on" role="tab" aria-selected="true" data-help-aud="all">Tout le monde</button>
+      <button type="button" role="tab" aria-selected="false" data-help-aud="visitor">Visiteur</button>
+      <button type="button" role="tab" aria-selected="false" data-help-aud="candidat">Candidat</button>
+      <button type="button" role="tab" aria-selected="false" data-help-aud="recruteur">Recruteur</button>
+    </div>
 
     <ul class="hp-nav" aria-label="Sections de l’aide">
-      <li><a href="#compte">Compte &amp; connexion</a></li>
-      <li><a href="#candidat">Candidat</a></li>
-      <li><a href="#recruteur">Recruteur</a></li>
-      <li><a href="#credits">Crédits IA &amp; formules</a></li>
-      <li><a href="#donnees">Données &amp; sécurité</a></li>
-      <li><a href="#contact">Une question restante</a></li>
+      <li data-help-for="all visitor candidat recruteur"><a href="#compte">Compte &amp; connexion</a></li>
+      <li data-help-for="all visitor candidat"><a href="#candidat">Candidat</a></li>
+      <li data-help-for="all visitor recruteur"><a href="#recruteur">Recruteur</a></li>
+      <li data-help-for="all candidat recruteur"><a href="#credits">Crédits IA &amp; formules</a></li>
+      <li data-help-for="all visitor candidat recruteur"><a href="#donnees">Données &amp; sécurité</a></li>
+      <li data-help-for="all visitor candidat recruteur"><a href="#contact">Une question restante</a></li>
     </ul>
 
-    <section class="hp-section" id="compte">
+    <section class="hp-section" id="compte" data-help-for="all visitor candidat recruteur">
       <h2><span class="hp-num">1</span>Compte &amp; connexion</h2>
       <p class="hp-kicker">Deux entrées possibles — un compte candidat ou un espace recruteur — et une seule façon de prouver son identité : l’adresse e-mail.</p>
       <div class="faq">
@@ -130,7 +137,7 @@
       </div>
     </section>
 
-    <section class="hp-section" id="candidat">
+    <section class="hp-section" id="candidat" data-help-for="all visitor candidat">
       <h2><span class="hp-num">2</span>Côté candidat</h2>
       <p class="hp-kicker">Votre profil sert à classer les offres. Il n’est pas une vitrine publique.</p>
       <ul class="hp-facts">
@@ -163,7 +170,7 @@
       </div>
     </section>
 
-    <section class="hp-section" id="recruteur">
+    <section class="hp-section" id="recruteur" data-help-for="all visitor recruteur">
       <h2><span class="hp-num">3</span>Côté recruteur</h2>
       <p class="hp-kicker">Un espace par entreprise, trois rôles, et une règle : ce qui est affiché au candidat doit être mesurable.</p>
       <div class="faq">
@@ -190,7 +197,7 @@
       </div>
     </section>
 
-    <section class="hp-section" id="credits">
+    <section class="hp-section" id="credits" data-help-for="all candidat recruteur">
       <h2><span class="hp-num">4</span>Crédits IA &amp; formules</h2>
       <p class="hp-kicker">Un crédit = un appel à l’assistant. Le compteur se remet à zéro chaque mois ; l’historique de consommation est consultable dans l’application.</p>
       <table class="hp-plans">
@@ -205,10 +212,10 @@
           <tr><th scope="row">Recruteur Premium</th><td>299 MAD / mois</td><td><b>200</b></td><td><b>25</b></td></tr>
         </tbody>
       </table>
-      <p class="hp-note"><strong>Ce qu’un plan payant ne change pas.</strong> Le classement des offres pour un candidat, la position d’une offre dans les résultats, ni la vérification de l’entreprise. Un plan payant n’accélère rien : il relève uniquement le quota de l’assistant et le nombre de sièges. Le changement de formule se fait dans Paramètres → Facturation, à tout moment et sans pénalité, par le créateur de l’espace.</p>
+      <p class="hp-note"><strong>Ce qu’un plan payant ne change pas.</strong> Le classement des offres pour un candidat, la position d’une offre dans les résultats, ni la vérification de l’entreprise. Un plan payant n’accélère rien : il relève uniquement le quota de l’assistant et le nombre de sièges. Le passage à une formule payante se fait via le <a href="checkout.html">paiement en ligne</a> (couronne « Passer Premium » ou Paramètres → Facturation), à tout moment et sans pénalité, par le créateur de l’espace.</p>
     </section>
 
-    <section class="hp-section" id="donnees">
+    <section class="hp-section" id="donnees" data-help-for="all visitor candidat recruteur">
       <h2><span class="hp-num">5</span>Données &amp; sécurité</h2>
       <ul class="hp-facts">
         <li><strong>Mots de passe</strong><span>hachés ; la double authentification et les passkeys se configurent sur la page Sécurité.</span></li>
@@ -219,7 +226,7 @@
       <p class="hp-kicker" style="margin-top:1rem">Le détail complet — ce qui est collecté, pourquoi, et pendant combien de temps — est sur la <a href="security.html">page Sécurité</a>.</p>
     </section>
 
-    <section class="hp-section" id="contact">
+    <section class="hp-section" id="contact" data-help-for="all visitor candidat recruteur">
       <h2><span class="hp-num">6</span>Une question restante ?</h2>
       <p class="hp-kicker">Les réponses ci-dessus décrivent le comportement actuel de l’application. Si votre situation diffère — un refus de publication inattendu, un badge de vérification bloqué, un compte qui ne reçoit plus ses codes — écrivez à l’équipe produit depuis la section <a href="about.html#contact">Contact</a> en décrivant ce que vous voyez à l’écran : les messages d’erreur de HireLink sont en français et indiquent ce qui manque.</p>
     </section>
@@ -272,6 +279,38 @@
   </footer>
   <script src="js/nav.js?v=20261101r"></script>
   <script src="js/public-nav.js?v=20261106a"></script>
-<script defer src="js/premium.js?v=20261106g"></script>
+  <script defer src="js/premium.js?v=20261106g"></script>
+  <script>
+    (function () {
+      var root = document.querySelector(".help-audience");
+      if (!root) return;
+      var params = new URLSearchParams(location.search);
+      var role = null;
+      try {
+        var s = JSON.parse(localStorage.getItem("hirelink.session") || "null");
+        if (s && s.role === "CANDIDAT") role = "candidat";
+        if (s && s.role === "RECRUTEUR") role = "recruteur";
+      } catch (e) {}
+      var initial = params.get("for") || role || "all";
+      function apply(aud) {
+        root.querySelectorAll("[data-help-aud]").forEach(function (b) {
+          var on = b.getAttribute("data-help-aud") === aud;
+          b.classList.toggle("is-on", on);
+          b.setAttribute("aria-selected", on ? "true" : "false");
+        });
+        document.querySelectorAll("[data-help-for]").forEach(function (el) {
+          var ok = el.getAttribute("data-help-for").split(/\s+/).indexOf(aud) >= 0;
+          el.hidden = !ok;
+        });
+      }
+      root.addEventListener("click", function (e) {
+        var b = e.target.closest("[data-help-aud]");
+        if (!b) return;
+        apply(b.getAttribute("data-help-aud"));
+      });
+      if (!root.querySelector('[data-help-aud="' + initial + '"]')) initial = "all";
+      apply(initial);
+    })();
+  </script>
 </body>
 </html>
