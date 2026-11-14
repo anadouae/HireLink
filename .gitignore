@@ -27,11 +27,27 @@ backend/tmp_jar_check2/
 Thumbs.db
 desktop.ini
 
-# Env / secrets
+# Env / secrets / configs machine
 .env
 .env.*
 !.env.example
 **/application-local.properties
+backend/application-cutover-runtime.properties
+backend/application-audit-iso.properties
+backend/application-deploy-prep.properties
+backend/application-p0-iso.properties
+backend/application-*-iso.properties
+backend/data/jwt.key
+
+# Uploads / JWT / données locales runtime
+backend/data/
+data/
+node_modules/
+
+# Sauvegardes SQL et prep déploiement (hashs, PII, logs, captures)
+backup-db/
+docs/deploy-prep/
+docs/audit-screenshots/
 
 # Python / temp generators
 __pycache__/
@@ -43,10 +59,6 @@ backend/scripts/gen_cdc_*.py
 *.tmp
 ~$*
 
-# Fichiers déposés pendant les tests (CV, logos)
-backend/data/
-node_modules/
-
 # Journaux d'exécution locaux et fichiers LaTeX intermédiaires
 run-*.out
 run-*.err
@@ -55,9 +67,7 @@ run-*.err
 docs/**/main.out
 tools/
 
-# Artéfacts locaux jamais versionnés : sauvegarde de base (hashs de mots de passe),
-# paquets livrés, scripts et jeux de données de mes sondes
-backup-db/
+# Artéfacts locaux jamais versionnés
 tmp/
 *.zip
 backend/target-e2e/
@@ -68,7 +78,7 @@ backend/target-ux-check/
 backend/target-validate-lab/
 backend/target-*/
 
-# Captures de contrôle / audit avec données de démo / PII — ne pas publier telles quelles
+# Captures de contrôle / audit avec données de démo / PII
 docs/security-control-*/shots/
 docs/audit-ui-*/shots/
 docs/audit-ui-*/shots-write/
