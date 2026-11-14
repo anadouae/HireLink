@@ -31,18 +31,21 @@
   let ownedOffersReady = false;
   const ACTIVE = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"]);
   const RENDERED = new Set(["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"]);
+  // Filtres liste = statuts pipeline réels (pas Embauchés/Offre : hors parcours actif).
   const LIST_GROUPS = {
     active: (a) => ACTIVE.has(a.status),
-    interview: (a) => a.status === "INTERVIEW",
-    hired: (a) => a.status === "HIRED",
-    rejected: (a) => a.status === "REJECTED",
-    withdrawn: (a) => a.status === "WITHDRAWN",
+    SUBMITTED: (a) => a.status === "SUBMITTED",
+    SCREENING: (a) => a.status === "SCREENING",
+    SHORTLISTED: (a) => a.status === "SHORTLISTED",
+    INTERVIEW: (a) => a.status === "INTERVIEW",
+    REJECTED: (a) => a.status === "REJECTED",
+    WITHDRAWN: (a) => a.status === "WITHDRAWN",
     all: () => true,
   };
   const LIST_TONE = { SUBMITTED: "", SCREENING: "warn", SHORTLISTED: "info", INTERVIEW: "ok", OFFER: "ok", HIRED: "ok", REJECTED: "danger", WITHDRAWN: "" };
   const urlBoot = new URLSearchParams(location.search);
   let uiView = urlBoot.get("view") === "list" || urlBoot.get("layout") === "list" ? "list" : "kanban";
-  let listStatus = ["active", "interview", "hired", "rejected", "withdrawn", "all"].includes(urlBoot.get("status"))
+  let listStatus = Object.prototype.hasOwnProperty.call(LIST_GROUPS, urlBoot.get("status") || "")
     ? urlBoot.get("status")
     : (urlBoot.get("view") && LIST_GROUPS[urlBoot.get("view")] ? urlBoot.get("view") : "active");
   if (LIST_GROUPS[urlBoot.get("view")]) uiView = "list";

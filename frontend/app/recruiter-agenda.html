@@ -65,19 +65,20 @@
             </div>
           </div>
           <div class="ag-filters ag-filters--compact" id="ag-filters">
-            <select id="ag-f-type" class="rc-select" aria-label="Mode d’entretien">
+            <select id="ag-f-nature" class="rc-select" aria-label="Type d’événement">
+              <option value="all">Événements · tous</option>
+              <option value="INTERVIEW">Entretiens</option>
+              <option value="MEETING">Réunions</option>
+              <option value="APPOINTMENT">Rendez-vous</option>
+              <option value="PERSONAL">Personnel</option>
+              <option value="PROFESSIONAL">Professionnel</option>
+              <option value="OTHER">Autre</option>
+            </select>
+            <select id="ag-f-type" class="rc-select" aria-label="Mode (entretiens)">
               <option value="all">Mode · tous</option>
               <option value="VISIO">Visioconférence</option>
               <option value="ONSITE">Sur site</option>
-            </select>
-            <select id="ag-f-kind" class="rc-select" aria-label="Type d’événement">
-              <option value="all">Type · tous</option>
-              <option value="HR">Entretien RH</option>
-              <option value="TECHNICAL">Technique</option>
-              <option value="MANAGER">Manager</option>
-              <option value="CASE">Étude de cas</option>
-              <option value="TEAM">Rencontre d’équipe</option>
-              <option value="FINAL">Final</option>
+              <option value="PHONE">Téléphone</option>
             </select>
             <select id="ag-f-offer" class="rc-select" aria-label="Offre concernée"><option value="all">Offre · toutes</option></select>
             <label class="ag-check"><input type="checkbox" id="ag-f-cancelled" /> Annulés</label>
@@ -108,6 +109,6 @@
   <script defer src="../js/in-app-help.js?v=20261105s"></script>
   <script defer src="../js/credits.js?v=20261105v"></script>
   <script defer src="../js/app-shell.js?v=20261110b"></script>
-  <script defer src="../js/recruiter-agenda.js?v=20261109a"></script>
+  <script defer src="../js/recruiter-agenda.js?v=20261112f"></script>
 </body>
 </html>

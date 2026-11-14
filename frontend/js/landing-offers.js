@@ -49,60 +49,54 @@
     return days <= 1 ? "il y a 1 jour" : "il y a " + days + " jours";
   }
 
-  function filtered() {
-    const city = document.getElementById("q-city").value.trim();
-    const contract = document.getElementById("q-contract").value;
+  function catalogParams(pageNum) {
+    const params = new URLSearchParams();
+    params.set("page", String(pageNum));
+    params.set("size", String(PAGE_SIZE));
+    params.set("country", ((document.getElementById("q-country") || {}).value) || "MA");
+    const q = (document.getElementById("q-text") || {}).value || "";
+    if (q.trim()) params.set("q", q.trim());
+    const city = (document.getElementById("q-city") || {}).value || "";
+    if (city.trim()) params.set("city", city.trim());
+    const contract = (document.getElementById("q-contract") || {}).value || "";
+    if (contract) params.set("contract", contract);
     const origin = (document.getElementById("q-origin") || {}).value || "";
-    const since = Number((document.getElementById("q-since") || {}).value || 0);
-    const pool = offers.filter(function (o) {
-      if (origin === "external" && !o.external) return false;
-      if (origin === "hirelink" && o.external) return false;
-      if (since) {
-        const at = new Date(o.publishedAt || o.createdAt || "").getTime();
-        if (!at || Date.now() - at > since * 86400000) return false;
-      }
-      if (city && HireLinkSearch.score(city, cityOf(o)) <= 0) return false;
-      return !contract || String(o.contractType || "") === contract;
-    });
-    return HireLinkSearch.rank(pool, document.getElementById("q-text").value.trim(), [
-      { get: function (o) { return o.title; }, weight: 3 },
-      { get: companyOf, weight: 2 },
-      { get: function (o) { return o.requiredSkills; }, weight: 2 },
-      { get: cityOf, weight: 1 },
-    ]);
+    if (origin === "hirelink") params.set("origin", "internal");
+    else if (origin === "external") params.set("origin", "external");
+    const since = (document.getElementById("q-since") || {}).value || "";
+    if (since) params.set("sinceDays", since);
+    return params.toString();
   }
 
-  /* Les offres s’affichent par lots : les plus récentes d’abord, la suite à la demande. */
+  let page = 0;
+  let totalElements = 0;
+  let totalPages = 0;
+  let loading = false;
+
   function showMoreOffers() {
-    const next = matches.slice(shown, shown + PAGE_SIZE);
-    next.forEach(function (o) {
-      root.appendChild(HireLinkOffer.card(o, {
-        variant: "showcase",
-        badge: o.external ? "Offre externe" : "Offre HireLink",
-        footText: o.external ? "Postuler sur le site d'origine" : ("Postuler sur HireLink" + (ago(o.createdAt) ? " · " + ago(o.createdAt) : "")),
-        href: function () { return o.external ? (o.applyUrl || o.originUrl) : "auth.html?mode=login"; },
-      }));
-    });
-    shown += next.length;
-    HireLinkSearch.mark(root, document.getElementById("q-text").value.trim());
-    const left = matches.length - shown;
-    moreBox.hidden = left <= 0;
-    moreBtn.textContent = "Afficher " + Math.min(left, PAGE_SIZE) + " offre" + (Math.min(left, PAGE_SIZE) > 1 ? "s" : "") + " de plus";
+    if (loading) return;
+    if (page + 1 >= totalPages) {
+      moreBox.hidden = true;
+      return;
+    }
+    page += 1;
+    fetchPage(true);
   }
 
-  function paintOffers(list) {
+  function paintOffers(list, reset) {
     const lead = document.getElementById("offers-lead");
     if (lead) {
-      lead.textContent = list.length
-        ? list.length + " offre" + (list.length > 1 ? "s" : "") + " correspondent à la recherche. La réactivité affichée est mesurée sur les dossiers déjà traités."
+      lead.textContent = totalElements
+        ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " correspondent a la recherche (pagination serveur)."
         : "Aucune offre pour cette recherche.";
     }
-    root.replaceChildren();
-    root.classList.remove("card-grid");
-    matches = list;
-    shown = 0;
+    if (reset) {
+      root.replaceChildren();
+      root.classList.remove("card-grid");
+      shown = 0;
+    }
     moreBox.hidden = true;
-    if (!list.length) {
+    if (!list.length && reset) {
       HireLinkSearch.emptyState(root, document.getElementById("q-text").value.trim(), {
         emptyTitle: "Aucune offre pour cette recherche",
         onClear: function () {
@@ -110,12 +104,99 @@
             const el = document.getElementById(id);
             if (el) el.value = "";
           });
-          paintOffers(filtered());
+          const c = document.getElementById("q-country");
+          if (c) c.value = "MA";
+          applyOffers();
         },
       });
       return;
     }
-    showMoreOffers();
+    list.forEach(function (o) {
+      const published = o.publishedAtTrusted ? o.publishedAt : null;
+      root.appendChild(HireLinkOffer.card(o, {
+        variant: "showcase",
+        badge: o.external ? "Offre externe" : "Offre HireLink",
+        footText: o.external
+          ? (HireLinkOffer.externalLinkPolicy(o).trusted ? HireLinkOffer.externalLinkPolicy(o).label : "Lien non garanti")
+          : ("Postuler sur HireLink" + (ago(published) ? " · " + ago(published) : "")),
+        href: function () {
+          if (!o.external) return "auth.html?mode=login";
+          const p = HireLinkOffer.externalLinkPolicy(o);
+          return p.trusted ? p.href : (p.href || "#");
+        },
+      }));
+    });
+    shown += list.length;
+    HireLinkSearch.mark(root, document.getElementById("q-text").value.trim());
+    const leftPages = totalPages - (page + 1);
+    moreBox.hidden = leftPages <= 0;
+    moreBtn.textContent = leftPages > 0
+      ? ("Afficher " + Math.min(PAGE_SIZE, Math.max(0, totalElements - shown)) + " offre(s) de plus")
+      : "Fin du catalogue";
+  }
+
+  function fetchPage(append) {
+    loading = true;
+    if (!append) {
+      root.replaceChildren();
+      const sk = document.createElement("div");
+      sk.className = "skeleton";
+      sk.style.height = "96px";
+      root.appendChild(sk);
+      page = 0;
+      shown = 0;
+    }
+    return fetch(base + "/catalog/offers?" + catalogParams(page))
+      .then(function (r) {
+        if (r.status === 404 || r.status === 401 || r.status === 403 || !r.ok) {
+          return Promise.all([
+            fetch(base + "/offers/public").then(function (x) { if (!x.ok) throw new Error("offres"); return x.json(); }),
+            fetch(base + "/external-offers").then(function (x) { return x.ok ? x.json() : []; }).catch(function () { return []; })
+          ]).then(function (parts) {
+            const internal = (Array.isArray(parts[0]) ? parts[0] : []).map(function (o) { o.external = false; return o; });
+            const external = (Array.isArray(parts[1]) ? parts[1] : []).map(function (o) { o.external = true; return o; });
+            const all = internal.concat(external);
+            totalElements = all.length;
+            totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
+            const start = page * PAGE_SIZE;
+            return { items: all.slice(start, start + PAGE_SIZE), totalElements: totalElements, totalPages: totalPages, _legacy: true, _all: all };
+          });
+        }
+        return r.json();
+      })
+      .then(function (data) {
+        if (data && data._legacy && !append) offers = data._all || [];
+        const items = Array.isArray(data.items) ? data.items : [];
+        totalElements = Number(data.totalElements || 0);
+        totalPages = Number(data.totalPages || 0);
+        if (!append) {
+          offers = items.slice();
+          matches = items.slice();
+        } else {
+          offers = offers.concat(items);
+          matches = matches.concat(items);
+        }
+        paintOffers(items, !append);
+        const count = document.getElementById("offer-count");
+        if (count) count.textContent = totalElements ? String(totalElements) : "nos";
+        if (!append) {
+          const contracts = Array.from(new Set(offers.map(function (o) { return o.contractType; }).filter(Boolean)));
+          fillSelect("q-contract", contracts, "Type de contrat");
+          paintChips();
+          paintCompanies();
+          paintCities();
+          paintStats();
+          document.dispatchEvent(new CustomEvent("landing:offers-loaded"));
+        }
+      })
+      .catch(function () {
+        if (!append) {
+          root.innerHTML = "<p class='muted'>Impossible de charger le catalogue (API indisponible ou erreur reseau).</p>";
+          const count = document.getElementById("offer-count");
+          if (count) count.textContent = "nos";
+        }
+      })
+      .finally(function () { loading = false; });
   }
 
   function paintCompanies() {
@@ -219,7 +300,7 @@
         .map(companyOf)
     );
     const values = {
-      offers: offers.length,
+      offers: totalElements || offers.length,
       companies: companies.size,
       cities: cities.size,
       pace: quick.size
@@ -267,7 +348,7 @@
   }
 
   function applyOffers() {
-    paintOffers(filtered());
+    fetchPage(false);
     const target = document.getElementById("liste-offres");
     if (target) target.dispatchEvent(new CustomEvent("landing:scroll-to", { bubbles: true }));
   }
@@ -286,11 +367,11 @@
     const people = next === "people";
     if (contract) contract.hidden = people;
     if (submit) submit.textContent = people ? "Voir les dossiers" : "Rechercher";
-    if (input) input.placeholder = people ? "Métier ou compétence…" : "Rechercher un poste, une entreprise…";
+    if (input) input.placeholder = people ? "Metier ou competence…" : "Rechercher un poste, une entreprise…";
     if (hint) {
       hint.textContent = people
-        ? "Les dossiers ne sont pas publics. Le recruteur les ouvre après connexion : CV, texte extrait, synthèse, étapes."
-        : "Trouvez un poste parmi les offres publiées. La connexion sert à postuler avec votre CV.";
+        ? "Les dossiers ne sont pas publics. Le recruteur les ouvre apres connexion : CV, texte extrait, synthese, etapes."
+        : "Trouvez un poste parmi les offres publiees. La connexion sert a postuler avec votre CV.";
     }
   }
 
@@ -321,43 +402,16 @@
   paintMetiers();
   let timer = 0;
   ["q-text", "q-city"].forEach(function (id) {
-    document.getElementById(id).addEventListener("input", function () {
-      clearTimeout(timer);
-      timer = setTimeout(function () { paintOffers(filtered()); }, 200);
-    });
-  });
-  ["q-origin", "q-since", "q-contract"].forEach(function (id) {
     const el = document.getElementById(id);
-    if (el) el.addEventListener("change", function () { paintOffers(filtered()); });
-  });
-  HireLinkPlaces.ready().then(function () { if (offers.length) paintOffers(filtered()); });
-  function asList(value) { return Array.isArray(value) ? value : []; }
-  Promise.all([
-    fetch(base + "/offers/public").then(function (r) { if (!r.ok) throw new Error("offres"); return r.json(); }),
-    fetch(base + "/external-offers").then(function (r) { return r.ok ? r.json() : []; }).catch(function () { return []; })
-  ])
-    .then(function (parts) {
-      const internal = asList(parts[0]).map(function (o) { o.external = false; return o; });
-      const external = asList(parts[1]).map(function (o) { o.external = true; return o; });
-      offers = internal.concat(external).sort(function (a, b) {
-        return String(b.publishedAt || b.createdAt || "").localeCompare(String(a.publishedAt || a.createdAt || ""));
-      });
-      const count = document.getElementById("offer-count");
-      if (count) count.textContent = internal.length ? String(internal.length) : "nos";
-      const cities = [];
-      const contracts = Array.from(new Set(offers.map(function (o) { return o.contractType; }).filter(Boolean)));
-      fillSelect("q-city", cities, "Lieu");
-      fillSelect("q-contract", contracts, "Type de contrat");
-      paintChips();
-      paintCompanies();
-      paintCities();
-      paintOffers(offers);
-      paintStats();
-      document.dispatchEvent(new CustomEvent("landing:offers-loaded"));
-    })
-    .catch(function () {
-      root.innerHTML = "<p class='muted'>Les offres s’afficheront dès que l’API est disponible.</p>";
-      const count = document.getElementById("offer-count");
-      if (count) count.textContent = "nos";
+    if (!el) return;
+    el.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { applyOffers(); }, 280);
     });
+  });
+  ["q-origin", "q-since", "q-contract", "q-country"].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener("change", function () { applyOffers(); });
+  });
+  HireLinkPlaces.ready().then(function () { applyOffers(); });
 })();

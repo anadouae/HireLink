@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Offres · Candidat — HireLink</title>
   <meta name="robots" content="noindex" />
@@ -48,6 +48,12 @@
             <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-filters">Effacer les filtres</button>
           </div>
           <div class="offer-advanced" id="offer-advanced">
+            <label>Pays
+              <select id="f-country" name="country" aria-label="Filtrer par pays" data-testid="catalog-country">
+                <option value="MA">Maroc</option>
+                <option value="ALL">Tous les pays (international inclus)</option>
+              </select>
+            </label>
             <label>Ville
               <select id="f-city"><option value="">Toutes</option></select>
             </label>
@@ -86,7 +92,7 @@
               </select>
             </label>
           </div>
-          <p class="muted">Une offre externe vient d'une source autorisée. Remote OK publie des emplois à distance internationaux, pas des postes situés au Maroc. Le bouton ouvre le site d'origine et HireLink ne crée pas de suivi.</p>
+          <p class="muted">Une offre externe vient d'une source partenaire autorisée (emploi Maroc en priorité). Le bouton ouvre le site d'origine : HireLink ne crée pas de candidature ni de suivi pour ces annonces.</p>
           <details class="filter-more">
             <summary>Plus de filtres</summary>
             <div class="offer-advanced">
@@ -99,9 +105,9 @@
               <label>Mode
                 <select id="f-mode">
                   <option value="">Tous</option>
-                  <option value="remote">Remote</option>
-                  <option value="hybrid">Hybride</option>
-                  <option value="onsite">Présentiel</option>
+                  <option value="REMOTE">Remote</option>
+                  <option value="HYBRID">Hybride</option>
+                  <option value="ONSITE">Présentiel</option>
                 </select>
               </label>
               <label>Réponse de l’entreprise
@@ -144,6 +150,6 @@
   <script defer src="../js/apply-profile-gate.js?v=20261106f"></script>
   <script defer src="../js/suggest.js?v=20261103g"></script>
   <script defer src="../js/match.js?v=20261110e"></script>
-  <script defer src="../js/candidate-home.js?v=20261112c"></script>
+  <script defer src="../js/candidate-home.js?v=20261113p3"></script>
 </body>
 </html>

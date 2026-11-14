@@ -383,3 +383,34 @@
     font-size: 0.83rem;
   }
 }
+
+/* Aide unifiée — sélecteur de profil */
+.help-audience {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 1.25rem 0 0.35rem;
+  padding: 0.3rem;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  background: rgba(122, 32, 50, 0.06);
+  border: 1px solid rgba(122, 32, 50, 0.12);
+}
+.help-audience button {
+  border: 0;
+  background: transparent;
+  border-radius: 999px;
+  padding: 0.55rem 1rem;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 650;
+  color: #6a5f62;
+  cursor: pointer;
+}
+.help-audience button.is-on {
+  background: #7a2032;
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(122, 32, 50, 0.22);
+}
+.help-main .hp-nav { margin-top: 1rem; }
