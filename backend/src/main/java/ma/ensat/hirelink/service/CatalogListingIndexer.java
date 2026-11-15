@@ -9,7 +9,6 @@ import ma.ensat.hirelink.repository.ExternalJobOfferRepository;
 import ma.ensat.hirelink.repository.JobOfferRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,11 +17,9 @@ import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Reconstruit la projection catalog_listings a partir des tables sources.
@@ -37,22 +34,19 @@ public class CatalogListingIndexer {
     private final JobOfferRepository jobOffers;
     private final ExternalJobOfferRepository externalOffers;
     private final PlaceCatalogService places;
-    private final Set<String> excludeSources;
+    private final ExternalOfferListability listability;
 
     public CatalogListingIndexer(
             CatalogListingRepository listings,
             JobOfferRepository jobOffers,
             ExternalJobOfferRepository externalOffers,
             PlaceCatalogService places,
-            @Value("${hirelink.catalog.exclude-sources:MAROC_EMPLOI}") String excludeSourcesCsv) {
+            ExternalOfferListability listability) {
         this.listings = listings;
         this.jobOffers = jobOffers;
         this.externalOffers = externalOffers;
         this.places = places;
-        this.excludeSources = new HashSet<>();
-        for (String s : excludeSourcesCsv.split(",")) {
-            if (!s.isBlank()) excludeSources.add(s.trim().toUpperCase(Locale.ROOT));
-        }
+        this.listability = listability;
     }
 
     @Transactional
@@ -77,7 +71,7 @@ public class CatalogListingIndexer {
                 kept++;
             }
         }
-        log.info("Catalogue reconstruit : {} lignes (sources exclues={})", kept, excludeSources);
+        log.info("Catalogue reconstruit : {} lignes (sources exclues={})", kept, listability.excludeSources());
         return kept;
     }
 
@@ -190,12 +184,7 @@ public class CatalogListingIndexer {
     }
 
     private boolean isExternalListable(ExternalJobOffer offer) {
-        if (offer.getSource() != null && excludeSources.contains(offer.getSource().toUpperCase(Locale.ROOT))) {
-            return false;
-        }
-        if (!offer.isAvailable() || offer.isQuarantined() || offer.isHiddenByAdmin()) return false;
-        String q = offer.getUrlQuality();
-        return q == null || "DEEP".equals(q) || "UNKNOWN".equals(q);
+        return listability.isListable(offer);
     }
 
     private CatalogListing fromInternal(JobOffer offer) {
@@ -319,7 +308,11 @@ public class CatalogListingIndexer {
             if (sb.length() > 0) sb.append(' ');
             sb.append(p);
         }
-        return sb.toString();
+        String raw = sb.toString();
+        // Forme repliée pour LIKE SQL accent-insensible (complète le ranking fuzzy in-memory).
+        String folded = TextMatcher.fold(raw);
+        if (folded.isEmpty() || folded.equalsIgnoreCase(raw)) return raw;
+        return raw + " " + folded;
     }
 
     private static String blankToNull(String v) {

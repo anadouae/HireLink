@@ -16,17 +16,21 @@
   const cancelled = (a) => a.interviewStatus === "CANCELLED";
 
   function groups() {
-    const limit = Date.now() - 3600e3;
-    const withInterview = apps.filter((a) => a.interviewAt);
-    const live = withInterview.filter((a) => a.status === "INTERVIEW" && !cancelled(a));
+    const now = Date.now();
     const byDate = (x, y) => new Date(x.interviewAt) - new Date(y.interviewAt);
-    return {
-      upcoming: live.filter((a) => new Date(a.interviewAt).getTime() >= limit).sort(byDate),
-      todo: withInterview.filter((a) => a.status === "INTERVIEW" && cancelled(a)).sort(byDate),
-      past: withInterview
-        .filter((a) => !cancelled(a) && (a.status !== "INTERVIEW" || new Date(a.interviewAt).getTime() < limit))
-        .sort((x, y) => byDate(y, x)),
-    };
+    // Aligné pipeline : étape INTERVIEW + créneau futur = à venir ; sinon à replanifier / historique.
+    const interviewStage = apps.filter((a) => a.status === "INTERVIEW");
+    const upcoming = interviewStage
+      .filter((a) => a.interviewAt && !cancelled(a) && new Date(a.interviewAt).getTime() >= now)
+      .sort(byDate);
+    const todo = interviewStage
+      .filter((a) => cancelled(a) || !a.interviewAt || new Date(a.interviewAt).getTime() < now)
+      .sort(byDate);
+    const past = apps
+      .filter((a) => a.interviewAt && a.status !== "INTERVIEW" && !cancelled(a))
+      .concat(apps.filter((a) => a.interviewAt && cancelled(a) && a.status !== "INTERVIEW"))
+      .sort((x, y) => byDate(y, x));
+    return { upcoming, todo, past };
   }
 
   const KIND = {

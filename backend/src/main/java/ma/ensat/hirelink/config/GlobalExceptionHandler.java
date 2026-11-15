@@ -84,9 +84,23 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({ConstraintViolationException.class, HttpMessageNotReadableException.class, MissingServletRequestParameterException.class,
-            MissingServletRequestPartException.class, MethodArgumentTypeMismatchException.class, IllegalArgumentException.class})
+            MissingServletRequestPartException.class, MethodArgumentTypeMismatchException.class, IllegalArgumentException.class,
+            org.springframework.dao.InvalidDataAccessApiUsageException.class})
     public ResponseEntity<Map<String, Object>> badRequest(Exception e) {
-        return body(HttpStatus.BAD_REQUEST, "Requête invalide.", null);
+        String msg = "Requête invalide.";
+        if (e instanceof HttpMessageNotReadableException hmnr) {
+            Throwable cause = hmnr.getMostSpecificCause();
+            String detail = cause != null ? cause.getMessage() : hmnr.getMessage();
+            if (detail != null && detail.toLowerCase().contains("jobofferid")) {
+                msg = "jobOfferId manquant ou invalide — seules les offres HireLink numériques acceptent une candidature interne";
+            }
+        } else if (e instanceof IllegalArgumentException || e instanceof org.springframework.dao.InvalidDataAccessApiUsageException) {
+            String detail = e.getMessage();
+            if (detail != null && detail.toLowerCase().contains("id must not be null")) {
+                msg = "jobOfferId manquant ou invalide — seules les offres HireLink numériques acceptent une candidature interne";
+            }
+        }
+        return body(HttpStatus.BAD_REQUEST, msg, null);
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

@@ -336,19 +336,29 @@
     }
   }
 
-  /** Retour vers la page demandée avant la connexion (même espace uniquement, chemin relatif sûr). */
+  /** Retour vers la page demandée avant la connexion — chemins relatifs internes uniquement (anti open-redirect). */
   function nextTarget(authRole) {
     const n = params.get("next");
-    if (!n || !/^[a-z0-9-]+\.html([?#].*)?$/i.test(n)) return null;
-    const file = n.split(/[?#]/)[0].toLowerCase();
+    if (!n) return null;
+    // Refuse protocol-relative, absolu, traversal, etc.
+    if (!/^[a-z0-9][a-z0-9./_-]*\.html([?#].*)?$/i.test(n)) return null;
+    if (n.indexOf("://") >= 0 || n.indexOf("//") === 0 || n.indexOf("..") >= 0) return null;
+    const file = n.split(/[?#]/)[0].toLowerCase().replace(/^app\//, "");
     const prefix = authRole === "RECRUTEUR" ? "recruiter" : authRole === "ADMINISTRATEUR" ? "admin" : "candidate";
     const shared = {
       RECRUTEUR: ["notifications.html", "security.html"],
       CANDIDAT: ["notifications.html", "security.html"],
       ADMINISTRATEUR: ["account.html", "security.html"],
     };
+    // Pages publiques sûres (fiche entreprise, offres landing) — retour après login « Suivre », etc.
+    const publicOk = ["company.html", "index.html", "about.html", "pricing.html", "help.html"];
+    if (publicOk.indexOf(file) >= 0) {
+      return n.indexOf("app/") === 0 ? n : (file === "index.html" ? n : "../" + n);
+    }
     const ok = file.indexOf(prefix) === 0 || (shared[authRole] || []).indexOf(file) >= 0;
-    return ok ? "app/" + n : null;
+    if (!ok) return null;
+    if (n.indexOf("app/") === 0) return n;
+    return "app/" + n;
   }
 
   if (params.get("expired") === "1") {

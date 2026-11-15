@@ -82,3 +82,14 @@ backend/target-*/
 docs/security-control-*/shots/
 docs/audit-ui-*/shots/
 docs/audit-ui-*/shots-write/
+
+# Local alternate-port test overlay
+backend/application-csp-alt-test.properties
+backend/application-clone-test.properties
+tmp-csp-fix/
+tmp-csp-browser*.mjs
+tmp-clone-browser*.mjs
+
+# Builds / smokes isolés locaux
+build-iso/
+docs/evidence/

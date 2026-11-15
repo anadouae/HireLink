@@ -72,24 +72,39 @@ public class JoobleJobConnector implements ExternalJobConnector {
         return parser.parse(body);
     }
 
-    private List<ParsedExternalJob> fetchPages(String keywords, String location) {
-        if (!enabled) {
-            throw new IllegalStateException("Jooble est desactive (hirelink.external-jobs.jooble.enabled=false)");
-        }
+    /**
+     * Recherche live pour {@code WebJobDiscovery} : exige une clé API, ignore le flag d'import sync.
+     * Ne persiste rien — l'appelant mappe en résultats éphémères.
+     */
+    public List<ParsedExternalJob> searchLive(String keywords, String location, int pages, int resultsOnPage) {
         if (!hasKey()) {
             throw new IllegalStateException("Cle Jooble absente : aucune requete n'a ete envoyee");
         }
+        String loc = location == null || location.isBlank() ? defaultLocation : location.trim();
+        String kw = keywords == null ? "" : keywords.trim();
+        if (kw.isBlank()) {
+            throw new IllegalArgumentException("Mots-cles Jooble requis");
+        }
+        int pageCap = Math.max(1, Math.min(5, pages <= 0 ? 1 : pages));
+        int perPage = Math.max(1, Math.min(50, resultsOnPage <= 0 ? 20 : resultsOnPage));
         java.util.ArrayList<ParsedExternalJob> all = new java.util.ArrayList<>();
-        for (int page = 1; page <= maxPages; page++) {
+        for (int page = 1; page <= pageCap; page++) {
             String url = apiBase + "/" + apiKey;
-            String body = "{\"keywords\":\"" + esc(keywords) + "\",\"location\":\"" + esc(location)
-                    + "\",\"page\":\"" + page + "\",\"searchMode\":1}";
+            String body = "{\"keywords\":\"" + esc(kw) + "\",\"location\":\"" + esc(loc)
+                    + "\",\"page\":\"" + page + "\",\"ResultOnPage\":" + perPage + ",\"searchMode\":1}";
             String json = http.postJson(url, body);
             List<ParsedExternalJob> batch = parser.parse(json);
             all.addAll(batch);
             if (batch.isEmpty()) break;
         }
         return all;
+    }
+
+    private List<ParsedExternalJob> fetchPages(String keywords, String location) {
+        if (!enabled) {
+            throw new IllegalStateException("Jooble est desactive (hirelink.external-jobs.jooble.enabled=false)");
+        }
+        return searchLive(keywords, location, maxPages, 20);
     }
 
     private static String esc(String s) {

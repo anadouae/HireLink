@@ -120,13 +120,14 @@ public class CatalogSuggestController {
     @GetMapping("/suggest")
     public List<Suggestion> suggest(
             @RequestParam(defaultValue = "job") String kind,
-            @RequestParam(defaultValue = "") String q
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(required = false) String country
     ) {
         String query = q.trim();
         return switch (kind.toLowerCase(Locale.ROOT)) {
-            case "place" -> places.search(query, LIMIT).stream()
+            case "place" -> places.search(query, country, LIMIT).stream()
                     .map(p -> new Suggestion(p.label(), p.flag(), p.city().isEmpty() ? "" : p.country())).toList();
-            case "city" -> places.searchCities(query, LIMIT).stream()
+            case "city" -> places.searchCities(query, country, LIMIT).stream()
                     .map(p -> new Suggestion(p.city(), p.flag(), p.country())).toList();
             case "nationality" -> places.nationalities(query, LIMIT).stream()
                     .map(n -> new Suggestion(n.label(), n.flag(), n.country())).toList();
@@ -138,10 +139,23 @@ public class CatalogSuggestController {
         };
     }
 
-    /** Tous les lieux du catalogue (une centaine) : mis en cache côté navigateur pour les drapeaux. */
+    /**
+     * Lieux du catalogue. Sans filtre : liste complète (cache drapeaux FE).
+     * Avec {@code q} et/ou {@code country} : suggestions filtrées (villes non vides si pays fourni).
+     */
     @GetMapping("/places")
-    public List<PlaceDto> allPlaces() {
-        return places.all().stream().map(p -> new PlaceDto(p.city(), p.country(), p.flag())).toList();
+    public List<PlaceDto> allPlaces(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String country
+    ) {
+        boolean filtered = (q != null && !q.isBlank()) || (country != null && !country.isBlank());
+        if (!filtered) {
+            return places.all().stream().map(p -> new PlaceDto(p.city(), p.country(), p.flag())).toList();
+        }
+        // Autocomplétion lieu : villes uniquement (pas d'entrées pays vides).
+        return places.searchCities(q == null ? "" : q, country, LIMIT).stream()
+                .map(p -> new PlaceDto(p.city(), p.country(), p.flag()))
+                .toList();
     }
 
     private List<Suggestion> jobs(String query) {

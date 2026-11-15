@@ -314,12 +314,17 @@
     }
     appendEnd(link, opts);
     root.appendChild(link);
-    if (o.external && /^https:\/\//i.test(o.sourceHome || "")) {
+    const WEB_HOME = { REMOTIVE: "https://remotive.com", ARBEITNOW: "https://www.arbeitnow.com", REMOTE_OK: "https://remoteok.com", JOOBLE: "https://ma.jooble.org" };
+    const WEB_LABEL = { REMOTIVE: "Remotive", ARBEITNOW: "Arbeitnow", REMOTE_OK: "Remote OK", JOOBLE: "Jooble" };
+    const srcCode = String(o.source || "").toUpperCase();
+    const srcHome = o.sourceHome || WEB_HOME[srcCode] || "";
+    const srcLabel = (o.sourceLabel && o.sourceLabel !== "Recherche Web" ? o.sourceLabel : null) || WEB_LABEL[srcCode] || o.sourceLabel || o.source || "Partenaire";
+    if (o.external && /^https:\/\//i.test(srcHome)) {
       const credit = el("a", "offer-card__source");
-      credit.href = o.sourceHome;
+      credit.href = srcHome;
       credit.target = "_blank";
       credit.rel = "noopener";
-      credit.textContent = "Source : " + (o.sourceLabel || o.source || "Partenaire");
+      credit.textContent = "Source : " + srcLabel;
       root.appendChild(credit);
     }
     return root;

@@ -18,7 +18,14 @@
       minChars: kind === "job" ? 1 : 0,
       emptyText: "Aucune proposition : vous pouvez saisir librement.",
       fetch: function (q) {
-        return fetch(base() + "/catalog/suggest?kind=" + encodeURIComponent(kind) + "&q=" + encodeURIComponent(q))
+        let url = base() + "/catalog/suggest?kind=" + encodeURIComponent(kind) + "&q=" + encodeURIComponent(q);
+        // Lieu / ville : respecter le pays du formulaire (MA par défaut sur les écrans catalogue).
+        if (kind === "city" || kind === "place") {
+          const countryEl = document.getElementById("f-country") || document.getElementById("q-country") || document.getElementById("pf-country");
+          const country = countryEl && countryEl.value && countryEl.value !== "ALL" ? countryEl.value : "";
+          if (country) url += "&country=" + encodeURIComponent(country);
+        }
+        return fetch(url)
           .then(function (r) { return r.ok ? r.json() : []; })
           .then(function (rows) {
             return rows.map(function (row) {

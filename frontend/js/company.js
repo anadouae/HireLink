@@ -17,6 +17,32 @@
   view.title.textContent = name || "Entreprise";
   document.title = (name || "Entreprise") + " — HireLink";
 
+  // Retour contextuel : ?from=app/xxx.html ou referrer same-origin, sinon landing offres.
+  (function paintBack() {
+    const back = document.querySelector(".co-back");
+    if (!back) return;
+    const raw = new URLSearchParams(location.search).get("from") || "";
+    let href = "index.html#offres";
+    let label = "← Toutes les offres";
+    if (raw && /^[a-z0-9][a-z0-9./_-]*\.html([?#].*)?$/i.test(raw) && raw.indexOf("..") < 0 && raw.indexOf("://") < 0) {
+      href = raw.indexOf("app/") === 0 || raw.indexOf("/") === 0 ? raw : raw;
+      if (href.indexOf("app/") === 0) href = href;
+      else if (/^(candidate|recruiter|admin|notifications|security)/i.test(href)) href = "app/" + href.replace(/^app\//, "");
+      label = "← Retour";
+    } else if (document.referrer) {
+      try {
+        const ref = new URL(document.referrer);
+        if (ref.origin === location.origin) {
+          href = ref.pathname.replace(/^\//, "") + ref.search + ref.hash;
+          if (href.indexOf("frontend/") === 0) href = href.slice("frontend/".length);
+          label = "← Retour";
+        }
+      } catch (_) {}
+    }
+    back.setAttribute("href", href);
+    back.textContent = label;
+  })();
+
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;")

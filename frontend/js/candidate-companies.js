@@ -178,7 +178,7 @@
       (selected.verified ? " · Identité vérifiée" : "") +
       "</p>" +
       "</div>" +
-      '<a class="btn btn-soft btn-sm" href="../company.html?name=' + encodeURIComponent(selected.name) + '">Page publique</a>' +
+      '<a class="btn btn-soft btn-sm" href="../company.html?name=' + encodeURIComponent(selected.name) + '&from=' + encodeURIComponent('app/candidate-companies.html') + '">Page publique</a>' +
       (canFollow ? '<button type="button" class="btn btn-sm ' + (since ? "btn-soft" : "btn-primary") + ' co-follow">' + (since ? "✓ Suivie" : "+ Suivre") + "</button>" : "") +
       "</div>" +
       '<div class="co-detail-stats">' +

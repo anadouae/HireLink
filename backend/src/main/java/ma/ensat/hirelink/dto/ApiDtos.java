@@ -174,6 +174,7 @@ public class ApiDtos {
     ) {}
 
     public record ApplyRequest(
+            @NotNull(message = "obligatoire (identifiant numérique d'une offre HireLink)")
             Long jobOfferId,
             @Size(max = 20) String cvSource,
             @Size(max = 160) String cvFileName,

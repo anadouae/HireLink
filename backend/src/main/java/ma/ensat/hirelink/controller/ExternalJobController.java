@@ -6,6 +6,7 @@ import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.ExternalJobOfferRepository;
 import ma.ensat.hirelink.service.ExternalJobImportService;
 import ma.ensat.hirelink.service.ExternalJobSyncFacade;
+import ma.ensat.hirelink.service.ExternalOfferListability;
 import ma.ensat.hirelink.service.ExternalSourceCatalog;
 import ma.ensat.hirelink.service.SkillMatchingService;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,24 +29,28 @@ public class ExternalJobController {
     private final ExternalJobSyncFacade sync;
     private final ExternalSourceCatalog catalog;
     private final SkillMatchingService matching;
+    private final ExternalOfferListability listability;
 
     public ExternalJobController(ExternalJobOfferRepository offers,
                                  ExternalJobSyncFacade sync,
                                  ExternalSourceCatalog catalog,
-                                 SkillMatchingService matching) {
+                                 SkillMatchingService matching,
+                                 ExternalOfferListability listability) {
         this.offers = offers;
         this.sync = sync;
         this.catalog = catalog;
         this.matching = matching;
+        this.listability = listability;
     }
 
     @GetMapping
     public List<Map<String, Object>> list(@AuthenticationPrincipal User user) {
-        // Vitrine = offres available (hors quarantaine / hors masquage). Une source desactivee
-        // bloque la sync, pas l'affichage des lignes deja importees et encore fiables.
+        // B0 : même politique que le catalogue (exclude-sources, statut, URL).
+        // Une source désactivée bloque la sync ; les lignes déjà importées restent
+        // visibles seulement si encore listables selon ExternalOfferListability.
         List<Map<String, Object>> out = new ArrayList<>();
         for (ExternalJobOffer offer : offers.findByAvailableTrueOrderByPublishedAtDesc()) {
-            if (offer.isQuarantined()) continue;
+            if (!listability.isListable(offer)) continue;
             out.add(toPublic(offer, user));
         }
         return out;

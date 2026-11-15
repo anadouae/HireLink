@@ -83,12 +83,16 @@
     fetchPage(true);
   }
 
+  let lastWebMsg = "";
+
   function paintOffers(list, reset) {
     const lead = document.getElementById("offers-lead");
     if (lead) {
-      lead.textContent = totalElements
+      let text = totalElements
         ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " correspondent a la recherche (pagination serveur)."
         : "Aucune offre pour cette recherche.";
+      if (lastWebMsg) text += " — " + lastWebMsg;
+      lead.textContent = text;
     }
     if (reset) {
       root.replaceChildren();
@@ -97,8 +101,14 @@
     }
     moreBox.hidden = true;
     if (!list.length && reset) {
+      const origin = ((document.getElementById("q-origin") || {}).value) || "";
       HireLinkSearch.emptyState(root, document.getElementById("q-text").value.trim(), {
-        emptyTitle: "Aucune offre pour cette recherche",
+        emptyTitle: origin === "external"
+          ? "Aucune source externe active actuellement"
+          : "Aucune offre pour cette recherche",
+        emptyHint: origin === "external"
+          ? "Les sources externes sont désactivées sur cette démonstration."
+          : undefined,
         onClear: function () {
           ["q-text", "q-city", "q-contract", "q-origin", "q-since"].forEach(function (id) {
             const el = document.getElementById(id);
@@ -148,27 +158,18 @@
     }
     return fetch(base + "/catalog/offers?" + catalogParams(page))
       .then(function (r) {
-        if (r.status === 404 || r.status === 401 || r.status === 403 || !r.ok) {
-          return Promise.all([
-            fetch(base + "/offers/public").then(function (x) { if (!x.ok) throw new Error("offres"); return x.json(); }),
-            fetch(base + "/external-offers").then(function (x) { return x.ok ? x.json() : []; }).catch(function () { return []; })
-          ]).then(function (parts) {
-            const internal = (Array.isArray(parts[0]) ? parts[0] : []).map(function (o) { o.external = false; return o; });
-            const external = (Array.isArray(parts[1]) ? parts[1] : []).map(function (o) { o.external = true; return o; });
-            const all = internal.concat(external);
-            totalElements = all.length;
-            totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
-            const start = page * PAGE_SIZE;
-            return { items: all.slice(start, start + PAGE_SIZE), totalElements: totalElements, totalPages: totalPages, _legacy: true, _all: all };
-          });
-        }
+        // B0 fail-closed : pas de repli /offers/public + /external-offers.
+        // /external-offers n'applique pas exclude-sources ; /offers/public n'applique pas les filtres catalogue.
+        if (!r.ok) throw new Error("catalog");
         return r.json();
       })
       .then(function (data) {
-        if (data && data._legacy && !append) offers = data._all || [];
         const items = Array.isArray(data.items) ? data.items : [];
         totalElements = Number(data.totalElements || 0);
         totalPages = Number(data.totalPages || 0);
+        lastWebMsg = (data.webSearchAvailable === false && data.webSearchMessage)
+          ? String(data.webSearchMessage)
+          : (data.rankedByRelevance ? "Classement par pertinence (fautes et synonymes tolérés)." : "");
         if (!append) {
           offers = items.slice();
           matches = items.slice();
@@ -191,9 +192,21 @@
       })
       .catch(function () {
         if (!append) {
-          root.innerHTML = "<p class='muted'>Impossible de charger le catalogue (API indisponible ou erreur reseau).</p>";
+          offers = [];
+          matches = [];
+          totalElements = 0;
+          totalPages = 0;
+          root.replaceChildren();
+          const p = document.createElement("p");
+          p.className = "muted";
+          p.setAttribute("role", "alert");
+          p.textContent = "Catalogue temporairement indisponible";
+          root.appendChild(p);
+          const lead = document.getElementById("offers-lead");
+          if (lead) lead.textContent = "Catalogue temporairement indisponible.";
           const count = document.getElementById("offer-count");
           if (count) count.textContent = "nos";
+          moreBox.hidden = true;
         }
       })
       .finally(function () { loading = false; });

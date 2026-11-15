@@ -27,7 +27,7 @@ public class CatalogOfferController {
     public Map<String, Object> offers(
             @AuthenticationPrincipal User user,
             @RequestParam(required = false) String q,
-            @RequestParam(required = false, defaultValue = "MA") String country,
+            @RequestParam(required = false, defaultValue = "ALL") String country,
             @RequestParam(required = false) String city,
             @RequestParam(required = false) String contract,
             @RequestParam(required = false) String workMode,
@@ -35,6 +35,7 @@ public class CatalogOfferController {
             @RequestParam(required = false, defaultValue = "all") String origin,
             @RequestParam(required = false) Integer sinceDays,
             @RequestParam(required = false, defaultValue = "false") boolean forYou,
+            @RequestParam(required = false, defaultValue = "0") Double minMatch,
             @RequestParam(required = false, defaultValue = "0") int page,
             @RequestParam(required = false, defaultValue = "20") int size) {
         // country=* ou ALL => pas de filtre pays
@@ -45,7 +46,7 @@ public class CatalogOfferController {
         }
         String workModeFilter = normalizeWorkMode(workMode);
         CatalogOfferService.CatalogPage result = catalog.search(
-                user, q, countryFilter, city, contract, workModeFilter, source, origin, sinceDays, forYou, page, size);
+                user, q, countryFilter, city, contract, workModeFilter, source, origin, sinceDays, forYou, minMatch, page, size);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("page", result.page());
         body.put("size", result.size());
@@ -56,6 +57,12 @@ public class CatalogOfferController {
         body.put("forYouTruncated", result.forYouTruncated());
         body.put("forYouScanned", result.forYouScanned());
         body.put("forYouScanCap", result.forYouScanCap());
+        body.put("rankedByRelevance", result.rankedByRelevance());
+        body.put("webSearchAvailable", result.webSearchAvailable());
+        body.put("webSearchStatus", result.webSearchStatus());
+        body.put("webSearchMessage", result.webSearchMessage());
+        body.put("webSearchCoverage", result.webSearchCoverage());
+        body.put("webSearchSources", result.webSearchSources());
         return body;
     }
 
