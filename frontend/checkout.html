@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:8095 http://127.0.0.1:8095; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:8095 http://127.0.0.1:8095 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Paiement — HireLink</title>
   <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
@@ -62,6 +62,10 @@
         Paiement par carte bancaire
       </h1>
       <p class="ck-lead">Renseignez les informations de votre carte pour finaliser l’abonnement.</p>
+      <p class="ck-demo-banner" role="status" id="ck-sim-banner">
+        <strong>Démonstration</strong> — aucun débit réel. Le paiement est <em>simulé</em> côté serveur
+        (scénario de succès ou d’échec). N’utilisez pas de vraie carte bancaire.
+      </p>
 
       <div class="ck-card-demo" aria-label="Paiement par carte">
         <label class="ck-field">
@@ -124,6 +128,7 @@
       </div>
       <h1 id="ck-s3-title" class="ck-title ck-title-center">Paiement réussi !</h1>
       <p class="ck-lead ck-lead-center" id="ck-success-lead">Votre abonnement a été activé avec succès.</p>
+      <p class="ck-demo-banner ck-demo-banner-ok" role="status">Activation simulée — aucun prélèvement n’a eu lieu.</p>
 
       <div class="ck-details" id="ck-details">
         <h2>Détails de l’abonnement</h2>

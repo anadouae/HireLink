@@ -122,9 +122,22 @@ public class PlaceCatalogService {
 
     /** Lieux triés par pertinence ; à pertinence égale, le Maroc passe en premier. Sans saisie : villes marocaines. */
     public List<Place> search(String query, int limit) {
-        if (TextMatcher.fold(query).isEmpty()) return PLACES.stream().limit(limit).toList();
+        return search(query, null, limit);
+    }
+
+    /** Même recherche, avec filtre pays optionnel (code ISO {@code MA} ou libellé {@code Maroc}). */
+    public List<Place> search(String query, String country, int limit) {
+        List<Place> pool = filterByCountry(PLACES, country);
+        if (TextMatcher.fold(query).isEmpty()) {
+            // Sans saisie + pays MA : villes marocaines d'abord (pas les entrées-pays vides).
+            return pool.stream()
+                    .sorted(Comparator.comparing((Place p) -> p.city().isEmpty())
+                            .thenComparing(p -> !"MA".equals(p.code())))
+                    .limit(limit)
+                    .toList();
+        }
         record Hit(Place place, double score) {}
-        return PLACES.stream()
+        return pool.stream()
                 .map(p -> new Hit(p, Math.max(matcher.score(query, p.label()), 0.5 * matcher.score(query, p.country()))))
                 .filter(h -> h.score() > 0)
                 .sorted(Comparator.comparingDouble(Hit::score).reversed()
@@ -139,7 +152,13 @@ public class PlaceCatalogService {
      * Le pays se déduit ensuite, il n'est jamais saisi à la place.
      */
     public List<Place> searchCities(String query, int limit) {
-        List<Place> cities = PLACES.stream().filter(p -> !p.city().isEmpty()).toList();
+        return searchCities(query, null, limit);
+    }
+
+    public List<Place> searchCities(String query, String country, int limit) {
+        List<Place> cities = filterByCountry(PLACES, country).stream()
+                .filter(p -> !p.city().isEmpty())
+                .toList();
         if (TextMatcher.fold(query).isEmpty()) return cities.stream().limit(limit).toList();
         record Hit(Place place, double score) {}
         return cities.stream()
@@ -150,6 +169,27 @@ public class PlaceCatalogService {
                 .limit(limit)
                 .map(Hit::place)
                 .toList();
+    }
+
+    private static List<Place> filterByCountry(List<Place> source, String country) {
+        String code = normalizeCountryCode(country);
+        if (code == null) return source;
+        return source.stream().filter(p -> code.equals(p.code())).toList();
+    }
+
+    /** Accepte {@code MA}, {@code ma}, {@code Maroc}, {@code Morocco}. */
+    public static String normalizeCountryCode(String country) {
+        if (country == null) return null;
+        String t = country.trim();
+        if (t.isEmpty() || "*".equals(t) || "ALL".equalsIgnoreCase(t) || "TOUS".equalsIgnoreCase(t)) return null;
+        if (t.length() == 2) return t.toUpperCase(java.util.Locale.ROOT);
+        String fold = TextMatcher.fold(t);
+        if (fold.equals("maroc") || fold.equals("morocco")) return "MA";
+        if (fold.equals("france")) return "FR";
+        for (var e : COUNTRIES.entrySet()) {
+            if (TextMatcher.fold(e.getValue()).equals(fold)) return e.getKey();
+        }
+        return null;
     }
 
     /** Le pays d'un lieu connu ; vide si le catalogue ne le reconnaît pas. */

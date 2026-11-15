@@ -22,10 +22,8 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * Catalogue unifie avec pagination SQL et mode Pour toi.
- * Internes : SkillMatchingService.evaluate (multicritere).
- * Externes : explain competences source uniquement, label indicatif.
- * Au-dela de for-you-max-scan : truncation douce (offres les plus recentes), jamais HTTP 400.
+ * Catalogue unifié : pagination SQL, mode Pour toi, et recherche intelligente
+ * (fuzzy + synonymes + fusion Web optionnelle). Les annonces Web ne sont jamais persistées.
  */
 @Service
 public class CatalogOfferService {
@@ -38,7 +36,24 @@ public class CatalogOfferService {
             List<Map<String, Object>> items,
             boolean forYouTruncated,
             int forYouScanned,
-            int forYouScanCap) {}
+            int forYouScanCap,
+            boolean rankedByRelevance,
+            boolean webSearchAvailable,
+            String webSearchStatus,
+            String webSearchMessage,
+            String webSearchCoverage,
+            List<WebJobDiscovery.SourceReport> webSearchSources) {
+
+        /** Compat tests / appels internes sans métadonnées Web. */
+        public CatalogPage(
+                int page, int size, long totalElements, int totalPages,
+                List<Map<String, Object>> items,
+                boolean forYouTruncated, int forYouScanned, int forYouScanCap) {
+            this(page, size, totalElements, totalPages, items, forYouTruncated, forYouScanned, forYouScanCap,
+                    false, false, "UNAVAILABLE", DisabledWebJobDiscovery.MESSAGE,
+                    DisabledWebJobDiscovery.MESSAGE, List.of());
+        }
+    }
 
     private final CatalogListingRepository listings;
     private final CatalogForYouRunRepository forYouRuns;
@@ -47,9 +62,14 @@ public class CatalogOfferService {
     private final ExternalSourceCatalog sources;
     private final JobOfferRepository jobOffers;
     private final PlaceCatalogService places;
+    private final CatalogSmartRanker ranker;
+    private final JobSearchLexicon lexicon;
+    private final WebJobDiscovery webDiscovery;
     private final double forYouThreshold;
     private final int forYouMaxScan;
     private final int maxPageSize;
+    private final int smartScanCap;
+    private final int webSearchLimit;
 
     public CatalogOfferService(
             CatalogListingRepository listings,
@@ -59,9 +79,14 @@ public class CatalogOfferService {
             ExternalSourceCatalog sources,
             JobOfferRepository jobOffers,
             PlaceCatalogService places,
+            CatalogSmartRanker ranker,
+            JobSearchLexicon lexicon,
+            WebJobDiscovery webDiscovery,
             @Value("${hirelink.catalog.for-you-threshold:50}") double forYouThreshold,
             @Value("${hirelink.catalog.for-you-max-scan:5000}") int forYouMaxScan,
-            @Value("${hirelink.catalog.max-page-size:50}") int maxPageSize) {
+            @Value("${hirelink.catalog.max-page-size:50}") int maxPageSize,
+            @Value("${hirelink.catalog.smart-scan-cap:2500}") int smartScanCap,
+            @Value("${hirelink.web-search.max-results:20}") int webSearchLimit) {
         this.listings = listings;
         this.forYouRuns = forYouRuns;
         this.indexer = indexer;
@@ -69,9 +94,14 @@ public class CatalogOfferService {
         this.sources = sources;
         this.jobOffers = jobOffers;
         this.places = places;
+        this.ranker = ranker;
+        this.lexicon = lexicon;
+        this.webDiscovery = webDiscovery;
         this.forYouThreshold = forYouThreshold;
         this.forYouMaxScan = Math.max(100, forYouMaxScan);
         this.maxPageSize = Math.max(1, maxPageSize);
+        this.smartScanCap = Math.max(100, smartScanCap);
+        this.webSearchLimit = Math.max(0, webSearchLimit);
     }
 
     @Transactional
@@ -91,6 +121,7 @@ public class CatalogOfferService {
             String origin,
             Integer sinceDays,
             boolean forYou,
+            Double minMatch,
             int page,
             int size) {
         int safeSize = Math.min(maxPageSize, Math.max(1, size));
@@ -108,21 +139,198 @@ public class CatalogOfferService {
             since = Instant.now().minus(Duration.ofDays(sinceDays));
         }
 
-        if (forYou) {
-            return searchForYou(user, qn, countryN, cityN, contractN, workModeN, sourceN, originN, since, safePage, safeSize);
+        double matchFloor = minMatch != null && minMatch > 0 ? minMatch : 0;
+        // Compatibilité min. : filtre serveur avant pagination (pas seulement la page FE).
+        if (forYou || matchFloor > 0) {
+            double threshold = matchFloor > 0 ? matchFloor : forYouThreshold;
+            return searchForYou(user, qn, countryN, cityN, contractN, workModeN, sourceN, originN, since,
+                    safePage, safeSize, threshold);
         }
 
-        long total = listings.countFiltered(qn, countryN, cityN, contractN, workModeN, sourceN, originN, since);
+        // Recherche libre : fuzzy + synonymes + fusion Web (sans favoriser l'interne).
+        if (qn != null) {
+            return searchSmart(user, qn, countryN, cityN, cityRaw, contractN, workModeN, sourceN, originN, since,
+                    safePage, safeSize);
+        }
+
+        long total = listings.countFiltered(null, countryN, cityN, contractN, workModeN, sourceN, originN, since);
         int offset = safePage * safeSize;
         List<CatalogListing> rows = total == 0 || offset >= total
                 ? List.of()
-                : listings.findFilteredPage(qn, countryN, cityN, contractN, workModeN, sourceN, originN, since, safeSize, offset);
+                : listings.findFilteredPage(null, countryN, cityN, contractN, workModeN, sourceN, originN, since, safeSize, offset);
         List<Map<String, Object>> items = new ArrayList<>(rows.size());
         for (CatalogListing row : rows) {
-            items.add(toDto(row, user, null));
+            items.add(toDto(row, user, null, null));
         }
         int pages = total == 0 ? 0 : (int) Math.ceil(total / (double) safeSize);
-        return new CatalogPage(safePage, safeSize, total, pages, items, false, 0, forYouMaxScan);
+        // q vide : fusion Web éphémère (page 0) sans imposer le Maroc
+        WebJobDiscovery.DiscoveryResult web = webDiscovery.search("", countryN, cityRaw, webSearchLimit);
+        if (web.available() && safePage == 0 && web.jobs() != null && !web.jobs().isEmpty()) {
+            List<Map<String, Object>> mixed = new ArrayList<>();
+            for (WebJobDiscovery.DiscoveredJob job : web.jobs()) {
+                if (job == null || job.originUrl() == null) continue;
+                double rel = Math.max(CatalogSmartRanker.MIN_SCORE, 0.35);
+                mixed.add(toDtoEphemeral(ephemeralListing(job), rel));
+                if (mixed.size() >= Math.min(5, safeSize / 2)) break;
+            }
+            mixed.addAll(items);
+            if (mixed.size() > safeSize) mixed = mixed.subList(0, safeSize);
+            items = mixed;
+        }
+        return new CatalogPage(safePage, safeSize, total, pages, items, false, 0, forYouMaxScan,
+                false, web.available(), web.status(), web.message(),
+                web.coverageSummary(), web.sources());
+    }
+
+    /**
+     * Parcours intelligent : scan filtré (sans LIKE naïf), score TextMatcher + lexique,
+     * fusion optionnelle d'annonces Web éphémères, dédup, pagination par pertinence.
+     */
+    private CatalogPage searchSmart(
+            User user,
+            String q, String country, String cityFold, String cityLabel, String contract, String workMode,
+            String source, String origin, Instant since,
+            int page, int size) {
+        // Préfiltre SQL sans q (accents / fautes) puis ranking in-memory.
+        List<Object[]> candidateIds = listings.findForYouCandidates(
+                null, country, cityFold, contract, workMode, source, origin, since, smartScanCap);
+        Map<Long, CatalogListing> byId = new HashMap<>();
+        if (!candidateIds.isEmpty()) {
+            List<Long> ids = new ArrayList<>(candidateIds.size());
+            for (Object[] row : candidateIds) {
+                ids.add(((Number) row[0]).longValue());
+            }
+            for (CatalogListing row : listings.findByIdIn(ids)) {
+                byId.put(row.getId(), row);
+            }
+        }
+        List<CatalogListing> pool = new ArrayList<>(byId.values());
+        List<CatalogSmartRanker.ScoredListing> ranked = ranker.dedupe(ranker.rank(q, pool));
+
+        // Ville lisible pour Jooble (pas la forme foldée SQL).
+        WebJobDiscovery.DiscoveryResult web = webDiscovery.search(q, country, cityLabel, webSearchLimit);
+        if (web.available() && web.jobs() != null) {
+            for (WebJobDiscovery.DiscoveredJob job : web.jobs()) {
+                if (job == null || job.originUrl() == null || job.originUrl().isBlank()) continue;
+                if (job.title() == null || job.title().isBlank()) continue;
+                if (isDuplicateWeb(ranked, job)) continue;
+                double rel = ranker.scoreDiscovered(q, job);
+                if (rel < CatalogSmartRanker.MIN_SCORE) continue;
+                // Marqueur éphémère : listing synthétique non persisté (id négatif local à la réponse).
+                CatalogListing ephemeral = ephemeralListing(job);
+                ranked.add(new CatalogSmartRanker.ScoredListing(ephemeral, rel));
+            }
+            ranked = ranker.dedupe(ranked);
+            ranked.sort(java.util.Comparator
+                    .comparingDouble(CatalogSmartRanker.ScoredListing::relevance).reversed()
+                    .thenComparing(s -> s.listing().getSortAt(),
+                            java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+        }
+
+        long total = ranked.size();
+        int offset = page * size;
+        List<CatalogSmartRanker.ScoredListing> pageRows = total == 0 || offset >= total
+                ? List.of()
+                : ranked.subList(offset, (int) Math.min(offset + size, total));
+        List<Map<String, Object>> items = new ArrayList<>(pageRows.size());
+        for (CatalogSmartRanker.ScoredListing scored : pageRows) {
+            CatalogListing row = scored.listing();
+            Map<String, Object> dto = row.getId() != null && row.getId() < 0
+                    ? toDtoEphemeral(row, scored.relevance())
+                    : toDto(row, user, null, scored.relevance());
+            items.add(dto);
+        }
+        int pages = total == 0 ? 0 : (int) Math.ceil(total / (double) size);
+        return new CatalogPage(page, size, total, pages, items, false, pool.size(), smartScanCap,
+                true, web.available(), web.status(), web.message(),
+                web.coverageSummary(), web.sources());
+    }
+
+    private boolean isDuplicateWeb(List<CatalogSmartRanker.ScoredListing> ranked, WebJobDiscovery.DiscoveredJob job) {
+        String url = job.applyUrl() != null && !job.applyUrl().isBlank() ? job.applyUrl() : job.originUrl();
+        String urlNorm = url == null ? "" : url.trim().toLowerCase(Locale.ROOT);
+        for (CatalogSmartRanker.ScoredListing s : ranked) {
+            CatalogListing row = s.listing();
+            if (urlNorm.length() > 8) {
+                String a = row.getApplyUrl() == null ? "" : row.getApplyUrl().trim().toLowerCase(Locale.ROOT);
+                String o = row.getOriginUrl() == null ? "" : row.getOriginUrl().trim().toLowerCase(Locale.ROOT);
+                if (urlNorm.equals(a) || urlNorm.equals(o)) return true;
+            }
+            if (lexicon.nearDuplicate(row.getTitle(), row.getCompanyName(), job.title(), job.companyName())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static CatalogListing ephemeralListing(WebJobDiscovery.DiscoveredJob job) {
+        CatalogListing row = new CatalogListing();
+        // id négatif : non persisté, signal pour toDtoEphemeral
+        row.setId(-1L - Math.floorMod(job.originUrl().hashCode(), 1_000_000));
+        row.setOrigin(CatalogListing.ORIGIN_EXTERNAL);
+        row.setRefId(0L);
+        row.setPublicId("web-" + Integer.toHexString(job.originUrl().hashCode()));
+        row.setSourceCode(job.sourceCode() == null ? "WEB" : job.sourceCode());
+        row.setTitle(job.title());
+        row.setCompanyName(job.companyName() == null || job.companyName().isBlank() ? "Entreprise non précisée" : job.companyName());
+        row.setLocationLabel(job.location());
+        row.setCity(job.city());
+        row.setCountryCode(job.countryCode());
+        row.setContractLabel(job.contractType());
+        row.setWorkMode(job.workMode());
+        row.setSkillsText(job.skills());
+        row.setDescription(job.description());
+        row.setOriginUrl(job.originUrl());
+        row.setApplyUrl(job.applyUrl() == null || job.applyUrl().isBlank() ? job.originUrl() : job.applyUrl());
+        row.setUrlQuality("DEEP");
+        row.setLinkReliable(true);
+        row.setPublishedTrusted(false);
+        row.setSortAt(Instant.now());
+        row.setSearchBlob(job.title() + " " + job.companyName() + " " + job.skills());
+        return row;
+    }
+
+    private Map<String, Object> toDtoEphemeral(CatalogListing row, double relevance) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("external", true);
+        body.put("id", row.getPublicId());
+        body.put("origin", CatalogListing.ORIGIN_EXTERNAL);
+        body.put("source", row.getSourceCode());
+        String srcLabel = sources.labelOf(row.getSourceCode());
+        if (srcLabel == null || srcLabel.isBlank()) {
+            srcLabel = "Recherche Web";
+        }
+        String srcHome = sources.homeOf(row.getSourceCode());
+        body.put("sourceLabel", srcLabel);
+        body.put("sourceHome", srcHome);
+        body.put("boardKey", null);
+        body.put("title", row.getTitle());
+        body.put("companyName", row.getCompanyName());
+        body.put("location", row.getLocationLabel());
+        body.put("city", row.getCity());
+        body.put("countryCode", row.getCountryCode());
+        body.put("contractType", row.getContractLabel());
+        body.put("workMode", row.getWorkMode());
+        body.put("requiredSkills", row.getSkillsText());
+        body.put("description", row.getDescription());
+        body.put("originUrl", row.getOriginUrl());
+        body.put("applyUrl", row.getApplyUrl());
+        body.put("urlQuality", row.getUrlQuality());
+        body.put("linkReliable", true);
+        body.put("directAccessTrusted", true);
+        body.put("publishedAtTrusted", false);
+        body.put("createdAt", row.getSortAt());
+        body.put("matchesProfile", false);
+        body.put("matchAvailable", false);
+        body.put("matchLabel", "Annonce Web : candidature uniquement sur le site d’origine (non gérée par HireLink).");
+        body.put("relevanceScore", Math.round(relevance * 1000.0) / 1000.0);
+        body.put("ephemeral", true);
+        body.put("provenance", ranker.provenanceWeb(new WebJobDiscovery.DiscoveredJob(
+                row.getTitle(), row.getCompanyName(), row.getLocationLabel(), row.getCity(), row.getCountryCode(),
+                row.getContractLabel(), row.getWorkMode(), row.getSkillsText(), row.getDescription(),
+                row.getOriginUrl(), row.getApplyUrl(), row.getSourceCode(),
+                srcLabel, srcHome == null ? "" : srcHome)));
+        return body;
     }
 
     private CatalogPage searchForYou(
@@ -130,13 +338,29 @@ public class CatalogOfferService {
             String q, String country, String city, String contract, String workMode,
             String source, String origin, Instant since,
             int page, int size) {
+        return searchForYou(user, q, country, city, contract, workMode, source, origin, since, page, size, forYouThreshold);
+    }
+
+    private CatalogPage searchForYou(
+            User user,
+            String q, String country, String city, String contract, String workMode,
+            String source, String origin, Instant since,
+            int page, int size, double scoreThreshold) {
         if (user == null || !matching.hasConfirmedSkills(user)) {
             return new CatalogPage(page, size, 0, 0, List.of(), false, 0, forYouMaxScan);
         }
-        long filteredTotal = listings.countFiltered(q, country, city, contract, workMode, source, origin, since);
+        // q smart : pas de LIKE SQL (accents / fautes) — filtre textuel après chargement.
+        String sqlQ = null;
+        long filteredTotal = listings.countFiltered(sqlQ, country, city, contract, workMode, source, origin, since);
         boolean truncated = filteredTotal > forYouMaxScan;
         List<Object[]> candidates = listings.findForYouCandidates(
-                q, country, city, contract, workMode, source, origin, since, forYouMaxScan);
+                sqlQ, country, city, contract, workMode, source, origin, since, forYouMaxScan);
+        Map<Long, CatalogListing> listingCache = new HashMap<>();
+        if (q != null && !q.isBlank() && !candidates.isEmpty()) {
+            List<Long> ids = new ArrayList<>();
+            for (Object[] row : candidates) ids.add(((Number) row[0]).longValue());
+            for (CatalogListing L : listings.findByIdIn(ids)) listingCache.put(L.getId(), L);
+        }
         forYouRuns.deleteOlderThan(Instant.now().minus(Duration.ofHours(1)));
         String runId = UUID.randomUUID().toString();
         List<CatalogForYouRun> batch = new ArrayList<>();
@@ -146,21 +370,25 @@ public class CatalogOfferService {
             String originCode = String.valueOf(row[1]);
             Long refId = ((Number) row[2]).longValue();
             String skills = row[3] == null ? "" : String.valueOf(row[3]);
+            if (q != null && !q.isBlank()) {
+                CatalogListing L = listingCache.get(listingId);
+                if (L == null || ranker.scoreListing(q, L) < CatalogSmartRanker.MIN_SCORE) continue;
+            }
             Double score = scoreCandidate(user, originCode, refId, skills, internalCache);
-            if (score != null && score >= forYouThreshold) {
+            if (score != null && score >= scoreThreshold) {
                 batch.add(new CatalogForYouRun(runId, listingId, score));
             }
         }
         if (!batch.isEmpty()) forYouRuns.saveAll(batch);
         forYouRuns.flush();
         try {
-            long total = forYouRuns.countEligible(runId, forYouThreshold);
+            long total = forYouRuns.countEligible(runId, scoreThreshold);
             int offset = page * size;
             List<Long> pageIds = total == 0 || offset >= total
                     ? List.of()
-                    : forYouRuns.findPageIds(runId, forYouThreshold, size, offset);
+                    : forYouRuns.findPageIds(runId, scoreThreshold, size, offset);
             Map<Long, Double> scores = new HashMap<>();
-            for (Object[] s : forYouRuns.scoresForRun(runId, forYouThreshold)) {
+            for (Object[] s : forYouRuns.scoresForRun(runId, scoreThreshold)) {
                 scores.put(((Number) s[0]).longValue(), ((Number) s[1]).doubleValue());
             }
             Map<Long, CatalogListing> byId = new HashMap<>();
@@ -172,10 +400,17 @@ public class CatalogOfferService {
             List<Map<String, Object>> items = new ArrayList<>(pageIds.size());
             for (Long id : pageIds) {
                 CatalogListing row = byId.get(id);
-                if (row != null) items.add(toDto(row, user, scores.get(row.getId())));
+                if (row != null) {
+                    Double forced = scores.get(row.getId());
+                    Double textRel = (q != null && !q.isBlank()) ? ranker.scoreListing(q, row) : null;
+                    items.add(toDto(row, user, forced, textRel));
+                }
             }
             int pages = total == 0 ? 0 : (int) Math.ceil(total / (double) size);
-            return new CatalogPage(page, size, total, pages, items, truncated, candidates.size(), forYouMaxScan);
+            WebJobDiscovery.DiscoveryResult web = webDiscovery.search(q == null ? "" : q, null, city, 0);
+            return new CatalogPage(page, size, total, pages, items, truncated, candidates.size(), forYouMaxScan,
+                    q != null && !q.isBlank(), web.available(), web.status(), web.message(),
+                    web.coverageSummary(), web.sources());
         } finally {
             forYouRuns.deleteByRunId(runId);
         }
@@ -193,7 +428,7 @@ public class CatalogOfferService {
         return matching.computeMatchScore(user.getSkills(), skills);
     }
 
-    private Map<String, Object> toDto(CatalogListing row, User user, Double forcedScore) {
+    private Map<String, Object> toDto(CatalogListing row, User user, Double forcedScore, Double relevance) {
         Map<String, Object> body = new LinkedHashMap<>();
         boolean external = CatalogListing.ORIGIN_EXTERNAL.equals(row.getOrigin());
         body.put("external", external);
@@ -266,6 +501,15 @@ public class CatalogOfferService {
         }
         body.put("matchAvailable", matchAvailable);
         body.put("matchLabel", matchLabel);
+        if (relevance != null) {
+            body.put("relevanceScore", Math.round(relevance * 1000.0) / 1000.0);
+        }
+        body.put("provenance", ranker.provenance(row, sources));
+        if (external) {
+            body.put("applyHint", "Ouvrir l’annonce sur le site d’origine — HireLink ne crée pas de candidature pour cette offre.");
+        } else {
+            body.put("applyHint", "Fiche et candidature gérées dans HireLink.");
+        }
         return body;
     }
 

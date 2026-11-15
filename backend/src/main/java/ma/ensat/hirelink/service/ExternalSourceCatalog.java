@@ -16,6 +16,8 @@ import java.util.Map;
 public class ExternalSourceCatalog {
 
     public static final String REMOTE_OK = "REMOTE_OK";
+    public static final String REMOTIVE = "REMOTIVE";
+    public static final String ARBEITNOW = "ARBEITNOW";
     public static final String MAROC_EMPLOI = "MAROC_EMPLOI";
     public static final String GREENHOUSE = GreenhouseJobParser.SOURCE;
     public static final String LEVER = LeverJobParser.SOURCE;
@@ -69,8 +71,13 @@ public class ExternalSourceCatalog {
     }
 
     public List<SourceInfo> all() {
+        // Remotive / Arbeitnow : connus pour libellé + attribution (recherche Web éphémère),
+        // enabled=false pour ne pas les entraîner dans le sync external-jobs.
+        // Remote OK : label/home toujours disponibles ; enabled suit uniquement le flag de sync.
         return List.of(
                 new SourceInfo(MAROC_EMPLOI, "Emploi Maroc (partenaires)", "https://hirelink.ma", marocEnabled, "maroc"),
+                new SourceInfo(REMOTIVE, "Remotive", "https://remotive.com", false, "web-search"),
+                new SourceInfo(ARBEITNOW, "Arbeitnow", "https://www.arbeitnow.com", false, "web-search"),
                 new SourceInfo(REMOTE_OK, "Remote OK", "https://remoteok.com", remoteOkEnabled, "remote"),
                 new SourceInfo(GREENHOUSE, "Greenhouse", "https://www.greenhouse.io", greenhouseEnabled, "ats"),
                 new SourceInfo(LEVER, "Lever", "https://www.lever.co", leverEnabled, "ats"),

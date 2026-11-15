@@ -580,43 +580,53 @@
     coachLog.appendChild(row);
   }
 
+  /** Chaque constat : { text, ok } — ok=true → Validé ; ok=false → À corriger. */
   const FINDINGS = {
     skills: {
       label: "Compétences",
       points: function (s) {
         const n = (s.skills || "").split(/[,;\n]/).filter(function (x) { return x.trim(); }).length;
-        if (!s.skills) return ["Ajoutez une liste de compétences concrètes, pas seulement le titre du poste.", "Nommez les outils que vous utilisez vraiment."];
-        if (n < 4) return ["La liste est courte. Ajoutez les outils et les langages déjà pratiqués."];
-        return ["Les compétences sont lisibles. Gardez-les alignées avec le métier visé."];
+        if (!s.skills) return [
+          { text: "Ajoutez une liste de compétences concrètes, pas seulement le titre du poste.", ok: false },
+          { text: "Nommez les outils que vous utilisez vraiment.", ok: false },
+        ];
+        if (n < 4) return [{ text: "La liste est courte. Ajoutez les outils et les langages déjà pratiqués.", ok: false }];
+        return [{ text: "Les compétences sont lisibles et suffisantes pour le score qualité CV.", ok: true }];
       },
     },
     experience: {
       label: "Expériences",
       points: function (s) {
-        if (!s.experience || s.experience.length < 40) return ["Décrivez au moins une expérience avec le contexte, votre rôle et un résultat.", "Évitez une liste de tâches sans ce que vous avez produit."];
-        return ["Les expériences ont assez de matière. Précisez un résultat chiffré quand vous en avez un."];
+        if (!s.experience || s.experience.length < 40) return [
+          { text: "Décrivez au moins une expérience avec le contexte, votre rôle et un résultat.", ok: false },
+          { text: "Évitez une liste de tâches sans ce que vous avez produit.", ok: false },
+        ];
+        return [{ text: "Les expériences ont assez de matière pour la lecture recruteur.", ok: true }];
       },
     },
     education: {
       label: "Formation",
       points: function (s) {
-        if (!s.education) return ["Indiquez l'école, le diplôme et l'année prévue ou obtenue."];
-        return ["La formation est présente. Vérifiez que l'école et l'année sont explicites."];
+        if (!s.education) return [{ text: "Indiquez l'école, le diplôme et l'année prévue ou obtenue.", ok: false }];
+        return [{ text: "La formation est renseignée.", ok: true }];
       },
     },
     structure: {
       label: "Structure",
       points: function (s) {
         const missing = ["identity", "experience", "education", "skills"].filter(function (k) { return !s[k]; });
-        if (missing.length) return ["Il manque encore : " + missing.join(", ") + ".", "Un CV lisible sépare identité, formation, expériences et compétences."];
-        return ["Les grandes parties sont là. Le recruteur peut les parcourir sans chercher."];
+        if (missing.length) return [
+          { text: "Il manque encore : " + missing.join(", ") + ".", ok: false },
+          { text: "Un CV lisible sépare identité, formation, expériences et compétences.", ok: false },
+        ];
+        return [{ text: "Les grandes parties du CV sont présentes.", ok: true }];
       },
     },
     match: {
-      label: "Compatibilité",
+      label: "Matching offres",
       points: function (s) {
-        if (!s.skills) return ["Correspondance non disponible tant qu'aucune compétence n'est confirmée. Le métier recherché n'entre pas dans le score."];
-        return ["Les compétences confirmées alimentent le score, avec le niveau, le contrat et le lieu s'ils sont renseignés. Le métier recherché ne classe pas les offres."];
+        if (!s.skills) return [{ text: "Le matching offres reste indisponible tant qu'aucune compétence n'est confirmée. Ce n'est pas le score qualité CV ci-dessus.", ok: false }];
+        return [{ text: "Les compétences confirmées alimentent le matching offres (distinct du score qualité CV /100).", ok: true }];
       },
     },
   };
@@ -671,15 +681,15 @@
     }
     if (legend) {
       legend.innerHTML =
-        "<strong>Comment le score est calculé</strong>" +
+        "<strong>Score qualité du CV (pas un score de matching offre)</strong>" +
         "Identité " + parts.identity + "/15 · Expériences " + parts.experience + "/25 · Formation " + parts.education + "/20 · " +
         "Compétences " + parts.skills + "/25 · Langues " + parts.languages + "/15. " +
-        "Ce score mesure la lecture du CV, pas la correspondance avec une offre.<br/>" +
+        "Complétude et lisibilité du dossier uniquement.<br/>" +
         (score < 55
-          ? "Niveau C : complétez les sections Expériences et Formation dans « Voir le détail », puis confirmez. La synthèse lit ces textes."
+          ? "Niveau C : complétez Expériences et Formation, puis confirmez."
           : score < 80
-            ? "Niveau B : le CV est exploitable. Ajoutez un résultat chiffré et les langues pour viser A."
-            : "Niveau A : le CV est prêt pour la lecture recruteur et le matching.");
+            ? "Niveau B : CV exploitable. Langues et détails renforcent le niveau A."
+            : "Niveau A : qualité CV prête pour la lecture recruteur. Le matching offre se calcule séparément sur chaque annonce.");
     }
     const tabs = document.getElementById("cv-tabs");
     if (tabs && !tabs.dataset.ready) {
@@ -702,8 +712,13 @@
     const list = document.getElementById("cv-findings");
     if (list) {
       const points = FINDINGS[analysisTab].points(s);
-      list.innerHTML = points.map(function (text) {
-        return "<li><span>" + text.replace(/</g, "") + '</span><button type="button" class="cv-fix" data-fix="' + analysisTab + '">à corriger</button></li>';
+      list.innerHTML = points.map(function (p) {
+        const text = typeof p === "string" ? p : (p.text || "");
+        const ok = typeof p === "object" && p.ok === true;
+        const action = ok
+          ? '<span class="cv-ok" role="status">Validé</span>'
+          : '<button type="button" class="cv-fix" data-fix="' + analysisTab + '">À corriger</button>';
+        return "<li><span>" + text.replace(/</g, "") + "</span>" + action + "</li>";
       }).join("");
     }
   }
@@ -735,25 +750,6 @@
     if (details) details.open = true;
     details.scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  async function askCoach(message) {
-    const text = cvText();
-    if (!text.trim()) {
-      HireLink.toast("Coach", "Déposez d’abord un CV et confirmez les sections.", "info");
-      return;
-    }
-    const send = document.querySelector("#coach-form button[type=submit]");
-    if (send) send.disabled = true;
-    pushCoach("Vous", message, true);
-    try {
-      const data = await HireLinkCredits.run("/ai/coach", { message: message, cvText: text });
-      const local = data.provider && String(data.provider).toLowerCase().indexOf("local") === 0;
-      pushCoach(local ? "Coach local" : "Coach", data.content || "Pas de réponse.", true);
-    } catch (err) {
-      if (!err.handled) HireLink.toast("Coach", err.message, "danger");
-    } finally {
-      if (send) send.disabled = false;
-    }
-  }
   async function summarizeCv() {
     const text = cvText();
     if (!text.trim()) {
@@ -771,17 +767,6 @@
     } finally {
       if (send) send.disabled = false;
     }
-  }
-  const coachForm = document.getElementById("coach-form");
-  if (coachForm) {
-    coachForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const input = document.getElementById("coach-input");
-      const message = (input.value || "").trim();
-      if (!message) return;
-      input.value = "";
-      askCoach(message);
-    });
   }
   const analyze = document.getElementById("coach-analyze");
   if (analyze) analyze.addEventListener("click", summarizeCv);

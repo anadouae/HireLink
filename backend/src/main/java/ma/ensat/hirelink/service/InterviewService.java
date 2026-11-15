@@ -2,6 +2,7 @@ package ma.ensat.hirelink.service;
 
 import ma.ensat.hirelink.dto.ApiDtos.InterviewRequest;
 import ma.ensat.hirelink.model.Application;
+import ma.ensat.hirelink.model.ApplicationStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -79,7 +80,14 @@ public class InterviewService {
     }
 
     public boolean isActive(Application app) {
-        return app.getInterviewAt() != null && !CANCELLED.equals(app.getInterviewStatus());
+        if (app.getInterviewAt() == null) return false;
+        if (CANCELLED.equals(app.getInterviewStatus())) return false;
+        // Dossier terminal : plus de convocation active même si le statut entretien est resté vide/SCHEDULED.
+        var st = app.getStatus();
+        if (st == ApplicationStatus.REJECTED || st == ApplicationStatus.WITHDRAWN || st == ApplicationStatus.HIRED) {
+            return false;
+        }
+        return true;
     }
 
     private void requireActive(Application app) {

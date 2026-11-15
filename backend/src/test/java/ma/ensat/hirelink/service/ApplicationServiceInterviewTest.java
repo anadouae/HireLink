@@ -6,6 +6,7 @@ import ma.ensat.hirelink.model.ApplicationStatus;
 import ma.ensat.hirelink.model.JobOffer;
 import ma.ensat.hirelink.model.Membership;
 import ma.ensat.hirelink.model.OrgRole;
+import ma.ensat.hirelink.model.RefusalReason;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.ApplicationRepository;
@@ -45,6 +46,7 @@ class ApplicationServiceInterviewTest {
     private final InterviewService interviews = new InterviewService();
     private ApplicationRepository applicationRepository;
     private OrganizationService organizationService;
+    private RefusalReasonRepository refusalReasonRepository;
     private AuditService audit;
     private EventNotifier notifier;
     private ApplicationService service;
@@ -56,12 +58,13 @@ class ApplicationServiceInterviewTest {
     void setUp() {
         applicationRepository = mock(ApplicationRepository.class);
         organizationService = mock(OrganizationService.class);
+        refusalReasonRepository = mock(RefusalReasonRepository.class);
         audit = mock(AuditService.class);
         notifier = mock(EventNotifier.class);
         SkillMatchingService matching = mock(SkillMatchingService.class);
         ResponsivenessService responsiveness = mock(ResponsivenessService.class);
         service = new ApplicationService(applicationRepository, mock(JobOfferRepository.class), matching,
-                mock(TimelineService.class), mock(RefusalReasonRepository.class), mock(NotificationService.class),
+                mock(TimelineService.class), refusalReasonRepository, mock(NotificationService.class),
                 organizationService, mock(MembershipRepository.class), mock(CvStorage.class), audit,
                 interviews, notifier, responsiveness);
 
@@ -287,5 +290,51 @@ class ApplicationServiceInterviewTest {
                 .when(organizationService).assertCanAccessApplication(any(), any());
 
         assertThrows(ResponseStatusException.class, () -> service.interviewCalendar(etranger, 9L));
+    }
+
+    /** D2 : un refus annule automatiquement l’entretien actif (plus de convocation ni ICS). */
+    @Test
+    void refusAnnuleEntretienActifEtRetireCalendrier() {
+        membreDe(recruteur, OrgRole.RECRUTEUR);
+        service.rescheduleInterview(recruteur, 9L, visio());
+        assertEquals(InterviewService.SCHEDULED, app.getInterviewStatus());
+
+        RefusalReason motif = new RefusalReason();
+        motif.setCode("REF01");
+        motif.setLabel("Profil non retenu");
+        when(refusalReasonRepository.findByCode("REF01")).thenReturn(Optional.of(motif));
+
+        ApiDtos.ApplicationResponse reponse = service.advance(recruteur, 9L,
+                new ApiDtos.AdvanceRequest(ApplicationStatus.REJECTED, "REF01", "Merci pour votre temps.",
+                        true, true, true));
+
+        assertEquals(ApplicationStatus.REJECTED, reponse.status());
+        assertEquals(InterviewService.CANCELLED, reponse.interviewStatus());
+        assertEquals(InterviewService.CANCELLED, app.getInterviewStatus());
+        verify(notifier).interviewCancelled(app);
+        verify(notifier).statusChanged(app);
+        verify(audit).ok(eq("INTERVIEW_CANCELLED"), eq(recruteur), eq("APPLICATION"), eq(9L), eq("auto-on-reject"));
+
+        ResponseStatusException ics = assertThrows(ResponseStatusException.class,
+                () -> service.interviewCalendar(candidat, 9L));
+        assertEquals("Cet entretien a été annulé.", ics.getReason());
+    }
+
+    @Test
+    void refusSansEntretienNeDeclenchePasAnnulation() {
+        membreDe(recruteur, OrgRole.RECRUTEUR);
+        RefusalReason motif = new RefusalReason();
+        motif.setCode("REF02");
+        motif.setLabel("Compétences insuffisantes");
+        when(refusalReasonRepository.findByCode("REF02")).thenReturn(Optional.of(motif));
+
+        ApiDtos.ApplicationResponse reponse = service.advance(recruteur, 9L,
+                new ApiDtos.AdvanceRequest(ApplicationStatus.REJECTED, "REF02", null, true, true, true));
+
+        assertEquals(ApplicationStatus.REJECTED, reponse.status());
+        assertTrue(reponse.interviewStatus() == null || reponse.interviewStatus().isBlank());
+        verify(notifier, never()).interviewCancelled(any());
+        verify(notifier).statusChanged(app);
+        verify(audit, never()).ok(eq("INTERVIEW_CANCELLED"), any(), any(), anyLong(), any());
     }
 }

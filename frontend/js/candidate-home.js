@@ -32,6 +32,18 @@
   const appState = (id) => appliedByOffer.get(id) || null;
   const isOpenToApply = (id) => { const st = appState(id); return !st || st.status === "WITHDRAWN"; };
   const modeKey = (o) => ({ "Télétravail": "REMOTE", "Hybride": "HYBRID", "Sur site": "ONSITE" })[O.workModeOf(o)] || "";
+  const WEB_SRC_LABEL = { REMOTIVE: "Remotive", ARBEITNOW: "Arbeitnow", REMOTE_OK: "Remote OK", JOOBLE: "Jooble" };
+  const WEB_SRC_HOME = { REMOTIVE: "https://remotive.com", ARBEITNOW: "https://www.arbeitnow.com", REMOTE_OK: "https://remoteok.com", JOOBLE: "https://ma.jooble.org" };
+  function webSourceLabel(o) {
+    const code = String((o && o.source) || "").toUpperCase();
+    const raw = (o && o.sourceLabel) || "";
+    if (raw && raw !== "Recherche Web") return raw;
+    return WEB_SRC_LABEL[code] || raw || code || "Web";
+  }
+  function webSourceHome(o) {
+    const code = String((o && o.source) || "").toUpperCase();
+    return (o && o.sourceHome) || WEB_SRC_HOME[code] || "";
+  }
 
   function tokenize(csv) {
     return String(csv || "").split(/[,;]+/).map((s) => s.trim()).filter(Boolean);
@@ -91,15 +103,13 @@
     fillSelect("f-skill", uniq(cached.flatMap((o) => tokenize(o.requiredSkills))));
   }
 
-  /** Filtres residuels client (candidature / reactivite) sur la page deja filtree serveur. */
+  /** Filtres résiduels client (candidature / réactivité). Compatibilité min. = serveur (minMatch). */
   function filtered(query) {
     const company = val("f-company"), skill = val("f-skill");
     const sentFilter = val("f-sent");
-    const pace = val("f-pace"), minMatch = Number(val("f-match") || 0);
+    const pace = val("f-pace");
     const kept = cached.filter((o) => {
-      const score = o.matchScore;
       const st = appState(o.id);
-      if (minMatch && !matchOnly && (score == null || score < minMatch)) return false;
       if (company && companyOf(o) !== company) return false;
       if (skill && !tokenize(o.requiredSkills).some((s) => s.toLowerCase() === skill.toLowerCase())) return false;
       if (pace === "answers" && !o.responsiveness) return false;
@@ -126,7 +136,7 @@
     const params = new URLSearchParams();
     params.set("page", String(pageNum));
     params.set("size", String(PAGE_SIZE));
-    params.set("country", val("f-country") || "MA");
+    params.set("country", val("f-country") || "ALL");
     params.set("forYou", matchOnly ? "true" : "false");
     const qParts = [];
     const search = val("rc-search").trim();
@@ -139,6 +149,8 @@
     if (val("f-mode")) params.set("workMode", val("f-mode"));
     if (val("f-origin")) params.set("origin", val("f-origin") === "hirelink" ? "internal" : val("f-origin"));
     if (val("f-since")) params.set("sinceDays", val("f-since"));
+    const minMatch = Number(val("f-match") || 0);
+    if (minMatch > 0) params.set("minMatch", String(minMatch));
     return params.toString();
   }
 
@@ -146,7 +158,7 @@
     FILTERS.forEach((id) => {
       if (!$(id)) return;
       if (id === "f-match") $(id).value = "0";
-      else if (id === "f-country") $(id).value = "MA";
+      else if (id === "f-country") $(id).value = "ALL";
       else $(id).value = "";
     });
     const search = $("rc-search");
@@ -161,6 +173,13 @@
   }
 
   function paintEmpty(query) {
+    if (val("f-origin") === "external" && !totalElements) {
+      S.emptyState(offerList, "", {
+        emptyTitle: "Aucune source externe active actuellement",
+        emptyHint: "Les connecteurs externes sont désactivés sur cette démonstration. Affichez les offres HireLink ou toutes les provenances.",
+      });
+      return;
+    }
     if (matchOnly && !query) {
       S.emptyState(offerList, "", {
         emptyTitle: "Aucune offre ne correspond encore à votre profil",
@@ -192,6 +211,31 @@
     }
   }
 
+  function paintWebBanner(data) {
+    const el = $("web-search-banner");
+    if (!el) return;
+    if (data && data.webSearchAvailable === false && data.webSearchMessage) {
+      el.hidden = false;
+      el.textContent = data.webSearchMessage;
+    } else if (data && (data.webSearchCoverage || data.webSearchMessage)) {
+      el.hidden = false;
+      const bits = [];
+      if (data.webSearchCoverage) bits.push(String(data.webSearchCoverage));
+      else if (data.webSearchMessage) bits.push(String(data.webSearchMessage));
+      if (Array.isArray(data.webSearchSources) && data.webSearchSources.length) {
+        bits.push("Sources : " + data.webSearchSources.map((s) => s.code + "=" + s.status + "(" + (s.hits || 0) + ")").join(", "));
+      }
+      if (data.rankedByRelevance) bits.push("Classement par pertinence (fautes et synonymes tolérés).");
+      el.textContent = bits.join(" ");
+    } else if (data && data.rankedByRelevance) {
+      el.hidden = false;
+      el.textContent = "Résultats classés par pertinence. Les offres externes s’ouvrent sur le site d’origine — HireLink ne gère pas ces candidatures.";
+    } else {
+      el.hidden = true;
+      el.textContent = "";
+    }
+  }
+
   function updateHint() {
     if (matchOnly) {
       $("match-hint").textContent = totalElements
@@ -201,7 +245,9 @@
     }
     const scoring = cached.some((o) => o.matchScore != null);
     if (!scoring) {
-      $("match-hint").textContent = "Correspondance non disponible : ajoutez au moins une competence dans votre profil.";
+      $("match-hint").textContent = totalElements
+        ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " au catalogue (recherche unifiée)."
+        : "Correspondance non disponible : ajoutez au moins une competence dans votre profil.";
       return;
     }
     $("match-hint").textContent = totalElements + " offre" + (totalElements > 1 ? "s" : "") + " au catalogue (page serveur).";
@@ -211,7 +257,7 @@
     const query = val("rc-search").trim();
     const list = filtered(query);
     const active = FILTERS.filter((id) => val(id) && val(id) !== "0").length;
-    const countryLabel = val("f-country") === "ALL" ? "tous pays" : "Maroc";
+    const countryLabel = !val("f-country") || val("f-country") === "ALL" ? "tous pays" : val("f-country");
     $("filter-summary").textContent = totalElements + " offre" + (totalElements > 1 ? "s" : "") + " · " + countryLabel + " · page " + (page + 1) + (active ? " · " + active + " filtre" + (active > 1 ? "s" : "") : "");
     offerList.replaceChildren();
     const detail = $("offer-detail");
@@ -302,7 +348,9 @@
       },
       companyHref: (x) => x.external ? "" : "candidate-companies.html?name=" + encodeURIComponent(companyOf(x)),
       onOpen: (x) => { selectedId = x.id; offerList.querySelectorAll(".offer-card").forEach((n) => n.classList.toggle("is-selected", n.dataset.offerId === String(x.id))); showDetail(x); },
-      statusChip: o.external ? "Offre externe" : (st ? (st.status === "WITHDRAWN" ? "Candidature retirée" : "Candidature envoyée") : "Offre HireLink"),
+      statusChip: o.external
+        ? (o.ephemeral ? ((webSourceLabel(o) || "Web") + " · annonce d’origine") : "Offre externe")
+        : (st ? (st.status === "WITHDRAWN" ? "Candidature retirée" : "Candidature envoyée") : "Offre HireLink"),
     });
   }
 
@@ -402,13 +450,13 @@
         unavailable.textContent = "Lien d’annonce insuffisamment fiable — candidature directe désactivée.";
         actions.appendChild(unavailable);
       }
-      if (/^https:\/\//i.test(o.sourceHome || "")) {
+      if (/^https:\/\//i.test(webSourceHome(o))) {
         const source = document.createElement("a");
         source.className = "btn btn-ghost";
-        source.href = o.sourceHome;
+        source.href = webSourceHome(o);
         source.target = "_blank";
         source.rel = "noopener";
-        source.textContent = "Source : " + (o.sourceLabel || o.source || "Web");
+        source.textContent = "Source : " + webSourceLabel(o);
         actions.appendChild(source);
       }
     } else if (sent) {
@@ -450,10 +498,39 @@
       whyTitle.textContent = "Pourquoi ce score ?";
       extra.push(whyTitle, why);
     }
-    const notice = o.external ? document.createElement("p") : null;
+    const notice = o.external ? document.createElement("div") : null;
     if (notice) {
       notice.className = "match-why";
-      notice.textContent = "Cette offre est publiée sur un site externe. Pour postuler, vous serez redirigé vers le site d'origine. HireLink ne gère pas cette candidature ni son suivi.";
+      const p = document.createElement("p");
+      p.textContent = (o.applyHint || "Cette offre est publiée sur un site externe. HireLink ne crée pas de candidature pour cette annonce.");
+      notice.appendChild(p);
+      const src = document.createElement("p");
+      src.className = "muted";
+      const srcName = webSourceLabel(o);
+      const srcHome = webSourceHome(o);
+      src.appendChild(document.createTextNode("Source : " + srcName + " — "));
+      const a = document.createElement("a");
+      const href = (O.externalLinkPolicy(o).trusted && O.externalLinkPolicy(o).href) || o.originUrl || o.applyUrl || srcHome || "";
+      a.href = href || "#";
+      a.target = "_blank";
+      // Attribution Remotive / Remote OK / Arbeitnow : lien suivi (pas de nofollow).
+      a.rel = "noopener";
+      a.textContent = href ? "ouvrir l’annonce d’origine" : "lien indisponible";
+      if (!href) a.removeAttribute("href");
+      src.appendChild(a);
+      notice.appendChild(src);
+      if (srcHome) {
+        const home = document.createElement("p");
+        home.className = "muted";
+        const ha = document.createElement("a");
+        ha.href = srcHome;
+        ha.target = "_blank";
+        ha.rel = "noopener";
+        ha.textContent = srcHome.replace(/^https?:\/\//, "");
+        home.appendChild(document.createTextNode("Site : "));
+        home.appendChild(ha);
+        notice.appendChild(home);
+      }
     }
     detail.append(head, O.facts(o), body, skillsTitle, boxes, ...extra, ...(notice ? [notice] : []), actions);
     S.mark(detail, val("rc-search").trim());
@@ -480,25 +557,14 @@
         HireLinkAPI.api("/applications/mine").catch(() => []),
         HireLinkPlaces.ready(),
       ]);
-      let items;
-      if (data && Array.isArray(data.items)) {
-        items = data.items;
-        totalElements = Number(data.totalElements || 0);
-        totalPages = Number(data.totalPages || 0);
-      } else {
-        // Compat demo : backend sans Phase 3 — repli legacy (charge complete, pagination locale).
-        const [offers, external] = await Promise.all([
-          HireLinkAPI.api("/offers/public"),
-          HireLinkAPI.api("/external-offers").catch(() => []),
-        ]);
-        const outside = (external || []).map((o) => Object.assign({ external: true, matchesProfile: o.matchAvailable === true && Number(o.matchScore) >= 50 }, o));
-        let all = (offers || []).concat(outside);
-        if (matchOnly) all = all.filter((o) => o.matchesProfile);
-        totalElements = all.length;
-        totalPages = Math.max(1, Math.ceil(totalElements / PAGE_SIZE));
-        const start = page * PAGE_SIZE;
-        items = all.slice(start, start + PAGE_SIZE);
+      // B0 fail-closed : pas de repli /offers/public + /external-offers.
+      // /external-offers n'applique pas exclude-sources ; /offers/public n'applique pas les filtres catalogue.
+      if (!data || !Array.isArray(data.items)) {
+        throw new Error("Catalogue temporairement indisponible");
       }
+      const items = data.items;
+      totalElements = Number(data.totalElements || 0);
+      totalPages = Number(data.totalPages || 0);
       const stamp = items.map((o) => o.id).join(",") + "~" + totalElements + "~" + (mine || []).map((a) => a.id + ":" + a.status).join("|") + "~" + matchOnly + "~" + qs;
       if (quiet && !append && stamp === offerStamp) { loading = false; return; }
       offerStamp = stamp;
@@ -506,6 +572,7 @@
       appliedByOffer = new Map((mine || []).map((a) => [a.jobOfferId, { appId: a.id, status: a.status }]));
       matchToggle.checked = matchOnly;
       if (!append) rebuildFacets();
+      paintWebBanner(data);
       updateHint();
       render();
       paintPager();
@@ -516,13 +583,21 @@
         if (target) openApply(target);
       }
     } catch (err) {
-      loadError = (err && err.message) || "Erreur reseau";
+      const msg = (err && err.message) || "Erreur reseau";
+      loadError = msg.indexOf("Catalogue temporairement") >= 0 ? msg : "Catalogue temporairement indisponible";
       if (!quiet) {
+        cached = [];
+        totalElements = 0;
+        totalPages = 0;
         offerList.replaceChildren();
         const p = document.createElement("p");
         p.className = "muted";
-        p.textContent = "Impossible de charger le catalogue : " + loadError;
+        p.setAttribute("role", "alert");
+        p.textContent = "Catalogue temporairement indisponible";
         offerList.appendChild(p);
+        const hint = $("match-hint");
+        if (hint) hint.textContent = "Catalogue temporairement indisponible.";
+        paintPager();
       }
     } finally {
       loading = false;
@@ -569,6 +644,8 @@
   });
   const searchInput = $("rc-search");
   if (searchInput) {
+    searchInput.placeholder = "Métier, compétence, phrase… (fautes et synonymes tolérés)";
+    searchInput.setAttribute("aria-label", "Recherche intelligente d’offres");
     let timer = 0;
     searchInput.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(reloadFromFilters, 280); });
   }

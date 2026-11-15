@@ -694,7 +694,7 @@
       '<div class="hq-preview-name"><h3>' + esc(d.name) + "</h3>" +
       (meta ? "<p>" + meta + "</p>" : "") +
       '<div class="hq-preview-signals">' + signal + "</div></div>" +
-      '<a class="btn btn-soft btn-sm hq-preview-cta" href="../company.html?name=' + encodeURIComponent(org.name || "") + '">Voir la page publique</a></div>' +
+      '<a class="btn btn-soft btn-sm hq-preview-cta" href="../company.html?name=' + encodeURIComponent(org.name || "") + '&from=' + encodeURIComponent(location.pathname.split('/').pop() || 'recruiter-team.html') + '">Voir la page publique</a></div>' +
       '<p class="hq-preview-bio">' + bio + "</p>" +
       '<p class="hq-preview-follow">' + suivi +
       "<span>Chiffre anonyme, visible uniquement ici : la fiche publique ne l’affiche pas.</span></p>" +

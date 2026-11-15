@@ -25,6 +25,60 @@
     INTERVIEW: "Phase entretien : le créneau se pose depuis le dossier du candidat.",
   };
 
+  const STATUS_TL = Object.assign({}, RC.STATUS_FR || {}, {
+    SUBMITTED: "Reçue",
+    SCREENING: "Présélection",
+    SHORTLISTED: "Shortlist",
+    INTERVIEW: "Entretien",
+    REJECTED: "Refusée",
+    WITHDRAWN: "Retirée",
+    OFFER: "Offre",
+    HIRED: "Embauché",
+  });
+
+  /** Historique chronologique via GET /applications/{id}/timeline. */
+  async function showTimeline(appOrId) {
+    const id = typeof appOrId === "object" && appOrId ? appOrId.id : appOrId;
+    const titleName = typeof appOrId === "object" && appOrId ? (appOrId.candidateName || "") : "";
+    if (id == null) return;
+    let rows = [];
+    try {
+      rows = await HireLinkAPI.api("/applications/" + id + "/timeline");
+    } catch (err) {
+      HireLink.toast("Historique", (err && err.message) || "Impossible de charger l'historique", "danger");
+      return;
+    }
+    const list = Array.isArray(rows) ? rows.slice() : [];
+    list.sort((a, b) => String(a.at || "").localeCompare(String(b.at || "")));
+    const body = list.length
+      ? '<ol class="hl-timeline">' +
+        list
+          .map((h) => {
+            const from = STATUS_TL[h.from] || h.from || "—";
+            const to = STATUS_TL[h.to] || h.to || "—";
+            const when = h.at ? new Date(h.at).toLocaleString("fr-FR") : "";
+            return (
+              "<li><strong>" +
+              from +
+              " → " +
+              to +
+              "</strong>" +
+              (when ? '<span class="muted"> · ' + when + "</span>" : "") +
+              "</li>"
+            );
+          })
+          .join("") +
+        "</ol>"
+      : '<p class="muted">Aucun événement enregistré pour ce dossier.</p>';
+    HireLink.openModal({
+      title: "Historique" + (titleName ? " · " + titleName : ""),
+      description: "Étapes enregistrées sur cette candidature.",
+      bodyHtml: body,
+      confirmLabel: "Fermer",
+      hideCancel: true,
+    });
+  }
+
   let allApps = [];
   let refusalCatalog = [];
   let ownedOffers = [];
@@ -518,7 +572,7 @@
       '<p class="muted hl-checklist-sub">' +
       sub +
       "</p>" +
-      row("chk-id", pre.id, "Identité vérifiée", "Nom et email présents dans le dossier", pre.id) +
+      row("chk-id", pre.id, "Identité renseignée", "Nom et email présents dans le dossier (pas une vérification d'identité)", pre.id) +
       row(
         "chk-cv",
         pre.cv,
@@ -812,9 +866,11 @@
         }
         const tl = document.getElementById("btn-tl");
         if (tl)
-          tl.onclick = () => {
-            HireLink.closeModal(false);
-            setTimeout(() => showTimeline(c.id), 120);
+          tl.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Ne pas fermer le dossier : la timeline s’ouvre en modal au-dessus (évite course close/open).
+            showTimeline(c);
           };
         const planBtn = document.getElementById("btn-plan-from");
         if (planBtn)

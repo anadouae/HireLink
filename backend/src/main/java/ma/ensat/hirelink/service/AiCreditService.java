@@ -1,10 +1,12 @@
 package ma.ensat.hirelink.service;
 
 import ma.ensat.hirelink.model.AiUsageLog;
+import ma.ensat.hirelink.model.Organization;
 import ma.ensat.hirelink.model.PlanTier;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.repository.AiUsageLogRepository;
+import ma.ensat.hirelink.repository.OrganizationRepository;
 import ma.ensat.hirelink.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,16 +38,19 @@ public class AiCreditService {
     private final AiUsageLogRepository aiUsageLogRepository;
     private final BillingCatalogService billingCatalogService;
     private final UserRepository userRepository;
+    private final OrganizationRepository organizationRepository;
 
     @Value("${hirelink.ai.reservation-stale-minutes:15}")
     private int staleReservationMinutes = 15;
 
     public AiCreditService(AiUsageLogRepository aiUsageLogRepository,
                            BillingCatalogService billingCatalogService,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           OrganizationRepository organizationRepository) {
         this.aiUsageLogRepository = aiUsageLogRepository;
         this.billingCatalogService = billingCatalogService;
         this.userRepository = userRepository;
+        this.organizationRepository = organizationRepository;
     }
 
     /** Une action IA réussie = un crédit. Le coût n'est pas une variable d'ajustement invisible. */
@@ -67,7 +72,17 @@ public class AiCreditService {
     /** Ce qu'une formule a consommé, fonctionnalité par fonctionnalité, depuis le début du mois. */
     public record FeatureUse(String feature, int actions, int credits) {}
 
+    /**
+     * Recruteur : la formule de l’organisation prime (évite user=ACCES alors que l’org est PREMIUM).
+     * Candidat / sans org : plan utilisateur, sinon défaut catalogue.
+     */
     public PlanTier resolveTier(User user) {
+        if (user.getRole() == Role.RECRUTEUR && user.getAssignedOrgId() != null) {
+            Organization org = organizationRepository.findById(user.getAssignedOrgId()).orElse(null);
+            if (org != null && org.getPlanTier() != null) {
+                return org.getPlanTier();
+            }
+        }
         if (user.getPlanTier() != null) return user.getPlanTier();
         return user.getRole() == Role.CANDIDAT ? PlanTier.ESSENTIEL : PlanTier.ACCES;
     }

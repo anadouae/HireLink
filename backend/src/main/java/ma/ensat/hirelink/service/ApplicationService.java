@@ -103,7 +103,12 @@ public class ApplicationService {
             throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
                     "Limite de candidatures atteinte (anti-abus)");
         }
-        Long jobOfferId = req.jobOfferId();
+        Long jobOfferId = req == null ? null : req.jobOfferId();
+        // Les annonces Web éphémères exposent un id texte (web-…) : refus explicite, jamais un 500 JPA.
+        if (jobOfferId == null || jobOfferId <= 0L) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "jobOfferId manquant ou invalide — seules les offres HireLink numériques acceptent une candidature interne");
+        }
         JobOffer offer = jobOfferRepository.findById(jobOfferId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Offre introuvable"));
         if (!offer.isPublished()) {
@@ -292,7 +297,10 @@ public class ApplicationService {
             applyRefusalCatalog(app, req.rejectionReason());
         }
 
-        if (req.status() == ApplicationStatus.REJECTED && app.getFirstDecisionAt() == null) {
+        // Première décision recruteur (avancement ou refus) — pas seulement REJECTED (SLA 1ʳᵉ réponse).
+        if (app.getFirstDecisionAt() == null
+                && req.status() != ApplicationStatus.WITHDRAWN
+                && req.status() != ApplicationStatus.SUBMITTED) {
             app.setFirstDecisionAt(Instant.now());
         }
 
@@ -302,18 +310,31 @@ public class ApplicationService {
             app.setAdvanceNote(note);
         }
 
+        // Refus : annuler proprement un entretien encore actif (historique conservé, plus de convocation active).
+        boolean interviewCancelledOnReject = false;
+        if (req.status() == ApplicationStatus.REJECTED && interviews.isActive(app)) {
+            interviews.cancel(app, "Candidature refusée — entretien annulé automatiquement.");
+            interviewCancelledOnReject = true;
+        }
+
         app.setStatus(req.status());
         applicationRepository.save(app);
 
         audit.ok("STAGE_CHANGE", actor, "APPLICATION", app.getId(), from + " → " + req.status());
         if (req.status() == ApplicationStatus.REJECTED) {
             audit.ok("APPLICATION_REFUSED", actor, "APPLICATION", app.getId(), app.getRefusalReasonCode());
+            if (interviewCancelledOnReject) {
+                audit.ok("INTERVIEW_CANCELLED", actor, "APPLICATION", app.getId(), "auto-on-reject");
+            }
         }
         String payload = buildTimelinePayload(app, req);
         timelineService.append(app.getId(), from.name(), req.status().name(), actor.getId(), payload);
         // Invitation e-mail uniquement si un créneau existe déjà : sinon, on annonce l'étape et rien de plus.
         if (req.status() == ApplicationStatus.INTERVIEW && interviews.isPlanned(app)) {
             notifier.interviewScheduled(app, false);
+        } else if (interviewCancelledOnReject) {
+            notifier.interviewCancelled(app);
+            notifier.statusChanged(app);
         } else {
             notifier.statusChanged(app);
         }
@@ -443,7 +464,7 @@ public class ApplicationService {
                 app.getInterviewVideoUrl(),
                 app.getInterviewMapUrl(),
                 app.getInterviewParticipants(),
-                app.getInterviewAt() == null ? null : app.getInterviewStatus() == null ? InterviewService.SCHEDULED : app.getInterviewStatus(),
+                interviewStatusForDto(app),
                 app.getInterviewCancelReason(),
                 app.getAdvanceNote(),
                 app.getAssignedHmUserId(),
@@ -463,6 +484,17 @@ public class ApplicationService {
                 currentScore,
                 compat != null
         );
+    }
+
+    /** Affichage DTO : ne pas inventer SCHEDULED sur un dossier déjà refusé/retiré/embauché. */
+    private static String interviewStatusForDto(Application app) {
+        if (app.getInterviewAt() == null) return null;
+        if (app.getInterviewStatus() != null) return app.getInterviewStatus();
+        ApplicationStatus st = app.getStatus();
+        if (st == ApplicationStatus.REJECTED || st == ApplicationStatus.WITHDRAWN || st == ApplicationStatus.HIRED) {
+            return InterviewService.CANCELLED;
+        }
+        return InterviewService.SCHEDULED;
     }
 
     /** Poser ou reporter un entretien (dossier à l'étape Entretien) : équipe de l'organisation uniquement. */

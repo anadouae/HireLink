@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Mon profil — HireLink</title>
   <meta name="robots" content="noindex" />
@@ -172,18 +172,14 @@
               <div class="score-track" aria-hidden="true"><span id="cv-score-bar"></span></div>
               <p class="cv-score-legend" id="cv-score-legend">Score indicatif basé sur les sections confirmées (identité, expériences, formation, compétences, langues). Ce n’est pas une extraction certifiée ni une décision de recrutement.</p>
             </div>
-            <h3>Éléments à améliorer</h3>
-            <p class="muted" id="cv-analysis-lead">Erreurs et manques lus dans les sections du CV.</p>
+            <h3>Analyse qualité CV</h3>
+            <p class="muted" id="cv-analysis-lead">Constats mesurables sur le dossier. « À corriger » uniquement pour les lacunes ; « Validé » pour les points satisfaits. Distinct du matching offre.</p>
             <div class="cv-tabs" id="cv-tabs" role="tablist"></div>
             <p class="cv-level" id="cv-level"></p>
             <ul class="cv-findings" id="cv-findings"></ul>
             <button type="button" class="btn btn-ghost btn-sm" id="cv-more">Voir le détail</button>
             <div class="coach-log" id="coach-log" hidden></div>
             <button type="button" class="btn btn-primary" id="coach-analyze" data-ai-cost>Faire la synthèse</button>
-            <form class="coach-ask" id="coach-form">
-              <input id="coach-input" type="text" maxlength="300" placeholder="Une question précise sur ce CV…" aria-label="Votre question pour le coach" />
-              <button type="submit" class="btn btn-ghost btn-sm" data-ai-cost>Interroger le coach</button>
-            </form>
           </aside>
         </section>
         </div>

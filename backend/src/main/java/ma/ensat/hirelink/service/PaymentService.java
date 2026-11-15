@@ -113,6 +113,9 @@ public class PaymentService {
         rejectCardData(body);
         long invoiceId = longOf(body.get("invoiceId"));
         String scenario = String.valueOf(body.get("scenario") == null ? "" : body.get("scenario")).trim().toUpperCase();
+        if (!"SUCCESS".equals(scenario) && !"FAILURE".equals(scenario)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Scénario de simulation inconnu.");
+        }
         String key = String.valueOf(body.get("idempotencyKey") == null ? "" : body.get("idempotencyKey")).trim();
         if (!key.matches("[A-Za-z0-9_-]{8,80}")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Clé d'idempotence invalide.");
@@ -164,7 +167,8 @@ public class PaymentService {
         invoice.setTransactionRef(tx.getReference());
         Instant end = periodEnd(invoice.getCycle(), currentEnd(user, invoice));
         invoice.setPeriodEnd(end);
-        if (Boolean.FALSE.equals(invoice.getRightsApplied())) {
+        // null ou false = droits pas encore appliqués (évite un abonnement payé sans crédits).
+        if (!Boolean.TRUE.equals(invoice.getRightsApplied())) {
             grant(user, invoice, end);
             invoice.setRightsApplied(true);
         }
