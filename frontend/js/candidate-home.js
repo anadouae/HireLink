@@ -172,64 +172,89 @@
     reloadFromFilters();
   }
 
+  function activeFilterLabels() {
+    const bits = [];
+    if (val("rc-search").trim()) bits.push("texte « " + val("rc-search").trim() + " »");
+    if (val("f-country") && val("f-country") !== "ALL") bits.push("pays " + val("f-country"));
+    if (val("f-city")) bits.push("ville " + val("f-city"));
+    if (val("f-contract")) bits.push("contrat " + val("f-contract"));
+    if (val("f-mode")) bits.push("mode " + val("f-mode"));
+    if (val("f-origin") === "hirelink" || val("f-origin") === "internal") bits.push("offres HireLink");
+    if (val("f-origin") === "external") bits.push("offres externes / Web");
+    if (val("f-company")) bits.push("entreprise " + val("f-company"));
+    if (val("f-skill")) bits.push("compétence " + val("f-skill"));
+    if (Number(val("f-match") || 0) > 0) bits.push("compatibilité min. " + val("f-match") + " %");
+    if (matchOnly) bits.push("classement par compatibilité profil");
+    return bits;
+  }
+
   function paintEmpty(query) {
-    if (val("f-origin") === "external" && !totalElements) {
+    const filters = activeFilterLabels();
+    const filterHint = filters.length
+      ? "Filtres actifs : " + filters.join(" · ") + ". Élargissez ou effacez-les pour voir d’autres annonces."
+      : "Aucune offre ne correspond à cette combinaison. Essayez d’autres critères.";
+    // items[] prime sur totalElements : des annonces Web éphémères peuvent remplir la page
+    // alors que le catalogue importé (total) est à 0.
+    if (val("f-origin") === "external" && !totalElements && !(cached && cached.length)) {
       S.emptyState(offerList, "", {
-        emptyTitle: "Aucune source externe active actuellement",
-        emptyHint: "Les connecteurs externes sont désactivés sur cette démonstration. Affichez les offres HireLink ou toutes les provenances.",
-      });
-      return;
-    }
-    if (matchOnly && !query) {
-      S.emptyState(offerList, "", {
-        emptyTitle: "Aucune offre ne correspond encore à votre profil",
-        emptyHint: "Ajoutez vos compétences à votre profil pour être orienté vers les bonnes offres, ou affichez toutes les offres.",
+        emptyTitle: "Aucune offre externe pour ces filtres",
+        emptyHint: filterHint + " Cela ne signifie pas qu’aucune annonce n’existe hors HireLink. Affichez aussi les offres HireLink, ou lancez une recherche textuelle (Recherche Web temporaire si activée).",
       });
       const row = document.createElement("div");
       row.className = "row";
-      const a = document.createElement("a");
-      a.className = "btn btn-soft btn-sm";
-      a.href = "candidate-profile.html";
-      a.textContent = "Compléter mon profil";
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "btn btn-primary btn-sm";
-      b.textContent = "Voir toutes les offres";
-      b.addEventListener("click", () => setMatchOnly(false));
-      row.append(a, b);
-      offerList.querySelector(".hl-noresult").appendChild(row);
+      b.className = "btn btn-soft btn-sm";
+      b.textContent = "Effacer les filtres";
+      b.addEventListener("click", () => { clearAll(); reloadFromFilters(); });
+      row.appendChild(b);
+      const box = offerList.querySelector(".hl-noresult");
+      if (box) box.appendChild(row);
       return;
     }
-    S.emptyState(offerList, query, { emptyTitle: "Aucune offre pour ces filtres", emptyHint: "Modifiez ou effacez les filtres pour élargir la recherche.", onClear: clearAll });
+    S.emptyState(offerList, query, {
+      emptyTitle: "Aucune offre pour ces filtres",
+      emptyHint: filterHint,
+      onClear: () => { clearAll(); reloadFromFilters(); },
+    });
     if (!query) {
       const b = document.createElement("button");
       b.type = "button";
       b.className = "btn btn-soft btn-sm";
       b.textContent = "Effacer les filtres";
-      b.addEventListener("click", clearAll);
-      offerList.querySelector(".hl-noresult").appendChild(b);
+      b.addEventListener("click", () => { clearAll(); reloadFromFilters(); });
+      const box = offerList.querySelector(".hl-noresult");
+      if (box) box.appendChild(b);
     }
   }
 
   function paintWebBanner(data) {
     const el = $("web-search-banner");
     if (!el) return;
-    if (data && data.webSearchAvailable === false && data.webSearchMessage) {
+    const coverage = data && data.webSearchCoverage ? String(data.webSearchCoverage) : "";
+    const message = data && data.webSearchMessage ? String(data.webSearchMessage) : "";
+    const technical = /=\s*(OK|SKIPPED|ERROR)\s*\(|Sources prêtes\s*:/i;
+    const bits = [];
+    if (coverage && !technical.test(coverage)) bits.push(coverage);
+    else if (message && !technical.test(message)) bits.push(message);
+    else if (data && data.webSearchAvailable === false) {
+      bits.push("Recherche Web directe inactive sur cet environnement. Les offres affichées viennent du catalogue HireLink (internes et importées).");
+    } else if (Array.isArray(data && data.webSearchSources) && data.webSearchSources.some((s) => s && Number(s.hits) > 0)) {
+      const names = data.webSearchSources
+        .filter((s) => s && Number(s.hits) > 0)
+        .map((s) => s.label || WEB_SRC_LABEL[String(s.code || "").toUpperCase()] || s.code)
+        .filter(Boolean);
+      if (names.length) bits.push("Annonces Web temporaires via " + names.join(", ") + " — ouverture sur le site d’origine.");
+    }
+    if (data && data.rankedByRelevance) {
+      bits.push("Classement par pertinence (fautes et synonymes tolérés).");
+    }
+    if (matchOnly) {
+      bits.push("Tri par estimation de compatibilité profil — ce n’est pas une chance d’embauche.");
+    }
+    if (bits.length) {
       el.hidden = false;
-      el.textContent = data.webSearchMessage;
-    } else if (data && (data.webSearchCoverage || data.webSearchMessage)) {
-      el.hidden = false;
-      const bits = [];
-      if (data.webSearchCoverage) bits.push(String(data.webSearchCoverage));
-      else if (data.webSearchMessage) bits.push(String(data.webSearchMessage));
-      if (Array.isArray(data.webSearchSources) && data.webSearchSources.length) {
-        bits.push("Sources : " + data.webSearchSources.map((s) => s.code + "=" + s.status + "(" + (s.hits || 0) + ")").join(", "));
-      }
-      if (data.rankedByRelevance) bits.push("Classement par pertinence (fautes et synonymes tolérés).");
       el.textContent = bits.join(" ");
-    } else if (data && data.rankedByRelevance) {
-      el.hidden = false;
-      el.textContent = "Résultats classés par pertinence. Les offres externes s’ouvrent sur le site d’origine — HireLink ne gère pas ces candidatures.";
     } else {
       el.hidden = true;
       el.textContent = "";
@@ -239,18 +264,13 @@
   function updateHint() {
     if (matchOnly) {
       $("match-hint").textContent = totalElements
-        ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " pour vous (score >= 50 %, pagination serveur)."
-        : "Aucune offre n'atteint 50 % avec votre profil actuel.";
+        ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " classée" + (totalElements > 1 ? "s" : "") + " par estimation de compatibilité (pagination serveur). Les scores faibles restent visibles."
+        : "Aucune offre pour ces filtres. Désactivez le classement profil ou élargissez la recherche.";
       return;
     }
-    const scoring = cached.some((o) => o.matchScore != null);
-    if (!scoring) {
-      $("match-hint").textContent = totalElements
-        ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " au catalogue (recherche unifiée)."
-        : "Correspondance non disponible : ajoutez au moins une competence dans votre profil.";
-      return;
-    }
-    $("match-hint").textContent = totalElements + " offre" + (totalElements > 1 ? "s" : "") + " au catalogue (page serveur).";
+    $("match-hint").textContent = totalElements
+      ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " au catalogue (page serveur)."
+      : "Aucune offre pour les filtres actuels.";
   }
 
   function render() {
@@ -261,6 +281,10 @@
     $("filter-summary").textContent = totalElements + " offre" + (totalElements > 1 ? "s" : "") + " · " + countryLabel + " · page " + (page + 1) + (active ? " · " + active + " filtre" + (active > 1 ? "s" : "") : "");
     offerList.replaceChildren();
     const detail = $("offer-detail");
+    // Toujours relire ?offer= : un deep-link doit afficher « Offre indisponible »
+    // si l’ID est absent, sans ouvrir silencieusement une autre fiche.
+    const fromUrl = new URLSearchParams(location.search).get("offer");
+    if (fromUrl != null && fromUrl !== "") selectedId = fromUrl;
     const requestedId = selectedId;
     if (!list.length) {
       paintEmpty(query);
@@ -330,13 +354,19 @@
 
   function card(o, selected) {
     const st = appState(o.id);
-    const badge = o.matchScore != null ? document.createElement("span") : null;
+    const badge = (matchOnly || o.matchScore != null) ? document.createElement("span") : null;
     if (badge) {
-      badge.textContent = Math.round(o.matchScore) + " %";
-      badge.title = o.matchLabel
-        || (o.external
-          ? "Indicatif : compétences citées par la source uniquement."
-          : "Compatibilité multicritère HireLink (compétences, langues, expérience, contrat, lieu).");
+      if (o.matchScore != null && o.matchAvailable !== false) {
+        badge.textContent = Math.round(o.matchScore) + " %";
+        badge.title = o.matchLabel
+          || "Estimation de compatibilité — pas une probabilité d’embauche.";
+      } else if (o.matchScore != null) {
+        badge.textContent = Math.round(o.matchScore) + " %";
+        badge.title = o.matchLabel || "Estimation indicative — l’offre reste visible.";
+      } else {
+        badge.textContent = "n/d";
+        badge.title = o.matchLabel || "Correspondance non calculée — l’offre reste visible.";
+      }
     }
     return O.card(o, {
       selected,

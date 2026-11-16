@@ -7,9 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Agrégateur multi-sources international.
@@ -74,19 +72,46 @@ public class MultiSourceWebJobDiscovery implements WebJobDiscovery {
             }
         }
 
-        String summary = coveragePreamble(country, location) + " "
-                + "Sources prêtes : " + ready + "/" + sources.size()
-                + (errors > 0 ? " (" + errors + " en erreur)." : ".")
-                + " Couverture partielle du Web uniquement — pas un index mondial exhaustif.";
+        String summary = humanCoverageSummary(country, location, ready, errors, merged.size(), reports);
 
         if (ready == 0) {
             return DiscoveryResult.unavailable(
-                    "Aucun fournisseur Web prêt. " + summary + " " + reportsSummary(reports));
+                    "La recherche Web directe est indisponible pour le moment. " + summary);
         }
         if (merged.isEmpty() && errors == ready) {
-            return DiscoveryResult.error("Tous les fournisseurs Web ont échoué. " + summary);
+            return DiscoveryResult.error(
+                    "La recherche Web n’a renvoyé aucune annonce exploitable. " + summary);
         }
         return DiscoveryResult.ok(merged, reports, summary.trim());
+    }
+
+    /** Résumé destinée au candidat : libellés métier, sans codes techniques OK/SKIPPED. */
+    private String humanCoverageSummary(
+            String country, String location, int ready, int errors, int hits, List<SourceReport> reports) {
+        StringBuilder names = new StringBuilder();
+        int contributing = 0;
+        for (SourceReport r : reports) {
+            if (r == null || !"OK".equals(r.status()) || r.hits() <= 0) continue;
+            if (contributing > 0) names.append(", ");
+            names.append(r.label() != null && !r.label().isBlank() ? r.label() : r.code());
+            contributing++;
+        }
+        StringBuilder sb = new StringBuilder(coveragePreamble(country, location));
+        sb.append(' ');
+        if (hits > 0 && contributing > 0) {
+            sb.append(hits).append(" annonce").append(hits > 1 ? "s" : "")
+                    .append(" Web temporaire").append(hits > 1 ? "s" : "")
+                    .append(" via ").append(names).append('.');
+        } else if (ready > 0) {
+            sb.append("Aucune annonce Web temporaire pour cette recherche.");
+        } else {
+            sb.append("Aucun fournisseur Web n’est prêt.");
+        }
+        if (errors > 0) {
+            sb.append(" Certains fournisseurs n’ont pas répondu.");
+        }
+        sb.append(" Couverture partielle — HireLink n’indexe pas tout le Web.");
+        return sb.toString().trim();
     }
 
     private String normalizeCountry(String countryCode) {
@@ -119,12 +144,4 @@ public class MultiSourceWebJobDiscovery implements WebJobDiscovery {
         return false;
     }
 
-    private static String reportsSummary(List<SourceReport> reports) {
-        StringBuilder sb = new StringBuilder();
-        for (SourceReport r : reports) {
-            if (sb.length() > 0) sb.append(' ');
-            sb.append(r.code()).append('=').append(r.status()).append('.');
-        }
-        return sb.toString();
-    }
 }

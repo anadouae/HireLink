@@ -164,8 +164,12 @@ class CatalogSyncAndPerfIsolationTest {
         assertFalse(items.isEmpty());
         Map first = items.get(0);
         assertTrue(Boolean.TRUE.equals(first.get("matchAvailable")));
-        assertTrue(String.valueOf(first.get("matchLabel")).toLowerCase().contains("multicritere")
-                || String.valueOf(first.get("matchLabel")).toLowerCase().contains("compatibilite"));
+        String label = String.valueOf(first.get("matchLabel")).toLowerCase()
+                .replace('é', 'e').replace('è', 'e').replace('ê', 'e');
+        assertTrue(label.contains("multicritere")
+                || label.contains("compatibilite")
+                || label.contains("competences"),
+                () -> "matchLabel inattendu: " + first.get("matchLabel"));
         assertTrue(((Number) first.get("matchScore")).doubleValue() >= 50.0);
     }
 

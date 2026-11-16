@@ -9,6 +9,7 @@ import ma.ensat.hirelink.service.ExternalJobSyncFacade;
 import ma.ensat.hirelink.service.ExternalSourceCatalog;
 import ma.ensat.hirelink.service.external.ExternalBoardDefinition;
 import ma.ensat.hirelink.service.external.ExternalBoardRegistry;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -37,19 +38,22 @@ public class ExternalJobAdminController {
     private final ExternalBoardRegistry boards;
     private final ExternalJobSyncFacade sync;
     private final CatalogListingIndexer catalogIndexer;
+    private final boolean webSearchEnabled;
 
     public ExternalJobAdminController(ExternalJobOfferRepository offers,
                                       ExternalSyncRunRepository runs,
                                       ExternalSourceCatalog catalog,
                                       ExternalBoardRegistry boards,
                                       ExternalJobSyncFacade sync,
-                                      CatalogListingIndexer catalogIndexer) {
+                                      CatalogListingIndexer catalogIndexer,
+                                      @Value("${hirelink.web-search.enabled:false}") boolean webSearchEnabled) {
         this.offers = offers;
         this.runs = runs;
         this.catalog = catalog;
         this.boards = boards;
         this.sync = sync;
         this.catalogIndexer = catalogIndexer;
+        this.webSearchEnabled = webSearchEnabled;
     }
 
     @GetMapping("/status")
@@ -93,6 +97,29 @@ public class ExternalJobAdminController {
                     .orElse(null);
             if (last != null) body.put("last", last);
         }
+        // Deux mécanismes distincts : import catalogue (sync) vs recherche Web directe (éphémère).
+        Map<String, Object> importCatalog = new LinkedHashMap<>();
+        importCatalog.put("mechanism", "CATALOG_IMPORT");
+        importCatalog.put("label", "Import catalogue (stocké)");
+        importCatalog.put("enabled", !live.isEmpty());
+        importCatalog.put("availableCount", visible.size());
+        importCatalog.put("hiddenCount", hidden);
+        importCatalog.put("syncApplicable", true);
+        importCatalog.put("summary", live.isEmpty()
+                ? "Aucun connecteur d’import n’est activé. Les annonces stockées ne sont pas rafraîchies automatiquement."
+                : "Import catalogue actif pour au moins une source. La synchronisation met à jour le catalogue stocké.");
+        body.put("importCatalog", importCatalog);
+
+        Map<String, Object> webDirect = new LinkedHashMap<>();
+        webDirect.put("mechanism", "WEB_DIRECT_SEARCH");
+        webDirect.put("label", "Recherche Web directe");
+        webDirect.put("enabled", webSearchEnabled);
+        webDirect.put("syncApplicable", false);
+        webDirect.put("providers", List.of("Remotive", "Arbeitnow", "Remote OK", "Jooble (si clé)"));
+        webDirect.put("summary", webSearchEnabled
+                ? "Recherche Web active : résultats temporaires non stockés, ouverts sur le site d’origine. Pas de synchronisation catalogue."
+                : "Recherche Web désactivée (hirelink.web-search.enabled=false). Le candidat ne reçoit pas d’annonces Web éphémères.");
+        body.put("webDirectSearch", webDirect);
         return body;
     }
 
