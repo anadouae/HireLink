@@ -109,9 +109,24 @@ public class BillingCatalogService {
         row.put("tva", amounts.tva());
         row.put("amountTtc", ttc);
         row.put("vatConfigured", amounts.configured());
+        row.put("vatRateConfigured", vatRate == null ? "" : vatRate);
+        row.put("vatHypothesisNote",
+                "Le taux configuré (ex. 0,20) est une hypothèse technique ; son applicabilité juridique n’est pas confirmée.");
+        row.put("paymentMode", "SIMULATED");
         if (!amounts.configured()) {
             row.put("message", "TVA non configurée sur le serveur : le total TTC du catalogue est affiché ; le détail HT/TVA reste non ventilé.");
         }
+        return row;
+    }
+
+    /** Recalcule HT/TVA à partir d’un TTC déjà réduit (promotion). */
+    public Map<String, Object> quoteAmountsFromTtc(int ttc) {
+        Amounts amounts = amounts(Math.max(0, ttc));
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("amountHt", amounts.ht());
+        row.put("tva", amounts.tva());
+        row.put("amountTtc", Math.max(0, ttc));
+        row.put("vatConfigured", amounts.configured());
         return row;
     }
 
@@ -123,14 +138,28 @@ public class BillingCatalogService {
      */
     @Transactional
     public BillingInvoice issuePending(Organization org, ma.ensat.hirelink.model.User debtor, PlanTier tier, String cycle) {
+        return issuePending(org, debtor, tier, cycle, null, -1);
+    }
+
+    /**
+     * @param promoNote libellé promo éventuel (historique)
+     * @param forcedTtc TTC déjà réduit (&lt; 0 = prix catalogue)
+     */
+    @Transactional
+    public BillingInvoice issuePending(Organization org, ma.ensat.hirelink.model.User debtor, PlanTier tier,
+                                       String cycle, String promoNote, int forcedTtc) {
         CommercialPlan plan = require(tier);
         String period = "year".equalsIgnoreCase(cycle) ? "year" : "month";
-        int ttc = "year".equals(period) ? plan.getYearlyMad() : plan.getMonthlyMad();
-        if (ttc <= 0) {
+        int listTtc = "year".equals(period) ? plan.getYearlyMad() : plan.getMonthlyMad();
+        if (listTtc <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette formule est gratuite : elle ne produit pas de facture.");
         }
+        int ttc = forcedTtc >= 0 ? forcedTtc : listTtc;
+        if (ttc < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Montant TTC invalide.");
+        }
         BillingInvoice open = findOpen(org, debtor, plan.getCode(), period);
-        if (open != null) return open;
+        if (open != null && forcedTtc < 0) return open;
         Amounts amounts = amounts(ttc);
         BillingInvoice invoice = new BillingInvoice();
         invoice.setNumber(org != null ? nextNumber(org.getId()) : nextUserNumber(debtor.getId()));
@@ -146,6 +175,16 @@ public class BillingCatalogService {
         invoice.setStatus("NON_PAYEE");
         invoice.setRightsApplied(false);
         invoice.setIssuedAt(Instant.now());
+        String note = "";
+        if (promoNote != null && !promoNote.isBlank()) {
+            note = "Promotion : " + promoNote.trim();
+            if (forcedTtc >= 0 && forcedTtc != listTtc) {
+                note += " · catalogue " + listTtc + " MAD TTC → " + ttc + " MAD TTC";
+            }
+        }
+        note = (note + " · Paiement simulé · prix TTC (TVA hypothèse config)").trim();
+        if (note.startsWith("·")) note = note.substring(1).trim();
+        invoice.setNote(note);
         if (org != null) {
             invoice.setBillToName(org.getName());
             invoice.setBillToEmail(debtor.getEmail());
@@ -194,19 +233,6 @@ public class BillingCatalogService {
     }
 
     /** Les documents historiques restent lisibles. Cette version ne crée plus d'avoir et ne change pas un statut à la main. */
-
-    public Map<String, Object> toPlan(CommercialPlan plan) {
-        Map<String, Object> row = new LinkedHashMap<>();
-        row.put("code", plan.getCode());
-        row.put("label", plan.getLabel());
-        row.put("audience", plan.getAudience());
-        row.put("monthlyMad", plan.getMonthlyMad());
-        row.put("yearlyMad", plan.getYearlyMad());
-        row.put("credits", plan.getCredits());
-        row.put("features", plan.getFeatures() == null ? "" : plan.getFeatures());
-        row.put("detail", plan.getFeatures() == null ? "" : plan.getFeatures().replace("\n", " · "));
-        return row;
-    }
 
     /**
      * La ligne se lit dans une session ouverte : après une écriture, l'entité rendue par save() est
@@ -268,14 +294,18 @@ public class BillingCatalogService {
         return prefix + (alreadyIssued + 1);
     }
 
-    /** Catalogue des plans créé une fois au démarrage (jamais pendant une requête de lecture). */
+    /**
+     * Filet de sécurité si la migration Vague 2 n’a pas encore tourné :
+     * catalogue minimal. La source de vérité à jour est PlanCatalogMigrationService.
+     */
     @EventListener(ApplicationReadyEvent.class)
     public void ensureDefaults() {
         if (planRepository.count() > 0) return;
-        seed("ACCES", "Accès", "RECRUTEUR", 0, 0, 20, "Publication d’offres\nSuivi des candidatures\nJusqu’à 5 sièges\n20 usages IA par mois");
-        seed("PREMIUM", "Premium", "RECRUTEUR", 299, 2990, 200, "Jusqu’à 25 sièges\n200 usages IA par mois\nCouronne Premium");
-        seed("ESSENTIEL", "Essentiel", "CANDIDAT", 0, 0, 5, "Candidatures\nMatching des compétences\n5 usages IA par mois");
-        seed("PERFORMANCE", "Performance", "CANDIDAT", 39, 390, 40, "40 usages IA par mois\nPréparation d’entretien\nRéécriture de profil");
+        seed("ESSENTIEL", "Essentiel", "RECRUTEUR", 0, 0, 0, "3 offres actives\n1 siège");
+        seed("PROFESSIONNEL", "Professionnel", "RECRUTEUR", 299, 2990, 100, "20 offres actives\n5 sièges\n100 crédits IA / mois");
+        seed("ENTREPRISE", "Entreprise", "RECRUTEUR", 699, 6990, 200, "Offres illimitées (garde-fou)\n25 sièges\n200 crédits IA / mois");
+        seed("GRATUIT", "Gratuit", "CANDIDAT", 0, 0, 5, "5 crédits IA / 30 jours");
+        seed("PERFORMANCE", "Performance", "CANDIDAT", 39, 390, 40, "40 crédits IA / mois");
     }
 
     private void seed(String code, String label, String audience, int month, int year, int credits, String features) {
@@ -288,5 +318,37 @@ public class BillingCatalogService {
         plan.setCredits(credits);
         plan.setFeatures(features);
         planRepository.save(plan);
+    }
+
+    public Map<String, Object> toPlan(CommercialPlan plan) {
+        Map<String, Object> row = toPlanBase(plan);
+        try {
+            PlanTier tier = PlanTier.valueOf(plan.getCode());
+            row.put("seats", tier.isRecruiterPlan() ? tier.seatLimit() : null);
+            row.put("activeOffers", tier.isRecruiterPlan() ? tier.activeOfferLimit() : null);
+            row.put("offersUnlimited", tier.isRecruiterPlan() && tier.unlimitedOffers());
+            row.put("paid", tier.isPaid());
+            row.put("displayLabel", tier.displayLabel());
+        } catch (Exception ignored) {
+            row.put("displayLabel", plan.getLabel());
+        }
+        row.put("receivedApplicationsUnlimited", true);
+        row.put("currency", "MAD");
+        row.put("priceIsTtc", true);
+        row.put("paymentMode", "SIMULATED");
+        return row;
+    }
+
+    private Map<String, Object> toPlanBase(CommercialPlan plan) {
+        Map<String, Object> row = new LinkedHashMap<>();
+        row.put("code", plan.getCode());
+        row.put("label", plan.getLabel());
+        row.put("audience", plan.getAudience());
+        row.put("monthlyMad", plan.getMonthlyMad());
+        row.put("yearlyMad", plan.getYearlyMad());
+        row.put("credits", plan.getCredits());
+        row.put("features", plan.getFeatures() == null ? "" : plan.getFeatures());
+        row.put("detail", plan.getFeatures() == null ? "" : plan.getFeatures().replace("\n", " · "));
+        return row;
     }
 }

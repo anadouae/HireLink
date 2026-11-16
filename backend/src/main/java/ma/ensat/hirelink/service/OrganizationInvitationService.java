@@ -71,13 +71,15 @@ public class OrganizationInvitationService {
         }
         Organization org = ownerMembership.getOrganization();
         organizations.lockOrganization(org.getId());
-        int maxMembers = (org.getPlanTier() == null ? PlanTier.ACCES : org.getPlanTier()).seatLimit();
+        PlanTier inviteTier = PlanTier.normalize(org.getPlanTier(), Role.RECRUTEUR);
+        int maxMembers = inviteTier.seatLimit();
         // un compte en pause occupe toujours son siège : il peut être rétabli, ce n'est pas un départ
         long seatCount = memberships.countTeamSeats(org.getId());
         if (seatCount >= maxMembers) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Capacité d'équipe atteinte (" + seatCount + "/" + maxMembers + " sièges). "
-                            + "Retirez un compte en pause ou passez à la formule supérieure.");
+            throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
+                    "Capacité d'équipe atteinte (" + seatCount + "/" + maxMembers + " sièges sur "
+                            + inviteTier.displayLabel() + "). Les membres existants sont conservés ; "
+                            + "passez à une formule supérieure pour de nouvelles invitations.");
         }
         User user = users.findByEmailIgnoreCase(email).orElse(null);
         if (user != null && user.getRole() == Role.CANDIDAT) {
@@ -177,11 +179,11 @@ public class OrganizationInvitationService {
                 invitation.getOrganization().getId(), user.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invitation invalide."));
         boolean alreadySeated = membership.isActive() || membership.getSuspendedAt() != null;
-        PlanTier tier = invitation.getOrganization().getPlanTier() == null
-                ? PlanTier.ACCES : invitation.getOrganization().getPlanTier();
+        PlanTier tier = PlanTier.normalize(invitation.getOrganization().getPlanTier(), Role.RECRUTEUR);
         if (!alreadySeated && memberships.countTeamSeats(invitation.getOrganization().getId()) >= tier.seatLimit()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Capacité d'équipe atteinte (" + tier.seatLimit() + " sièges). L'invitation ne peut pas être acceptée.");
+                    "Capacité d'équipe atteinte (" + tier.seatLimit() + " sièges sur " + tier.displayLabel()
+                            + "). Les membres existants sont conservés ; l'invitation ne peut pas être acceptée.");
         }
         membership.setOrgRole(invitation.getOrgRole());
         membership.setActive(true);

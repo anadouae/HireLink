@@ -47,7 +47,7 @@ public class Organization {
     private String presentation;
     @Enumerated(EnumType.STRING)
     @Column(name = "plan_tier", nullable = false, length = 24)
-    private PlanTier planTier = PlanTier.ACCES;
+    private PlanTier planTier = PlanTier.ESSENTIEL;
 
     /** Fin de la période déjà réglée. Nul si aucun paiement de cette version n'a fixé de date. */
     @Column(name = "subscription_ends_at")

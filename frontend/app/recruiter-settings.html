@@ -67,12 +67,16 @@
             <div class="rc-card-body"><div class="rc-setting"><div>Mode sombre<small>Réduit la fatigue visuelle en faible luminosité</small></div><label class="switch"><input type="checkbox" id="theme-toggle" /><span class="slider"></span></label></div></div></section>
         </div>
         <div class="rc-panel" id="tab-plans" hidden>
-          <div class="rc-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
-            <section class="rc-card rc-plan" id="plan-access"><div class="rc-card-head"><div><h2>Accès</h2><p id="mark-access">Formule en cours</p></div></div><div class="rc-card-body"><ul class="rc-checks">
-              <li>Un siège pour publier et suivre le pipeline</li><li>Délai de réponse affiché sur chaque offre</li><li>Vérification de l’entreprise avant publication</li><li>Dossier candidat : CV, étapes, motif de refus</li></ul></div></section>
-            <section class="rc-card rc-plan" id="plan-premium"><div class="rc-card-head"><div><h2>Premium · 299 MAD / mois</h2><p id="mark-premium">À activer</p></div></div><div class="rc-card-body"><ul class="rc-checks">
-              <li>Jusqu’à 25 sièges : Créateur et Recruteur (5 en Accès)</li><li>200 usages de l’assistant IA par mois, contre 20 en Accès</li><li>Couronne « Premium » dans votre barre d’espace</li></ul></div><div class="rc-card-body"><p class="rc-muted" style="margin:0;font-size: var(--text-sm)">Pipeline, alertes de délai, reporting et export : déjà inclus dans Accès. La formule ne change rien à la visibilité de vos offres.</p></div>
-              <div class="rc-card-foot"><p class="rc-muted" id="plan-owner-only" hidden style="margin:0 0 .6rem;font-size: var(--text-sm)">Seul le créateur de l’espace change la formule. Demandez-lui de le faire depuis cette page.</p><button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Résilier mon abonnement</button><button type="button" class="btn btn-primary" id="btn-billing-premium">Activer Premium</button></div></section>
+          <p class="rc-muted" style="margin:0 0 1rem;font-size:var(--text-sm)">Prix TTC catalogue · paiement <strong>simulé</strong> · TVA 20&nbsp;% = hypothèse de configuration. Aucun plafond sur les candidatures reçues.</p>
+          <div class="rc-grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))">
+            <section class="rc-card rc-plan" id="plan-essentiel"><div class="rc-card-head"><div><h2>Essentiel · gratuit</h2><p id="mark-essentiel">Formule en cours</p></div></div><div class="rc-card-body"><ul class="rc-checks">
+              <li>3 offres actives</li><li>1 siège</li><li>Publication et suivi des candidatures</li><li>Sans crédits IA inclus</li></ul></div></section>
+            <section class="rc-card rc-plan" id="plan-professionnel"><div class="rc-card-head"><div><h2>Professionnel · 299 MAD TTC / mois</h2><p id="mark-professionnel">À activer</p></div></div><div class="rc-card-body"><ul class="rc-checks">
+              <li>20 offres actives</li><li>5 sièges</li><li>100 crédits IA / mois</li></ul></div>
+              <div class="rc-card-foot"><button type="button" class="btn btn-primary" id="btn-billing-pro">Choisir Professionnel</button></div></section>
+            <section class="rc-card rc-plan" id="plan-entreprise"><div class="rc-card-head"><div><h2>Entreprise · 699 MAD TTC / mois</h2><p id="mark-entreprise">À activer</p></div></div><div class="rc-card-body"><ul class="rc-checks">
+              <li>Offres actives illimitées (garde-fou)</li><li>25 sièges</li><li>200 crédits IA / mois</li></ul></div>
+              <div class="rc-card-foot"><p class="rc-muted" id="plan-owner-only" hidden style="margin:0 0 .6rem;font-size: var(--text-sm)">Seul le créateur de l’espace change la formule.</p><button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Résilier</button><button type="button" class="btn btn-primary" id="btn-billing-ent">Choisir Entreprise</button></div></section>
           </div>
           <section class="rc-card" style="margin-top:1rem"><div class="rc-card-head"><div><h2>Factures de l’entreprise</h2><p>Même document que celui consulté par l’administration. Le bouton Payer n’apparaît que pour le débiteur.</p></div></div>
             <div class="rc-card-body" id="org-invoices"></div></section>

@@ -10,6 +10,7 @@ import ma.ensat.hirelink.repository.OrganizationRepository;
 import ma.ensat.hirelink.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class AiCreditService {
     private final BillingCatalogService billingCatalogService;
     private final UserRepository userRepository;
     private final OrganizationRepository organizationRepository;
+    private final EntityManager entityManager;
 
     @Value("${hirelink.ai.reservation-stale-minutes:15}")
     private int staleReservationMinutes = 15;
@@ -46,11 +48,13 @@ public class AiCreditService {
     public AiCreditService(AiUsageLogRepository aiUsageLogRepository,
                            BillingCatalogService billingCatalogService,
                            UserRepository userRepository,
-                           OrganizationRepository organizationRepository) {
+                           OrganizationRepository organizationRepository,
+                           EntityManager entityManager) {
         this.aiUsageLogRepository = aiUsageLogRepository;
         this.billingCatalogService = billingCatalogService;
         this.userRepository = userRepository;
         this.organizationRepository = organizationRepository;
+        this.entityManager = entityManager;
     }
 
     /** Une action IA réussie = un crédit. Le coût n'est pas une variable d'ajustement invisible. */
@@ -80,11 +84,11 @@ public class AiCreditService {
         if (user.getRole() == Role.RECRUTEUR && user.getAssignedOrgId() != null) {
             Organization org = organizationRepository.findById(user.getAssignedOrgId()).orElse(null);
             if (org != null && org.getPlanTier() != null) {
-                return org.getPlanTier();
+                return PlanTier.normalize(org.getPlanTier(), Role.RECRUTEUR);
             }
         }
-        if (user.getPlanTier() != null) return user.getPlanTier();
-        return user.getRole() == Role.CANDIDAT ? PlanTier.ESSENTIEL : PlanTier.ACCES;
+        return PlanTier.normalize(user.getPlanTier(),
+                user.getRole() == null ? Role.CANDIDAT : user.getRole());
     }
 
     /** Le plafond mensuel vient du catalogue de plans (modifiable par l'administration). */
@@ -97,8 +101,9 @@ public class AiCreditService {
         PlanTier tier = resolveTier(user);
         ma.ensat.hirelink.model.CommercialPlan plan = billingCatalogService.require(tier);
         int limit = plan.getCredits();
-        int u = usedThisMonth(user.getId());
-        boolean paid = tier == PlanTier.PREMIUM || tier == PlanTier.PERFORMANCE;
+        int u = tier.rollingThirtyDayCredits() ? usedLastDays(user.getId(), 30) : usedThisMonth(user.getId());
+        boolean paid = tier.isPaid();
+        int days = tier.rollingThirtyDayCredits() ? daysToRollingReset(user) : daysToReset();
         return new CreditStatus(
                 tier.name(),
                 plan.getLabel(),
@@ -107,7 +112,7 @@ public class AiCreditService {
                 u,
                 Math.max(0, limit - u),
                 COST_PER_ACTION,
-                daysToReset(),
+                days,
                 paid,
                 u < limit
         );
@@ -138,9 +143,27 @@ public class AiCreditService {
     private int usedThisMonth(Long userId) {
         YearMonth ym = YearMonth.now(ZoneOffset.UTC);
         Instant from = ym.atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+        // Borne haute exclusive : +1 mois déjà ; pas de « now » qui exclurait une ligne à la même ms.
         Instant to = ym.plusMonths(1).atDay(1).atStartOfDay().toInstant(ZoneOffset.UTC);
         Integer sum = aiUsageLogRepository.sumCreditsSpent(userId, from, to);
         return sum == null ? 0 : sum;
+    }
+
+    /** Gratuit : fenêtre glissante 30 jours (renouvellement sans double attribution calendaire). */
+    private int usedLastDays(Long userId, int days) {
+        Instant now = Instant.now();
+        Instant from = now.minus(Duration.ofDays(days));
+        // Marge haute : Instant/MySQL DATETIME peut arrondir ; createdAt < now exclurait la ligne venant d'être écrite.
+        Instant to = now.plusSeconds(60);
+        Integer sum = aiUsageLogRepository.sumCreditsSpent(userId, from, to);
+        return sum == null ? 0 : sum;
+    }
+
+    private int daysToRollingReset(User user) {
+        Instant created = user.getCreatedAt() == null ? Instant.now() : user.getCreatedAt();
+        long elapsed = Duration.between(created, Instant.now()).toDays();
+        long intoCycle = Math.floorMod(elapsed, 30L);
+        return (int) (30 - intoCycle);
     }
 
     /**
@@ -151,14 +174,20 @@ public class AiCreditService {
      */
     @Transactional
     public AiUsageLog reserve(User user, String feature) {
+        // Verrou ligne + flush : les réservations concurrentes voient le débit déjà gravé.
         userRepository.findByIdForUpdate(user.getId())
                 .orElseThrow(() -> new java.util.NoSuchElementException("Compte inconnu"));
-        CreditStatus st = status(user);
-        if (!st.allowed()) {
+        entityManager.flush();
+        // Calcul direct (pas status() readOnly) pour rester dans la même transaction d'écriture.
+        PlanTier tier = resolveTier(user);
+        int limit = limitFor(tier);
+        int used = tier.rollingThirtyDayCredits() ? usedLastDays(user.getId(), 30) : usedThisMonth(user.getId());
+        if (used >= limit) {
+            int days = tier.rollingThirtyDayCredits() ? daysToRollingReset(user) : daysToReset();
             throw new org.springframework.web.server.ResponseStatusException(
                     org.springframework.http.HttpStatus.PAYMENT_REQUIRED,
-                    "Crédits IA épuisés (" + st.used() + "/" + st.limit() + " ce mois). Le compteur repart dans "
-                            + st.daysToReset() + " jour" + (st.daysToReset() > 1 ? "s" : "") + ".");
+                    "Crédits IA épuisés (" + used + "/" + limit + " ce mois). Le compteur repart dans "
+                            + days + " jour" + (days > 1 ? "s" : "") + ".");
         }
         AiUsageLog row = new AiUsageLog();
         row.setUserId(user.getId());
@@ -167,7 +196,7 @@ public class AiCreditService {
         row.setProvider("reservation");
         row.setCreditsSpent(COST_PER_ACTION);
         row.setSuccess(false);
-        return aiUsageLogRepository.save(row);
+        return aiUsageLogRepository.saveAndFlush(row);
     }
 
     /** Liquidation après l'appel : succès = le débit reste ; échec = 0 crédit, aucune perte injustifiée. */

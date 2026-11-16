@@ -294,13 +294,13 @@
 
       <div class="pricing" id="pricing-candidat" role="tabpanel" aria-labelledby="price-tab-candidat">
         <article class="price-card">
-          <p class="eyebrow">Essentiel</p>
+          <p class="eyebrow">Gratuit</p>
           <div class="price">0 <small>MAD</small></div>
           <p class="price-note">Activez votre recherche sans friction.</p>
           <ul>
-            <li><strong>Transparence totale :</strong> Postuler et suivre son parcours en temps réel.</li>
-            <li><strong>Matching intelligent :</strong> Offres classées selon votre profil réel.</li>
-            <li><strong>CV déposé, pas recopié :</strong> Synthèse automatique et points manquants signalés.</li>
+            <li><strong>Transparence totale :</strong> postuler et suivre son parcours en temps réel.</li>
+            <li><strong>Matching local :</strong> offres classées selon votre profil (aide, jamais filtre d’exclusion).</li>
+            <li><strong>5 crédits IA / 30 jours :</strong> 1 action réussie = 1 crédit ; un échec ne débite pas.</li>
           </ul>
           <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=CANDIDAT">Activer ma recherche</a>
         </article>
@@ -310,42 +310,53 @@
           <div class="price">39 <small>MAD / mois</small></div>
           <p class="price-note">Beaucoup plus d’usages du même assistant.</p>
           <ul>
-            <li><strong>40 usages IA par mois :</strong> contre 5 en Essentiel, 1 usage = 1 crédit.</li>
+            <li><strong>40 crédits IA / mois :</strong> contre 5 en Gratuit.</li>
             <li><strong>Réécriture de profil :</strong> synthèse, pitch et contrôle de la langue.</li>
-            <li><strong>Préparation d’entretien :</strong> questions et réponses à partir du poste et de votre CV.</li>
+            <li><strong>Préparation d’entretien :</strong> questions à partir du poste et de votre CV.</li>
           </ul>
           <p class="price-note">Votre profil n’est ni mieux classé ni mis en avant : le matching reste calculé sur vos compétences.</p>
-          <a class="btn btn-primary btn-block" href="checkout.html?plan=candidate">Passer en Performance</a>
+          <a class="btn btn-primary btn-block" href="checkout.html?plan=candidate&planCode=PERFORMANCE">Passer en Performance</a>
         </article>
       </div>
 
       <div class="pricing" id="pricing-recruteur" role="tabpanel" aria-labelledby="price-tab-recruteur" hidden>
         <article class="price-card">
-          <p class="eyebrow">Accès</p>
+          <p class="eyebrow">Essentiel</p>
           <div class="price">0 <small>MAD</small></div>
-          <p class="price-note">Automatisez votre sourcing de confiance.</p>
+          <p class="price-note">Publier et suivre sans abonnement.</p>
           <ul>
-            <li><strong>Pipeline fluide :</strong> Outils de suivi des candidatures (ATS) inclus.</li>
-            <li><strong>Badge de confiance :</strong> contrôle d’identité d’entreprise (ICE + e-mail professionnel) avant publication.</li>
-            <li><strong>Engagement visible :</strong> Délais de réponse affichés d’après vos vraies réponses.</li>
+            <li><strong>3 offres actives</strong> · <strong>1 siège</strong> · crédits IA selon catalogue.</li>
+            <li><strong>Pipeline ATS :</strong> étapes contrôlées côté serveur, motif de refus obligatoire.</li>
+            <li><strong>Badge ICE :</strong> vérification entreprise avant publication.</li>
           </ul>
           <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=RECRUTEUR">Activer mon sourcing</a>
         </article>
         <article class="price-card is-featured">
-          <span class="tag">ROI entreprise</span>
-          <p class="eyebrow">Premium</p>
+          <span class="tag">Équipe</span>
+          <p class="eyebrow">Professionnel</p>
           <div class="price">299 <small>MAD / mois</small></div>
-          <p class="price-note">Une équipe complète, et beaucoup d’usages IA.</p>
+          <p class="price-note">Capacité d’équipe et d’offres élargie.</p>
           <ul>
-            <li><strong>Collaboration totale :</strong> jusqu’à 25 sièges (5 en Accès), rôles d’équipe définis.</li>
-            <li><strong>Assistant IA :</strong> 200 usages par mois contre 20 en Accès.</li>
-            <li><strong>Pilotage par la donnée :</strong> alertes de délai, motifs de refus, reporting d’équipe.</li>
+            <li><strong>20 offres actives</strong> · <strong>5 sièges</strong> · <strong>100 crédits IA / mois</strong>.</li>
+            <li><strong>Invitations recruteurs</strong> dans la limite de sièges (grandfathering si downgrade).</li>
+            <li><strong>Paiement simulé</strong> au checkout (HT / TVA / TTC catalogue).</li>
           </ul>
-          <p class="price-note">La formule ne change pas la visibilité de vos offres : elles restent classées sur les compétences.</p>
-          <a class="btn btn-primary btn-block" href="checkout.html?plan=recruiter">Activer Premium</a>
+          <p class="price-note">La formule ne change pas le classement des offres côté candidats.</p>
+          <a class="btn btn-primary btn-block" href="checkout.html?plan=recruiter&planCode=PROFESSIONNEL">Voir Professionnel</a>
+        </article>
+        <article class="price-card">
+          <p class="eyebrow">Entreprise</p>
+          <div class="price">699 <small>MAD / mois</small></div>
+          <p class="price-note">Pour les organisations structurées.</p>
+          <ul>
+            <li><strong>Offres actives élargies</strong> (garde-fou technique) · <strong>25 sièges</strong>.</li>
+            <li><strong>200 crédits IA / mois</strong>.</li>
+            <li><strong>Membres déjà présents</strong> conservés en cas de changement de formule.</li>
+          </ul>
+          <a class="btn btn-ghost btn-block" href="checkout.html?plan=recruiter&planCode=ENTREPRISE">Voir Entreprise</a>
         </article>
       </div>
-      <p class="pricing-footnote">Vous ne payez pas le bruit — vous investissez la valeur. Gratuit pour activer. Performance et Premium pour multiplier les usages de l’assistant et les sièges d’équipe.</p>
+      <p class="pricing-footnote">Cinq formules catalogue : Gratuit / Performance (candidat) · Essentiel / Professionnel / Entreprise (recruteur). Paiement simulé — aucun débit bancaire réel en démonstration.</p>
     </section>
 
     <section class="finale" aria-labelledby="finale-title">
@@ -381,10 +392,10 @@
         </div>
         <div class="footer-col">
           <span class="footer-label">Formules</span>
-          <a href="#tarifs">Candidat · Essentiel</a>
+          <a href="#tarifs">Candidat · Gratuit</a>
           <a href="#tarifs">Candidat · Performance</a>
-          <a href="#tarifs">Recruteur · Accès</a>
-          <a href="#tarifs">Recruteur · Premium</a>
+          <a href="#tarifs">Recruteur · Essentiel</a>
+          <a href="#tarifs">Recruteur · Professionnel</a>
         </div>
         <div class="footer-col" id="footer-cities">
           <span class="footer-label">Offres par ville</span>

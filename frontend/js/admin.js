@@ -85,7 +85,7 @@
     const kpi = (label, value, hint, href) => '<a class="db-kpi" href="' + href + '"><small>' + esc(label) + "</small><b>" + esc(String(value == null ? "—" : value)) + "</b><span>" + esc(hint || "") + "</span></a>";
     $("stats").innerHTML =
       kpi("Comptes", stats.users, (stats.candidates || 0) + " candidats · " + (stats.recruiters || 0) + " recruteurs", "#users/all") +
-      kpi("Entreprises", orgs.length, orgs.filter((o) => o.planTier === "PREMIUM").length + " en Premium", "#orgs/all") +
+      kpi("Entreprises", orgs.length, orgs.filter((o) => o.planTier === "PROFESSIONNEL" || o.planTier === "PREMIUM" || o.planTier === "ENTREPRISE").length + " payantes", "#orgs/all") +
       kpi("Offres en ligne", state.offers.filter((o) => o.published && !o.suspended && !o.closedAt && !o.archivedAt).length, (stats.offers || 0) + " au total", "#offers/all") +
       kpi("Candidatures", stats.applications, "Toutes offres confondues", "#dash");
 
@@ -121,7 +121,7 @@
     const rows = HireLinkSearch.rank(state.orgs.filter((o) => {
       if (f === "pending" && o.verified) return false;
       if (f === "verified" && !o.verified) return false;
-      return !(f === "premium" && o.planTier !== "PREMIUM");
+      return !(f === "premium" && !(o.planTier === "PREMIUM" || o.planTier === "PROFESSIONNEL" || o.planTier === "ENTREPRISE"));
     }), q, [{ get: (o) => o.name, weight: 3 }, { get: (o) => o.city, weight: 2 }, { get: (o) => o.ownerEmail, weight: 1 }, { get: (o) => o.ice, weight: 2 }]);
     const body = $("orgs-body");
     if (!rows.length) {
@@ -728,33 +728,47 @@
       const data = await HireLinkAPI.api("/admin/external-offers/status");
       const last = data.last;
       const enabled = !!data.enabled;
+      const importCat = data.importCatalog || {};
+      const webDirect = data.webDirectSearch || {};
       const sources = data.sources || [];
       const sourceLines = sources.length
         ? sources.map((s) => {
             const on = !!s.enabled;
             const run = s.last;
-            return '<div><span class="rc-muted">' + esc(s.label || s.code) + "</span><strong>" +
-              (on ? "Activée" : "Désactivée") +
-              (run ? " · " + esc(App.fmtDateTime(run.finishedAt || "")) : "") +
+            const kind = (s.kind || s.channel || "").toString().toLowerCase().includes("web")
+              ? " (recherche Web — pas d’import)"
+              : " (import catalogue)";
+            return '<div><span class="rc-muted">' + esc(s.label || s.code) + kind + "</span><strong>" +
+              (on ? "Import activé" : "Import désactivé") +
+              (run ? " · sync " + esc(App.fmtDateTime(run.finishedAt || "")) : "") +
               "</strong></div>";
           }).join("")
-        : '<div><span class="rc-muted">Sources</span><strong>Aucune configurée</strong></div>';
+        : '<div><span class="rc-muted">Connecteurs d’import</span><strong>Aucun configuré</strong></div>';
       box.innerHTML =
         '<div class="ext-status-grid">' +
+        '<div style="grid-column:1/-1"><strong>1. Import catalogue (stocké)</strong><p class="rc-muted" style="margin:.35rem 0 0">' +
+        esc(importCat.summary || (enabled
+          ? "Les annonces importées sont stockées et visibles dans le catalogue."
+          : "Aucun connecteur d’import n’est activé. Cela n’empêche pas une Recherche Web distincte côté candidat.")) +
+        "</p></div>" +
         sourceLines +
-        '<div><span class="rc-muted">Offres importées visibles</span><strong>' + (data.availableCount || 0) + "</strong></div>" +
+        '<div><span class="rc-muted">Annonces importées visibles</span><strong>' + (data.availableCount || 0) + "</strong></div>" +
         '<div><span class="rc-muted">Masquées</span><strong>' + (data.hiddenCount || 0) + "</strong></div>" +
-        '<div><span class="rc-muted">Dernière synchronisation</span><strong>' +
-        (last ? esc(App.fmtDateTime(last.finishedAt || last.startedAt || "")) + (last.message ? " · " + esc(last.message) : "") : "Jamais") +
+        '<div><span class="rc-muted">Dernière synchronisation (import uniquement)</span><strong>' +
+        (last ? esc(App.fmtDateTime(last.finishedAt || last.startedAt || "")) + (last.message ? " · " + esc(last.message) : "") : "Jamais — normal si l’import est désactivé") +
         "</strong></div>" +
-        (!enabled
-          ? '<p class="rc-muted" style="grid-column:1/-1;margin:0">Aucune source n’est activée. « Actualiser l’affichage » recharge uniquement ce tableau.</p>'
-          : '<p class="rc-muted" style="grid-column:1/-1;margin:0">« Synchroniser les offres » interroge chaque source activée. Les annonces Remote OK restent masquées tant que cette source est désactivée.</p>') +
+        '<div style="grid-column:1/-1;margin-top:.6rem"><strong>2. Recherche Web directe</strong><p class="rc-muted" style="margin:.35rem 0 0">' +
+        esc(webDirect.summary || "État de la recherche Web non communiqué par l’API.") +
+        (Array.isArray(webDirect.providers) && webDirect.providers.length
+          ? " Fournisseurs prévus : " + webDirect.providers.map(esc).join(", ") + "."
+          : "") +
+        "</p></div>" +
+        '<p class="rc-muted" style="grid-column:1/-1;margin:0">La synchronisation ci-dessous concerne uniquement l’import catalogue. Elle n’active pas la Recherche Web et n’est pas lancée automatiquement.</p>' +
         "</div>";
       if (extSync) {
         extSync.disabled = !enabled;
-        extSync.title = enabled ? "Importer / mettre à jour les offres externes" : "Import désactivé dans la configuration";
-        extSync.textContent = enabled ? "Synchroniser les offres" : "Synchronisation indisponible";
+        extSync.title = enabled ? "Importer / mettre à jour le catalogue stocké" : "Import catalogue désactivé dans la configuration";
+        extSync.textContent = enabled ? "Synchroniser l’import catalogue" : "Synchronisation import indisponible";
       }
       if (extRefresh) extRefresh.textContent = "Actualiser l’affichage";
       body.replaceChildren();

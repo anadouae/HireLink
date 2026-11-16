@@ -60,42 +60,94 @@ public class PaymentService {
     /** Devis catalogue pour le rôle connecté (sans créer de facture). */
     @Transactional(readOnly = true)
     public Map<String, Object> quote(User user, String cycle) {
+        return quote(user, cycle, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> quote(User user, String cycle, String planCode, String promoCode) {
         user = users.findById(user.getId()).orElseThrow();
-        PlanTier target = targetPaidTier(user);
+        PlanTier target = resolveTargetPaidTier(user, planCode);
         Map<String, Object> quote = billing.quote(target, cycle);
         quote.put("role", user.getRole().name());
+        quote.put("paymentMode", "SIMULATED");
+        if (promoCode != null && !promoCode.isBlank()) {
+            // Délégué au service promotions via BillingController ; ici filet simple non appliqué.
+            quote.put("promoRequested", promoCode.trim());
+        }
         return quote;
     }
 
-    private PlanTier targetPaidTier(User user) {
-        if (user.getRole() == Role.CANDIDAT) return PlanTier.PERFORMANCE;
+    private PlanTier resolveTargetPaidTier(User user, String planCode) {
+        if (user.getRole() == Role.CANDIDAT) {
+            if (planCode == null || planCode.isBlank()) return PlanTier.PERFORMANCE;
+            PlanTier t = parseTier(planCode);
+            if (t != PlanTier.PERFORMANCE) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formule candidat payante : Performance uniquement.");
+            }
+            return t;
+        }
         if (user.getRole() == Role.RECRUTEUR) {
             Membership m = organizations.requireMembership(user);
             if (m.getOrgRole() != OrgRole.OWNER) {
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace règle la formule.");
             }
-            return PlanTier.PREMIUM;
+            if (planCode == null || planCode.isBlank()) return PlanTier.PROFESSIONNEL;
+            PlanTier t = parseTier(planCode);
+            if (t != PlanTier.PROFESSIONNEL && t != PlanTier.ENTREPRISE) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Formule entreprise payante : Professionnel ou Entreprise.");
+            }
+            return t;
         }
         throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Non disponible pour ce rôle.");
     }
 
+    private static PlanTier parseTier(String code) {
+        try {
+            PlanTier t = PlanTier.valueOf(code.trim().toUpperCase());
+            if (t == PlanTier.PREMIUM) return PlanTier.PROFESSIONNEL;
+            if (t == PlanTier.ACCES) return PlanTier.ESSENTIEL;
+            return t;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code formule inconnu.");
+        }
+    }
+
     @Transactional
     public Map<String, Object> prepare(User user, String cycle) {
+        return prepare(user, cycle, null, null, null);
+    }
+
+    @Transactional
+    public Map<String, Object> prepare(User user, String cycle, String planCode, String promoCode,
+                                       BillingPromotionService promotions) {
         expireIfDue(user);
         user = users.findById(user.getId()).orElseThrow();
         String period = "year".equalsIgnoreCase(cycle) ? "year" : "month";
+        PlanTier target = resolveTargetPaidTier(user, planCode);
         BillingInvoice invoice;
         PlanTier current;
+        String promoNote = null;
+        int forcedTtc = -1;
+        if (promoCode != null && !promoCode.isBlank()) {
+            if (promotions == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Promotions indisponibles.");
+            }
+            var promo = promotions.requireUsable(promoCode, target.name(), Instant.now());
+            int list = "year".equals(period)
+                    ? billing.require(target).getYearlyMad()
+                    : billing.require(target).getMonthlyMad();
+            forcedTtc = promotions.applyDiscount(list, promo);
+            promoNote = promo.getCode() + " — " + promo.getLabel();
+            promotions.logApplied(user, promo, null, "Devis/facture " + target.name() + " → " + forcedTtc + " MAD TTC");
+        }
         if (user.getRole() == Role.CANDIDAT) {
-            current = user.getPlanTier() == null ? PlanTier.ESSENTIEL : user.getPlanTier();
-            invoice = billing.issuePending(null, user, PlanTier.PERFORMANCE, period);
+            current = PlanTier.normalize(user.getPlanTier(), Role.CANDIDAT);
+            invoice = billing.issuePending(null, user, target, period, promoNote, forcedTtc);
         } else if (user.getRole() == Role.RECRUTEUR) {
             Membership m = organizations.requireMembership(user);
-            if (m.getOrgRole() != OrgRole.OWNER) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace règle la formule.");
-            }
-            current = m.getOrganization().getPlanTier() == null ? PlanTier.ACCES : m.getOrganization().getPlanTier();
-            invoice = billing.issuePending(m.getOrganization(), user, PlanTier.PREMIUM, period);
+            current = PlanTier.normalize(m.getOrganization().getPlanTier(), Role.RECRUTEUR);
+            invoice = billing.issuePending(m.getOrganization(), user, target, period, promoNote, forcedTtc);
         } else {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Non disponible pour ce rôle.");
         }
@@ -105,6 +157,7 @@ public class PaymentService {
         Map<String, Object> out = state(user, current);
         out.put("pending", true);
         out.put("invoice", view(user, invoice));
+        out.put("targetPlan", target.name());
         return out;
     }
 
@@ -217,7 +270,8 @@ public class PaymentService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Seul le créateur de l'espace résilie la formule.");
         }
         Organization org = m.getOrganization();
-        if (org.getPlanTier() != PlanTier.PREMIUM) {
+        PlanTier orgTier = PlanTier.normalize(org.getPlanTier(), Role.RECRUTEUR);
+        if (!orgTier.isPaid()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucun abonnement payant à résilier.");
         }
         org.setCancelAtPeriodEnd(true);
@@ -284,11 +338,11 @@ public class PaymentService {
         Instant now = Instant.now();
         if (user.getRole() == Role.CANDIDAT && user.isCancelAtPeriodEnd()
                 && user.getSubscriptionEndsAt() != null && user.getSubscriptionEndsAt().isBefore(now)) {
-            user.setPlanTier(PlanTier.ESSENTIEL);
+            user.setPlanTier(PlanTier.GRATUIT);
             user.setSubscriptionEndsAt(null);
             user.setCancelAtPeriodEnd(false);
             users.save(user);
-            audit.ok("SUBSCRIPTION_ENDED", user, "USER", user.getId(), "Retour à Essentiel");
+            audit.ok("SUBSCRIPTION_ENDED", user, "USER", user.getId(), "Retour à Gratuit");
             return;
         }
         if (user.getRole() != Role.RECRUTEUR) return;
@@ -297,7 +351,7 @@ public class PaymentService {
             Organization org = m.getOrganization();
             if (org.isCancelAtPeriodEnd() && org.getSubscriptionEndsAt() != null && org.getSubscriptionEndsAt().isBefore(now)) {
                 organizations.downgradeExpired(org.getId());
-                audit.ok("SUBSCRIPTION_ENDED", user, "ORGANIZATION", org.getId(), "Retour à Accès");
+                audit.ok("SUBSCRIPTION_ENDED", user, "ORGANIZATION", org.getId(), "Retour à Essentiel");
             }
         } catch (ResponseStatusException ignored) {
             // pas d'organisation : rien à clôturer
@@ -317,7 +371,7 @@ public class PaymentService {
     private String freshTier(User user) {
         User fresh = users.findById(user.getId()).orElse(user);
         if (fresh.getRole() == Role.CANDIDAT) {
-            return fresh.getPlanTier() == null ? PlanTier.ESSENTIEL.name() : fresh.getPlanTier().name();
+            return PlanTier.normalize(fresh.getPlanTier(), Role.CANDIDAT).name();
         }
         try {
             return organizations.requireMembership(fresh).getOrganization().getPlanTier().name();
@@ -365,18 +419,23 @@ public class PaymentService {
     }
 
     private Map<String, Object> state(User user, PlanTier current) {
+        PlanTier canon = PlanTier.normalize(current, user.getRole());
         Map<String, Object> out = new LinkedHashMap<>();
-        out.put("planTier", current.name());
-        out.put("premium", current == PlanTier.PREMIUM || current == PlanTier.PERFORMANCE);
+        out.put("planTier", canon.name());
+        out.put("planLabel", canon.displayLabel());
+        out.put("premium", canon.isPaid());
+        out.put("paymentMode", "SIMULATED");
         return out;
     }
 
     private Map<String, Object> cancelView(String tier, Instant until) {
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("planTier", tier);
-        out.put("premium", "PREMIUM".equals(tier) || "PERFORMANCE".equals(tier));
+        out.put("premium", "PREMIUM".equals(tier) || "PROFESSIONNEL".equals(tier)
+                || "ENTREPRISE".equals(tier) || "PERFORMANCE".equals(tier));
         out.put("cancelAtPeriodEnd", true);
         out.put("accessUntil", until == null ? "" : until.toString());
+        out.put("paymentMode", "SIMULATED");
         out.put("message", until == null
                 ? "Résiliation enregistrée. Aucune date de fin n'avait été fixée pour cet abonnement : l'accès déjà ouvert est conservé."
                 : "Résiliation enregistrée. L'accès reste ouvert jusqu'au " + until + ".");

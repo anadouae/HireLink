@@ -84,20 +84,22 @@
 
   function iconFor(code) {
     const c = String(code || "").toUpperCase();
-    if (c === "PREMIUM") {
+    if (c === "PREMIUM" || c === "PROFESSIONNEL" || c === "ENTREPRISE") {
       return { cls: "ck-plan-icon ck-plan-icon--gold", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 8l4.5 3L12 4l4.5 7L21 8v10H3V8z"/></svg>' };
     }
     if (c === "PERFORMANCE") {
       return { cls: "ck-plan-icon ck-plan-icon--rose", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M8 15v-4M12 15V8M16 15v-7"/></svg>' };
     }
-    if (c === "ACCES") {
+    if (c === "ACCES" || c === "ESSENTIEL" || c === "GRATUIT") {
       return { cls: "ck-plan-icon", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>' };
     }
     return { cls: "ck-plan-icon", svg: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3"/><path d="M5 19c1.5-3 4-5 7-5s5.5 2 7 5"/></svg>' };
   }
 
   function paidCode() {
-    return audience === "RECRUTEUR" ? "PREMIUM" : "PERFORMANCE";
+    const q = new URLSearchParams(location.search).get("planCode");
+    if (q) return String(q).toUpperCase();
+    return audience === "RECRUTEUR" ? "PROFESSIONNEL" : "PERFORMANCE";
   }
 
   function selectedPlan() {
@@ -213,8 +215,10 @@
     }
     toPay.disabled = !payable;
     if (selectedCode !== paidCode()) {
+      const paid = plans.find((p) => p.code === paidCode());
+      const paidLabel = (paid && paid.label) || (audience === "RECRUTEUR" ? "Professionnel" : "Performance");
       showErr("ck-error-1", "Cette formule est gratuite : aucun paiement n’est requis. Choisissez " +
-        (audience === "RECRUTEUR" ? "Premium" : "Performance") + " pour continuer.");
+        paidLabel + " pour continuer.");
     } else {
       showErr("ck-error-1", "");
     }
@@ -258,8 +262,8 @@
       return;
     }
     try {
-      // Le serveur ne facture que le palier payant de l'audience (Premium / Performance).
-      const q = await HireLinkAPI.api("/billing/quote?cycle=" + encodeURIComponent(cycle));
+      // Le serveur facture le palier demandé (Professionnel / Entreprise / Performance).
+      const q = await HireLinkAPI.api("/billing/quote?cycle=" + encodeURIComponent(cycle) + "&plan=" + encodeURIComponent(paidCode()));
       paintTotalsFromQuote(q);
     } catch (err) {
       // Certains backends n'exposent pas encore /billing/quote : repli sur le catalogue /plans.
@@ -342,7 +346,7 @@
     showErr("ck-error-2", "");
     try {
       if (!invoice) {
-        const prepared = await HireLinkAPI.api("/billing/subscribe", { method: "POST", body: { cycle } });
+        const prepared = await HireLinkAPI.api("/billing/subscribe", { method: "POST", body: { cycle, plan: paidCode() } });
         invoice = prepared.invoice;
         if (!invoice) throw new Error("Aucune facture n’a été émise.");
       }

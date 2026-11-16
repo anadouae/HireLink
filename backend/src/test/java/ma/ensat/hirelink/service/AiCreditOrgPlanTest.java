@@ -25,20 +25,21 @@ class AiCreditOrgPlanTest {
                 mock(AiUsageLogRepository.class),
                 mock(BillingCatalogService.class),
                 mock(UserRepository.class),
-                orgs);
+                orgs,
+                mock(jakarta.persistence.EntityManager.class));
 
         Organization org = new Organization();
         org.setId(1L);
-        org.setPlanTier(PlanTier.PREMIUM);
+        org.setPlanTier(PlanTier.PROFESSIONNEL);
         when(orgs.findById(1L)).thenReturn(Optional.of(org));
 
         User owner = new User();
         owner.setId(2L);
         owner.setRole(Role.RECRUTEUR);
         owner.setAssignedOrgId(1L);
-        owner.setPlanTier(PlanTier.ACCES); // désynchronisé
+        owner.setPlanTier(PlanTier.ESSENTIEL); // désynchronisé
 
-        assertEquals(PlanTier.PREMIUM, credits.resolveTier(owner));
+        assertEquals(PlanTier.PROFESSIONNEL, credits.resolveTier(owner));
     }
 
     @Test
@@ -47,7 +48,8 @@ class AiCreditOrgPlanTest {
                 mock(AiUsageLogRepository.class),
                 mock(BillingCatalogService.class),
                 mock(UserRepository.class),
-                mock(OrganizationRepository.class));
+                mock(OrganizationRepository.class),
+                mock(jakarta.persistence.EntityManager.class));
 
         User cand = new User();
         cand.setRole(Role.CANDIDAT);

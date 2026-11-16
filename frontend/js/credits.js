@@ -14,8 +14,8 @@
     coach: "Coach CV",
   };
 
-  /** Repli si le catalogue n'est pas joignable : le palier payant de chaque espace. */
-  const NEXT_PLAN = { RECRUTEUR: "Premium · 299 MAD / mois", CANDIDAT: "Performance · 39 MAD / mois" };
+  /** Repli si le catalogue n'est pas joignable : le palier payant de chaque espace (libellés Vague 2). */
+  const NEXT_PLAN = { RECRUTEUR: "Professionnel · 299 MAD / mois", CANDIDAT: "Performance · 39 MAD / mois" };
 
   function plansHrefFor(role) {
     const file = (location.pathname.split("/").pop() || "").split("?")[0];
@@ -96,10 +96,22 @@
     if (num) num.textContent = String(Math.round(value));
   }
 
+  function reduceMotion() {
+    try {
+      return window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (_) {
+      return false;
+    }
+  }
+
   function tween(target) {
     const from = shown;
-    // un onglet caché ne reçoit pas requestAnimationFrame : on pose directement la valeur finale
-    if (document.hidden || from === target) { shown = target; applyValue(target); return; }
+    // onglet caché / reduced-motion : valeur finale sans animation
+    if (document.hidden || from === target || reduceMotion()) {
+      shown = target;
+      applyValue(target);
+      return;
+    }
     const start = performance.now();
     const step = function (now) {
       const k = Math.min(1, (now - start) / 650);
@@ -224,20 +236,43 @@
     return (global.HireLinkAPI.getSession() || {}).role || "";
   }
 
-  /** Ouvre la passerelle de formule quand le serveur a répondu 402. Renvoie true si c'était un 402. */
+  /** Ouvre une suggestion non bloquante (ou modal légère) sur 402. Renvoie true si c'était un 402. */
   function guard(err) {
     if (!err || err.status !== 402) return false;
     load(true);
     const s = status || {};
     const role = roleNow();
     const next = nextPlan();
+    const growthRole = role === "CANDIDAT" ? "candidate" : "recruiter";
+    if (global.HireLinkGrowth && HireLinkGrowth.maybeSuggest) {
+      HireLinkGrowth.maybeSuggest({ aiExhausted: true, role: role });
+      if (global.HireLink) {
+        HireLink.toast(
+          "Crédits IA épuisés",
+          "Les candidatures et entretiens restent disponibles. " + next + " relève le plafond.",
+          "warn"
+        );
+      }
+      return true;
+    }
+    if (global.HireLinkGrowth && HireLinkGrowth.showNudge) {
+      HireLinkGrowth.showNudge({
+        reason: "ai_credits_exhausted",
+        role: growthRole,
+        title: "Crédits IA épuisés ce mois",
+        body: "Le compteur repart dans " + (s.daysToReset || 30) + " jours. " + next,
+        cta: "Voir les formules",
+      });
+      return true;
+    }
     global.HireLink.openModal({
       title: "Crédits IA épuisés pour ce mois",
       description: err.message || "",
       bodyHtml:
         "<p>Chaque action IA réussie consomme 1 crédit. Le compteur repart le 1er du mois, dans " +
         (s.daysToReset || 30) + " jours.</p>" +
-        "<p>" + esc(next) + " relève le plafond sans attendre.</p>",
+        "<p>" + esc(next) + " relève le plafond sans attendre.</p>" +
+        "<p>Les candidatures et entretiens restent disponibles.</p>",
       confirmLabel: "Voir les formules",
       cancelLabel: "Plus tard",
       onConfirm: function () {
@@ -260,15 +295,30 @@
     return false;
   }
 
-  /** Une action IA de bout en bout : prévol, appel, resynchronisation du solde, passerelle sur 402. */
-  function run(endpoint, body) {
+  /**
+   * Une action IA de bout en bout : prévol, appel, resynchronisation du solde, passerelle sur 402.
+   * opts.timeoutMs : délais longs (synthèse CV) — défaut API 20s trop court pour le LLM.
+   */
+  function run(endpoint, body, opts) {
     if (!preflight()) {
       return Promise.reject(Object.assign(new Error("Crédits IA épuisés pour ce mois"), { handled: true }));
     }
-    return global.HireLinkAPI.api(endpoint, { method: "POST", body: body || {} }).then(function (data) {
+    const timeoutMs = opts && opts.timeoutMs != null ? opts.timeoutMs : 60000;
+    return global.HireLinkAPI.api(endpoint, { method: "POST", body: body || {}, timeoutMs: timeoutMs }).then(function (data) {
+      if (data && data.success === false) {
+        spend();
+        const err = Object.assign(new Error(data.message || "Analyse IA non aboutie. Aucun crédit débité."), {
+          degraded: true,
+          data: data,
+        });
+        throw err;
+      }
       spend();
       return data;
     }, function (err) {
+      if (err && (err.name === "AbortError" || /abort/i.test(String(err.message || "")))) {
+        err.message = "Délai dépassé : l’analyse n’a pas répondu à temps. Vérifiez le solde — un échec ne doit pas débiter.";
+      }
       if (guard(err)) err.handled = true;
       throw err;
     });

@@ -123,7 +123,7 @@ class FinalisationCoverageIntegrationTest {
         fraiche.setCancelAtPeriodEnd(false);
         organisations.saveAndFlush(fraiche);
         ResponseEntity<Map> encore = http.exchange("/api/v1/billing/subscribe", HttpMethod.POST, json(ownerToken, Map.of("cycle", "year")), Map.class);
-        assertEquals("PREMIUM", encore.getBody().get("planTier"));
+        assertEquals("PROFESSIONNEL", encore.getBody().get("planTier"));
 
         fraiche = organisations.findById(org.getId()).orElseThrow();
         fraiche.setSubscriptionEndsAt(Instant.now().minusSeconds(120));
@@ -131,8 +131,8 @@ class FinalisationCoverageIntegrationTest {
         organisations.saveAndFlush(fraiche);
         ResponseEntity<Map> terminee = http.exchange("/api/v1/billing/subscribe", HttpMethod.POST, json(ownerToken, Map.of("cycle", "year")), Map.class);
         assertEquals(HttpStatus.OK, terminee.getStatusCode(), () -> String.valueOf(terminee.getBody()));
-        assertEquals("ACCES", terminee.getBody().get("planTier"));
-        assertEquals(PlanTier.ACCES, organisations.findById(org.getId()).orElseThrow().getPlanTier());
+        assertEquals("ESSENTIEL", terminee.getBody().get("planTier"));
+        assertEquals(PlanTier.ESSENTIEL, organisations.findById(org.getId()).orElseThrow().getPlanTier());
 
         User candidate = compte(Role.CANDIDAT, "Sara Periode");
         candidate.setPlanTier(PlanTier.PERFORMANCE);
@@ -140,8 +140,8 @@ class FinalisationCoverageIntegrationTest {
         candidate.setSubscriptionEndsAt(Instant.now().minusSeconds(120));
         users.saveAndFlush(candidate);
         ResponseEntity<Map> candidat = http.exchange("/api/v1/billing/subscribe", HttpMethod.POST, json(token(candidate), Map.of("cycle", "month")), Map.class);
-        assertEquals("ESSENTIEL", candidat.getBody().get("planTier"));
-        assertEquals(PlanTier.ESSENTIEL, users.findById(candidate.getId()).orElseThrow().getPlanTier());
+        assertEquals("GRATUIT", candidat.getBody().get("planTier"));
+        assertEquals(PlanTier.GRATUIT, users.findById(candidate.getId()).orElseThrow().getPlanTier());
     }
 
     @Test
@@ -451,7 +451,7 @@ class FinalisationCoverageIntegrationTest {
         user.setFullName(nom);
         user.setFirstName(nom);
         user.setRole(role);
-        user.setPlanTier(role == Role.CANDIDAT ? PlanTier.ESSENTIEL : PlanTier.ACCES);
+        user.setPlanTier(role == Role.CANDIDAT ? PlanTier.GRATUIT : PlanTier.ESSENTIEL);
         user.setEmailVerified(true);
         user.setProfileComplete(true);
         user.setPasswordHash(encoder.encode(MOT_DE_PASSE));
