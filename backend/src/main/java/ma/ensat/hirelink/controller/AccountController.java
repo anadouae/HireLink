@@ -41,6 +41,17 @@ public class AccountController {
         return profile.update(user, body.get("firstName"), body.get("lastName"), body.get("email"), body.get("currentPassword"));
     }
 
+    /** Demande de changement d’e-mail (mot de passe + OTP vers la nouvelle adresse). */
+    @PostMapping("/email/change-request")
+    public Map<String, Object> emailChangeRequest(@AuthenticationPrincipal User user, @RequestBody Map<String, String> body) {
+        return profile.requestEmailChange(user, body.get("email"), body.get("currentPassword"));
+    }
+
+    @PostMapping("/email/confirm")
+    public Map<String, Object> emailConfirm(@AuthenticationPrincipal User user, @RequestBody Map<String, String> body) {
+        return profile.confirmEmailChange(user, body.get("code"));
+    }
+
     @GetMapping("/avatar")
     public ResponseEntity<byte[]> avatar(@AuthenticationPrincipal User user) {
         // 204 = pas de photo (comportement attendu) ; évite un 404 bruyant dans la console du navigateur.

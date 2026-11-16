@@ -51,12 +51,12 @@
       a: "HireLink est un ATS RH pour entreprises & organisations : offres, pipeline candidats, équipe RH, marque employeur — pas un outil juridique.",
     },
     {
-      q: "Équipe & sièges Premium ?",
-      a: "Entreprise & équipe → Inviter. Premium monte l’équipe à 25 sièges (5 en Accès) et le quota IA à 200 usages par mois. Vos offres ne sont pas mieux classées : le tri reste celui des compétences.",
+      q: "Équipe & sièges ?",
+      a: "Entreprise & équipe → Inviter. Essentiel : 1 siège / 3 offres. Professionnel : 5 sièges / 20 offres / 100 crédits IA. Entreprise : 25 sièges / offres élargies / 200 crédits IA. Le classement des offres n’est pas payant.",
     },
     {
-      q: "Facturation & Premium ?",
-      a: "Paramètres → Facturation : formule actuelle, activation Premium, plafond de sièges et de crédits IA. Seul le créateur de l’espace change la formule. Mode sombre dans Apparence.",
+      q: "Facturation & formules ?",
+      a: "Paramètres → Facturation : formule actuelle, passage Professionnel ou Entreprise, plafonds de sièges et de crédits IA. Seul le créateur de l’espace change la formule. Mode sombre dans Apparence.",
     },
   ];
 
@@ -77,7 +77,7 @@
       title: isRec ? "Centre d’aide · Recruteur RH" : "Centre d’aide · Candidat",
       description: isRec
         ? "Normes ATS, SLA, entretiens et gouvernance d’équipe — sans quitter votre espace."
-        : "Profil, candidatures, matching et Premium — tout reste dans votre espace.",
+        : "Profil, candidatures, matching et formules — tout reste dans votre espace.",
       bodyHtml: "<div class='help-drawer'>" + items + "</div>",
       confirmLabel: "Fermer",
       hideCancel: true,

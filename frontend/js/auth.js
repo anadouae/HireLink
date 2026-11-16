@@ -94,24 +94,32 @@
     const answer = host.querySelector(".cap-answer");
     const cap = {
       draw: async function () {
+        host.__token = "";
         try {
           const c = await HireLinkAPI.api("/auth/captcha", { method: "POST", body: {} });
           host.__token = c.token;
           if (c.kind === "image") challenge.innerHTML = c.svg;
-          else challenge.textContent = c.question;
+          else challenge.textContent = c.question || "Répondez à la question.";
           answer.value = "";
+          answer.focus();
         } catch (err) {
-          challenge.textContent = "Contrôle indisponible pour le moment.";
+          host.__token = "";
+          challenge.textContent = (err && err.status === 429)
+            ? "Trop de contrôles demandés. Patientez quelques minutes."
+            : "Contrôle indisponible pour le moment.";
         }
       },
-      show: function () {
+      /** Affiche l’épreuve. force=true : toujours un nouveau jeton (après consommation / échec). */
+      show: function (force) {
         host.hidden = false;
-        return host.__token ? Promise.resolve() : cap.draw();
+        return (!force && host.__token) ? Promise.resolve() : cap.draw();
       },
       hide: function () { host.hidden = true; host.__token = ""; challenge.innerHTML = ""; answer.value = ""; },
       value: function () { return { captchaToken: host.__token || "", captchaAnswer: answer.value.trim() }; },
+      /** Après tout appel qui a consommé le jeton (succès ou 428). */
+      renew: function () { return cap.show(true); },
     };
-    host.querySelector(".cap-refresh").addEventListener("click", cap.draw);
+    host.querySelector(".cap-refresh").addEventListener("click", function () { cap.draw(); });
     host.__cap = cap;
     return cap;
   }
@@ -121,6 +129,11 @@
   /** Le serveur répond 428 quand l'épreuve manque ou est ratée : on la remet en avant, neuve. */
   function isCaptchaChallenge(err) { return err && err.status === 428; }
 
+  async function renewCaptcha(panel) {
+    const cap = captchaOf(panel);
+    if (cap) await cap.renew();
+  }
+
   async function sendOtp(email, purpose) {
     const host = otpHostPanel || panels.email;
     const cap = captchaOf(host);
@@ -129,11 +142,11 @@
         method: "POST",
         body: Object.assign({ email, purpose }, cap.value()),
       });
+      await cap.renew();
     } catch (err) {
       if (isCaptchaChallenge(err)) {
-        cap.hide();
         showPanel(host === panels.password ? "password" : "email");
-        cap.show();
+        await cap.renew();
       }
       throw err;
     }
@@ -493,9 +506,10 @@
     e.preventDefault();
     try {
       const r = await HireLinkAPI.api("/auth/forgot-password", { method: "POST", body: Object.assign({ email: document.getElementById("forgot-email").value.trim() }, captchaOf(panels.forgot).value()) });
+      await renewCaptcha(panels.forgot);
       HireLink.toast("Demande envoyée", r.message, "ok");
     } catch (err) {
-      if (isCaptchaChallenge(err)) { const cap = captchaOf(panels.forgot); cap.hide(); cap.show(); }
+      if (isCaptchaChallenge(err)) await renewCaptcha(panels.forgot);
       HireLink.toast("Échec", err.message, "danger");
     }
   });
@@ -859,7 +873,8 @@
       });
       afterAuth(auth, true);
     } catch (err) {
-      if (isCaptchaChallenge(err)) await captchaOf(panels.password).show();
+      // Jeton consommé dès la première tentative : toujours renouveler.
+      await renewCaptcha(panels.password);
       HireLink.toast("Connexion refusée", err.message, "danger");
     }
   });

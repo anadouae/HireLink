@@ -374,7 +374,7 @@
       '<button type="button" class="rc-iconbtn rc-burger" id="rc-burger" aria-label="Ouvrir le menu">' + svg("menu") + "</button>" +
       (CFG.noSearch ? '<span class="rc-spacer"></span>' : '<label class="rc-search">' + svg("search") + '<input type="search" id="rc-search" placeholder="' + esc((opts.search && opts.search.placeholder) || CFG.search) + '" autocomplete="off" aria-label="Rechercher" /></label>') +
       '<div class="rc-actions">' +
-      (CFG.plans ? '<a class="rc-crown' + (premiumOn() ? " is-on" : "") + '" href="' + plansHref() + '" title="Formules">' + svg("crown") + "<span>" + (premiumOn() ? "Premium" : "Passer Premium") + "</span></a>" : "") +
+      (CFG.plans ? '<a class="rc-crown' + (premiumOn() ? " is-on" : "") + '" href="' + plansHref() + '" title="Formules">' + svg("crown") + "<span>" + (premiumOn() ? (HireLinkAPI.planLabel ? HireLinkAPI.planLabel((session && session.planTier) || "") : "Formule active") : "Voir les formules") + "</span></a>" : "") +
       '<button type="button" class="rc-iconbtn" id="rc-theme" aria-label="Changer de thème">' + svg(dark ? "sun" : "moon") + "</button>" +
       (CFG.noBell ? "" : '<button type="button" class="rc-iconbtn" id="rc-bell" aria-label="Notifications" aria-haspopup="true">' + svg("bell") + '<span class="rc-dot" id="rc-bell-dot" hidden>0</span></button>') +
       '<button type="button" class="rc-profile" id="rc-profile" aria-label="Menu du compte" aria-haspopup="true"></button></div>';
@@ -721,10 +721,27 @@
         var crown = document.querySelector(".rc-crown");
         if (crown) {
           crown.classList.toggle("is-on", HireLinkAPI.isPremium());
-          crown.querySelector("span").textContent = HireLinkAPI.isPremium() ? "Premium" : "Passer Premium";
+          var paid = HireLinkAPI.isPremium();
+          crown.querySelector("span").textContent = paid
+            ? (HireLinkAPI.planLabel ? HireLinkAPI.planLabel(c.plan) : "Formule active")
+            : "Voir les formules";
         }
       }
+      if (c && c.allowed === false && window.HireLinkGrowth) {
+        HireLinkGrowth.maybeSuggest({ aiExhausted: true, role: (session && session.role) || "RECRUTEUR" });
+      }
     }).catch(function () {});
+  }
+
+  function suggestFromOrg(o) {
+    if (!o || !window.HireLinkGrowth) return;
+    HireLinkGrowth.maybeSuggest({
+      seatsUsed: o.memberCount,
+      seatsMax: o.maxMembers,
+      offersUsed: o.activeOffers,
+      offersMax: o.offersUnlimited ? null : o.activeOfferLimit,
+      tier: o.planTier,
+    });
   }
 
   /* ----------------------------------------------------------------- mount */
@@ -745,7 +762,12 @@
     document.documentElement.classList.remove("rc-pending");
     if (opts.title) document.title = opts.title + " — HireLink";
 
-    if (want === "RECRUTEUR") data.org(function (o) { orgInfo = o; paintOrg(); document.dispatchEvent(new CustomEvent("rc:org", { detail: o })); }, paintOrgUnavailable);
+    if (want === "RECRUTEUR") data.org(function (o) {
+      orgInfo = o;
+      paintOrg();
+      suggestFromOrg(o);
+      document.dispatchEvent(new CustomEvent("rc:org", { detail: o }));
+    }, paintOrgUnavailable);
     if (!CFG.noBell) {
       // Le premier appel n'est jamais ignoré : sans lui la cloche afficherait « rien à voir » alors que la
       // page n'a pas interrogé le serveur (onglet ouvert en arrière-plan, webview considérée cachée).

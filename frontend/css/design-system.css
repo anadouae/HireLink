@@ -740,6 +740,31 @@ html[data-theme="dark"] .badge-brass { color: #e2c98a; }
   }
 }
 
+/* Confirmation d’enregistrement légère */
+.hl-saved-flash {
+  animation: hl-saved 0.55s var(--ease) both;
+}
+@keyframes hl-saved {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--burgundy, #7a2032) 35%, transparent); }
+  70% { box-shadow: 0 0 0 6px transparent; }
+  100% { box-shadow: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-up,
+  .hl-saved-flash,
+  .overlay,
+  .modal,
+  .skeleton {
+    animation: none !important;
+    transition: none !important;
+  }
+  .overlay .modal,
+  .overlay.is-open .modal {
+    transform: none !important;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

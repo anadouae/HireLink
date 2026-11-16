@@ -177,6 +177,21 @@ public class MailService {
         }
     }
 
+    /** Indique si un envoi SMTP réel est possible (sans promettre le succès). */
+    public boolean isSmtpConfigured() {
+        return smtpConfigured();
+    }
+
+    /**
+     * Hint honnête avant l'envoi asynchrone : SMTP_OFF | DISABLED_BY_USER | QUEUED.
+     * Ne jamais afficher « envoyé » tant que {@link SentEmail.Status#SENT} n'est pas confirmé en base.
+     */
+    public String deliveryHint(User user, Kind kind) {
+        if (!kind.mandatory && user != null && !user.isEmailNotifications()) return "DISABLED_BY_USER";
+        if (!smtpConfigured()) return "SMTP_OFF";
+        return "QUEUED";
+    }
+
     private boolean smtpConfigured() {
         return !host.isBlank() && sender.getIfAvailable() != null;
     }

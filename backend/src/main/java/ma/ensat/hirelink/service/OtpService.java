@@ -20,6 +20,7 @@ public class OtpService {
     public static final String PURPOSE_REGISTER = "REGISTER";
     public static final String PURPOSE_LOGIN = "LOGIN";
     public static final String PURPOSE_REAUTH = "REAUTH";
+    public static final String PURPOSE_EMAIL_CHANGE = "EMAIL_CHANGE";
 
     private static final Logger log = LoggerFactory.getLogger(OtpService.class);
     private final EmailOtpRepository otpRepository;
