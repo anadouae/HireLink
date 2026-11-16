@@ -1,0 +1,128 @@
+/* Vague 3 — profil structuré & checklist CV */
+.pf-photo-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 1.25rem;
+}
+.pf-photo-wrap img,
+.pf-photo-fallback {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  background: var(--hl-surface-2, #e8eef5);
+  font-weight: 700;
+  color: var(--hl-ink, #1a2b3c);
+}
+.pf-email-change {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+.pf-email-change .form-control {
+  flex: 1 1 160px;
+  min-width: 140px;
+}
+.career-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.career-card {
+  border: 1px solid var(--hl-border, rgba(26, 43, 60, 0.12));
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  background: var(--hl-surface, #fff);
+  animation: pf-in 0.28s ease;
+}
+.career-card .career-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem 0.75rem;
+}
+.career-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.82rem;
+  color: var(--hl-muted, #5a6b7c);
+}
+.career-card .field-full {
+  grid-column: 1 / -1;
+}
+.career-card .career-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.55rem;
+}
+.checklist-card .score-card-top strong {
+  font-variant-numeric: tabular-nums;
+}
+.cv-extract-review {
+  margin: 1rem 0;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px dashed var(--hl-border, rgba(26, 43, 60, 0.2));
+  background: var(--hl-surface-2, #f4f7fb);
+}
+.cv-extract-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  padding: 0.65rem 0;
+  border-bottom: 1px solid var(--hl-border, rgba(26, 43, 60, 0.08));
+}
+.cv-extract-item:last-child {
+  border-bottom: 0;
+}
+.cv-extract-item .diff {
+  font-size: 0.85rem;
+}
+.cv-extract-item .diff .was {
+  color: var(--hl-muted, #5a6b7c);
+  text-decoration: line-through;
+  margin-right: 0.35rem;
+}
+.cv-extract-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+.cv-findings li.is-ok::marker {
+  content: "✓ ";
+  color: #1a7f4b;
+}
+.cv-findings li.is-ko::marker {
+  content: "· ";
+}
+@keyframes pf-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (max-width: 720px) {
+  .profile-hero {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pf-photo-wrap {
+    margin-right: 0;
+    margin-bottom: 0.75rem;
+  }
+  .career-card .career-grid {
+    grid-template-columns: 1fr;
+  }
+  .cv-board {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .career-card { animation: none; }
+}

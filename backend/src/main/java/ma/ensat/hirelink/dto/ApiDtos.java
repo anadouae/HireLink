@@ -57,7 +57,9 @@ public class ApiDtos {
             String educationDomain,
             Integer graduationYear,
             String workMode,
-            boolean emailNotifications
+            boolean emailNotifications,
+            String country,
+            String pendingEmail
     ) {}
 
     public record UpdateProfile(
@@ -83,7 +85,9 @@ public class ApiDtos {
             @Size(max = 40) String workMode,
             @Size(max = 20) String gender,
             @Size(max = 40) String availability,
-            Boolean emailNotifications
+            Boolean emailNotifications,
+            @Size(max = 120) String jobTitle,
+            @Size(max = 80) String country
     ) {}
 
     public record JobOfferRequest(
@@ -232,7 +236,9 @@ public class ApiDtos {
             Double matchScoreAtSubmission,
             /** Même valeur que {@code matchScore} : score actuel, ou {@code null} si le matching n'est pas disponible. */
             Double currentMatchScore,
-            boolean matchingAvailable
+            boolean matchingAvailable,
+            /** Vague 4 : TO_SCHEDULE | SCHEDULED | CANCELLED | NONE — jamais une date inventée. */
+            String interviewPlanningState
     ) {}
 
     /** Vélocité mesurée du recruteur sur ses propres offres ; {@code badge} vide sous l'échantillon minimum. */

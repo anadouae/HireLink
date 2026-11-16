@@ -213,16 +213,25 @@
       '</div>';
   }
 
-  /** Bloc « Votre entretien » : la convocation décidée par le recruteur, avec l'export calendrier. */
+  /** Bloc « Votre entretien » : à planifier / planifié / annulé — jamais de date inventée. */
   function paintInterview(app) {
     const box = el("d-interview");
     if (!box) return;
     box.replaceChildren();
-    if (!app.interviewAt) { box.hidden = true; return; }
+    if (app.status !== "INTERVIEW" && !app.interviewAt) { box.hidden = true; return; }
     box.hidden = false;
     const title = document.createElement("h3");
     title.className = "timeline-title";
-    title.textContent = "Votre entretien";
+    if (app.status === "INTERVIEW" && (!app.interviewAt || app.interviewPlanningState === "TO_SCHEDULE")) {
+      title.textContent = "Entretien à planifier";
+      box.append(title);
+      const p = document.createElement("p");
+      p.className = "muted";
+      p.textContent = "Le recruteur vous proposera un créneau. Aucune date n’est affichée tant qu’elle n’est pas enregistrée.";
+      box.appendChild(p);
+      return;
+    }
+    title.textContent = app.interviewStatus === "CANCELLED" ? "Entretien annulé" : "Votre entretien";
     box.append(title, HireLinkInterview.card(app, { role: "readonly" }));
     if (app.interviewStatus === "CANCELLED") return;
     const prep = document.createElement("button");

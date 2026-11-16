@@ -159,6 +159,12 @@
     try {
       await HireLinkAPI.api("/me", { method: "PATCH", body: profileBody() });
       HireLink.toast("Enregistré", "Profil mis à jour", "ok");
+      const card = document.querySelector(".card, .panel, form");
+      if (card) {
+        card.classList.remove("hl-saved-flash");
+        void card.offsetWidth;
+        card.classList.add("hl-saved-flash");
+      }
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
     }

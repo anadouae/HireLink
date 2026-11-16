@@ -71,7 +71,7 @@ public class ApplicationController {
 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PutMapping("/{id}/interview")
-    public ApiDtos.ApplicationResponse rescheduleInterview(
+    public java.util.Map<String, Object> rescheduleInterview(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
             @Valid @RequestBody ApiDtos.InterviewRequest body
@@ -81,7 +81,7 @@ public class ApplicationController {
 
     @org.springframework.security.access.prepost.PreAuthorize("hasRole('RECRUTEUR')")
     @PostMapping("/{id}/interview/cancel")
-    public ApiDtos.ApplicationResponse cancelInterview(
+    public java.util.Map<String, Object> cancelInterview(
             @AuthenticationPrincipal User user,
             @PathVariable Long id,
             @Valid @RequestBody ApiDtos.CancelInterviewRequest body
