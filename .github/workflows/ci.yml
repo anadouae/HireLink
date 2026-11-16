@@ -1,4 +1,4 @@
-# HireLink CI — compile + JUnit + E2E optionnel. AUCUN déploiement.
+# HireLink CI — JUnit + Newman API. AUCUN déploiement.
 # Ne nécessite aucun secret de la démo locale (8081 / hirelink / F3C2).
 name: hirelink-ci
 
@@ -51,6 +51,108 @@ jobs:
           name: surefire-reports
           path: backend/target/surefire-reports/
           if-no-files-found: ignore
+
+  api-newman:
+    name: API Newman (Postman)
+    runs-on: ubuntu-latest
+    needs: backend-junit
+    # MySQL dédié — jamais hirelink / 8081 / F3C2
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+          MYSQL_DATABASE: hirelink_ci_newman
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot"
+          --health-interval=8s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      # Comptes seed publics (DataSeeder) — pas des secrets production
+      HL_API: http://127.0.0.1:18082/api/v1
+      HL_CANDIDATE_EMAIL: candidat@hirelink.ma
+      HL_RECRUITER_EMAIL: n.bennani@atlasdigital.ma
+      HL_ADMIN_EMAIL: admin@hirelink.ma
+      HL_CANDIDATE_PASSWORD: Candidat123!
+      HL_RECRUITER_PASSWORD: Recruteur123!
+      HL_ADMIN_PASSWORD: Admin123!
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Package backend (skipTests — déjà couverts par backend-junit)
+        working-directory: backend
+        run: mvn -B -DskipTests package
+      - name: Start Spring Boot (seed CI, port 18082)
+        working-directory: backend
+        run: |
+          set -euo pipefail
+          mkdir -p ../postman/reports
+          JAR=$(ls target/hirelink-*.jar | grep -v '\.original$' | head -n1)
+          echo "JAR=$JAR"
+          nohup java -jar "$JAR" \
+            --server.port=18082 \
+            --spring.datasource.url='jdbc:mysql://127.0.0.1:3306/hirelink_ci_newman?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8' \
+            --spring.datasource.username=root \
+            --spring.datasource.password= \
+            --spring.jpa.hibernate.ddl-auto=update \
+            --hirelink.seed.enabled=true \
+            --hirelink.seed.force-reset=true \
+            --hirelink.security.admin-mfa-required=false \
+            --hirelink.jwt.secret='hirelink-ci-newman-key-not-for-any-real-use-000000' \
+            --hirelink.cookie.secure=false \
+            --spring.mail.host= \
+            --hirelink.llm.api-key= \
+            --hirelink.scheduling.enabled=false \
+            --hirelink.external-jobs.startup-sync=false \
+            --hirelink.catalog.rebuild-on-startup=false \
+            > ../postman/reports/backend-ci.log 2>&1 &
+          echo $! > ../postman/reports/backend-ci.pid
+          echo "PID=$(cat ../postman/reports/backend-ci.pid)"
+      - name: Wait for /health
+        run: |
+          set -euo pipefail
+          mkdir -p postman/reports
+          for i in $(seq 1 90); do
+            if curl -fsS "$HL_API/health" | tee postman/reports/health-probe.json | grep -q '"UP"'; then
+              echo "API UP after ${i}s"
+              exit 0
+            fi
+            echo "waiting ($i)..."
+            sleep 2
+          done
+          echo "=== backend log (tail) ==="
+          tail -n 120 postman/reports/backend-ci.log || true
+          exit 1
+      - name: Newman collection
+        run: |
+          set -euo pipefail
+          chmod +x postman/scripts/run-newman.sh
+          postman/scripts/run-newman.sh
+      - name: Upload Newman reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-reports
+          path: |
+            postman/reports/
+          if-no-files-found: ignore
+      - name: Stop Spring Boot
+        if: always()
+        run: |
+          if [ -f postman/reports/backend-ci.pid ]; then
+            kill "$(cat postman/reports/backend-ci.pid)" || true
+          fi
+          pkill -f 'hirelink-.*\.jar' || true
 
   e2e-playwright:
     name: Playwright E2E (nécessite services)

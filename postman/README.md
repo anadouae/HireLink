@@ -33,7 +33,7 @@ Suite API professionnelle pour l’instance **ISO** (`http://127.0.0.1:18081`), 
 
 ## Newman (automatisé)
 
-PowerShell :
+### Windows (ISO local)
 
 ```powershell
 cd C:\Users\daurinia\Desktop\HireLink-iso\postman\scripts
@@ -46,6 +46,18 @@ $env:HL_ADMIN_PASSWORD     = "<seed-admin>"
 
 .\run-newman.ps1
 ```
+
+### Linux / GitHub Actions
+
+```bash
+export HL_API=http://127.0.0.1:18082/api/v1
+export HL_CANDIDATE_PASSWORD='…' HL_RECRUITER_PASSWORD='…' HL_ADMIN_PASSWORD='…'
+chmod +x postman/scripts/run-newman.sh
+./postman/scripts/run-newman.sh
+```
+
+Job CI : `api-newman` dans `.github/workflows/ci.yml`
+(MySQL `hirelink_ci_newman` + JAR seed sur port **18082**, après `backend-junit`).
 
 Rapports : `postman/reports/newman-*.json` (gitignorés).
 

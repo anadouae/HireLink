@@ -105,3 +105,13 @@ tmp-clone-browser*.mjs
 # Builds / smokes isolés locaux
 build-iso/
 docs/evidence/
+
+# Postman / Newman — rapports, PIDs, env locaux (mots de passe / tokens)
+postman/reports/
+postman/environments/*.local.json
+postman/environments/HireLink.iso.environment.json
+postman/environments/*secret*
+newman-results/
+**/*.pid
+**/backend-ci.log
+**/newman-*.html
