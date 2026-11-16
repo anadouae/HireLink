@@ -4,195 +4,194 @@
 
 ---
 
-## Description de l’application
+## 1. Présentation
 
-HireLink est une plateforme de gestion du recrutement pour les PME marocaines, complétée par un catalogue d'offres externes provenant uniquement de sources autorisées. Le cœur du produit reste l'**ATS** : une entreprise inscrite publie ses offres, reçoit les candidatures et les fait avancer. Une offre externe s'affiche avec sa source et s'ouvre sur le site d'origine. Elle ne crée ni candidature, ni pipeline, ni recruteur HireLink.
-
-L’application relie deux publics :
-
-- le **candidat** (étudiant, jeune diplômé, salarié en mobilité) qui trouve une offre, postule et suit son dossier ;
-- l’**organisation recruteuse** (PME / ETI, multi-sièges) qui publie des offres, fait avancer un pipeline d’étapes et décide avec des règles claires.
-
-### Problème traité
-
-Sans outil structuré, le suivi dépend de la rigueur manuelle du recruteur : pas de délai garanti, refus souvent non motivés, candidatures « fantômes ». HireLink impose un **pipeline à états contrôlés côté serveur**, un **SLA de réponse visible**, un **motif de refus obligatoire** (catalogue), et un **matching local** pour aider au tri — **sans jamais automatiser la décision finale**.
-
-### Utilisateurs
-
-| Qui | Rôle dans HireLink |
-|-----|--------------------|
-| Candidat | Profil, CV, candidatures, suivi SLA |
-| Personne RH (Owner / Recruteur) | Offres, pipeline, équipe, entretiens |
-| Hiring Manager | Scorecard / entretien sur dossiers assignés |
-| Administrateur | Vérification entreprise (ICE), supervision |
+HireLink relie **candidats** et **organisations recruteuses** autour d’un ATS : publication d’offres, candidatures avec CV, pipeline d’états contrôlés côté serveur, entretiens, abonnements simulés et espace administrateur. Une vitrine d’offres externes (sources autorisées) complète le catalogue ; ces annonces s’ouvrent sur le site d’origine et **ne créent pas** de candidature HireLink.
 
 ---
 
-## Fonctionnalités
+## 2. Fonctionnalités principales
 
-### Candidat
-- Inscription / connexion sécurisée (mot de passe, OTP, Google, double authentification, passkeys, mot de passe oublié, page Sécurité)
-- Gestion du profil, compétences / langues, dépôt de CV (OCR)
-- Recherche et consultation des offres publiques
-- Candidature guidée (compétences → CV → lettre de motivation)
-- Suivi des candidatures : statut, SLA restant, historique des transitions
-- Assistance IA bornée (préparation entretien, suggestions de profil) avec crédits
-- Export des données personnelles (droit d’accès)
-
-### Organisation (recruteur)
-- Fiche entreprise et vérification ICE
-- Création, publication et clôture d’offres (SLA par offre)
-- Pipeline Kanban : soumise → présélection → shortlist → entretien → proposition → embauché (ou refus motivé / retrait)
-- Transitions sécurisées côté serveur (checklist + règles d’état)
-- Motif de rejet obligatoire choisi dans un **catalogue fermé**
-- Planification d’entretiens (téléphone, visio, présentiel, asynchrone)
-- Scorecard : critères par poste, notes multi-évaluateurs
-- Historique immuable des changements d’étape
-- Organisation multi-membres : Owner / Recruteur / Hiring Manager (invite / rôles)
-- Assistant IA recruteur (grille d’entretien, brouillon de refus) + crédits partagés
-
-### Nouveautés de la version intégrée
-
-- **Recherche intelligente** partout (module `frontend/js/search.js` + `TextMatcher` côté serveur) : tolérante aux fautes, aux accents et aux synonymes, classée, avec surlignage et messages « aucun résultat ».
-- **Compétences** : sélecteur avec saisie libre et référentiel catégorisé (offre et profil) ; le profil candidat range les compétences dans des boîtes colorées par catégorie (« Autres » pour les inconnues), visibles aussi des recruteurs.
-- **Correspondance** : l'interrupteur « Offres qui correspondent à mon profil » filtre la liste et affiche un score.
-- **Offres détaillées par type de contrat** (CDI, CDD, stage, PFE, PFA, stage d'été, alternance, freelance, temps partiel) : rémunération, durée, dates, convention de stage, avantages, mode de travail, niveau… avec validation en ligne. Lieux avec drapeau et autocomplétion (Maroc en premier).
-- **Carte d'offre unique** (`css/offer-card.css`, `js/offer-card.js`) réutilisée sur l'accueil, les pages entreprise et les espaces candidat et recruteur.
-- **Entretiens** : mode (sur site, visio, téléphone), nature (RH, technique, manager, final), fuseau horaire (Africa/Casablanca par défaut), participants, consignes, report et annulation motivés, confirmation du candidat, fichier `.ics`, rappel la veille.
-- **E-mails transactionnels** (HTML + texte, français) par SMTP configurable (`HIRELINK_MAIL_*` ou `application-local.properties`), envoi asynchrone sans bloquer l'application, boîte d'envoi pour l'administrateur, préférence de désinscription pour les messages de suivi.
-- **Notifications en temps réel** (SSE, ticket à usage unique de 30 s, reconnexion, secours par interrogation).
-- **Étapes Proposition et Embauché** dans le pipeline, avec e-mails, notifications et célébration.
-- **Page d'accueil animée** (`index.html`, `css/home.css`, `js/home-motion.js`, `js/landing-offers.js`, bibliothèques d'animation locales dans `js/vendor/`) : elle réutilise la carte d'offre commune (variante « vitrine »), la recherche tolérante, la rémunération et les drapeaux ; elle respecte « réduire les animations » et reste lisible sans JavaScript.
-- **Mascotte** (`js/mascotte.js`, `css/mascotte.css`) : notifications, fenêtres de confirmation (avec motif obligatoire pour une annulation), états vides et célébrations (embauche, première offre publiée, entreprise vérifiée, profil complet). La célébration d'embauche montre l'équipe de recruteurs côté recruteur et la tenue du candidat côté candidat.
-- **Logos d'entreprise** : tuile blanche uniforme (image entière, petite marge) sur les cartes, listes, page entreprise, menu recruteur et administration ; initiale de repli si le logo manque ou ne se charge pas. Fichiers PNG/JPEG/WEBP/GIF ou adresse `https://`.
-
-Détails : [`docs/API.md`](docs/API.md) pour les routes et les champs, [`docs/GUIDE_INSTALLATION_ET_TEST.md`](docs/GUIDE_INSTALLATION_ET_TEST.md) §5.1 (SMTP) et §18 (scénarios).
-
-**Schéma** : migrations explicites `database/migrations/V000`…`V006` via `database/apply-migrations.ps1` (install propre : `-Fresh`). En démo locale, Hibernate (`ddl-auto=update`) reste tolérant. L’import Remote OK / Jooble / ATS reste **désactivé** par défaut. Après seed sur base neuve, le catalogue unifié est initialisé automatiquement. Voir `docs/HIRELINK_INSTALL_WINDOWS.md` et `docs/MIGRATIONS.md`.
-
-### Transversal
-- **Matching local (F14)** : score Jaccard compétences / offre, gratuit, déterministe, sans API externe
-- **Assistant IA (F15)** : rédaction via LLM optionnel (Gemini / Mistral) — jamais de décision automatique ; pas d’identité envoyée au fournisseur
-- **Crédits IA (F16)** : plafonds selon palier (Essentiel / Performance / Accès / Premium)
-- Notifications in-app
-- Espace administration
-
-### Règles métier clés
-- Une candidature ne peut avancer que vers des états autorisés
-- Isolation des données par organisation
-- Refus impossible sans motif catalogue
-- Le matching **ne rejette jamais** automatiquement
-- Un crédit IA n’est débité qu’en cas de succès de la réponse LLM
+- Authentification (mot de passe, CAPTCHA, OTP, MFA TOTP optionnelle, passkeys optionnelles)
+- Profil candidat, CV, candidatures, suivi SLA
+- Offres, pipeline Kanban, refus motivés (catalogue), entretiens, scorecards
+- Organisations multi-membres (Owner / Recruteur / Hiring Manager)
+- Cinq formules catalogue : **Gratuit / Performance** (candidat) · **Essentiel / Professionnel / Entreprise** (recruteur)
+- Crédits IA plafonnés ; paiement **simulé**
+- Administration (ICE, comptes, plans, e-mails journalisés)
 
 ---
 
-## Séance 2 — statut
-
-**Déjà réalisé.** Architecture Spring en couches + première fonctionnalité métier (offres) + pages frontend.
-
-| Attendu | Emplacement |
-|---------|-------------|
-| Packages `controller` / `service` / `repository` / entity | `backend/.../controller`, `service`, `repository`, `model` |
-| IoC / DI (Spring Beans) | constructeurs `@Service` / `@RestController` |
-| Liste + formulaire + détail | `frontend/app/recruiter-offers.html`, wizard offre, espaces candidat |
-| Flux Controller → Service → Repository | [`docs/architecture/flux_controller_service_repository.png`](docs/architecture/flux_controller_service_repository.png) |
-
-Guide d’installation et de test (Windows, pas à pas, avec captures) : [`docs/GUIDE_INSTALLATION_ET_TEST.md`](docs/GUIDE_INSTALLATION_ET_TEST.md) · [`.docx`](docs/GUIDE_INSTALLATION_ET_TEST.docx)  
-Cas d’utilisation UML : [`docs/Diagramme_Cas_Utilisation_HireLink.docx`](docs/Diagramme_Cas_Utilisation_HireLink.docx)
-
----
-
-## Stack
-
-- **Backend** : Spring Boot 3.3 · Java 21 · Maven · Spring Security JWT + sessions · JPA · MySQL / MariaDB  
-- **Frontend** : HTML / CSS / JS sans framework (pages + wizards). Les trois espaces (candidat, recruteur, administrateur) partagent le même shell : `css/shell.css` + `js/app-shell.js` (menu, en-tête, notifications, thème clair/sombre, cache, états de chargement) ; `css/app.css` ne garde que les composants des pages candidat ; animations légères dans `css/motion.css`, désactivées avec `prefers-reduced-motion`.  
-- **Port API** : `8081` · **Front** : `5500`
+## 3. Architecture technique
 
 ```
-Frontend (5500)
-    │  HTTP / JSON
-    ▼
-API REST /api/v1  (8081)
-    │
-    ▼
-Controller → Service → Repository → MySQL (hirelink)
+Frontend (HTML/CSS/JS)  :5500
+        │  HTTP / JSON
+        ▼
+API Spring Boot /api/v1  :8081
+        │
+Controller → Service → Repository → MySQL
 ```
+
+| Couche | Techno |
+|--------|--------|
+| Backend | Spring Boot 3.3 · Java 21 · Maven · JWT + sessions · JPA |
+| Frontend | Pages HTML/CSS/JS (sans framework SPA) |
+| Base | MySQL 8+ (utf8mb4) |
+| Tests | JUnit · Playwright (`e2e/`) |
 
 ---
 
-## Démarrage rapide (IntelliJ)
+## 4. Prérequis
 
-1. MySQL : `CREATE DATABASE hirelink CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;` (l’UTF-8 complet est requis : les notifications contiennent des « → » et des accents)
-2. IntelliJ → **Open** → dossier `backend/` (pom.xml) → Run `HireLinkApplication`
-3. Health : http://localhost:8081/api/v1/health  
-4. Frontend :
-   ```bash
-   cd frontend
-   python -m http.server 5500
+| Outil | Version minimale |
+|-------|------------------|
+| JDK | 21+ |
+| Maven | 3.9+ |
+| MySQL | 8.0+ |
+| Navigateur | Chrome, Edge ou Firefox |
+| Node.js | 18+ (uniquement pour `npx serve` du frontend et les tests Playwright) |
+
+Vérification Windows : `scripts\VERIFY-PREREQS.bat`
+
+---
+
+## 5. Installation pas à pas
+
+1. Obtenir le dépôt (clone Git **après** autorisation, ou archive fournie).
+2. `scripts\VERIFY-PREREQS.bat`
+3. Créer une base **vierge** (le script refuse d’écraser une base existante) :
+   ```bat
+   set HIRELINK_DB_NAME=hirelink_demo
+   scripts\INSTALL-DB.bat
    ```
-5. App : http://localhost:5500/auth.html (aucun script `.bat` : tout se lance avec les commandes ci-dessus)
+4. Copier `backend\src\main\resources\application-local.properties.example`
+   vers `backend\application-local.properties`
+   et pointer JDBC vers la base créée (utilisateur / mot de passe locaux).
+5. (Optionnel) migrations SQL : voir `database/migrations/README.md` et `docs/MIGRATIONS.md`.
+   En démo locale, Hibernate `ddl-auto=update` crée le schéma au premier démarrage.
+6. Lancer backend puis frontend (sections 7).
 
-### Parcours par rôle
+Guide court vérifié : [`docs/DEMARRER.md`](docs/DEMARRER.md) (**~8–15 min** la première fois, pas une promesse « 5 minutes »).
 
-| Rôle | Redirection après connexion | Pages |
-|------|-----------------------------|-------|
-| Recruteur / Hiring Manager | `app/recruiter.html` | Tableau de bord · Pipeline · Candidats · Entretiens · Offres · Assistant IA · Notifications · Entreprise & équipe · Paramètres |
-| Candidat | `app/candidate-dashboard.html` | Tableau de bord · Offres · Entreprises · Mes candidatures · Profil / CV · Paramètres |
-| Administrateur | `app/admin.html` | Tableau de bord · Entreprises (vérification ICE, plans) · Plans et factures · Comptes · Motifs de refus |
+---
 
-Un utilisateur qui ouvre la page d’un autre rôle est renvoyé vers son propre espace ; un jeton expiré (401) ramène à la connexion puis à la page demandée.
+## 6. Configuration
 
-### Liens entre les trois espaces
+Modèles **sans secrets** :
 
-- Une candidature envoyée apparaît dans le **pipeline** de toute l’organisation et notifie l’auteur de l’offre **et les Owners**.
-- Chaque changement d’étape (présélection, entretien, refus motivé…) notifie le **candidat** et est visible dans « Mes candidatures ».
-- La décision de l’**administrateur** sur l’ICE met à jour l’organisation *et* tous ses membres (badge « vérifiée », droit de publier) et les prévient par notification.
-- Les motifs proposés au recruteur pour un refus viennent du catalogue géré par l’administrateur (« Motifs de refus »).
-- Une offre qui a des candidatures ne peut pas être supprimée (elle se dépublie) : l’historique des candidats est conservé.
+- `backend/src/main/resources/application-local.properties.example`
+- `.env.example`
 
-Détails, scénarios par rôle et dépannage : [`docs/GUIDE_INSTALLATION_ET_TEST.md`](docs/GUIDE_INSTALLATION_ET_TEST.md)
+| Sujet | Démo sans clé externe |
+|-------|------------------------|
+| Base de données | JDBC local dédié (`hirelink_demo`, …) |
+| JWT | Généré automatiquement dans `backend/data/jwt.key` |
+| SMTP | Vide → e-mails **journalisés** (pas d’envoi réel) |
+| IA / LLM | Sans clé → **repli local** explicite |
+| CAPTCHA | Défis locaux (question / SVG) |
+| URL FE/BE | `5500` / `8081` (surchargeables via scripts) |
+| Paiement | **Simulé** — aucune carte bancaire |
+| MFA admin | Procédure : [`docs/ADMIN_MFA_DEMO.md`](docs/ADMIN_MFA_DEMO.md) |
 
-### Comptes seed
+Ne jamais committer `application-local.properties`, `.env`, `jwt.key`.
+
+---
+
+## 7. Démarrage
+
+```bat
+scripts\LANCER-BACKEND.bat
+scripts\LANCER-FRONTEND.bat
+```
+
+Variables utiles : `HIRELINK_PORT`, `HIRELINK_FE_ORIGIN`, `HIRELINK_FE_PORT`, `HIRELINK_DB_*`.
+
+Health : `http://127.0.0.1:8081/api/v1/health`
+App : `http://127.0.0.1:5500`
+
+Lanceur historique (si présent) : `LANCER-HIRELINK-DEMO.bat`.
+
+---
+
+## 8. Comptes de démonstration
 
 | Email | Mot de passe | Rôle |
 |-------|--------------|------|
-| `admin@hirelink.ma` | `Admin123!` seul (double authentification activable, et imposée par `HIRELINK_ADMIN_MFA_REQUIRED=true` — guide §14) | Admin |
-| `recruteur@hirelink.ma` | `Recruteur123!` | Recruteur (Salma Berrada, Atlas Digital) |
+| `admin@hirelink.ma` | `Admin123!` | Administrateur (MFA activable manuellement) |
 | `candidat@hirelink.ma` | `Candidat123!` | Candidat |
-| `n.bennani@atlasdigital.ma` | `Recruteur123!` | Recruteur · Owner d’Atlas Digital |
-| `k.benali@atlasdigital.ma` | `Recruteur123!` | Recruteur (Atlas Digital) |
-| `m.alaoui@atlasdigital.ma` | `Recruteur123!` | Hiring Manager (Atlas Digital) |
+| `s.elamrani@gmail.com` | `Candidat123!` | Candidat |
+| `a.tazi@gmail.com` | `Candidat123!` | Candidat |
+| `n.bennani@atlasdigital.ma` | `Recruteur123!` | Owner · Atlas Digital |
+| `k.benali@atlasdigital.ma` | `Recruteur123!` | Recruteur · Atlas Digital |
+| `m.alaoui@atlasdigital.ma` | `Recruteur123!` | Hiring Manager · Atlas Digital |
+| `recruteur@hirelink.ma` | `Recruteur123!` | Recruteur · Atlas Digital |
 
-`recruteur@hirelink.ma` (Salma Berrada) est **Recruteur** de l’organisation **Atlas Digital** : elle voit les mêmes offres et le même pipeline que Nadia Bennani (Owner), sans les actions réservées à l’Owner (inviter un membre, changer de formule).
-
-> Adapter `spring.datasource.password` dans `backend/src/main/resources/application.properties` selon votre MySQL (souvent vide en local), de préférence via `application-local.properties` (ignoré par Git).
->
-> Ces mots de passe « faciles » ne concernent que les comptes de démonstration. Tout mot de passe créé dans l’application doit faire 12 à 64 caractères et ne pas être courant.
-> L’application démarre **sans aucune clé IA** ; les secrets (clé JWT, clés IA, Google) se règlent par variables d’environnement ou `application-local.properties` (modèles : `.env.example`, `application-local.properties.example`).
-
-### Sécurité
-
-Authentification par jeton court (15 min) + refresh opaque haché en cookie `HttpOnly` (rotation, détection de réutilisation, expiration par inactivité et durée absolue), liste et révocation des sessions, mots de passe BCrypt 12 avec politique (12–64 caractères, liste noire), verrouillage et limitation de débit, double authentification TOTP (activable par tout compte, avec codes de secours ; imposée à l’administrateur lorsque `hirelink.security.admin-mfa-required=true`, réglage de production), passkeys WebAuthn optionnelles, ré-authentification pour les actions sensibles, réinitialisation du mot de passe, contrôle d’accès par rôle **et** par organisation, validation des entrées, téléversements vérifiés par signature, CSP et en-têtes de sécurité, CORS restreint, journal d’audit, export et effacement RGPD, profil `prod`. Détails, table OWASP/ASVS et limites : [`docs/SECURITE.md`](docs/SECURITE.md).
+Deux organisations seed (Atlas Digital + seconde org) ; offres, candidatures, entretiens et abonnements fictifs. **Données anonymisées / pédagogiques** — pas un dump de production.
 
 ---
 
-## Structure
+## 9. Parcours de test recommandés
 
+1. **Candidat** : connexion → offres → candidature + CV → suivi.
+2. **Recruteur / Owner** : pipeline → transition d’étape → entretien → lecture CV.
+3. **Administrateur** : entreprises ICE → comptes → consultation des e-mails journalisés.
+4. **Billing** : checkout d’une des cinq formules → facture simulée.
+5. **Négatif** : autre candidat ne lit pas le CV d’une candidature étrangère (403/404).
+
+---
+
+## 10. Paiement simulé
+
+Le checkout crée des enregistrements locaux (abonnement / facture). **Aucun débit bancaire.** Les libellés landing correspondent aux cinq formules catalogue ci-dessus.
+
+---
+
+## 11. Limites IA / SMTP
+
+- **Sans SMTP** : messages enregistrés / visibles en admin — **ne pas** présenter comme « e-mail envoyé ».
+- **Sans clé LLM** : assistant en repli local — **ne pas** présenter comme analyse IA fournisseur.
+- Crédits IA : réserve / règlement selon le palier ; concurrence couverte par tests d’intégration.
+
+---
+
+## 12. Résolution des problèmes courants
+
+| Symptôme | Piste |
+|----------|--------|
+| Port déjà utilisé | Changer `HIRELINK_PORT` / `HIRELINK_FE_PORT` — les scripts **n’arrêtent pas** un processus inconnu |
+| Base existe déjà | `INSTALL-DB.bat` refuse — choisir un autre `HIRELINK_DB_NAME` |
+| CAPTCHA / login | Rafraîchir le défi ; vérifier l’horloge système |
+| Frontend 404 API | CORS / `HIRELINK_FE_ORIGIN` aligné sur l’URL réelle |
+| MFA admin | Voir `docs/ADMIN_MFA_DEMO.md` |
+
+---
+
+## 13. Exécution des tests
+
+```bat
+cd backend
+mvn -B test
 ```
-HireLink/
-├── backend/                 # Spring Boot
-│   └── src/main/java/ma/ensat/hirelink/
-│       ├── controller/      # API REST
-│       ├── service/         # Métier + IoC
-│       ├── repository/      # Spring Data JPA
-│       ├── model/           # Entités JPA
-│       ├── security/        # JWT
-│       ├── dto/
-│       └── config/
-├── frontend/                # UI HTML/CSS/JS
-├── database/                # schema SQL
-└── docs/                    # CDC, guides, diagrammes UML
+
+```bat
+cd e2e
+npm install
+npx playwright test
 ```
+
+Prérequis E2E : backend + frontend joignables (`HL_API`, `HL_FE`).
+CI GitHub Actions : `.github/workflows/ci.yml` — **validée localement sur les commandes Maven** ; le succès sur GitHub n’est déclaré qu’après une exécution réelle (push autorisé séparément).
+
+---
+
+## 14. Arrêt
+
+```bat
+scripts\ARRETER-HIRELINK.bat
+```
+
+N’agit que sur les ports HireLink configurés (backend / `serve`).
 
 ---
 
@@ -200,15 +199,16 @@ HireLink/
 
 | Document | Fichier |
 |----------|---------|
-| Guide d’installation et de test (Windows) | `docs/GUIDE_INSTALLATION_ET_TEST.md` / `.docx` |
-| Sécurité (OWASP Top 10 / ASVS niveau 2) | `docs/SECURITE.md` |
-| API : offres, entretiens, notifications, e-mails | `docs/API.md` |
-| Cas d’utilisation UML | `docs/Diagramme_Cas_Utilisation_HireLink.docx` |
-| Accès BDD | `docs/ACCES_BDD.md` |
-| Cahier des charges | `docs/cahier-des-charges/` |
+| Démarrage vérifié | [`docs/DEMARRER.md`](docs/DEMARRER.md) |
+| MFA admin démo | [`docs/ADMIN_MFA_DEMO.md`](docs/ADMIN_MFA_DEMO.md) |
+| Guide installation Windows (détail) | `docs/HIRELINK_INSTALL_WINDOWS.md` |
+| Guide + scénarios | `docs/GUIDE_INSTALLATION_ET_TEST.md` |
+| Sécurité | `docs/SECURITE.md` |
+| API | `docs/API.md` |
+| Migrations | `docs/MIGRATIONS.md` |
 
 ---
 
 ## Licence / contexte
 
-Projet pédagogique ENSA Tétouan. Un durcissement de sécurité (OWASP / ASVS) a été appliqué et documenté dans `docs/SECURITE.md` ; les limites connues y sont listées (limitation de débit en mémoire, tests sur MariaDB…) : relisez-les avant tout déploiement réel.
+Projet pédagogique ENSA Tétouan. Limites de sécurité : `docs/SECURITE.md`. Aucun cutover / production sans GO explicite du responsable.
