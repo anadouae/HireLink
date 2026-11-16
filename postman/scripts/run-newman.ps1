@@ -34,7 +34,7 @@ $jsonReport = Join-Path $Reports "newman-$stamp.json"
 Write-Host "Newman → $BaseUrl"
 Write-Host "Collection → $Collection"
 
-npx --yes newman run $Collection `
+npx --yes newman@6 run $Collection `
   -e $EnvExample `
   --env-var "baseUrl=$BaseUrl" `
   --env-var "candidateEmail=$(if ($env:HL_CANDIDATE_EMAIL) { $env:HL_CANDIDATE_EMAIL } else { 'candidat@hirelink.ma' })" `
