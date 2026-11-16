@@ -85,8 +85,8 @@ public class AuthController {
 
     /** Épreuve anti-robot fabriquée par le serveur : pas de service externe, donc utilisable hors ligne. */
     @PostMapping("/captcha")
-    public CaptchaService.Challenge captchaChallenge() {
-        return captcha.issue();
+    public CaptchaService.Challenge captchaChallenge(HttpServletRequest req) {
+        return captcha.issue(ClientInfo.from(req).ip());
     }
 
     @PostMapping("/request-otp")

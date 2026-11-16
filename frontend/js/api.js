@@ -19,6 +19,10 @@
   // Jeton d'accès (15 min) renouvelé en silence grâce au cookie HttpOnly de rafraîchissement.
   // En-tête X-HireLink-CSRF : protection CSRF de /auth/refresh et /auth/logout (un formulaire externe ne peut pas l'envoyer).
   let refreshing = null;
+  /**
+   * Renouvelle le jeton d'accès.
+   * true = OK · false = session refusée (401/403) · "network" = hors-ligne / 5xx (ne pas déconnecter).
+   */
   function refreshAccess() {
     if (refreshing) return refreshing;
     refreshing = fetch(apiBase() + "/auth/refresh", {
@@ -27,7 +31,8 @@
       headers: { "X-HireLink-CSRF": "1" },
     })
       .then(async (res) => {
-        if (!res.ok) return false;
+        if (res.status === 401 || res.status === 403) return false;
+        if (!res.ok) return "network";
         const auth = await res.json();
         if (!auth || !auth.accessToken) return false;
         const avant = getSession();
@@ -40,7 +45,7 @@
         }
         return true;
       })
-      .catch(() => false)
+      .catch(() => "network")
       .finally(() => {
         refreshing = null;
       });
@@ -67,8 +72,12 @@
       return fetch(path.indexOf("http") === 0 ? path : apiBase() + path, o);
     };
     let res = await run();
-    if (res.status === 401 && getToken() && (await refreshAccess())) res = await run();
-    if (res.status === 401 && getToken()) return goToLogin();
+    if (res.status === 401 && getToken()) {
+      const refreshed = await refreshAccess();
+      if (refreshed === true) res = await run();
+      else if (refreshed === false && getToken()) return goToLogin();
+      // network : conserver la session locale, laisser l'appelant gérer l'échec.
+    }
     return res;
   }
 
@@ -186,7 +195,16 @@
     if (!res.ok) {
       // Session expirée / jeton invalide : retour propre à la connexion (hors endpoints d'auth)
       if (res.status === 401 && token && path.indexOf("/auth/") !== 0) {
-        if (!retried && (await refreshAccess())) return request(path, options, true);
+        if (!retried) {
+          const refreshed = await refreshAccess();
+          if (refreshed === true) return request(path, options, true);
+          if (refreshed === "network") {
+            const err = new Error("Réseau indisponible — session conservée. Réessayez.");
+            err.status = 0;
+            err.network = true;
+            throw err;
+          }
+        }
         return goToLogin();
       }
       const msg =
@@ -242,7 +260,22 @@
   }
   function isPremium() {
     const s = getSession();
-    return !!s && (s.planTier === "PREMIUM" || s.planTier === "PERFORMANCE");
+    if (!s) return false;
+    const t = s.planTier;
+    return t === "PREMIUM" || t === "PROFESSIONNEL" || t === "ENTREPRISE" || t === "PERFORMANCE" || s.premium === true;
+  }
+
+  function planLabel(code) {
+    const map = {
+      ESSENTIEL: "Essentiel",
+      PROFESSIONNEL: "Professionnel",
+      ENTREPRISE: "Entreprise",
+      GRATUIT: "Gratuit",
+      PERFORMANCE: "Performance",
+      ACCES: "Essentiel",
+      PREMIUM: "Professionnel",
+    };
+    return map[code] || code || "—";
   }
 
   /** Télécharge un fichier protégé (JWT) puis l'ouvre dans un nouvel onglet. */
@@ -268,6 +301,7 @@
     logout,
     setPlanTier,
     isPremium,
+    planLabel,
     mediaUrl,
     setAuth,
     clearAuth,

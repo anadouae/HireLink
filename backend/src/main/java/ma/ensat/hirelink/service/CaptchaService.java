@@ -1,5 +1,6 @@
 package ma.ensat.hirelink.service;
 
+import ma.ensat.hirelink.security.AuthThrottle;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -31,17 +32,28 @@ public class CaptchaService {
 
     private final SecureRandom random = new SecureRandom();
     private final Map<String, Pending> pending = new ConcurrentHashMap<>();
+    private final AuthThrottle throttle;
+
+    public CaptchaService(AuthThrottle throttle) {
+        this.throttle = throttle;
+    }
 
     private record Pending(byte[] answer, long expiresAt) {}
 
     public record Challenge(String token, String kind, String question, String svg, int expiresInSeconds) {}
 
-    public Challenge issue() {
+    /** Épreuve nouvelle. {@code clientIp} peut être null (tests). */
+    public Challenge issue(String clientIp) {
+        if (clientIp != null && !clientIp.isBlank()) {
+            // 60 épreuves / 10 min / IP : freine le flood CPU et l’éviction massive.
+            throttle.hit("captcha:ip:" + clientIp, 60, 600, "Trop de contrôles anti-robot. Réessayez dans quelques minutes.");
+        }
         prune();
         String token = UUID.randomUUID().toString().replace("-", "");
         Challenge challenge;
         String answer;
-        if (random.nextInt(100) < 25) {
+        // 40 % question texte (meilleure accessibilité) ; 60 % image.
+        if (random.nextInt(100) < 40) {
             int a = 11 + random.nextInt(78);
             int b = 3 + random.nextInt(9);
             boolean add = random.nextBoolean();
@@ -57,6 +69,11 @@ public class CaptchaService {
         }
         pending.put(token, new Pending(normalize(answer).getBytes(StandardCharsets.UTF_8), System.currentTimeMillis() + TTL_MILLIS));
         return challenge;
+    }
+
+    /** Compat tests / appels sans IP. */
+    public Challenge issue() {
+        return issue(null);
     }
 
     /** Jeton à usage unique : une réponse refusée le consomme aussi, il faut alors une nouvelle épreuve. */
@@ -109,6 +126,13 @@ public class CaptchaService {
     private void prune() {
         long now = System.currentTimeMillis();
         pending.entrySet().removeIf(e -> e.getValue().expiresAt() < now);
-        if (pending.size() > MAX_PENDING) pending.clear();
+        if (pending.size() <= MAX_PENDING) return;
+        // Éviction des plus anciens : ne pas invalider tous les jetons légitimes d'un coup.
+        pending.entrySet().stream()
+                .sorted(java.util.Comparator.comparingLong(e -> e.getValue().expiresAt()))
+                .limit(Math.max(1, pending.size() - MAX_PENDING + 500))
+                .map(Map.Entry::getKey)
+                .toList()
+                .forEach(pending::remove);
     }
 }
