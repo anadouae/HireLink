@@ -1,6 +1,7 @@
 package ma.ensat.hirelink.service;
 
 import ma.ensat.hirelink.security.AuthThrottle;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -33,17 +34,28 @@ public class CaptchaService {
     private final SecureRandom random = new SecureRandom();
     private final Map<String, Pending> pending = new ConcurrentHashMap<>();
     private final AuthThrottle throttle;
+    private final boolean enabled;
 
-    public CaptchaService(AuthThrottle throttle) {
+    public CaptchaService(
+            AuthThrottle throttle,
+            @Value("${hirelink.captcha.enabled:true}") boolean enabled) {
         this.throttle = throttle;
+        this.enabled = enabled;
     }
 
     private record Pending(byte[] answer, long expiresAt) {}
 
     public record Challenge(String token, String kind, String question, String svg, int expiresInSeconds) {}
 
+    public boolean isEnabled() {
+        return enabled;
+    }
+
     /** Épreuve nouvelle. {@code clientIp} peut être null (tests). */
     public Challenge issue(String clientIp) {
+        if (!enabled) {
+            return new Challenge("", "disabled", null, null, 0);
+        }
         if (clientIp != null && !clientIp.isBlank()) {
             // 60 épreuves / 10 min / IP : freine le flood CPU et l’éviction massive.
             throttle.hit("captcha:ip:" + clientIp, 60, 600, "Trop de contrôles anti-robot. Réessayez dans quelques minutes.");
@@ -78,6 +90,7 @@ public class CaptchaService {
 
     /** Jeton à usage unique : une réponse refusée le consomme aussi, il faut alors une nouvelle épreuve. */
     public void assertValid(String token, String answer) {
+        if (!enabled) return;
         if (token == null || token.isBlank() || answer == null || answer.isBlank()) {
             throw new ResponseStatusException(HttpStatus.PRECONDITION_REQUIRED,
                     "Répondez au contrôle anti-robot avant de continuer.");

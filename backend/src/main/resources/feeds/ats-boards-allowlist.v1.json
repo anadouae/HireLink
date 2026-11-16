@@ -8,7 +8,7 @@
       "companyName": "GitLab",
       "referenceUrl": "https://boards.greenhouse.io/gitlab",
       "regionHint": "GLOBAL",
-      "enabled": false,
+      "enabled": true,
       "attributionNotes": "Greenhouse Job Board API publique (GET). Afficher la provenance Greenhouse/GitLab. Pas de POST apply. Docs: https://docs.greenhouse.io/job-board.html",
       "verificationNotes": "Board public historique boards.greenhouse.io/gitlab. A revalider (HTTP 200) avant activation. Pas de partenariat HireLink."
     },
@@ -38,7 +38,7 @@
       "companyName": "Ashby",
       "referenceUrl": "https://jobs.ashbyhq.com/Ashby",
       "regionHint": "GLOBAL",
-      "enabled": false,
+      "enabled": true,
       "attributionNotes": "Ashby Job Postings API documentee pour peupler le site carriere de l'organisation. Afficher jobUrl/applyUrl. Docs: developers.ashbyhq.com/docs/public-job-posting-api",
       "verificationNotes": "Exemple officiel de la documentation Ashby (jobs.ashbyhq.com/Ashby). Pas de partenariat HireLink."
     },
@@ -50,7 +50,17 @@
       "regionHint": "MA/MENA",
       "enabled": false,
       "attributionNotes": "Board Lever public ; candidats renvoyes vers jobs.lever.co. Usage multi-board a confirmer juridiquement.",
-      "verificationNotes": "URL publique jobs.lever.co/yassir observee dans le plan d'architecture. Revalider HTTP avant activation. Pas de partenariat declare."
+      "verificationNotes": "HTTP 404 en 2026-11 sur api.lever.co/v0/postings/yassir — desactive. Pas de partenariat declare."
+    },
+    {
+      "provider": "LEVER",
+      "boardKey": "spotify",
+      "companyName": "Spotify",
+      "referenceUrl": "https://jobs.lever.co/spotify",
+      "regionHint": "GLOBAL",
+      "enabled": true,
+      "attributionNotes": "Lever Postings API publique. Attribution Spotify + lien hostedUrl. Docs: github.com/lever/postings-api",
+      "verificationNotes": "HTTP 200 verifie 2026-11 sur api.lever.co/v0/postings/spotify. Pas de partenariat HireLink."
     }
   ]
 }

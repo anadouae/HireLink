@@ -34,6 +34,9 @@ public class CatalogOfferController {
             @RequestParam(required = false) String source,
             @RequestParam(required = false, defaultValue = "all") String origin,
             @RequestParam(required = false) Integer sinceDays,
+            @RequestParam(required = false) Integer minSalary,
+            @RequestParam(required = false) String experience,
+            @RequestParam(required = false) String sector,
             @RequestParam(required = false, defaultValue = "false") boolean forYou,
             @RequestParam(required = false, defaultValue = "0") Double minMatch,
             @RequestParam(required = false, defaultValue = "0") int page,
@@ -46,7 +49,8 @@ public class CatalogOfferController {
         }
         String workModeFilter = normalizeWorkMode(workMode);
         CatalogOfferService.CatalogPage result = catalog.search(
-                user, q, countryFilter, city, contract, workModeFilter, source, origin, sinceDays, forYou, minMatch, page, size);
+                user, q, countryFilter, city, contract, workModeFilter, source, origin, sinceDays,
+                minSalary, experience, sector, forYou, minMatch, page, size);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("page", result.page());
         body.put("size", result.size());
@@ -63,6 +67,10 @@ public class CatalogOfferController {
         body.put("webSearchMessage", result.webSearchMessage());
         body.put("webSearchCoverage", result.webSearchCoverage());
         body.put("webSearchSources", result.webSearchSources());
+        // Catalogue stocké = cache indexé rapide ; vérité interne = job_offers. Web = éphémère live.
+        body.put("catalogCacheAt", java.time.Instant.now().toString());
+        body.put("catalogCacheNote",
+                "Les offres indexées sont un cache de recherche (fraîcheur ci-dessus). Les offres HireLink restent en base. Les résultats Web sont live et non persistés.");
         return body;
     }
 

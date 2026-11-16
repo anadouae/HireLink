@@ -21,7 +21,7 @@ class CaptchaServiceTest {
     @BeforeEach
     void setUp() {
         throttle = new AuthThrottle();
-        captcha = new CaptchaService(throttle);
+        captcha = new CaptchaService(throttle, true);
     }
 
     @Test

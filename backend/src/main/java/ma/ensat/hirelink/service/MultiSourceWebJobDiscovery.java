@@ -8,11 +8,17 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Agrégateur multi-sources international.
  * N'impose jamais le Maroc. « Tous les pays » = country null / ALL.
  * Ne persiste rien. Signale honnêtement les sources utilisées et leurs limites.
+ * Les appels sources sont parallélisés pour rester sous les délais UI.
  */
 @Service
 @ConditionalOnProperty(name = "hirelink.web-search.enabled", havingValue = "true")
@@ -22,6 +28,7 @@ public class MultiSourceWebJobDiscovery implements WebJobDiscovery {
     private final JobGeoVerifier geo;
     private final JobSearchLexicon lexicon;
     private final int perSourceCap;
+    private final ExecutorService pool;
 
     public MultiSourceWebJobDiscovery(
             List<WebJobSource> sources,
@@ -32,6 +39,7 @@ public class MultiSourceWebJobDiscovery implements WebJobDiscovery {
         this.geo = geo;
         this.lexicon = lexicon;
         this.perSourceCap = Math.max(3, perSourceCap);
+        this.pool = Executors.newFixedThreadPool(Math.max(2, Math.min(6, Math.max(2, sources.size()))));
     }
 
     @Override
@@ -41,44 +49,92 @@ public class MultiSourceWebJobDiscovery implements WebJobDiscovery {
         }
         String country = normalizeCountry(countryCode);
         int want = Math.max(1, limit);
+        String apiQuery = lexicon.preferredApiQuery(query == null ? "" : query);
+
         List<SourceReport> reports = new ArrayList<>();
         List<DiscoveredJob> merged = new ArrayList<>();
-        int ready = 0;
-        int errors = 0;
+        AtomicInteger ready = new AtomicInteger();
+        AtomicInteger errors = new AtomicInteger();
 
+        record FetchOutcome(WebJobSource src, List<DiscoveredJob> batch, Exception error, boolean skipped, String skipReason) {}
+
+        List<CompletableFuture<FetchOutcome>> futures = new ArrayList<>();
         for (WebJobSource src : sources) {
             if (!src.isReady()) {
                 reports.add(new SourceReport(src.code(), src.label(), "SKIPPED", src.notReadyReason(), 0));
                 continue;
             }
-            ready++;
-            try {
-                int fetchCap = Math.min(perSourceCap, want);
-                List<DiscoveredJob> batch = src.fetch(query, country, location, fetchCap);
-                int added = 0;
-                for (DiscoveredJob job : batch) {
-                    if (job == null) continue;
-                    if (!geo.matches(job, country, location)) continue;
-                    if (isDuplicate(merged, job)) continue;
-                    merged.add(job);
-                    added++;
-                    if (merged.size() >= want * 3) break; // marge pour ranking ultérieur
+            ready.incrementAndGet();
+            futures.add(CompletableFuture.supplyAsync(() -> {
+                try {
+                    int fetchCap = Math.min(perSourceCap, want);
+                    List<DiscoveredJob> batch = src.fetch(apiQuery, country, location, fetchCap);
+                    // Si la variante API ne donne rien et que la requête d'origine diffère, 2e essai.
+                    if ((batch == null || batch.isEmpty())
+                            && query != null && !query.isBlank()
+                            && !apiQuery.equalsIgnoreCase(query.trim())) {
+                        batch = src.fetch(query.trim(), country, location, fetchCap);
+                    }
+                    return new FetchOutcome(src, batch == null ? List.of() : batch, null, false, "");
+                } catch (Exception e) {
+                    return new FetchOutcome(src, List.of(), e, false, "");
                 }
-                reports.add(new SourceReport(src.code(), src.label(), "OK", src.coverageNote(), added));
-            } catch (Exception e) {
-                errors++;
-                reports.add(new SourceReport(src.code(), src.label(), "ERROR",
-                        e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage(), 0));
-            }
+            }, pool));
         }
 
-        String summary = humanCoverageSummary(country, location, ready, errors, merged.size(), reports);
+        try {
+            CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new))
+                    .get(28, TimeUnit.SECONDS);
+        } catch (Exception ignored) {
+            // On consomme ce qui est déjà terminé ; les futures non finies seront traitées ci-dessous.
+        }
 
-        if (ready == 0) {
+        for (CompletableFuture<FetchOutcome> f : futures) {
+            FetchOutcome outcome;
+            if (f.isDone() && !f.isCompletedExceptionally()) {
+                try {
+                    outcome = f.getNow(null);
+                } catch (Exception e) {
+                    errors.incrementAndGet();
+                    continue;
+                }
+            } else {
+                errors.incrementAndGet();
+                // Annulation douce : on ne bloque pas plus longtemps
+                f.cancel(true);
+                continue;
+            }
+            if (outcome == null) {
+                errors.incrementAndGet();
+                continue;
+            }
+            WebJobSource src = outcome.src();
+            if (outcome.error() != null) {
+                errors.incrementAndGet();
+                String msg = outcome.error().getMessage();
+                reports.add(new SourceReport(src.code(), src.label(), "ERROR",
+                        msg == null ? outcome.error().getClass().getSimpleName() : msg, 0));
+                continue;
+            }
+            int added = 0;
+            for (DiscoveredJob job : outcome.batch()) {
+                if (job == null) continue;
+                if (!geo.matches(job, country, location)) continue;
+                if (isDuplicate(merged, job)) continue;
+                merged.add(job);
+                added++;
+                if (merged.size() >= want * 3) break;
+            }
+            reports.add(new SourceReport(src.code(), src.label(), "OK", src.coverageNote(), added));
+        }
+
+        String summary = humanCoverageSummary(country, location, ready.get(), errors.get(), merged.size(), reports);
+
+        if (ready.get() == 0) {
             return DiscoveryResult.unavailable(
                     "La recherche Web directe est indisponible pour le moment. " + summary);
         }
-        if (merged.isEmpty() && errors == ready) {
+        if (merged.isEmpty() && errors.get() >= ready.get()) {
             return DiscoveryResult.error(
                     "La recherche Web n’a renvoyé aucune annonce exploitable. " + summary);
         }

@@ -20,12 +20,16 @@ class ExternalSourceCatalogWebAttributionTest {
         assertEquals("https://www.arbeitnow.com", catalog.homeOf("ARBEITNOW"));
         assertEquals("Remote OK", catalog.labelOf("REMOTE_OK"));
         assertEquals("https://remoteok.com", catalog.homeOf("REMOTE_OK"));
+        assertEquals("We Work Remotely", catalog.labelOf("WE_WORK_REMOTELY"));
+        assertEquals("https://weworkremotely.com", catalog.homeOf("WE_WORK_REMOTELY"));
 
         assertFalse(catalog.find("REMOTIVE").enabled());
         assertFalse(catalog.find("ARBEITNOW").enabled());
         assertFalse(catalog.find("REMOTE_OK").enabled());
+        assertFalse(catalog.find("WE_WORK_REMOTELY").enabled());
         assertTrue(catalog.enabled().stream().noneMatch(s ->
-                s.code().equals("REMOTIVE") || s.code().equals("ARBEITNOW") || s.code().equals("REMOTE_OK")));
+                s.code().equals("REMOTIVE") || s.code().equals("ARBEITNOW")
+                        || s.code().equals("REMOTE_OK") || s.code().equals("WE_WORK_REMOTELY")));
     }
 
     @Test

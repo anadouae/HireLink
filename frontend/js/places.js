@@ -95,7 +95,43 @@
     return city + " · " + country;
   }
 
+  /** Villes du catalogue complet (pas seulement les résultats courants), filtrables par nom de pays. */
+  function listCities(countryNameOrCode) {
+    if (!byName || !countryByCity) return [];
+    const want = fold(String(countryNameOrCode || "").trim());
+    const codeToName = {
+      ma: "maroc", fr: "france", de: "allemagne", gb: "royaume-uni", es: "espagne", be: "belgique",
+      ch: "suisse", nl: "pays-bas", ca: "canada", us: "etats-unis", ae: "emirats", sn: "senegal",
+      tn: "tunisie", ci: "cote d'ivoire",
+    };
+    const wantName = codeToName[want] || want;
+    const out = [];
+    countryByCity.forEach(function (country, cityFoldKey) {
+      if (wantName && fold(country) !== wantName) return;
+      // cityFoldKey est la clé foldée ; on garde le premier libellé non foldé via countryOf reverse impossible —
+      // reconstruit depuis session cache si dispo.
+      out.push(cityFoldKey);
+    });
+    // Préférer les libellés originaux du cache session
+    try {
+      const cached = JSON.parse(sessionStorage.getItem(KEY) || "null");
+      if (Array.isArray(cached)) {
+        return cached
+          .filter(function (p) {
+            if (!p || !p.city) return false;
+            if (!wantName) return true;
+            return fold(p.country) === wantName;
+          })
+          .map(function (p) { return p.city; })
+          .filter(function (v, i, a) { return a.indexOf(v) === i; })
+          .sort(function (a, b) { return a.localeCompare(b, "fr"); });
+      }
+    } catch (_) { /* ignore */ }
+    return out.sort(function (a, b) { return String(a).localeCompare(String(b), "fr"); });
+  }
+
   global.HireLinkPlaces = {
-    ready: ready, flagOf: flagOf, countryOf: countryOf, isCountry: isCountry, cityOf: cityOf, placeLabel: placeLabel
+    ready: ready, flagOf: flagOf, countryOf: countryOf, isCountry: isCountry, cityOf: cityOf, placeLabel: placeLabel,
+    listCities: listCities
   };
 })(window);

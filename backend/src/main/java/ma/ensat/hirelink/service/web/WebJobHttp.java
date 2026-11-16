@@ -17,9 +17,18 @@ public final class WebJobHttp {
     private WebJobHttp() {}
 
     public static String getJson(String url) throws Exception {
+        return get(url, "application/json");
+    }
+
+    /** Flux texte/XML publics (ex. RSS We Work Remotely) — pas de scraping HTML de pages offre. */
+    public static String getText(String url, String accept) throws Exception {
+        return get(url, accept == null || accept.isBlank() ? "*/*" : accept);
+    }
+
+    private static String get(String url, String accept) throws Exception {
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(20))
-                .header("Accept", "application/json")
+                .header("Accept", accept)
                 .header("User-Agent", "HireLink/1.0 (job-discovery; educational; +https://hirelink.local)")
                 .GET()
                 .build();

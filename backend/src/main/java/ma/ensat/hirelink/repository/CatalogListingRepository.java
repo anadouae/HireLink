@@ -20,6 +20,14 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
     @Query("delete from CatalogListing c")
     void deleteAllListings();
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("delete from CatalogListing c where c.origin = :origin")
+    void deleteByOrigin(@Param("origin") String origin);
+
+    /**
+     * Predicats communs : q, geo, contrat, mode, source, origin, date,
+     * plus salaire min (plafond ou plancher de l'offre), experience exacte, secteur LIKE.
+     */
     @Query(value = """
             SELECT COUNT(*) FROM catalog_listings c
             WHERE (:q IS NULL OR LOWER(c.search_blob) LIKE CONCAT('%', LOWER(:q), '%'))
@@ -30,6 +38,9 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
               AND (:source IS NULL OR c.source_code = :source)
               AND (:origin IS NULL OR c.origin = :origin)
               AND (:since IS NULL OR (c.published_trusted = 1 AND c.published_at IS NOT NULL AND c.published_at >= :since))
+              AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
+              AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
+              AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
             """, nativeQuery = true)
     long countFiltered(
             @Param("q") String q,
@@ -39,7 +50,10 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
             @Param("workMode") String workMode,
             @Param("source") String source,
             @Param("origin") String origin,
-            @Param("since") java.time.Instant since);
+            @Param("since") java.time.Instant since,
+            @Param("minSalary") Integer minSalary,
+            @Param("experience") String experience,
+            @Param("sector") String sector);
 
     @Query(value = """
             SELECT c.* FROM catalog_listings c
@@ -51,6 +65,9 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
               AND (:source IS NULL OR c.source_code = :source)
               AND (:origin IS NULL OR c.origin = :origin)
               AND (:since IS NULL OR (c.published_trusted = 1 AND c.published_at IS NOT NULL AND c.published_at >= :since))
+              AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
+              AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
+              AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
             ORDER BY c.sort_at DESC, c.id DESC
             LIMIT :limit OFFSET :offset
             """, nativeQuery = true)
@@ -63,6 +80,9 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
             @Param("source") String source,
             @Param("origin") String origin,
             @Param("since") java.time.Instant since,
+            @Param("minSalary") Integer minSalary,
+            @Param("experience") String experience,
+            @Param("sector") String sector,
             @Param("limit") int limit,
             @Param("offset") int offset);
 
@@ -76,6 +96,9 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
               AND (:source IS NULL OR c.source_code = :source)
               AND (:origin IS NULL OR c.origin = :origin)
               AND (:since IS NULL OR (c.published_trusted = 1 AND c.published_at IS NOT NULL AND c.published_at >= :since))
+              AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
+              AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
+              AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
             ORDER BY c.sort_at DESC, c.id DESC
             LIMIT :limit
             """, nativeQuery = true)
@@ -88,5 +111,8 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
             @Param("source") String source,
             @Param("origin") String origin,
             @Param("since") java.time.Instant since,
+            @Param("minSalary") Integer minSalary,
+            @Param("experience") String experience,
+            @Param("sector") String sector,
             @Param("limit") int limit);
 }

@@ -54,7 +54,7 @@ class AtsConnectorFetchTest {
         ExternalBoardRegistry registry = new ExternalBoardRegistry(
                 new DefaultResourceLoader(), "classpath:feeds/ats-boards-allowlist-test.v1.json");
 
-        GreenhouseJobConnector gh = new GreenhouseJobConnector(registry, http, true, base);
+        GreenhouseJobConnector gh = new GreenhouseJobConnector(registry, http, true, base, false);
         LeverJobConnector lever = new LeverJobConnector(registry, http, true, base);
         AshbyJobConnector ashby = new AshbyJobConnector(registry, http, true, base);
 
@@ -82,7 +82,7 @@ class AtsConnectorFetchTest {
         // registry with only acme-gh enabled already; empty board not in allowlist enabled set
         ExternalBoardRegistry registry = new ExternalBoardRegistry(
                 new DefaultResourceLoader(), "classpath:feeds/ats-boards-allowlist-test.v1.json");
-        GreenhouseJobConnector gh = new GreenhouseJobConnector(registry, http, true, base);
+        GreenhouseJobConnector gh = new GreenhouseJobConnector(registry, http, true, base, false);
         assertThrows(IllegalArgumentException.class, () -> {
             // force parse error path via unknown board
             gh.fetchNormalized("missing-board");
