@@ -51,7 +51,8 @@ class ApplicationServiceApplyValidationTest {
                 mock(AuditService.class),
                 mock(InterviewService.class),
                 mock(EventNotifier.class),
-                mock(ResponsivenessService.class));
+                mock(ResponsivenessService.class),
+                mock(MailService.class));
         candidat = new User();
         candidat.setId(42L);
         candidat.setRole(Role.CANDIDAT);

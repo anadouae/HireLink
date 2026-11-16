@@ -30,6 +30,8 @@ public class MeController {
     private final OrganizationService organizationService;
     private final CvStorage cvStorage;
     private final SkillCatalogService skillCatalog;
+    private final ma.ensat.hirelink.service.CandidateCareerService careerService;
+    private final ma.ensat.hirelink.service.CvQualityService cvQualityService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** Seul vocabulaire admis pour users.experience_level : celui du select « pf-level » du profil candidat. */
@@ -41,13 +43,17 @@ public class MeController {
             CompanyVerificationService companyVerificationService,
             OrganizationService organizationService,
             CvStorage cvStorage,
-            SkillCatalogService skillCatalog
+            SkillCatalogService skillCatalog,
+            ma.ensat.hirelink.service.CandidateCareerService careerService,
+            ma.ensat.hirelink.service.CvQualityService cvQualityService
     ) {
         this.userRepository = userRepository;
         this.companyVerificationService = companyVerificationService;
         this.organizationService = organizationService;
         this.cvStorage = cvStorage;
         this.skillCatalog = skillCatalog;
+        this.careerService = careerService;
+        this.cvQualityService = cvQualityService;
     }
 
     /** Le candidat confirme les sections. Elles entrent dans le profil seulement ici. */
@@ -107,6 +113,45 @@ public class MeController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
                 .contentType(MediaType.parseMediaType(cvStorage.mediaType(user.getCvStorageName())))
                 .body(resource);
+    }
+
+    /** Suppression du CV du compte (pas des candidatures déjà envoyées). */
+    @DeleteMapping("/cv")
+    public java.util.Map<String, Object> deleteCv(@AuthenticationPrincipal User user) {
+        if (user.getRole() != Role.CANDIDAT) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux candidats");
+        }
+        String stored = user.getCvStorageName();
+        if (stored != null && !stored.isBlank()) {
+            cvStorage.delete(stored);
+        }
+        user.setCvStorageName(null);
+        user.setCvFileName(null);
+        // Les sections confirmées restent éditables ; le fichier disparaît.
+        userRepository.save(user);
+        return java.util.Map.of(
+                "deleted", true,
+                "message", "CV retiré de votre espace. Les candidatures déjà envoyées conservent leur pièce jointe."
+        );
+    }
+
+    @GetMapping("/career")
+    public java.util.Map<String, Object> career(@AuthenticationPrincipal User user) {
+        return careerService.get(user);
+    }
+
+    @PutMapping("/career")
+    public java.util.Map<String, Object> saveCareer(@AuthenticationPrincipal User user,
+                                                    @RequestBody java.util.Map<String, Object> body) {
+        return careerService.save(user, body == null ? java.util.Map.of() : body);
+    }
+
+    @GetMapping("/cv-quality")
+    public java.util.Map<String, Object> cvQuality(@AuthenticationPrincipal User user) {
+        if (user.getRole() != Role.CANDIDAT) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux candidats");
+        }
+        return cvQualityService.assess(user);
     }
 
     @GetMapping
@@ -175,6 +220,14 @@ public class MeController {
         if (body.gender() != null) user.setGender(body.gender().trim());
         if (body.availability() != null) user.setAvailability(body.availability().trim());
         if (body.emailNotifications() != null) user.setEmailNotifications(body.emailNotifications());
+        if (body.jobTitle() != null) {
+            String t = body.jobTitle().trim();
+            user.setJobTitle(t.isBlank() ? null : t);
+        }
+        if (body.country() != null) {
+            String c = body.country().trim();
+            user.setCountry(c.isBlank() ? null : c);
+        }
         if (user.getRole() == Role.RECRUTEUR && body.companyIce() != null && !body.companyIce().isBlank()) {
             var v = companyVerificationService.verify(
                     body.companyIce(),
@@ -244,7 +297,9 @@ public class MeController {
                 u.getEducationDomain(),
                 u.getGraduationYear(),
                 u.getWorkMode(),
-                u.isEmailNotifications()
+                u.isEmailNotifications(),
+                u.getCountry(),
+                u.getPendingEmail()
         );
     }
 

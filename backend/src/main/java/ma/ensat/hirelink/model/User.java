@@ -146,6 +146,21 @@ public class User {
     @Column(name = "cv_sections", columnDefinition = "TEXT")
     private String cvSections;
 
+    /** JSON array d’expériences structurées (Vague 3). */
+    @Column(name = "profile_experiences", columnDefinition = "TEXT")
+    private String profileExperiences;
+
+    /** JSON array de formations structurées (Vague 3). */
+    @Column(name = "profile_educations", columnDefinition = "TEXT")
+    private String profileEducations;
+
+    @Column(name = "country", length = 80)
+    private String country;
+
+    /** E-mail en attente de confirmation OTP (changement sécurisé). */
+    @Column(name = "pending_email", length = 180)
+    private String pendingEmail;
+
     /** Palier CDC §9 : ESSENTIEL / PERFORMANCE (candidat) ou ACCES / PREMIUM (org). */
     @Enumerated(EnumType.STRING)
     @Column(name = "plan_tier", length = 24)
@@ -309,6 +324,15 @@ public class User {
 
     public String getCvSections() { return cvSections; }
     public void setCvSections(String cvSections) { this.cvSections = cvSections; }
+
+    public String getProfileExperiences() { return profileExperiences; }
+    public void setProfileExperiences(String profileExperiences) { this.profileExperiences = profileExperiences; }
+    public String getProfileEducations() { return profileEducations; }
+    public void setProfileEducations(String profileEducations) { this.profileEducations = profileEducations; }
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
+    public String getPendingEmail() { return pendingEmail; }
+    public void setPendingEmail(String pendingEmail) { this.pendingEmail = pendingEmail; }
 
     public PlanTier getPlanTier() { return planTier; }
     public void setPlanTier(PlanTier planTier) { this.planTier = planTier; }
