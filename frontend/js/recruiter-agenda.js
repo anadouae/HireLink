@@ -710,7 +710,7 @@
   /** Le pipeline décide de l'étape, l'Agenda pose le créneau : ici atterrissent les dossiers passés en entretien. */
   async function planInterview() {
     const pool = apps
-      .filter((a) => a.status === "INTERVIEW" && a.interviewStatus !== "CANCELLED")
+      .filter((a) => a.status === "INTERVIEW" && (!a.interviewAt || a.interviewStatus === "CANCELLED" || a.interviewPlanningState === "TO_SCHEDULE" || a.interviewPlanningState === "CANCELLED"))
       .sort((x, y) => (x.interviewAt ? 1 : 0) - (y.interviewAt ? 1 : 0));
     if (!pool.length) {
       RC.toast("Agenda", "Aucun dossier à l’étape Entretien : avancez d’abord un dossier du pipeline.", "info");

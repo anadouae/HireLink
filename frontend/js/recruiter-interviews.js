@@ -15,20 +15,28 @@
 
   const cancelled = (a) => a.interviewStatus === "CANCELLED";
 
+  function hasSlot(a) {
+    if (a.interviewAt == null || a.interviewAt === "") return false;
+    const t = new Date(a.interviewAt).getTime();
+    return !Number.isNaN(t) && t !== 0;
+  }
   function groups() {
     const now = Date.now();
-    const byDate = (x, y) => new Date(x.interviewAt) - new Date(y.interviewAt);
-    // Aligné pipeline : étape INTERVIEW + créneau futur = à venir ; sinon à replanifier / historique.
+    const byDate = (x, y) => {
+      const tx = hasSlot(x) ? new Date(x.interviewAt).getTime() : Number.POSITIVE_INFINITY;
+      const ty = hasSlot(y) ? new Date(y.interviewAt).getTime() : Number.POSITIVE_INFINITY;
+      return tx - ty;
+    };
     const interviewStage = apps.filter((a) => a.status === "INTERVIEW");
     const upcoming = interviewStage
-      .filter((a) => a.interviewAt && !cancelled(a) && new Date(a.interviewAt).getTime() >= now)
+      .filter((a) => hasSlot(a) && !cancelled(a) && new Date(a.interviewAt).getTime() >= now)
       .sort(byDate);
+    // À planifier / annulés / créneau passé — jamais new Date(null).
     const todo = interviewStage
-      .filter((a) => cancelled(a) || !a.interviewAt || new Date(a.interviewAt).getTime() < now)
+      .filter((a) => cancelled(a) || !hasSlot(a) || new Date(a.interviewAt).getTime() < now)
       .sort(byDate);
     const past = apps
-      .filter((a) => a.interviewAt && a.status !== "INTERVIEW" && !cancelled(a))
-      .concat(apps.filter((a) => a.interviewAt && cancelled(a) && a.status !== "INTERVIEW"))
+      .filter((a) => hasSlot(a) && a.status !== "INTERVIEW")
       .sort((x, y) => byDate(y, x));
     return { upcoming, todo, past };
   }
@@ -60,15 +68,25 @@
   function item(a) {
     const k = KIND[a.interviewKind] || KIND.HR;
     const wrap = document.createElement("article");
-    wrap.className = "iv-item " + k[1];
+    wrap.className = "iv-item " + k[1] + (cancelled(a) ? " is-cancelled" : "") + (!hasSlot(a) ? " is-todo" : "");
     wrap.dataset.focus = "interview:" + a.id + " application:" + a.id;
-    const d = new Date(a.interviewAt);
     const t = RC.interviewTypeUi(a.interviewType);
     const head = document.createElement("header");
     head.className = "iv-item-head";
+    let whenHtml;
+    if (!hasSlot(a)) {
+      whenHtml = '<div class="iv-when"><b>—</b><small>À planifier</small></div>';
+    } else if (cancelled(a)) {
+      const w = HireLinkInterview.whenText(a);
+      whenHtml = '<div class="iv-when"><b>' + (w.time || "—") + "</b><small>Annulé</small></div>";
+    } else {
+      const d = new Date(a.interviewAt);
+      whenHtml =
+        '<div class="iv-when"><b>' + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + "</b><small>" +
+        d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + "</small></div>";
+    }
     head.innerHTML =
-      '<div class="iv-when"><b>' + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }) + "</b><small>" +
-      d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" }) + "</small></div>" +
+      whenHtml +
       '<span class="ivx-ava" aria-hidden="true"></span>' +
       '<div class="iv-who"><strong></strong><span></span></div>' +
       '<div class="iv-tags"><span class="iv-kind"></span><span class="iv-mode ' + t.cls + '"><i class="iv-light-green" aria-hidden="true"></i>' + ico(t.icon) + t.label + "</span></div>";
@@ -96,6 +114,8 @@
   function groupKey(a) {
     if (groupBy === "kind") { const k = KIND[a.interviewKind] || KIND.HR; return [a.interviewKind || "HR", k[0], k[1]]; }
     if (groupBy === "offer") return ["o" + a.jobOfferId, a.jobTitle || "Offre", ""];
+    if (!hasSlot(a)) return ["noslot", "À planifier", ""];
+    if (cancelled(a)) return ["cancelled", "Annulés", ""];
     const d = new Date(a.interviewAt); const key = d.toDateString();
     return [key, dayLabel(d), ""];
   }
@@ -136,6 +156,7 @@
 
   function inPeriod(a) {
     if (period === "all") return true;
+    if (!hasSlot(a)) return period !== "past";
     const t = new Date(a.interviewAt).getTime();
     const now = Date.now();
     if (period === "past") return t < now;
@@ -211,8 +232,8 @@
             }
           : tab === "todo"
             ? {
-                title: "Aucun entretien à replanifier",
-                text: "Les entretiens annulés dont le dossier est toujours à l’étape Entretien apparaissent ici.",
+                title: "Rien à planifier",
+                text: "Dossiers à l’étape Entretien sans créneau, créneaux annulés, ou date passée — sans date inventée.",
               }
             : { title: "Aucun entretien passé", text: "L’historique des entretiens s’affichera ici." }
       );
