@@ -49,6 +49,26 @@ public interface JobOfferRepository extends JpaRepository<JobOffer, Long> {
     long countByPublishedTrue();
     long countBySuspendedTrue();
 
+    @Query("""
+            SELECT COUNT(o) FROM JobOffer o
+            WHERE o.organization.id = :organizationId
+              AND o.published = true
+              AND o.suspended = false
+              AND o.archivedAt IS NULL
+            """)
+    long countActiveByOrganizationId(@Param("organizationId") Long organizationId);
+
+    @Query("""
+            SELECT COUNT(o) FROM JobOffer o
+            WHERE o.organization.id = :organizationId
+              AND o.published = true
+              AND o.suspended = false
+              AND o.archivedAt IS NULL
+              AND o.id <> :excludeId
+            """)
+    long countActiveByOrganizationIdExcluding(@Param("organizationId") Long organizationId,
+                                              @Param("excludeId") Long excludeId);
+
     /** Liste d'administration : le recruteur et l'entreprise sont déjà chargés (D2). */
     @Query("""
             SELECT DISTINCT o FROM JobOffer o

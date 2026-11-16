@@ -57,6 +57,7 @@ public class JobOfferService {
     private final CompanyFollowService companyFollowService;
     private final AuditService audit;
     private final CatalogListingIndexer catalogIndexer;
+    private final PlanPolicyService planPolicy;
 
     public JobOfferService(
             JobOfferRepository jobOfferRepository,
@@ -75,8 +76,10 @@ public class JobOfferService {
             ResponsivenessService responsiveness,
             CompanyFollowService companyFollowService,
             AuditService audit,
-            CatalogListingIndexer catalogIndexer
+            CatalogListingIndexer catalogIndexer,
+            PlanPolicyService planPolicy
     ) {
+        this.planPolicy = planPolicy;
         this.tagRepository = tagRepository;
         this.skillCatalog = skillCatalog;
         this.offerTerms = offerTerms;
@@ -180,7 +183,7 @@ public class JobOfferService {
         boolean wasPublished = o.isPublished();
         boolean wantPublish = req.published();
         if (wantPublish && recruiter.getRole() != Role.ADMINISTRATEUR) {
-            assertCanPublish(recruiter);
+            assertCanPublish(recruiter, o.isPublished() ? o.getId() : null);
         }
         if (o.isSuspended() && wantPublish && recruiter.getRole() != Role.ADMINISTRATEUR) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -223,7 +226,7 @@ public class JobOfferService {
                     "Offre suspendue après signalements — contactez un administrateur");
         }
         if (o.isPublished()) return toDto(o, null);
-        if (recruiter.getRole() != Role.ADMINISTRATEUR) assertCanPublish(recruiter);
+        if (recruiter.getRole() != Role.ADMINISTRATEUR) assertCanPublish(recruiter, o.getId());
         var scan = fraudOfferScanService.scan(o.getTitle(), o.getDescription());
         if (scan.blockPublish()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, scan.message());
@@ -506,13 +509,20 @@ public class JobOfferService {
         return m;
     }
 
-    /** Middleware logique : Inscription libre ≠ Publication libre. */
+    /** Middleware logique : Inscription libre ≠ Publication libre + quotas formule. */
     private void assertCanPublish(User recruiter) {
+        assertCanPublish(recruiter, null);
+    }
+
+    private void assertCanPublish(User recruiter, Long excludeOfferId) {
         if (recruiter.getRole() == Role.ADMINISTRATEUR) return;
-        if (recruiter.isCompanyVerified() || organizationService.isOrgVerified(recruiter)) return;
-        String status = recruiter.getVerificationStatus() == null ? "PENDING" : recruiter.getVerificationStatus();
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                companyVerificationService.publishBlockReason(status));
+        if (!(recruiter.isCompanyVerified() || organizationService.isOrgVerified(recruiter))) {
+            String status = recruiter.getVerificationStatus() == null ? "PENDING" : recruiter.getVerificationStatus();
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    companyVerificationService.publishBlockReason(status));
+        }
+        Organization org = organizationService.currentOrganization(recruiter);
+        planPolicy.assertCanPublishOffer(recruiter, org, excludeOfferId);
     }
 
     /** Les compétences demandées alimentent la relation N–N JobOffer ↔ Tag (un tag partagé entre offres). */

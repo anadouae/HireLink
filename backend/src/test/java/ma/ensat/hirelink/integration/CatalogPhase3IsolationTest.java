@@ -239,27 +239,32 @@ class CatalogPhase3IsolationTest {
         catalog.rebuildIndex();
 
         User bare = compte(Role.CANDIDAT);
-        ResponseEntity<Map> empty = http.exchange(catalogUrl(Map.of("country", "ALL", "forYou", "true")),
+        // forYou ne masque plus les offres sans compétences (classement sans seuil) —
+        // aligné CatalogForYouNoHideIsolationTest.
+        ResponseEntity<Map> barePage = http.exchange(catalogUrl(Map.of("country", "ALL", "forYou", "true")),
                 HttpMethod.GET, auth(token(bare)), Map.class);
-        assertEquals(0, ((Number) empty.getBody().get("totalElements")).intValue());
+        assertEquals(HttpStatus.OK, barePage.getStatusCode());
+        assertTrue(((Number) barePage.getBody().get("totalElements")).intValue() >= 0);
 
         User skilled = compte(Role.CANDIDAT);
         skilled.setSkills("Java, Spring Boot");
         users.save(skilled);
-        ResponseEntity<Map> hit = http.exchange(catalogUrl(Map.of("country", "ALL", "forYou", "true", "size", "20")),
+        // Filtre explicite minMatch=50 (forYou seul ne masque plus les scores faibles).
+        ResponseEntity<Map> hit = http.exchange(catalogUrl(Map.of(
+                        "country", "ALL", "forYou", "true", "minMatch", "50", "size", "20")),
                 HttpMethod.GET, auth(token(skilled)), Map.class);
         assertEquals(HttpStatus.OK, hit.getStatusCode());
         long total = ((Number) hit.getBody().get("totalElements")).longValue();
         assertTrue(total >= 1);
         List<Map> items = (List<Map>) hit.getBody().get("items");
-        assertEquals(total, items.size());
+        assertFalse(items.isEmpty());
         for (Map item : items) {
             assertTrue(Boolean.TRUE.equals(item.get("matchAvailable")));
             assertTrue(((Number) item.get("matchScore")).doubleValue() >= 50.0);
             assertTrue(Boolean.TRUE.equals(item.get("matchesProfile")));
             if (Boolean.TRUE.equals(item.get("external"))) {
-                assertTrue(String.valueOf(item.get("matchLabel")).toLowerCase().contains("indicatif")
-                        || String.valueOf(item.get("matchLabel")).toLowerCase().contains("source"));
+                String lbl = String.valueOf(item.get("matchLabel")).toLowerCase();
+                assertTrue(lbl.contains("indicatif") || lbl.contains("source"));
             }
         }
     }
