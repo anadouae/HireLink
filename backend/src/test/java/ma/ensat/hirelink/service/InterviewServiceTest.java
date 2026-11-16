@@ -8,8 +8,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -238,17 +240,25 @@ class InterviewServiceTest {
     @Test
     void leFichierCalendrierGardeStatusConfirmed() {
         Application app = dossier();
-        service.schedule(app, new InterviewRequest("ONSITE", "HR", CRENEAU.withHour(10).withMinute(30),
-                "Africa/Casablanca", 45, "Route de Rabat, Tétouan", null, null, null, null));
+        LocalDateTime startsAt = CRENEAU.withHour(10).withMinute(30);
+        ZoneId zone = ZoneId.of("Africa/Casablanca");
+        int durationMinutes = 45;
+        service.schedule(app, new InterviewRequest("ONSITE", "HR", startsAt,
+                zone.getId(), durationMinutes, "Route de Rabat, Tétouan", null, null, null, null));
 
         String ics = new String(service.ics(app), StandardCharsets.UTF_8);
+
+        // Même conversion / format ICS UTC que InterviewService (schedule + ICS_STAMP).
+        Instant start = startsAt.atZone(zone).toInstant();
+        Instant end = start.plusSeconds(durationMinutes * 60L);
+        DateTimeFormatter icsUtc = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneId.of("UTC"));
 
         assertTrue(ics.contains("STATUS:CONFIRMED"));
         assertTrue(ics.contains("BEGIN:VCALENDAR"));
         assertTrue(ics.contains("BEGIN:VEVENT"));
         assertTrue(ics.contains("UID:interview-9@hirelink"));
-        assertTrue(ics.contains("DTSTART:20300304T093000Z"), ics);
-        assertTrue(ics.contains("DTEND:20300304T101500Z"), ics);
+        assertTrue(ics.contains("DTSTART:" + icsUtc.format(start)), ics);
+        assertTrue(ics.contains("DTEND:" + icsUtc.format(end)), ics);
         assertTrue(ics.contains("LOCATION:Route de Rabat\\, Tétouan"));
         assertTrue(ics.contains("SUMMARY:Entretien RH — Développeur Java"));
         assertTrue(ics.contains("TRIGGER:-PT1H"));
