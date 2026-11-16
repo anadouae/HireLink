@@ -62,6 +62,7 @@ public class ApplicationService {
     private final InterviewService interviews;
     private final EventNotifier notifier;
     private final ResponsivenessService responsiveness;
+    private final MailService mail;
 
     public ApplicationService(
             ApplicationRepository applicationRepository,
@@ -76,12 +77,14 @@ public class ApplicationService {
             AuditService audit,
             InterviewService interviews,
             EventNotifier notifier,
-            ResponsivenessService responsiveness
+            ResponsivenessService responsiveness,
+            MailService mail
     ) {
         this.audit = audit;
         this.interviews = interviews;
         this.notifier = notifier;
         this.responsiveness = responsiveness;
+        this.mail = mail;
         this.applicationRepository = applicationRepository;
         this.jobOfferRepository = jobOfferRepository;
         this.matchingService = matchingService;
@@ -192,7 +195,9 @@ public class ApplicationService {
 
     @Transactional(readOnly = true)
     public List<ApiDtos.ApplicationResponse> mineAsCandidate(User candidate) {
-        return applicationRepository.findByCandidateId(candidate.getId()).stream().map(this::toDto).toList();
+        return applicationRepository.findByCandidateId(candidate.getId()).stream()
+                .map(a -> toDto(a, true))
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -425,6 +430,11 @@ public class ApplicationService {
     }
 
     private ApiDtos.ApplicationResponse toDto(Application app) {
+        return toDto(app, false);
+    }
+
+    /** @param candidateView masque les notes internes confidentielles. */
+    private ApiDtos.ApplicationResponse toDto(Application app, boolean candidateView) {
         JobOffer o = app.getJobOffer();
         Instant deadline = app.getResponseDeadline();
         if (deadline == null && app.getSubmittedAt() != null) {
@@ -466,7 +476,7 @@ public class ApplicationService {
                 app.getInterviewParticipants(),
                 interviewStatusForDto(app),
                 app.getInterviewCancelReason(),
-                app.getAdvanceNote(),
+                candidateView ? null : app.getAdvanceNote(),
                 app.getAssignedHmUserId(),
                 app.getSubmittedAt(),
                 app.getUpdatedAt(),
@@ -482,7 +492,8 @@ public class ApplicationService {
                 app.getApplicationDetails(),
                 app.getMatchScore(),
                 currentScore,
-                compat != null
+                compat != null,
+                interviews.planningState(app)
         );
     }
 
@@ -497,27 +508,82 @@ public class ApplicationService {
         return InterviewService.SCHEDULED;
     }
 
-    /** Poser ou reporter un entretien (dossier à l'étape Entretien) : équipe de l'organisation uniquement. */
+    /**
+     * Poser ou reporter un entretien (étape Entretien). Autorisé aussi après annulation
+     * (nouvelle planification explicite). L'ancien créneau est conservé dans la timeline.
+     */
     @Transactional
-    public ApiDtos.ApplicationResponse rescheduleInterview(User actor, Long appId, ApiDtos.InterviewRequest req) {
+    public Map<String, Object> rescheduleInterview(User actor, Long appId, ApiDtos.InterviewRequest req) {
         Application app = interviewApplication(actor, appId);
         boolean etaitPlanifie = interviews.isPlanned(app);
+        boolean afterCancel = InterviewService.CANCELLED.equals(app.getInterviewStatus());
+        Map<String, Object> previous = interviews.snapshot(app);
         interviews.schedule(app, req);
         applicationRepository.save(app);
-        audit.ok(etaitPlanifie ? "INTERVIEW_RESCHEDULED" : "INTERVIEW_PLANNED", actor, "APPLICATION", app.getId(), interviews.summary(app));
-        // « reporté » n'est vrai que si un premier créneau avait déjà été envoyé.
+        String action = etaitPlanifie ? "INTERVIEW_RESCHEDULED" : "INTERVIEW_PLANNED";
+        audit.ok(action, actor, "APPLICATION", app.getId(), interviews.summary(app));
+        String payload = interviewTimelinePayload(previous, interviews.snapshot(app),
+                etaitPlanifie ? "RESCHEDULED" : (afterCancel ? "REPLANNED_AFTER_CANCEL" : "PLANNED"));
+        timelineService.append(app.getId(),
+                etaitPlanifie ? "INTERVIEW_SCHEDULED" : (afterCancel ? "INTERVIEW_CANCELLED" : null),
+                etaitPlanifie ? "INTERVIEW_RESCHEDULED" : "INTERVIEW_PLANNED",
+                actor.getId(), payload);
         notifier.interviewScheduled(app, etaitPlanifie);
-        return toDto(app);
+        return interviewActionResult(app, etaitPlanifie ? "RESCHEDULED" : "PLANNED", previous);
     }
 
     @Transactional
-    public ApiDtos.ApplicationResponse cancelInterview(User actor, Long appId, String reason) {
+    public Map<String, Object> cancelInterview(User actor, Long appId, String reason) {
         Application app = interviewApplication(actor, appId);
+        Map<String, Object> previous = interviews.snapshot(app);
         interviews.cancel(app, reason);
         applicationRepository.save(app);
         audit.ok("INTERVIEW_CANCELLED", actor, "APPLICATION", app.getId(), reason);
+        String payload = interviewTimelinePayload(previous, interviews.snapshot(app), "CANCELLED");
+        timelineService.append(app.getId(), "INTERVIEW_SCHEDULED", "INTERVIEW_CANCELLED", actor.getId(), payload);
         notifier.interviewCancelled(app);
-        return toDto(app);
+        return interviewActionResult(app, "CANCELLED", previous);
+    }
+
+    private Map<String, Object> interviewActionResult(Application app, String action, Map<String, Object> previous) {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("application", toDto(app));
+        out.put("action", action);
+        out.put("previousSlot", previous);
+        out.put("mailDelivery", mail.deliveryHint(app.getCandidate(), MailService.Kind.INTERVIEW));
+        out.put("mailDeliveryLabel", mailDeliveryLabel(String.valueOf(out.get("mailDelivery"))));
+        out.put("inAppNotification", true);
+        return out;
+    }
+
+    private static String mailDeliveryLabel(String code) {
+        return switch (code) {
+            case "SMTP_OFF" -> "Notification interne créée. E-mail non envoyé (SMTP désactivé) — journalisé.";
+            case "DISABLED_BY_USER" -> "Notification interne créée. E-mail non envoyé (préférence candidat).";
+            case "QUEUED" -> "Notification interne créée. E-mail mis en file d'envoi (pas encore confirmé).";
+            default -> "Notification interne créée.";
+        };
+    }
+
+    private static String interviewTimelinePayload(Map<String, Object> previous, Map<String, Object> current, String kind) {
+        return "{\"kind\":\"" + kind + "\",\"previous\":" + toJsonLoose(previous)
+                + ",\"current\":" + toJsonLoose(current) + "}";
+    }
+
+    private static String toJsonLoose(Map<String, Object> m) {
+        if (m == null) return "null";
+        StringBuilder sb = new StringBuilder("{");
+        boolean first = true;
+        for (Map.Entry<String, Object> e : m.entrySet()) {
+            if (!first) sb.append(',');
+            first = false;
+            sb.append('"').append(jsonEsc(e.getKey())).append("\":");
+            Object v = e.getValue();
+            if (v == null) sb.append("null");
+            else if (v instanceof Number || v instanceof Boolean) sb.append(v);
+            else sb.append('"').append(jsonEsc(String.valueOf(v))).append('"');
+        }
+        return sb.append('}').toString();
     }
 
     public record CalendarFile(byte[] content, String filename) {}

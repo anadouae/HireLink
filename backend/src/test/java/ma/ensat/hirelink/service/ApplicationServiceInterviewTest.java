@@ -63,10 +63,12 @@ class ApplicationServiceInterviewTest {
         notifier = mock(EventNotifier.class);
         SkillMatchingService matching = mock(SkillMatchingService.class);
         ResponsivenessService responsiveness = mock(ResponsivenessService.class);
+        MailService mail = mock(MailService.class);
+        when(mail.deliveryHint(any(), any())).thenReturn("SMTP_OFF");
         service = new ApplicationService(applicationRepository, mock(JobOfferRepository.class), matching,
                 mock(TimelineService.class), refusalReasonRepository, mock(NotificationService.class),
                 organizationService, mock(MembershipRepository.class), mock(CvStorage.class), audit,
-                interviews, notifier, responsiveness);
+                interviews, notifier, responsiveness, mail);
 
         candidat = utilisateur(12L, Role.CANDIDAT, "Sara Bennani");
         recruteur = utilisateur(7L, Role.RECRUTEUR, "Karim Idrissi");
@@ -118,10 +120,13 @@ class ApplicationServiceInterviewTest {
     void planifierUnEntretienJournaliseEtNotifie() {
         membreDe(recruteur, OrgRole.RECRUTEUR);
 
-        ApiDtos.ApplicationResponse reponse = service.rescheduleInterview(recruteur, 9L, visio());
+        var reponse = service.rescheduleInterview(recruteur, 9L, visio());
+        ApiDtos.ApplicationResponse appDto = (ApiDtos.ApplicationResponse) reponse.get("application");
 
-        assertEquals(InterviewService.SCHEDULED, reponse.interviewStatus());
+        assertEquals(InterviewService.SCHEDULED, appDto.interviewStatus());
         assertEquals("SCHEDULED", app.getInterviewStatus());
+        assertEquals("SMTP_OFF", reponse.get("mailDelivery"));
+        assertEquals("PLANNED", reponse.get("action"));
         verify(organizationService).assertSameOrg(recruteur, app.getJobOffer());
         verify(audit).ok(eq("INTERVIEW_PLANNED"), eq(recruteur), eq("APPLICATION"), eq(9L), any());
         verify(notifier).interviewScheduled(app, false);
@@ -133,11 +138,13 @@ class ApplicationServiceInterviewTest {
         membreDe(recruteur, OrgRole.RECRUTEUR);
         service.rescheduleInterview(recruteur, 9L, visio());
 
-        ApiDtos.ApplicationResponse reponse = service.rescheduleInterview(recruteur, 9L,
+        var reponse = service.rescheduleInterview(recruteur, 9L,
                 new ApiDtos.InterviewRequest("ONSITE", "FINAL", CRENEAU.plusDays(3), "Europe/Paris", 90,
                         "12 rue des Fleurs, Paris", null, null, null, null));
+        ApiDtos.ApplicationResponse appDto = (ApiDtos.ApplicationResponse) reponse.get("application");
 
-        assertEquals("ONSITE", reponse.interviewType());
+        assertEquals("ONSITE", appDto.interviewType());
+        assertEquals("RESCHEDULED", reponse.get("action"));
         verify(audit).ok(eq("INTERVIEW_RESCHEDULED"), eq(recruteur), eq("APPLICATION"), eq(9L), any());
         verify(notifier).interviewScheduled(app, true);
     }
@@ -147,10 +154,12 @@ class ApplicationServiceInterviewTest {
         membreDe(recruteur, OrgRole.RECRUTEUR);
         service.rescheduleInterview(recruteur, 9L, visio());
 
-        ApiDtos.ApplicationResponse reponse = service.cancelInterview(recruteur, 9L, "Poste pourvu en interne.");
+        var reponse = service.cancelInterview(recruteur, 9L, "Poste pourvu en interne.");
+        ApiDtos.ApplicationResponse appDto = (ApiDtos.ApplicationResponse) reponse.get("application");
 
-        assertEquals(InterviewService.CANCELLED, reponse.interviewStatus());
-        assertEquals("Poste pourvu en interne.", reponse.interviewCancelReason());
+        assertEquals(InterviewService.CANCELLED, appDto.interviewStatus());
+        assertEquals("Poste pourvu en interne.", appDto.interviewCancelReason());
+        assertEquals("CANCELLED", reponse.get("action"));
         verify(audit).ok("INTERVIEW_CANCELLED", recruteur, "APPLICATION", 9L, "Poste pourvu en interne.");
         verify(notifier).interviewCancelled(app);
     }
@@ -159,12 +168,14 @@ class ApplicationServiceInterviewTest {
     void laReponseDApiNePorteAucuneReponseDuCandidat() {
         membreDe(recruteur, OrgRole.RECRUTEUR);
 
-        ApiDtos.ApplicationResponse reponse = service.rescheduleInterview(recruteur, 9L, visio());
+        var wrap = service.rescheduleInterview(recruteur, 9L, visio());
+        ApiDtos.ApplicationResponse reponse = (ApiDtos.ApplicationResponse) wrap.get("application");
 
         List<String> champs = java.util.Arrays.stream(ApiDtos.ApplicationResponse.class.getRecordComponents())
                 .map(java.lang.reflect.RecordComponent::getName).toList();
         assertTrue(champs.contains("interviewStatus"), champs.toString());
         assertTrue(champs.contains("interviewCancelReason"), champs.toString());
+        assertTrue(champs.contains("interviewPlanningState"), champs.toString());
         assertTrue(champs.stream().noneMatch(c -> c.toLowerCase().contains("confirmation")), champs.toString());
         assertTrue(champs.stream().noneMatch(c -> c.toLowerCase().contains("candidatenote")), champs.toString());
         assertEquals(reponse.interviewStatus(), app.getInterviewStatus());

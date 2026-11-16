@@ -22,10 +22,14 @@
   const STEP_HINT = {
     SCREENING: "Présélection : CV et compétences vs fiche de poste.",
     SHORTLISTED: "Shortlist : candidat retenu pour un échange humain.",
-    INTERVIEW: "Phase entretien : le créneau se pose depuis le dossier du candidat.",
+    INTERVIEW: "Entretien à planifier tant qu’aucun créneau n’est enregistré. Utilisez « Planifier un entretien ».",
   };
 
   const STATUS_TL = Object.assign({}, RC.STATUS_FR || {}, {
+    INTERVIEW_PLANNED: "Entretien planifié",
+    INTERVIEW_RESCHEDULED: "Entretien reporté",
+    INTERVIEW_SCHEDULED: "Créneau précédent",
+    INTERVIEW_CANCELLED: "Entretien annulé",
     SUBMITTED: "Reçue",
     SCREENING: "Présélection",
     SHORTLISTED: "Shortlist",
@@ -56,7 +60,8 @@
           .map((h) => {
             const from = STATUS_TL[h.from] || h.from || "—";
             const to = STATUS_TL[h.to] || h.to || "—";
-            const when = h.at ? new Date(h.at).toLocaleString("fr-FR") : "";
+            const d = h.at ? new Date(h.at) : null;
+            const when = d && !Number.isNaN(d.getTime()) ? d.toLocaleString("fr-FR") : (h.at ? "Date non renseignée" : "");
             return (
               "<li><strong>" +
               from +
@@ -513,11 +518,13 @@
     return html;
   }
 
+  /** Indicateurs automatiques (informatifs) vs confirmation manuelle « Dossier relu ». */
   function checksState(c) {
+    const slaOk = !c.slaBreached && !(c.slaRemainingDays != null && c.slaRemainingDays < 0);
     return {
       id: !!(c.candidateName && c.candidateEmail),
-      cv: !!(c.cvFileName || c.cvSource),
-      sla: !c.slaBreached,
+      hasCv: !!(c.hasCvFile || (c.cvFileName && c.cvSource === "UPLOAD")),
+      sla: slaOk,
     };
   }
 
@@ -529,66 +536,64 @@
     const b = document.getElementById(id);
     return !!(b && b.checked);
   }
-  /** Le badge « n / 3 » et le bouton suivre suivent les cases réellement cochées ; rien n'est pré-affirmé au serveur. */
+  /** Seule la case manuelle « Dossier relu » peut bloquer ; les indicateurs auto ne suffisent pas. */
   function syncChecks(api) {
     const n = checkedCount();
     const badge = document.getElementById("chk-count");
     if (badge) badge.textContent = n + " / " + CHECK_IDS.length;
-    const ok = n === CHECK_IDS.length;
+    const ok = checkOn("chk-cv") && checkOn("chk-id") && checkOn("chk-sla");
     if (api && api.setConfirmEnabled) api.setConfirmEnabled(ok);
     return ok;
   }
 
   function checksHtml(c, mode) {
     const pre = checksState(c || {});
-    const count = (pre.id ? 1 : 0) + (pre.cv ? 1 : 0) + (pre.sla ? 1 : 0);
     const sub =
       mode === "reject"
-        ? "Confirmez la relecture avant d’enregistrer un motif catalogue."
-        : "Pré-coché si les données dossier le permettent — validez avant d’avancer.";
-    function row(id, checked, title, small, prefilled) {
+        ? "La relecture du dossier est une action manuelle. Les indicateurs auto ne suffisent pas."
+        : "Indicateurs automatiques (identité, délai) ≠ relecture. Cochez « Dossier relu » seulement après avoir lu le dossier.";
+    function infoRow(ok, title, small) {
       return (
-        '<label class="hl-check' +
-        (prefilled ? " is-pre" : "") +
-        '"><input type="checkbox" id="' +
-        id +
-        '"' +
-        (checked ? " checked" : "") +
-        " />" +
-        "<span><strong>" +
-        title +
-        (prefilled ? '<span class="pre-tag">Auto</span>' : "") +
-        "</strong><small>" +
-        small +
-        "</small></span></label>"
+        '<div class="hl-check is-info' + (ok ? " is-ok" : " is-ko") + '" role="status">' +
+        "<span><strong>" + title +
+        '<span class="pre-tag">' + (ok ? "Auto" : "Manque") + "</span></strong><small>" +
+        small + "</small></span></div>"
+      );
+    }
+    function row(id, checked, title, small, locked) {
+      return (
+        '<label class="hl-check' + (locked ? " is-pre" : "") + '"><input type="checkbox" id="' +
+        id + '"' + (checked ? " checked" : "") + (locked ? " disabled" : "") + " />" +
+        "<span><strong>" + title +
+        (locked ? '<span class="pre-tag">Auto</span>' : "") +
+        "</strong><small>" + small + "</small></span></label>"
       );
     }
     return (
       '<div class="hl-dossier-section hl-checklist-v2" role="group" aria-label="Checklist">' +
       '<div class="hl-checklist-head"><strong>Checklist</strong>' +
-      '<span class="badge badge-chrome" id="chk-count">' +
-      count +
-      " / 3</span></div>" +
-      '<p class="muted hl-checklist-sub">' +
-      sub +
-      "</p>" +
-      row("chk-id", pre.id, "Identité renseignée", "Nom et email présents dans le dossier (pas une vérification d'identité)", pre.id) +
-      row(
-        "chk-cv",
-        pre.cv,
-        "Dossier relu",
-        "CV / pièces déjà joints — confirmez la relecture",
-        pre.cv
-      ) +
-      row(
-        "chk-sla",
-        pre.sla,
-        "Délai de 1ʳᵉ réponse",
+      '<span class="badge badge-chrome" id="chk-count">0 / 3</span></div>' +
+      '<p class="muted hl-checklist-sub">' + sub + "</p>" +
+      infoRow(pre.id, "Identité renseignée",
+        pre.id
+          ? "Nom et e-mail présents (vérification automatique — pas une preuve d'identité)."
+          : "Nom ou e-mail manquant — cochez seulement si vous assumez l’avancer ainsi.") +
+      (pre.id
+        ? '<input type="checkbox" id="chk-id" checked hidden aria-hidden="true" />'
+        : row("chk-id", false, "Assumer l’identité incomplète", "Confirmation manuelle obligatoire.", false)) +
+      row("chk-cv", false, "Dossier relu",
+        pre.hasCv
+          ? "Un CV est joint — confirmez que vous l’avez lu (jamais pré-coché)."
+          : "Aucun fichier CV joint : confirmez seulement si vous avez lu le profil / lettre.",
+        false) +
+      infoRow(pre.sla, "Délai de 1ʳᵉ réponse",
         pre.sla
-          ? "Engagement encore dans les temps"
-          : "Délai dépassé — cochez pour assumer la décision",
-        pre.sla
-      ) +
+          ? "Indicateur automatique : engagement encore dans les temps."
+          : "Indicateur : délai dépassé.") +
+      (pre.sla
+        ? '<input type="checkbox" id="chk-sla" checked hidden aria-hidden="true" />'
+        : row("chk-sla", false, "Assumer le délai dépassé", "Confirmation manuelle avant d’avancer.", false)) +
+      '<p class="muted" style="margin:.5rem 0 0;font-size:.85rem">Aucun pourcentage de validation du candidat. Ce n’est pas une note.</p>' +
       "</div>"
     );
   }
@@ -840,8 +845,10 @@
         (canAdvance
           ? '<button type="button" class="btn btn-primary btn-sm" id="btn-adv-from">Avancer</button>'
           : "") +
-        (c.status === "INTERVIEW" && !c.interviewAt
-          ? '<button type="button" class="btn btn-secondary btn-sm" id="btn-plan-from">Planifier l’entretien</button>'
+        (c.status === "INTERVIEW" && (!c.interviewAt || c.interviewStatus === "CANCELLED" || c.interviewPlanningState === "TO_SCHEDULE" || c.interviewPlanningState === "CANCELLED")
+          ? '<button type="button" class="btn btn-secondary btn-sm" id="btn-plan-from">' +
+            (c.interviewStatus === "CANCELLED" ? "Planifier un nouvel entretien" : "Planifier un entretien") +
+            "</button>"
           : "") +
         '<button type="button" class="btn btn-ghost btn-sm" id="btn-rej-from">Refuser</button>' +
         "</div>" +
@@ -860,8 +867,14 @@
         }
         const ivSlot = document.querySelector("[data-iv-slot]");
         if (ivSlot) {
-          // Le créneau se gère dans l'Agenda : le pipeline affiche, il ne planifie pas.
-          ivSlot.appendChild(HireLinkInterview.card(c, { role: "readonly" }));
+          if (!c.interviewAt && c.status === "INTERVIEW") {
+            ivSlot.innerHTML = '<p class="muted"><strong>Entretien à planifier</strong> — aucun créneau enregistré.</p>';
+          } else if (c.interviewAt) {
+            ivSlot.appendChild(HireLinkInterview.card(c, {
+              role: "recruiter",
+              onChange: () => load(true),
+            }));
+          }
           ivSlot.insertAdjacentHTML("beforeend", '<a class="btn btn-secondary btn-sm" href="recruiter-agenda.html">Ouvrir dans l’Agenda</a>');
         }
         const tl = document.getElementById("btn-tl");
@@ -1083,12 +1096,16 @@
         card.querySelector("h3").textContent = c.candidateName || "Candidat";
         const scoped = selectedOfferId() != null;
         let sub = scoped ? "" : c.jobTitle || "";
-        if (c.interviewType && c.status === "INTERVIEW") {
-          sub += (sub ? " · " : "") + (HireLinkInterview.TYPE_FR[c.interviewType] || c.interviewType) +
-            (c.interviewAt ? " " + new Date(c.interviewAt).toLocaleDateString("fr-FR") : "") +
-            (c.interviewStatus === "CANCELLED" ? " (annulé)" : "");
-        } else if (c.status === "INTERVIEW") {
-          sub += (sub ? " · " : "") + "Entretien à planifier";
+        if (c.status === "INTERVIEW") {
+          if (!c.interviewAt || c.interviewPlanningState === "TO_SCHEDULE") {
+            sub += (sub ? " · " : "") + "Entretien à planifier";
+          } else if (c.interviewStatus === "CANCELLED") {
+            sub += (sub ? " · " : "") + "Entretien annulé — à replanifier";
+          } else if (c.interviewAt) {
+            const w = HireLinkInterview.whenText(c);
+            sub += (sub ? " · " : "") + (HireLinkInterview.TYPE_FR[c.interviewType] || "Entretien") +
+              (w && w.day ? " · " + w.day + " " + w.time : "");
+          }
         }
         card.querySelector("p").textContent = sub || (scoped ? "Dossier sur ce poste" : "");
         const bar = card.querySelector(".rc-bar");

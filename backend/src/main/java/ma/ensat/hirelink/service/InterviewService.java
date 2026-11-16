@@ -33,8 +33,8 @@ public class InterviewService {
     public static final Map<String, String> KIND_FR = Map.of(
             "HR", "Entretien RH", "TECHNICAL", "Entretien technique", "MANAGER", "Entretien avec le manager",
             "CASE", "Étude de cas", "TEAM", "Rencontre avec l'équipe", "FINAL", "Entretien final");
-    /** Modes proposés à la planification. « PHONE » reste lisible pour les anciens dossiers, mais n'est plus proposé. */
-    private static final Set<String> SCHEDULABLE = Set.of("ONSITE", "VISIO");
+    /** Modes proposés à la planification (Vague 4 : téléphone réintroduit). */
+    private static final Set<String> SCHEDULABLE = Set.of("ONSITE", "VISIO", "PHONE");
 
     private static final String DEFAULT_ZONE = "Africa/Casablanca";
     private static final int DEFAULT_DURATION = 45;
@@ -42,10 +42,28 @@ public class InterviewService {
     private static final DateTimeFormatter ICS_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneId.of("UTC"));
     private static final DateTimeFormatter HUMAN = DateTimeFormatter.ofPattern("EEEE d MMMM yyyy 'à' HH'h'mm", java.util.Locale.FRENCH);
 
+    /**
+     * Instantané du créneau actif (ou annulé encore daté) avant remplacement — pour l'historique.
+     * Ne fabrique jamais de date : si {@code interviewAt} est null, retourne une map sans créneau.
+     */
+    public Map<String, Object> snapshot(Application app) {
+        java.util.LinkedHashMap<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("status", app.getInterviewStatus());
+        m.put("type", app.getInterviewType());
+        m.put("kind", app.getInterviewKind());
+        m.put("at", app.getInterviewAt() == null ? null : app.getInterviewAt().toString());
+        m.put("timeZone", app.getInterviewTimeZone());
+        m.put("durationMinutes", app.getInterviewDurationMinutes());
+        m.put("location", app.getInterviewLocation());
+        m.put("videoUrl", app.getInterviewVideoUrl());
+        m.put("cancelReason", app.getInterviewCancelReason());
+        return m;
+    }
+
     /** Valide la demande et applique l'entretien (nouvelle planification ou report) : le rappel J-1 est réarmé. */
     public void schedule(Application app, InterviewRequest req) {
         String type = req.type().trim().toUpperCase();
-        if (!SCHEDULABLE.contains(type)) throw bad("Choisissez un entretien sur site ou en visioconférence.");
+        if (!SCHEDULABLE.contains(type)) throw bad("Choisissez un entretien sur site, en visioconférence ou par téléphone.");
         String kind = req.kind().trim().toUpperCase();
         if (!KIND_FR.containsKey(kind)) throw bad("Nature d'entretien invalide.");
         String zone = req.timeZone() == null || req.timeZone().isBlank() ? DEFAULT_ZONE : req.timeZone().trim();
@@ -56,6 +74,7 @@ public class InterviewService {
         String video = clean(req.videoUrl());
         switch (type) {
             case "ONSITE" -> require(location, "Indiquez l'adresse de l'entretien.");
+            case "PHONE" -> require(location, "Indiquez le numéro de téléphone.");
             default -> require(video, "Indiquez le lien de visioconférence.");
         }
         app.setInterviewType(type);
@@ -63,7 +82,7 @@ public class InterviewService {
         app.setInterviewAt(at);
         app.setInterviewTimeZone(zone);
         app.setInterviewDurationMinutes(req.durationMinutes() == null ? DEFAULT_DURATION : req.durationMinutes());
-        app.setInterviewLocation("ONSITE".equals(type) ? location : null);
+        app.setInterviewLocation(("ONSITE".equals(type) || "PHONE".equals(type)) ? location : null);
         app.setInterviewMapUrl("ONSITE".equals(type) ? clean(req.mapUrl()) : null);
         app.setInterviewVideoUrl("VISIO".equals(type) ? video : null);
         app.setInterviewParticipants(clean(req.participants()));
@@ -94,10 +113,26 @@ public class InterviewService {
         if (!isActive(app)) throw bad("Aucun entretien planifié sur ce dossier.");
     }
 
-    /** « jeudi 5 novembre 2026 à 10h30 (Africa/Casablanca) ». */
+    /** « jeudi 5 novembre 2026 à 10h30 (Africa/Casablanca) » — jamais une date inventée. */
     public String when(Application app) {
+        if (app.getInterviewAt() == null) return "Date non renseignée";
         ZoneId zone = zoneOf(app);
         return HUMAN.format(app.getInterviewAt().atZone(zone)) + " (" + zone.getId() + ")";
+    }
+
+    /**
+     * État d'affichage Vague 4 : TO_SCHEDULE | SCHEDULED | CANCELLED | NONE.
+     * Une candidature INTERVIEW sans créneau → TO_SCHEDULE (pas une date fictive).
+     */
+    public String planningState(Application app) {
+        if (app.getStatus() != ApplicationStatus.INTERVIEW) {
+            if (app.getInterviewAt() == null) return "NONE";
+            return CANCELLED.equals(app.getInterviewStatus()) ? "CANCELLED" : "SCHEDULED";
+        }
+        if (app.getInterviewAt() == null) return "TO_SCHEDULE";
+        if (CANCELLED.equals(app.getInterviewStatus())) return "CANCELLED";
+        if (SCHEDULED.equals(app.getInterviewStatus()) || app.getInterviewStatus() == null) return "SCHEDULED";
+        return app.getInterviewStatus();
     }
 
     /** Numéro de l'entretien téléphonique : ces dossiers, les seuls à ce mode, portent le numéro dans le lieu. */

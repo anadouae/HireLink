@@ -11,6 +11,7 @@
   const TYPES = [
     { value: "VISIO", label: "Visioconférence", hint: "Meet, Teams, Zoom…", icon: "video", cls: "t-visio" },
     { value: "ONSITE", label: "Sur site", hint: "Dans vos locaux", icon: "building", cls: "t-onsite" },
+    { value: "PHONE", label: "Téléphone", hint: "Appel téléphonique", icon: "phone", cls: "t-phone" },
   ];
   const KINDS = [["HR", "Entretien RH"], ["TECHNICAL", "Entretien technique"], ["MANAGER", "Avec le manager"], ["CASE", "Étude de cas"], ["TEAM", "Rencontre avec l’équipe"], ["FINAL", "Entretien final"]];
   const DURATIONS = [15, 30, 45, 60, 90, 120];
@@ -39,11 +40,22 @@
   }
 
   function whenText(app) {
-    const zone = app.interviewTimeZone || "Africa/Casablanca";
+    if (!app || app.interviewAt == null || app.interviewAt === "") {
+      return { day: "Date non renseignée", time: "", zone: "", missing: true };
+    }
     const d = new Date(app.interviewAt);
+    if (Number.isNaN(d.getTime()) || d.getTime() === 0) {
+      return { day: "Date non renseignée", time: "", zone: "", missing: true };
+    }
+    const zone = app.interviewTimeZone || "Africa/Casablanca";
     const day = new Intl.DateTimeFormat("fr-FR", { timeZone: zone, weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(d);
     const time = new Intl.DateTimeFormat("fr-FR", { timeZone: zone, hour: "2-digit", minute: "2-digit" }).format(d).replace(":", "h");
-    return { day: day.charAt(0).toUpperCase() + day.slice(1), time: time, zone: zone };
+    return { day: day.charAt(0).toUpperCase() + day.slice(1), time: time, zone: zone, missing: false };
+  }
+
+  function mailToast(data, fallback) {
+    if (data && data.mailDeliveryLabel) return data.mailDeliveryLabel;
+    return fallback || "Notification interne enregistrée.";
   }
 
   // ------------------------------------------------------------ formulaire
@@ -52,7 +64,7 @@
     const zone = (app && app.interviewTimeZone) || "Africa/Casablanca";
     const when = app && app.interviewAt ? partsIn(app.interviewAt, zone) : { date: "", time: "10:00" };
     const s = {
-      type: app && app.interviewType === "ONSITE" ? "ONSITE" : "VISIO",
+      type: app && (app.interviewType === "ONSITE" || app.interviewType === "PHONE" || app.interviewType === "VISIO") ? app.interviewType : "VISIO",
       kind: (app && app.interviewKind) || "HR",
       date: when.date, time: when.time, zone: zone,
       duration: String((app && app.interviewDurationMinutes) || 45),
@@ -69,6 +81,7 @@
       else if (!s.time) e.time = "Choisissez l’heure.";
       else if (new Date(s.date + "T" + s.time + ":00") < new Date(Date.now() - 24 * 3600e3)) e.date = "Cette date est déjà passée.";
       if (s.type === "ONSITE" && !s.location.trim()) e.location = "Indiquez l’adresse de l’entretien.";
+      if (s.type === "PHONE" && !s.location.trim()) e.location = "Indiquez le numéro de téléphone.";
       if (s.type === "VISIO") {
         if (!s.videoUrl.trim()) e.videoUrl = "Indiquez le lien de visioconférence.";
         else if (!/^https?:\/\/\S+$/i.test(s.videoUrl.trim())) e.videoUrl = "Le lien doit commencer par https://";
@@ -137,6 +150,8 @@
           field("location", "Adresse *", input("location", "text", { maxlength: 255, placeholder: "Bureau Casablanca, 12 rue Moulay Youssef, 3ᵉ étage" }), true),
           field("mapUrl", "Lien du plan (facultatif)", input("mapUrl", "url", { maxlength: 300, placeholder: "https://maps.google.com/…" }), true, "Google Maps, Waze… : le candidat pourra s’y rendre en un clic."),
         );
+      } else if (s.type === "PHONE") {
+        conditional.push(field("location", "Numéro de téléphone *", input("location", "tel", { maxlength: 255, placeholder: "+212 6 …" }), true));
       } else {
         conditional.push(field("videoUrl", "Lien de la visioconférence *", input("videoUrl", "url", { maxlength: 300, placeholder: "https://meet.google.com/abc-defg-hij" }), true));
       }
@@ -170,7 +185,8 @@
       values() {
         return {
           type: s.type, kind: s.kind, startsAt: s.date + "T" + s.time + ":00", timeZone: s.zone, durationMinutes: Number(s.duration),
-          location: s.type === "ONSITE" ? s.location.trim() : null, mapUrl: s.type === "ONSITE" ? s.mapUrl.trim() : null,
+          location: (s.type === "ONSITE" || s.type === "PHONE") ? s.location.trim() : null,
+          mapUrl: s.type === "ONSITE" ? s.mapUrl.trim() : null,
           videoUrl: s.type === "VISIO" ? s.videoUrl.trim() : null,
           participants: s.participants.trim() || null, instructions: s.instructions.trim() || null,
         };
@@ -220,11 +236,20 @@
     ]);
     root.append(h("header", {}, [
       h("div", { class: "iv-head-info" }, [h("span", { class: "iv-kind", text: KIND_FR[app.interviewKind] || "Entretien" }), modeBadge]),
-      cancelled ? h("span", { class: "badge badge-danger", text: "Annulé" }) : null,
+      cancelled ? h("span", { class: "badge badge-danger", text: "Annulé" }) :
+        (when.missing ? h("span", { class: "badge badge-chrome", text: "À planifier" }) :
+          h("span", { class: "badge badge-ok", text: "Entretien planifié" })),
     ]));
-    root.append(h("p", { class: "iv-when" }, [h("strong", { text: when.day }), document.createTextNode(" à "), h("strong", { text: when.time }),
-      h("small", { text: " · " + (app.interviewDurationMinutes || 45) + " min · " + when.zone })]));
-    if (!cancelled && app.interviewAt) {
+    if (when.missing) {
+      root.append(h("p", { class: "iv-when" }, [h("strong", { text: "Entretien à planifier" }),
+        h("small", { text: " — aucun créneau enregistré. Aucune date inventée." })]));
+    } else {
+      root.append(h("p", { class: "iv-when" }, [h("strong", { text: when.day }),
+        when.time ? document.createTextNode(" à ") : null,
+        when.time ? h("strong", { text: when.time }) : null,
+        h("small", { text: " · " + (app.interviewDurationMinutes || 45) + " min · " + when.zone })]));
+    }
+    if (!cancelled && app.interviewAt && !when.missing) {
       const ics = h("button", { type: "button", class: "btn btn-ghost btn-sm", text: "Ajouter à mon agenda (.ics)" });
       ics.onclick = () => download(app).catch(failure);
       root.append(h("p", { class: "iv-ics" }, [ics]));
@@ -246,7 +271,15 @@
     root.append(dl);
 
     const actions = h("div", { class: "iv-actions" });
-    if (!cancelled && role === "recruiter") actions.append(...recruiterActions(app, o));
+    if (role === "recruiter") {
+      if (cancelled || when.missing) {
+        const replan = h("button", { type: "button", class: "btn btn-primary btn-sm", text: cancelled ? "Planifier un nouvel entretien" : "Planifier un entretien" });
+        replan.addEventListener("click", () => plan(app, { onDone: o.onChange }));
+        actions.append(replan);
+      } else {
+        actions.append(...recruiterActions(app, o));
+      }
+    }
     if (actions.children.length) root.append(actions);
     return root;
   }
@@ -256,53 +289,87 @@
     if (opts.onChange) opts.onChange();
   }
 
+  let interviewBusy = false;
+
   function recruiterActions(app, opts) {
     const move = h("button", { type: "button", class: "btn btn-soft btn-sm", text: "Reporter" });
     move.addEventListener("click", async () => {
+      if (interviewBusy) return;
       const f = form(app);
-      const ok = await HireLink.openModal({ title: "Reporter l’entretien", description: "Le nouveau créneau est enregistré dans HireLink. L’e-mail part seulement si la messagerie du serveur est active ; sinon il est journalisé, pas envoyé.", bodyHtml: '<div id="iv-slot"></div>', confirmLabel: "Reporter le créneau", large: true, confirmDisabled: true,
-        onConfirm: () => HireLinkAPI.api("/applications/" + app.id + "/interview", { method: "PUT", body: f.values() }),
+      let lastData = null;
+      const ok = await HireLink.openModal({
+        title: "Reporter l’entretien",
+        description: "Nouveau créneau obligatoire. L’ancien reste dans l’historique. L’e-mail n’est jamais annoncé comme « envoyé » sans confirmation SMTP.",
+        bodyHtml: '<div id="iv-slot"></div>',
+        confirmLabel: "Reporter le créneau",
+        large: true,
+        confirmDisabled: true,
+        onConfirm: async () => {
+          if (interviewBusy) return false;
+          interviewBusy = true;
+          try {
+            lastData = await HireLinkAPI.api("/applications/" + app.id + "/interview", { method: "PUT", body: f.values() });
+            return true;
+          } finally {
+            interviewBusy = false;
+          }
+        },
         onReady: (api) => {
           api.root.querySelector("#iv-slot").appendChild(f.el);
           const refresh = () => api.setConfirmEnabled(f.isValid());
           f.el.addEventListener("input", refresh);
           f.el.addEventListener("change", refresh);
           refresh();
-        } });
-      if (ok) done(opts, "Entretien reporté", "Le candidat voit le nouveau créneau dans HireLink.");
+        },
+      });
+      if (ok) done(opts, "Entretien reporté", mailToast(lastData, "Créneau mis à jour. Notification interne créée."));
     });
     const cancel = h("button", { type: "button", class: "btn btn-ghost btn-sm iv-danger", text: "Annuler l’entretien" });
     cancel.addEventListener("click", async () => {
+      if (interviewBusy) return;
       const reason = await Mascotte.confirm({
         title: "Annuler l’entretien ?",
-        description: "Le motif est enregistré. Le candidat le voit dans HireLink. L’e-mail part seulement si la messagerie est active.",
+        description: "Ce n’est pas un report. Le dossier reste à l’étape Entretien ; vous pourrez planifier un nouvel entretien explicitement.",
         confirmLabel: "Annuler l’entretien",
         cancelLabel: "Garder l’entretien",
         danger: true,
         field: { label: "Motif (obligatoire)", placeholder: "Ex. Poste pourvu, imprévu côté équipe…", required: true },
       });
       if (!reason) return;
+      interviewBusy = true;
       HireLinkAPI.api("/applications/" + app.id + "/interview/cancel", { method: "POST", body: { reason } })
-        .then(() => done(opts, "Entretien annulé", "L’annulation est visible dans HireLink.")).catch(failure);
+        .then((data) => done(opts, "Entretien annulé", mailToast(data, "Annulation enregistrée. Notification interne créée.")))
+        .catch(failure)
+        .finally(() => { interviewBusy = false; });
     });
     return [move, cancel];
   }
 
   /**
-   * Fenêtre de planification pour un dossier sans créneau : réutilise le formulaire du kit.
-   * opts.onDone() est appelé après un envoi réussi.
+   * Fenêtre de planification (sans créneau ou après annulation).
    */
   function plan(app, opts) {
+    if (interviewBusy) return;
     const o = opts || {};
-    const f = form(app);
+    const f = form(app.interviewStatus === "CANCELLED" ? Object.assign({}, app, { interviewAt: null }) : app);
+    let lastData = null;
     HireLink.openDrawer({
-      title: "Planifier un entretien",
-      description: (app.candidateName || "Candidat") + " — le créneau est enregistré dans HireLink. L’e-mail de convocation part seulement si la messagerie du serveur est active.",
+      title: app.interviewStatus === "CANCELLED" ? "Nouveau créneau après annulation" : "Planifier un entretien",
+      description: (app.candidateName || "Candidat") + " — enregistrement du créneau. Pas d’acceptation candidat requise. Statut e-mail honnête après confirmation.",
       bodyHtml: '<div id="iv-plan"></div>',
-      confirmLabel: "Planifier et prévenir",
+      confirmLabel: "Enregistrer le créneau",
       confirmDisabled: true,
       wide: true,
-      onConfirm: () => HireLinkAPI.api("/applications/" + app.id + "/interview", { method: "PUT", body: f.values() }),
+      onConfirm: async () => {
+        if (interviewBusy) return false;
+        interviewBusy = true;
+        try {
+          lastData = await HireLinkAPI.api("/applications/" + app.id + "/interview", { method: "PUT", body: f.values() });
+          return true;
+        } finally {
+          interviewBusy = false;
+        }
+      },
       onReady: (api) => {
         api.root.querySelector("#iv-plan").appendChild(f.el);
         const refresh = () => api.setConfirmEnabled(f.isValid());
@@ -312,15 +379,16 @@
       },
     }).then((ok) => {
       if (!ok) return;
-      HireLink.toast("Entretien planifié", "Le créneau est dans HireLink. L’e-mail n’est pas annoncé comme envoyé.", "ok");
+      HireLink.toast("Entretien planifié", mailToast(lastData, "Créneau enregistré. Notification interne créée."), "ok");
       if (o.onDone) o.onDone();
     });
   }
 
-  /** « Jeudi 5 novembre 2026 à 10h30 · Visioconférence » pour une ligne de texte. */
+  /** « Jeudi 5 novembre 2026 à 10h30 · Visioconférence » — jamais 1970. */
   function summary(app) {
     const w = whenText(app);
-    return w.day + " à " + w.time + " · " + (TYPE_FR[app.interviewType] || "");
+    if (w.missing) return "Entretien à planifier";
+    return w.day + (w.time ? " à " + w.time : "") + " · " + (TYPE_FR[app.interviewType] || "");
   }
 
   global.HireLinkInterview = { form: form, card: card, plan: plan, summary: summary, whenText: whenText, download: download, TYPE_FR: TYPE_FR, KIND_FR: KIND_FR };

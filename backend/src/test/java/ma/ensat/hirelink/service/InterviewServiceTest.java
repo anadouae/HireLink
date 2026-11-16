@@ -141,14 +141,14 @@ class InterviewServiceTest {
     }
 
     @Test
-    void leTelephoneNestPlusProposeALaPlanification() {
+    void leTelephoneEstProposeALaPlanificationVague4() {
         Application app = dossier();
 
-        ResponseStatusException ex = assertThrows(ResponseStatusException.class,
-                () -> service.schedule(app, demande("PHONE", CRENEAU, "UTC",
-                        "05 39 97 90 00", null)));
+        service.schedule(app, demande("PHONE", CRENEAU, "UTC", "05 39 97 90 00", null));
 
-        assertEquals("Choisissez un entretien sur site ou en visioconférence.", ex.getReason());
+        assertEquals("PHONE", app.getInterviewType());
+        assertEquals("05 39 97 90 00", app.getInterviewLocation());
+        assertEquals(InterviewService.SCHEDULED, app.getInterviewStatus());
     }
 
     @Test
