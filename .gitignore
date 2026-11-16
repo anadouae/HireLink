@@ -67,6 +67,18 @@ run-*.err
 docs/**/main.out
 tools/
 
+# Playwright E2E — sources versionnées ; artefacts locaux exclus
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+e2e/playwright/.cache/
+
+# Lanceurs ISO locaux (ne pas publier — chemins machine / JAR F3C2)
+LANCER-ISO-BACKEND.bat
+LANCER-ISO-FRONTEND.bat
+VERIFY-ISO-CONFIG.bat
+
 # Artéfacts locaux jamais versionnés
 tmp/
 *.zip

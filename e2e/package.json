@@ -1,0 +1,14 @@
+{
+  "name": "hirelink-iso-e2e",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Playwright E2E HireLink ISO — jamais la démo 8081/5500",
+  "scripts": {
+    "test": "playwright test",
+    "test:ci": "playwright test --reporter=list,html,junit",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0"
+  }
+}
