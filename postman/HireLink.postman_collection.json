@@ -1,0 +1,2665 @@
+{
+  "info": {
+    "name": "HireLink API — ISO",
+    "description": "Suite API professionnelle HireLink (endpoints Spring réels uniquement).\n\n**Cible :** instance ISO (`baseUrl`, défaut http://127.0.0.1:18081/api/v1).\n**Interdit :** base démo `hirelink` / port 8081 / JAR F3C2.\n**Auth :** CAPTCHA one-shot résolu côté client (pas de bypass). OTP / MFA / reset token = manuels.\n**Comptes seed :** documentés dans DataSeeder (mots de passe via variables d'environnement Newman).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:18081/api/v1"
+    }
+  ],
+  "item": [
+    {
+      "name": "0. Prérequis & Santé",
+      "description": "Vérifie que l'API ISO répond. Aucune auth.",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "GET /api/v1/health — public"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"status UP\", () => pm.expect(pm.response.json().status).to.eql(\"UP\"));",
+                  "pm.test(\"pas de fuite 8081\", () => pm.expect(pm.environment.get(\"baseUrl\")).to.not.include(\":8081\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Auth config",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "config"
+              ]
+            },
+            "description": "GET /api/v1/auth/config — méthodes auth, legal versions"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"methods présentes\", () => pm.expect(pm.response.json().methods).to.be.an(\"array\").that.includes(\"password\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Legal versions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/legal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "legal"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "1. Authentification et sécurité",
+      "description": "CAPTCHA obligatoire pour login/forgot. Admin MFA : assert challenge sans jeton. Pas de contournement OTP/MFA.",
+      "item": [
+        {
+          "name": "CAPTCHA challenge",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/captcha",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "captcha"
+              ]
+            },
+            "description": "POST /auth/captcha — épreuve serveur one-shot",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"token captcha\", () => { const j = pm.response.json(); pm.expect(j.token).to.be.a(\"string\").that.is.not.empty; pm.environment.set(\"captchaToken\", j.token); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login candidat (CAPTCHA)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "POST /auth/login — rôle CANDIDAT seed. CAPTCHA résolu en prerequest.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{candidateEmail}}\",\n  \"password\": \"{{candidatePassword}}\",\n  \"captchaToken\": \"{{captchaToken}}\",\n  \"captchaAnswer\": \"{{captchaAnswer}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");",
+                  "const csrf = [",
+                  "  { key: \"X-HireLink-CSRF\", value: \"1\" },",
+                  "  { key: \"Content-Type\", value: \"application/json\" },",
+                  "  { key: \"Accept\", value: \"application/json\" }",
+                  "];",
+                  "function solve(cap) {",
+                  "  if (cap.kind === \"question\" && cap.question) {",
+                  "    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);",
+                  "    if (!m) throw new Error(\"CAPTCHA question illisible\");",
+                  "    const a = Number(m[1]), b = Number(m[3]);",
+                  "    return m[2] === \"+\" ? String(a + b) : String(a - b);",
+                  "  }",
+                  "  const texts = [...String(cap.svg || \"\").matchAll(/<text[^>]*\\sx=\"(\\d+)\"[^>]*>([^<]+)<\\/text>/g)]",
+                  "    .map((x) => ({ x: Number(x[1]), ch: x[2] }))",
+                  "    .sort((a, b) => a.x - b.x);",
+                  "  const ans = texts.map((t) => t.ch).join(\"\");",
+                  "  if (!ans) throw new Error(\"CAPTCHA image vide\");",
+                  "  return ans;",
+                  "}",
+                  "// Newman attend la fin de pm.sendRequest avant la requête principale.",
+                  "pm.sendRequest({",
+                  "  url: base + \"/auth/captcha\",",
+                  "  method: \"POST\",",
+                  "  header: csrf,",
+                  "  body: { mode: \"raw\", raw: \"{}\" }",
+                  "}, function (err, res) {",
+                  "  if (err) throw err;",
+                  "  if (res.code === 429) throw new Error(\"CAPTCHA throttled (429)\");",
+                  "  const cap = res.json();",
+                  "  pm.environment.set(\"captchaToken\", cap.token);",
+                  "  pm.environment.set(\"captchaAnswer\", solve(cap));",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"accessToken candidat\", () => { const j = pm.response.json(); pm.expect(j.accessToken).to.be.a(\"string\").that.is.not.empty; pm.expect(j.role).to.eql(\"CANDIDAT\"); pm.environment.set(\"candidateToken\", j.accessToken); pm.environment.set(\"candidateUserId\", String(j.userId)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login recruteur (CAPTCHA)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{recruiterEmail}}\",\n  \"password\": \"{{recruiterPassword}}\",\n  \"captchaToken\": \"{{captchaToken}}\",\n  \"captchaAnswer\": \"{{captchaAnswer}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");",
+                  "const csrf = [",
+                  "  { key: \"X-HireLink-CSRF\", value: \"1\" },",
+                  "  { key: \"Content-Type\", value: \"application/json\" },",
+                  "  { key: \"Accept\", value: \"application/json\" }",
+                  "];",
+                  "function solve(cap) {",
+                  "  if (cap.kind === \"question\" && cap.question) {",
+                  "    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);",
+                  "    if (!m) throw new Error(\"CAPTCHA question illisible\");",
+                  "    const a = Number(m[1]), b = Number(m[3]);",
+                  "    return m[2] === \"+\" ? String(a + b) : String(a - b);",
+                  "  }",
+                  "  const texts = [...String(cap.svg || \"\").matchAll(/<text[^>]*\\sx=\"(\\d+)\"[^>]*>([^<]+)<\\/text>/g)]",
+                  "    .map((x) => ({ x: Number(x[1]), ch: x[2] }))",
+                  "    .sort((a, b) => a.x - b.x);",
+                  "  const ans = texts.map((t) => t.ch).join(\"\");",
+                  "  if (!ans) throw new Error(\"CAPTCHA image vide\");",
+                  "  return ans;",
+                  "}",
+                  "// Newman attend la fin de pm.sendRequest avant la requête principale.",
+                  "pm.sendRequest({",
+                  "  url: base + \"/auth/captcha\",",
+                  "  method: \"POST\",",
+                  "  header: csrf,",
+                  "  body: { mode: \"raw\", raw: \"{}\" }",
+                  "}, function (err, res) {",
+                  "  if (err) throw err;",
+                  "  if (res.code === 429) throw new Error(\"CAPTCHA throttled (429)\");",
+                  "  const cap = res.json();",
+                  "  pm.environment.set(\"captchaToken\", cap.token);",
+                  "  pm.environment.set(\"captchaAnswer\", solve(cap));",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"accessToken recruteur\", () => { const j = pm.response.json(); pm.expect(j.accessToken).to.be.a(\"string\").that.is.not.empty; pm.expect(j.role).to.eql(\"RECRUTEUR\"); pm.environment.set(\"recruiterToken\", j.accessToken); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login admin → MFA challenge (pas de bypass)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Si MFA admin activé : 200 + mfaRequired sans accessToken. Ne pas appeler /mfa/verify sans TOTP manuel.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"captchaToken\": \"{{captchaToken}}\",\n  \"captchaAnswer\": \"{{captchaAnswer}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");",
+                  "const csrf = [",
+                  "  { key: \"X-HireLink-CSRF\", value: \"1\" },",
+                  "  { key: \"Content-Type\", value: \"application/json\" },",
+                  "  { key: \"Accept\", value: \"application/json\" }",
+                  "];",
+                  "function solve(cap) {",
+                  "  if (cap.kind === \"question\" && cap.question) {",
+                  "    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);",
+                  "    if (!m) throw new Error(\"CAPTCHA question illisible\");",
+                  "    const a = Number(m[1]), b = Number(m[3]);",
+                  "    return m[2] === \"+\" ? String(a + b) : String(a - b);",
+                  "  }",
+                  "  const texts = [...String(cap.svg || \"\").matchAll(/<text[^>]*\\sx=\"(\\d+)\"[^>]*>([^<]+)<\\/text>/g)]",
+                  "    .map((x) => ({ x: Number(x[1]), ch: x[2] }))",
+                  "    .sort((a, b) => a.x - b.x);",
+                  "  const ans = texts.map((t) => t.ch).join(\"\");",
+                  "  if (!ans) throw new Error(\"CAPTCHA image vide\");",
+                  "  return ans;",
+                  "}",
+                  "// Newman attend la fin de pm.sendRequest avant la requête principale.",
+                  "pm.sendRequest({",
+                  "  url: base + \"/auth/captcha\",",
+                  "  method: \"POST\",",
+                  "  header: csrf,",
+                  "  body: { mode: \"raw\", raw: \"{}\" }",
+                  "}, function (err, res) {",
+                  "  if (err) throw err;",
+                  "  if (res.code === 429) throw new Error(\"CAPTCHA throttled (429)\");",
+                  "  const cap = res.json();",
+                  "  pm.environment.set(\"captchaToken\", cap.token);",
+                  "  pm.environment.set(\"captchaAnswer\", solve(cap));",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"MFA requis OU token (selon état seed)\", () => {\n  const j = pm.response.json();\n  if (j.mfaRequired) {\n    pm.expect(j.accessToken).to.not.ok;\n    pm.expect(j.mfaToken).to.be.a(\"string\");\n    pm.environment.set(\"adminMfaToken\", j.mfaToken);\n    pm.environment.unset(\"adminToken\");\n  } else if (j.accessToken) {\n    pm.environment.set(\"adminToken\", j.accessToken);\n  } else {\n    throw new Error(\"Réponse login admin inattendue\");\n  }\n});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login mot de passe invalide",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{candidateEmail}}\",\n  \"password\": \"WrongPassword-NotSeed-000!\",\n  \"captchaToken\": \"{{captchaToken}}\",\n  \"captchaAnswer\": \"{{captchaAnswer}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const base = pm.environment.get(\"baseUrl\");",
+                  "const csrf = [",
+                  "  { key: \"X-HireLink-CSRF\", value: \"1\" },",
+                  "  { key: \"Content-Type\", value: \"application/json\" },",
+                  "  { key: \"Accept\", value: \"application/json\" }",
+                  "];",
+                  "function solve(cap) {",
+                  "  if (cap.kind === \"question\" && cap.question) {",
+                  "    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);",
+                  "    if (!m) throw new Error(\"CAPTCHA question illisible\");",
+                  "    const a = Number(m[1]), b = Number(m[3]);",
+                  "    return m[2] === \"+\" ? String(a + b) : String(a - b);",
+                  "  }",
+                  "  const texts = [...String(cap.svg || \"\").matchAll(/<text[^>]*\\sx=\"(\\d+)\"[^>]*>([^<]+)<\\/text>/g)]",
+                  "    .map((x) => ({ x: Number(x[1]), ch: x[2] }))",
+                  "    .sort((a, b) => a.x - b.x);",
+                  "  const ans = texts.map((t) => t.ch).join(\"\");",
+                  "  if (!ans) throw new Error(\"CAPTCHA image vide\");",
+                  "  return ans;",
+                  "}",
+                  "// Newman attend la fin de pm.sendRequest avant la requête principale.",
+                  "pm.sendRequest({",
+                  "  url: base + \"/auth/captcha\",",
+                  "  method: \"POST\",",
+                  "  header: csrf,",
+                  "  body: { mode: \"raw\", raw: \"{}\" }",
+                  "}, function (err, res) {",
+                  "  if (err) throw err;",
+                  "  if (res.code === 429) throw new Error(\"CAPTCHA throttled (429)\");",
+                  "  const cap = res.json();",
+                  "  pm.environment.set(\"captchaToken\", cap.token);",
+                  "  pm.environment.set(\"captchaAnswer\", solve(cap));",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"refus 401/400/403\", () => pm.expect([400,401,403]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me sans jeton → 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "Endpoint authentifié sans Authorization"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh sans cookie → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Cookies désactivés sur cette requête (jar Newman sinon réutilise le refresh des logins précédents).",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "disableCookies": true
+          }
+        },
+        {
+          "name": "Admin stats avec jeton candidat → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "stats"
+              ]
+            },
+            "description": "hasRole(ADMINISTRATEUR) — candidat refusé"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Profil candidat et CV",
+      "description": "Rôle CANDIDAT. Upload CV multipart = manuel / hors Newman par défaut.",
+      "item": [
+        {
+          "name": "GET /me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"email / rôle\", () => { const j = pm.response.json(); pm.expect(j.email || j.user?.email).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/career",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/me/career",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me",
+                "career"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/cv-quality",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/me/cv-quality",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me",
+                "cv-quality"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /account/profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "profile"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /account/security",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account/security",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "security"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /account/sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/account/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "account",
+                "sessions"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"liste sessions\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /me/cv (peut 404 si aucun CV)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/me/cv",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "me",
+                "cv"
+              ]
+            },
+            "description": "200 si CV présent, 404 sinon — les deux acceptés."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200 ou 404\", () => pm.expect([200,404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Recherche et catalogue",
+      "description": "Endpoints publics catalogue (SecurityConfig permitAll GET).",
+      "item": [
+        {
+          "name": "GET /catalog/offers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/offers?q=java&page=0&size=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "offers"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "java"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "size",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"contenu catalogue\", () => { const j = pm.response.json(); pm.expect(j).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /catalog/suggest",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/suggest?q=dev",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "suggest"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "dev"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /catalog/places",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/places?q=tet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "places"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "tet"
+                }
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /catalog/reindex sans auth → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/reindex",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "catalog",
+                "reindex"
+              ]
+            },
+            "description": "Reindex admin/auth — non public",
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. Offres et candidatures",
+      "item": [
+        {
+          "name": "GET /offers/public",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offers/public",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offers",
+                "public"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"tableau ou page\", () => { const j = pm.response.json(); pm.expect(j).to.be.ok; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /external-offers/sources",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/external-offers/sources",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "external-offers",
+                "sources"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /applications/mine (candidat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"liste\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));",
+                  "const apps = pm.response.json(); if (Array.isArray(apps) && apps.length) { const id = apps[0].id || apps[0].applicationId; if (id) pm.environment.set(\"sampleApplicationId\", String(id)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /offers/mine (recruteur)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/offers/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "offers",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "const offers = pm.response.json(); const list = Array.isArray(offers) ? offers : (offers.content || []); if (list.length) { pm.environment.set(\"sampleOfferId\", String(list[0].id)); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /applications/pipeline (recruteur)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/pipeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "pipeline"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /applications/pipeline (candidat) → 403 ou vide métier",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/pipeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "pipeline"
+              ]
+            },
+            "description": "Pipeline recruteur : candidat doit être refusé (403) ou erreur métier."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"refus candidat\", () => pm.expect([401,403,400]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST candidature sans auth → 401",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications"
+              ]
+            },
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"offerId\": 1\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. ATS et entretiens",
+      "description": "Lecture pipeline / ICS. Planification destructive = manuelle.",
+      "item": [
+        {
+          "name": "GET /applications/pace (recruteur)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/pace",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "pace"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET interview.ics (id pipeline ou 0)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/{{sampleApplicationId}}/interview.ics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "{{sampleApplicationId}}",
+                "interview.ics"
+              ]
+            },
+            "description": "Si aucune candidature candidat seed : sampleApplicationId=0 → 404/400 attendu. Pas de planification créée ici."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get(\"sampleApplicationId\")) { pm.environment.set(\"sampleApplicationId\", \"0\"); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"ics 200 ou erreur métier\", () => pm.expect([200,400,403,404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET timeline candidature (candidat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/applications/{{sampleApplicationId}}/timeline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "applications",
+                "{{sampleApplicationId}}",
+                "timeline"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.environment.get(\"sampleApplicationId\")) { pm.environment.set(\"sampleApplicationId\", \"0\"); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"200/403/404/400\", () => pm.expect([200,400,403,404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /notifications (candidat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Organisations",
+      "item": [
+        {
+          "name": "GET /organizations/public",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/public",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "public"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/mine (recruteur)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/mine/members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/mine/members",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "mine",
+                "members"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /organizations/mine (candidat) → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/organizations/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "organizations",
+                "mine"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /follows (candidat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/follows",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "follows"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "7. Abonnements et crédits IA",
+      "description": "Lecture seule. subscribe / payments = manuels (effets facturation).",
+      "item": [
+        {
+          "name": "GET /billing/plans (candidat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "plans"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"plans array\", () => pm.expect(pm.response.json()).to.be.an(\"array\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /billing/quote (candidat → PERFORMANCE)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/quote?cycle=month&plan=PERFORMANCE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "quote"
+              ],
+              "query": [
+                {
+                  "key": "cycle",
+                  "value": "month"
+                },
+                {
+                  "key": "plan",
+                  "value": "PERFORMANCE"
+                }
+              ]
+            },
+            "description": "Contrat PaymentService : candidat payant = PERFORMANCE uniquement. ESSENTIEL est une formule RECRUTEUR → 400 « Formule candidat payante : Performance uniquement. » (comportement métier normal, pas un bug)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });",
+                  "pm.test(\"plan PERFORMANCE\", () => pm.expect(pm.response.json().plan).to.eql(\"PERFORMANCE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /billing/quote ESSENTIEL en candidat → 400 métier",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/quote?cycle=month&plan=ESSENTIEL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "quote"
+              ],
+              "query": [
+                {
+                  "key": "cycle",
+                  "value": "month"
+                },
+                {
+                  "key": "plan",
+                  "value": "ESSENTIEL"
+                }
+              ]
+            },
+            "description": "Preuve du refus métier documenté (requête Postman initiale incorrecte pour le rôle)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 400\", function () { pm.response.to.have.status(400); });",
+                  "pm.test(\"message Performance uniquement\", () => pm.expect(String(pm.response.json().message || \"\")).to.match(/Performance uniquement/i));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /billing/quote (recruteur → PROFESSIONNEL)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/quote?cycle=month&plan=PROFESSIONNEL",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "quote"
+              ],
+              "query": [
+                {
+                  "key": "cycle",
+                  "value": "month"
+                },
+                {
+                  "key": "plan",
+                  "value": "PROFESSIONNEL"
+                }
+              ]
+            },
+            "description": "Devis payant recruteur : PROFESSIONNEL ou ENTREPRISE. ESSENTIEL est catalogue gratuit → 400 si passé à /quote."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"plan PROFESSIONNEL\", () => pm.expect(pm.response.json().plan).to.eql(\"PROFESSIONNEL\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /ai/credits (candidat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ai/credits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ai",
+                "credits"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /billing/invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/invoices",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "invoices"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /billing/plans sans auth → 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/billing/plans",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "billing",
+                "plans"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "8. Administration",
+      "description": "Sans TOTP admin : pas d'accès stats. Candidat/recruteur → 403. Endpoints admin mutateurs = manuels.",
+      "item": [
+        {
+          "name": "GET /admin/stats sans token → 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "stats"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"401\", () => pm.expect(pm.response.code).to.eql(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/stats recruteur → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{recruiterToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "stats"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/users candidat → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/promotions candidat → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/promotions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "promotions"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/external-offers/status candidat → 403",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{candidateToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/external-offers/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "external-offers",
+                "status"
+              ]
+            },
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"403\", () => pm.expect(pm.response.code).to.eql(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /admin/stats si adminToken (optionnel MFA)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Accept",
+                "value": "application/json",
+                "type": "text"
+              },
+              {
+                "key": "X-HireLink-CSRF",
+                "value": "1",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "stats"
+              ]
+            },
+            "description": "Une seule assertion exécutée selon présence de adminToken (MFA off → 200 ; MFA on → skip documenté). Explique l'écart historique 75 définies / 74 exécutées quand deux pm.test étaient en branches exclusives."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"admin stats selon MFA\", () => {\n  const tok = pm.environment.get(\"adminToken\");\n  if (!tok) {\n    // MFA admin actif : pas de bypass TOTP — stats non automatisées\n    pm.expect(pm.response.code).to.be.oneOf([401, 403]);\n    return;\n  }\n  pm.expect(pm.response.code).to.eql(200);\n});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
