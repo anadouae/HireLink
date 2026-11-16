@@ -35,7 +35,12 @@ public class AiAssistController {
         this.llmProvider = llmProvider;
     }
 
-    public record ProfileRewriteRequest(@jakarta.validation.constraints.Size(max = 3000) String skills, @jakarta.validation.constraints.Size(max = 300) String roles, @jakarta.validation.constraints.Size(max = 40) String level) {}
+    public record ProfileRewriteRequest(
+            @jakarta.validation.constraints.Size(max = 3000) String skills,
+            @jakarta.validation.constraints.Size(max = 300) String roles,
+            @jakarta.validation.constraints.Size(max = 40) String level,
+            @jakarta.validation.constraints.Size(max = 2000) String experienceDraft
+    ) {}
     public record InterviewPrepRequest(@jakarta.validation.constraints.Size(max = 160) String jobTitle, @jakarta.validation.constraints.Size(max = 3000) String skills) {}
     public record InterviewKitRequest(@jakarta.validation.constraints.Size(max = 160) String jobTitle, @jakarta.validation.constraints.Size(max = 3000) String skills) {}
     public record LanguageCheckRequest(@jakarta.validation.constraints.Size(max = 160) String title, @jakarta.validation.constraints.Size(max = 10000) String description) {}
@@ -45,34 +50,64 @@ public class AiAssistController {
     public record MatchExplainRequest(@jakarta.validation.constraints.Size(max = 3000) String skills, @jakarta.validation.constraints.Size(max = 3000) String requiredSkills) {}
 
     @GetMapping("/credits")
-    public Map<String, Object> credits(
-            @AuthenticationPrincipal User user
-    ) {
+    public Map<String, Object> credits(@AuthenticationPrincipal User user) {
         return creditMap(user, aiCreditService.status(user));
     }
 
+    /**
+     * Suggestions métier : reformulation claire des compétences / d’une expérience fournie.
+     * Ne remplit jamais le profil automatiquement — le candidat valide.
+     */
     @PostMapping("/profile-rewrite")
     public Map<String, Object> profileRewrite(
             @AuthenticationPrincipal User user,
             @jakarta.validation.Valid @RequestBody ProfileRewriteRequest body
     ) {
         AiUsageLog reservation = aiCreditService.reserve(user, "profile-rewrite");
-        // R15 : compétences / rôles / niveau uniquement — pas de nom/email
-        String skills = body.skills() != null ? body.skills() : user.getSkills();
-        String roles = body.roles() != null ? body.roles() : user.getSoughtRoles();
-        String level = body.level() != null ? body.level() : user.getExperienceLevel();
-        LlmProvider.LlmResult llm = llmProvider.complete(
-                "Tu es un assistant recrutement. Réponds en français. N'invente pas d'identité. Pas de markdown : aucun dièse, aucun astérisque.",
-                "Améliore ce profil (compétences uniquement) : skills=" + nullSafe(skills)
+        try {
+            String skills = body.skills() != null ? body.skills() : user.getSkills();
+            String roles = body.roles() != null ? body.roles() : user.getSoughtRoles();
+            String level = body.level() != null ? body.level() : user.getExperienceLevel();
+            String draft = body.experienceDraft() == null ? "" : body.experienceDraft().trim();
+            String userPrompt;
+            if (!draft.isBlank()) {
+                userPrompt = "Voici une description d'expérience fournie par le candidat (ne rien inventer hors de ce texte) :\n"
+                        + draft
+                        + "\n\nPropose une version plus claire et concrète (missions + résultats mesurables si déjà présents). "
+                        + "Si le texte est trop vague, dis précisément quoi ajouter. Pas de markdown.";
+            } else {
+                userPrompt = "À partir UNIQUEMENT de : skills=" + nullSafe(skills)
                         + " ; métiers=" + nullSafe(roles) + " ; niveau=" + nullSafe(level)
-        );
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Suggestions de profil");
-        m.put("content", llm.text());
-        m.put("provider", llm.provider());
-        m.put("tips", List.of("Relisez avant d'enregistrer — l'IA ne réécrit jamais à votre place."));
-        m.put("credits", settle(user, reservation, llm));
-        return m;
+                        + ".\nPropose 3 améliorations concrètes du profil (formulation, lacunes visibles, ordre). "
+                        + "N'invente aucune compétence absente. Pas de markdown.";
+            }
+            LlmProvider.LlmResult llm = llmProvider.complete(
+                    "Tu es un conseiller carrière. Français. N'invente aucune expérience, diplôme ni outil absent du texte. Pas de markdown.",
+                    userPrompt
+            );
+            if (llm == null || llm.text() == null || llm.text().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                        "L’assistant n’a pas répondu à temps. Aucun crédit n’a été débité.");
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("title", draft.isBlank() ? "Suggestions d’amélioration" : "Proposition de reformulation");
+            m.put("content", llm.text());
+            m.put("provider", llm.provider());
+            m.put("success", true);
+            m.put("tips", List.of(
+                    "Relisez avant d’enregistrer — rien n’est écrit à votre place.",
+                    "Refusez toute suggestion qui invente un outil ou un résultat."
+            ));
+            m.put("credits", settle(user, reservation, llm));
+            return m;
+        } catch (ResponseStatusException e) {
+            aiCreditService.release(reservation);
+            throw e;
+        } catch (Exception e) {
+            aiCreditService.release(reservation);
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "Analyse indisponible pour le moment. Aucun crédit n’a été débité.", e);
+        }
     }
 
     @PostMapping("/interview-prep")
@@ -81,19 +116,29 @@ public class AiAssistController {
             @jakarta.validation.Valid @RequestBody InterviewPrepRequest body
     ) {
         AiUsageLog reservation = aiCreditService.reserve(user, "interview-prep");
-        String skills = body.skills() != null ? body.skills() : user.getSkills();
-        LlmProvider.LlmResult llm = llmProvider.complete(
-                "Assistant préparation entretien. Français. Pas de données personnelles. Pas de markdown : aucun dièse, aucun astérisque, aucun tableau. Un titre court par ligne, puis des phrases.",
-                "Poste=" + nullSafe(body.jobTitle()) + " ; compétences=" + nullSafe(skills)
-                        + ". Préparation d'entretien claire, en texte simple."
-        );
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Préparation entretien");
-        m.put("content", llm.text());
-        m.put("provider", llm.provider());
-        m.put("tips", List.of("Adaptez les réponses à votre vécu réel."));
-        m.put("credits", settle(user, reservation, llm));
-        return m;
+        try {
+            String skills = body.skills() != null ? body.skills() : user.getSkills();
+            LlmProvider.LlmResult llm = llmProvider.complete(
+                    "Assistant préparation entretien. Français. Pas de données personnelles. Pas de markdown : aucun dièse, aucun astérisque, aucun tableau. Un titre court par ligne, puis des phrases.",
+                    "Poste=" + nullSafe(body.jobTitle()) + " ; compétences=" + nullSafe(skills)
+                            + ". Préparation d'entretien claire, en texte simple."
+            );
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("title", "Préparation entretien");
+            m.put("content", llm.text());
+            m.put("provider", llm.provider());
+            m.put("success", true);
+            m.put("tips", List.of("Adaptez les réponses à votre vécu réel."));
+            m.put("credits", settle(user, reservation, llm));
+            return m;
+        } catch (ResponseStatusException e) {
+            aiCreditService.release(reservation);
+            throw e;
+        } catch (Exception e) {
+            aiCreditService.release(reservation);
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "Préparation indisponible. Aucun crédit n’a été débité.", e);
+        }
     }
 
     @PostMapping("/interview-kit")
@@ -105,19 +150,28 @@ public class AiAssistController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux recruteurs");
         }
         AiUsageLog reservation = aiCreditService.reserve(user, "interview-kit");
-        // La grille affichée est structurée (cartes). L’appel LLM reste pour le débit / audit provider.
-        LlmProvider.LlmResult llm = llmProvider.complete(
-                "Génère une grille d'entretien structurée en français. Pas d'identité candidat. Pas de markdown : aucun dièse, aucun astérisque.",
-                "Poste=" + nullSafe(body.jobTitle()) + " ; compétences=" + nullSafe(body.skills())
-                        + ". 5 à 7 questions discriminantes."
-        );
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Grille d’entretien");
-        m.put("questions", aiCreditService.interviewKit(body.jobTitle(), body.skills()));
-        m.put("note", "Cliquez une question pour voir ce qu’il faut écouter. À adapter avant l’entretien.");
-        m.put("provider", llm.provider());
-        m.put("credits", settle(user, reservation, llm));
-        return m;
+        try {
+            LlmProvider.LlmResult llm = llmProvider.complete(
+                    "Génère une grille d'entretien structurée en français. Pas d'identité candidat. Pas de markdown : aucun dièse, aucun astérisque.",
+                    "Poste=" + nullSafe(body.jobTitle()) + " ; compétences=" + nullSafe(body.skills())
+                            + ". 5 à 7 questions discriminantes."
+            );
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("title", "Grille d’entretien");
+            m.put("questions", aiCreditService.interviewKit(body.jobTitle(), body.skills()));
+            m.put("note", "Cliquez une question pour voir ce qu’il faut écouter. À adapter avant l’entretien.");
+            m.put("provider", llm.provider());
+            m.put("success", true);
+            m.put("credits", settle(user, reservation, llm));
+            return m;
+        } catch (ResponseStatusException e) {
+            aiCreditService.release(reservation);
+            throw e;
+        } catch (Exception e) {
+            aiCreditService.release(reservation);
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "Grille indisponible. Aucun crédit n’a été débité.", e);
+        }
     }
 
     @PostMapping("/refusal-draft")
@@ -129,22 +183,34 @@ public class AiAssistController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux recruteurs");
         }
         AiUsageLog reservation = aiCreditService.reserve(user, "refusal-draft");
-        // R15 : motif catalogue + intitulé poste uniquement
-        LlmProvider.LlmResult llm = llmProvider.complete(
-                "Rédige un brouillon de message de refus professionnel en français. Pas de nom ni email. Pas de markdown : aucun dièse, aucun astérisque.",
-                "Motif catalogue=" + nullSafe(body.reasonCode()) + " (" + nullSafe(body.reasonLabel())
-                        + ") ; poste=" + nullSafe(body.jobTitle())
-                        + ". Message respectueux, court, sans promesse."
-        );
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Brouillon de refus");
-        m.put("content", llm.text());
-        m.put("provider", llm.provider());
-        m.put("note", "Proposition — le recruteur valide avant envoi.");
-        m.put("credits", settle(user, reservation, llm));
-        return m;
+        try {
+            LlmProvider.LlmResult llm = llmProvider.complete(
+                    "Rédige un brouillon de message de refus professionnel en français. Pas de nom ni email. Pas de markdown : aucun dièse, aucun astérisque.",
+                    "Motif catalogue=" + nullSafe(body.reasonCode()) + " (" + nullSafe(body.reasonLabel())
+                            + ") ; poste=" + nullSafe(body.jobTitle())
+                            + ". Message respectueux, court, sans promesse."
+            );
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("title", "Brouillon de refus");
+            m.put("content", llm.text());
+            m.put("provider", llm.provider());
+            m.put("success", true);
+            m.put("note", "Proposition — le recruteur valide avant envoi.");
+            m.put("credits", settle(user, reservation, llm));
+            return m;
+        } catch (ResponseStatusException e) {
+            aiCreditService.release(reservation);
+            throw e;
+        } catch (Exception e) {
+            aiCreditService.release(reservation);
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "Brouillon indisponible. Aucun crédit n’a été débité.", e);
+        }
     }
 
+    /**
+     * Synthèse fidèle du CV. Échec / timeout → libération du crédit, jamais de succès factice.
+     */
     @PostMapping("/cv-summary")
     public Map<String, Object> cvSummary(
             @AuthenticationPrincipal User user,
@@ -155,8 +221,6 @@ public class AiAssistController {
         if (cv.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucun texte de CV à résumer");
         }
-        String text;
-        String provider = "local";
         AiUsageLog reservation = aiCreditService.reserve(user, "cv-summary");
         try {
             boolean recruiter = user.getRole() == Role.RECRUTEUR;
@@ -166,28 +230,41 @@ public class AiAssistController {
                             : "Tu résumes le CV de la personne qui te parle. Français, tutoiement, 6 lignes maximum, sans inventer. Termine par une seule amélioration concrète.",
                     cv
             );
-            text = llm.text();
-            provider = llm.provider();
-            aiCreditService.settle(reservation, llm);
+            if (llm == null || llm.text() == null || llm.text().isBlank()) {
+                throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                        "La synthèse a expiré ou est vide. Aucun crédit n’a été débité.");
+            }
+            // Fallback local explicite : ne pas faire passer pour une analyse réussie
+            String provider = llm.provider() == null ? "local" : llm.provider();
+            if ("local".equalsIgnoreCase(provider) || provider.toLowerCase().startsWith("local")) {
+                aiCreditService.release(reservation);
+                Map<String, Object> degraded = new LinkedHashMap<>();
+                degraded.put("title", "Synthèse indisponible");
+                degraded.put("content", "");
+                degraded.put("provider", provider);
+                degraded.put("success", false);
+                degraded.put("degraded", true);
+                degraded.put("message",
+                        "Le fournisseur IA n’a pas pu produire de synthèse. Aucun crédit n’a été débité. "
+                                + "Réessayez plus tard ou vérifiez que le texte du CV est lisible.");
+                degraded.put("credits", creditMap(user, aiCreditService.status(user)));
+                return degraded;
+            }
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("title", "Synthèse du CV");
+            m.put("content", llm.text());
+            m.put("provider", provider);
+            m.put("success", true);
+            m.put("credits", settle(user, reservation, llm));
+            return m;
         } catch (ResponseStatusException e) {
             aiCreditService.release(reservation);
             throw e;
         } catch (Exception e) {
             aiCreditService.release(reservation);
-            text = localSummary(cv);
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "La synthèse a échoué ou a expiré. Aucun crédit n’a été débité.", e);
         }
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Synthèse du CV");
-        m.put("content", text);
-        m.put("provider", provider);
-        return m;
-    }
-
-    private String localSummary(String cv) {
-        String flat = cv.replace('\n', ' ').replaceAll("\\s+", " ").trim();
-        String head = flat.length() > 420 ? flat.substring(0, 420).trim() + "…" : flat;
-        return "Synthèse à partir du texte déposé :\n" + head
-                + "\n\nLe recruteur voit ce texte, pas une décision. Relisez les sections avant de confirmer.";
     }
 
     @PostMapping("/coach")
@@ -199,20 +276,30 @@ public class AiAssistController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Réservé aux candidats");
         }
         AiUsageLog reservation = aiCreditService.reserve(user, "coach");
-        String cv = nullSafe(body.cvText());
-        if (cv.length() > 4000) cv = cv.substring(0, 4000);
-        String question = nullSafe(body.message());
-        if (question.isEmpty()) question = "Quelles améliorations concrètes apporter à ce CV ?";
-        LlmProvider.LlmResult llm = llmProvider.complete(
-                "Tu es un coach carrière. Français simple, tutoiement. Quatre recommandations maximum, numérotées. Pas de markdown. N'invente aucune expérience absente du CV.",
-                "CV du candidat :\n" + cv + "\n\nQuestion :\n" + question
-        );
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Coach CV");
-        m.put("content", llm.text());
-        m.put("provider", llm.provider());
-        m.put("credits", settle(user, reservation, llm));
-        return m;
+        try {
+            String cv = nullSafe(body.cvText());
+            if (cv.length() > 4000) cv = cv.substring(0, 4000);
+            String question = nullSafe(body.message());
+            if (question.isEmpty()) question = "Quelles améliorations concrètes apporter à ce CV ?";
+            LlmProvider.LlmResult llm = llmProvider.complete(
+                    "Tu es un coach carrière. Français simple, tutoiement. Quatre recommandations maximum, numérotées. Pas de markdown. N'invente aucune expérience absente du CV.",
+                    "CV du candidat :\n" + cv + "\n\nQuestion :\n" + question
+            );
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("title", "Coach CV");
+            m.put("content", llm.text());
+            m.put("provider", llm.provider());
+            m.put("success", true);
+            m.put("credits", settle(user, reservation, llm));
+            return m;
+        } catch (ResponseStatusException e) {
+            aiCreditService.release(reservation);
+            throw e;
+        } catch (Exception e) {
+            aiCreditService.release(reservation);
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "Coach indisponible. Aucun crédit n’a été débité.", e);
+        }
     }
 
     @PostMapping("/match-explain")
@@ -221,18 +308,28 @@ public class AiAssistController {
             @jakarta.validation.Valid @RequestBody MatchExplainRequest body
     ) {
         AiUsageLog reservation = aiCreditService.reserve(user, "match-explain");
-        LlmProvider.LlmResult llm = llmProvider.complete(
-                "Explique un écart de matching en français clair. Pas d'identité. Pas de markdown : aucun dièse, aucun astérisque.",
-                "Compétences candidat=" + nullSafe(body.skills())
-                        + " ; compétences offre=" + nullSafe(body.requiredSkills())
-                        + ". Explique les forces et manques, suggère améliorations."
-        );
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("title", "Explication du matching");
-        m.put("content", llm.text());
-        m.put("provider", llm.provider());
-        m.put("credits", settle(user, reservation, llm));
-        return m;
+        try {
+            LlmProvider.LlmResult llm = llmProvider.complete(
+                    "Explique un écart de matching en français clair. Pas d'identité. Pas de markdown : aucun dièse, aucun astérisque.",
+                    "Compétences candidat=" + nullSafe(body.skills())
+                            + " ; compétences offre=" + nullSafe(body.requiredSkills())
+                            + ". Explique les forces et manques, suggère améliorations."
+            );
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("title", "Explication du matching");
+            m.put("content", llm.text());
+            m.put("provider", llm.provider());
+            m.put("success", true);
+            m.put("credits", settle(user, reservation, llm));
+            return m;
+        } catch (ResponseStatusException e) {
+            aiCreditService.release(reservation);
+            throw e;
+        } catch (Exception e) {
+            aiCreditService.release(reservation);
+            throw new ResponseStatusException(HttpStatus.GATEWAY_TIMEOUT,
+                    "Explication indisponible. Aucun crédit n’a été débité.", e);
+        }
     }
 
     @PostMapping("/language-check")

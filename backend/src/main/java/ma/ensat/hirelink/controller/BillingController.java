@@ -4,6 +4,7 @@ import ma.ensat.hirelink.model.CommercialPlan;
 import ma.ensat.hirelink.model.Role;
 import ma.ensat.hirelink.model.User;
 import ma.ensat.hirelink.service.BillingCatalogService;
+import ma.ensat.hirelink.service.BillingPromotionService;
 import ma.ensat.hirelink.service.PaymentService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Abonnement et factures. Le paiement est simulé : le serveur fixe le montant et n'active
@@ -25,12 +27,18 @@ import java.util.Map;
 @RequestMapping("/api/v1/billing")
 public class BillingController {
 
+    private static final Set<String> RETIRED = Set.of("ACCES", "PREMIUM");
+
     private final BillingCatalogService billingCatalogService;
     private final PaymentService payments;
+    private final BillingPromotionService promotions;
 
-    public BillingController(BillingCatalogService billingCatalogService, PaymentService payments) {
+    public BillingController(BillingCatalogService billingCatalogService,
+                             PaymentService payments,
+                             BillingPromotionService promotions) {
         this.billingCatalogService = billingCatalogService;
         this.payments = payments;
+        this.promotions = promotions;
     }
 
     @GetMapping("/plans")
@@ -39,6 +47,9 @@ public class BillingController {
         String audience = user.getRole() == Role.CANDIDAT ? "CANDIDAT" : "RECRUTEUR";
         List<Map<String, Object>> out = new ArrayList<>();
         for (CommercialPlan plan : billingCatalogService.plans()) {
+            if (RETIRED.contains(plan.getCode())) continue;
+            String feat = plan.getFeatures() == null ? "" : plan.getFeatures();
+            if (feat.contains("[RETIRÉ")) continue;
             if (user.getRole() == Role.ADMINISTRATEUR || audience.equals(plan.getAudience())) {
                 out.add(billingCatalogService.toPlan(plan));
             }
@@ -50,14 +61,22 @@ public class BillingController {
     @GetMapping("/quote")
     @Transactional(readOnly = true)
     public Map<String, Object> quote(@AuthenticationPrincipal User user,
-                                     @RequestParam(defaultValue = "month") String cycle) {
-        return payments.quote(user, cycle);
+                                     @RequestParam(defaultValue = "month") String cycle,
+                                     @RequestParam(required = false) String plan,
+                                     @RequestParam(required = false) String promo) {
+        if (promo != null && !promo.isBlank() && plan != null && !plan.isBlank()) {
+            return promotions.preview(plan, cycle, promo);
+        }
+        return payments.quote(user, cycle, plan, promo);
     }
 
     @PostMapping("/subscribe")
-    public Map<String, Object> subscribe(@AuthenticationPrincipal User user, @RequestBody(required = false) Map<String, Object> body) {
+    public Map<String, Object> subscribe(@AuthenticationPrincipal User user,
+                                         @RequestBody(required = false) Map<String, Object> body) {
         String cycle = body != null && "year".equals(String.valueOf(body.get("cycle"))) ? "year" : "month";
-        return payments.prepare(user, cycle);
+        String plan = body == null || body.get("plan") == null ? null : String.valueOf(body.get("plan"));
+        String promo = body == null || body.get("promo") == null ? null : String.valueOf(body.get("promo"));
+        return payments.prepare(user, cycle, plan, promo, promotions);
     }
 
     @DeleteMapping("/subscription")

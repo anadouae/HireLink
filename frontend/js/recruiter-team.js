@@ -190,7 +190,7 @@
     org = o;
     const canEdit = o.myRole === "OWNER" || o.myRole === "RECRUTEUR";
     $("org-name").textContent = o.name || "Organisation";
-    $("org-sub").textContent = "Votre rôle : " + (RC.ROLE_FR[o.myRole] || o.myRole || "—") + " · formule " + (o.planTier === "PREMIUM" ? "Premium" : "Accès");
+    $("org-sub").textContent = "Votre rôle : " + (RC.ROLE_FR[o.myRole] || o.myRole || "—") + " · formule " + (HireLinkAPI.planLabel ? HireLinkAPI.planLabel(o.planTier) : (o.planTier || "—"));
     const v = o.verified ? { label: o.statusLabel || "Entreprise vérifiée", tone: "ok" } : VERIF[o.verificationStatus] || { label: o.statusLabel || "À vérifier", tone: "warn" };
     $("kpi-status").textContent = v.label;
     $("kpi-status").closest(".rc-kpi").className = "rc-kpi rc-kpi--" + v.tone;
@@ -321,22 +321,30 @@
   }
 
   function paintSeats(o, memberCount) {
-    const tier = o && o.planTier ? o.planTier : "ACCES";
-    const max = o && o.maxMembers ? o.maxMembers : (tier === "PREMIUM" ? 25 : 5);
+    const tier = o && o.planTier ? o.planTier : "ESSENTIEL";
+    const max = o && o.maxMembers ? o.maxMembers : ({ ESSENTIEL: 1, ACCES: 1, PROFESSIONNEL: 5, PREMIUM: 5, ENTREPRISE: 25 }[tier] || 1);
     const count = memberCount != null ? memberCount : (o && o.memberCount != null ? o.memberCount : (members ? seatOnly(members).length : 1));
     const rem = Math.max(0, max - count);
 
     const kpiM = $("kpi-members");
     if (kpiM) kpiM.textContent = count + " / " + max;
     const kpiS = $("kpi-seats");
-    if (kpiS) kpiS.textContent = rem + " place" + (rem > 1 ? "s" : "") + " restante" + (rem > 1 ? "s" : "") + " · " + (tier === "PREMIUM" ? "Plan Premium" : "Plan Accès");
+    const planLabel = ({
+      ESSENTIEL: "Essentiel", ACCES: "Essentiel",
+      PROFESSIONNEL: "Professionnel", PREMIUM: "Professionnel",
+      ENTREPRISE: "Entreprise",
+    })[tier] || tier;
+    if (kpiS) kpiS.textContent = rem + " place" + (rem > 1 ? "s" : "") + " restante" + (rem > 1 ? "s" : "") + " · " + planLabel;
 
     const sTxt = $("hq-seats-txt");
     if (sTxt) sTxt.innerHTML = "Capacité d’équipe : <b>" + count + " / " + max + "</b> (" + rem + " place" + (rem > 1 ? "s" : "") + " disponible" + (rem > 1 ? "s" : "") + ")";
     const sPill = $("hq-seats-pill");
     if (sPill) {
-      sPill.textContent = tier === "PREMIUM" ? "Plan Premium (25 places)" : "Plan Accès (5 places)";
+      sPill.textContent = planLabel + " (" + max + " place" + (max > 1 ? "s" : "") + ")";
       sPill.className = "badge " + (rem === 0 ? "badge-danger" : rem <= 1 ? "badge-warn" : "badge-ok");
+    }
+    if (window.HireLinkGrowth && HireLinkGrowth.maybeSuggest && rem <= 1) {
+      HireLinkGrowth.maybeSuggest({ seatsUsed: count, seatsMax: max, tier: tier });
     }
   }
 
@@ -597,7 +605,7 @@
       if (!c) { $("kpi-credits").textContent = "—"; return; }
       $("kpi-credits").textContent = c.remaining + " / " + c.limit;
       $("kpi-plan").textContent =
-        "Formule " + (c.planLabel || (c.plan === "PREMIUM" ? "Premium" : "Accès")) +
+        "Formule " + (c.planLabel || (HireLinkAPI.planLabel ? HireLinkAPI.planLabel(c.plan) : c.plan) || "—") +
         " · votre siège, ce mois · recharge dans " + c.daysToReset + " j";
     })
     .catch(() => { $("kpi-credits").textContent = "—"; });

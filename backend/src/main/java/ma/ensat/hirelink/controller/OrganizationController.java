@@ -30,6 +30,7 @@ public class OrganizationController {
     private final ma.ensat.hirelink.service.OrganizationInvitationService organizationInvitationService;
     private final ma.ensat.hirelink.service.JobOfferService jobOfferService;
     private final ma.ensat.hirelink.service.CompanyFollowService companyFollowService;
+    private final ma.ensat.hirelink.service.PlanPolicyService planPolicyService;
 
     public OrganizationController(
             OrganizationService organizationService,
@@ -39,7 +40,8 @@ public class OrganizationController {
             ma.ensat.hirelink.service.OrganizationNoteService organizationNoteService,
             ma.ensat.hirelink.service.OrganizationInvitationService organizationInvitationService,
             ma.ensat.hirelink.service.JobOfferService jobOfferService,
-            ma.ensat.hirelink.service.CompanyFollowService companyFollowService
+            ma.ensat.hirelink.service.CompanyFollowService companyFollowService,
+            ma.ensat.hirelink.service.PlanPolicyService planPolicyService
     ) {
         this.organizationService = organizationService;
         this.companyVerificationService = companyVerificationService;
@@ -49,6 +51,7 @@ public class OrganizationController {
         this.organizationInvitationService = organizationInvitationService;
         this.jobOfferService = jobOfferService;
         this.companyFollowService = companyFollowService;
+        this.planPolicyService = planPolicyService;
     }
 
     public record InviteRequest(@jakarta.validation.constraints.Size(max = 254) String email, @jakarta.validation.constraints.Size(max = 30) String orgRole) {}
@@ -361,6 +364,11 @@ public class OrganizationController {
         m.put("maxMembers", maxMembers);
         m.put("memberCount", memberCount);
         m.put("seatsRemaining", Math.max(0, maxMembers - memberCount));
+        Map<String, Object> quota = planPolicyService.quotaSnapshot(org);
+        m.put("activeOffers", quota.get("activeOffers"));
+        m.put("activeOfferLimit", quota.get("activeOfferLimit"));
+        m.put("offersUnlimited", quota.get("offersUnlimited"));
+        m.put("planLabel", quota.get("planLabel"));
         // Un total, jamais des identités : les abonnés d'une entreprise restent anonymes.
         m.put("followerCount", companyFollowService.count(org.getId()));
         m.put("myRole", me.getOrgRole().name());

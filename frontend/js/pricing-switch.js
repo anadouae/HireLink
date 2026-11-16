@@ -14,7 +14,7 @@
     },
     recruteur: {
       title: "Recrutez à la performance, sans opacité",
-      lead: "ROI entreprise : automatisez votre sourcing de confiance, sécurisez les meilleurs talents avec Premium.",
+      lead: "ROI entreprise : Essentiel gratuit, Professionnel (299 MAD) ou Entreprise (699 MAD) selon la taille d’équipe.",
     },
   };
 

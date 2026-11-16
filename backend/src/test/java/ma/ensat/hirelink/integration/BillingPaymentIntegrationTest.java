@@ -46,7 +46,7 @@ class BillingPaymentIntegrationTest {
         user.setFullName(nom);
         user.setFirstName(nom);
         user.setRole(role);
-        user.setPlanTier(role == Role.CANDIDAT ? PlanTier.ESSENTIEL : PlanTier.ACCES);
+        user.setPlanTier(role == Role.CANDIDAT ? PlanTier.GRATUIT : PlanTier.ESSENTIEL);
         user.setEmailVerified(true);
         user.setProfileComplete(true);
         user.setPasswordHash("$2a$10$integrationtestnopasswordhashunused000000000000000000");
@@ -77,7 +77,7 @@ class BillingPaymentIntegrationTest {
 
         ResponseEntity<Map> prepared = http.exchange("/api/v1/billing/subscribe", HttpMethod.POST, json(ownerToken, Map.of("cycle", "month")), Map.class);
         assertEquals(HttpStatus.OK, prepared.getStatusCode(), () -> String.valueOf(prepared.getBody()));
-        assertEquals("ACCES", prepared.getBody().get("planTier"));
+        assertEquals("ESSENTIEL", prepared.getBody().get("planTier"));
         @SuppressWarnings("unchecked")
         Map<String, Object> invoice = (Map<String, Object>) prepared.getBody().get("invoice");
         assertEquals("NON_PAYEE", invoice.get("status"));
@@ -99,7 +99,7 @@ class BillingPaymentIntegrationTest {
                 json(ownerToken, Map.of("invoiceId", invoiceId, "scenario", "SUCCESS", "idempotencyKey", "succes-123456")), Map.class);
         assertEquals(HttpStatus.OK, paid.getStatusCode(), () -> String.valueOf(paid.getBody()));
         assertEquals("SUCCEEDED", paid.getBody().get("status"));
-        assertEquals("PREMIUM", paid.getBody().get("planTier"));
+        assertEquals("PROFESSIONNEL", paid.getBody().get("planTier"));
         assertEquals("PAYEE", ((Map<?, ?>) paid.getBody().get("invoice")).get("status"));
         String reference = String.valueOf(paid.getBody().get("reference"));
         assertTrue(reference.startsWith("SIM-"));
@@ -132,7 +132,7 @@ class BillingPaymentIntegrationTest {
 
         ResponseEntity<Map> cancel = http.exchange("/api/v1/billing/subscription", HttpMethod.DELETE, auth(ownerToken), Map.class);
         assertEquals(HttpStatus.OK, cancel.getStatusCode(), () -> String.valueOf(cancel.getBody()));
-        assertEquals("PREMIUM", cancel.getBody().get("planTier"));
+        assertEquals("PROFESSIONNEL", cancel.getBody().get("planTier"));
         assertEquals(Boolean.TRUE, cancel.getBody().get("cancelAtPeriodEnd"));
 
         ResponseEntity<Map> card = http.exchange("/api/v1/billing/payments", HttpMethod.POST,

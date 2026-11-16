@@ -41,6 +41,12 @@
       const s = HireLinkAPI.getSession();
       if (s) { s.fullName = p.fullName || name; localStorage.setItem("hirelink.session", JSON.stringify(s)); }
       RC.toast("Compte", "Profil mis à jour", "ok");
+      const card = document.querySelector(".card, .panel, form");
+      if (card) {
+        card.classList.remove("hl-saved-flash");
+        void card.offsetWidth;
+        card.classList.add("hl-saved-flash");
+      }
       RC.paintProfile();
     } catch (err) { RC.toast("Compte", err.message, "danger"); } finally { RC.busy(btn, false); }
   });
@@ -107,22 +113,35 @@
   });
 
   /* Formules — réservées au créateur de l'espace, comme côté serveur. */
+  function currentTier() {
+    const s = HireLinkAPI.getSession() || {};
+    const t = s.planTier || "ESSENTIEL";
+    if (t === "ACCES" || t === "PREMIUM") return t === "PREMIUM" ? "PROFESSIONNEL" : "ESSENTIEL";
+    return t;
+  }
   function refreshBilling() {
-    const prem = HireLinkAPI.isPremium();
+    const tier = currentTier();
     const governs = RC.isCreator();
-    $("plan-access").classList.toggle("is-current", !prem);
-    $("plan-premium").classList.toggle("is-current", prem);
-    $("mark-access").textContent = prem ? "Toujours disponible" : "Formule en cours";
-    $("mark-premium").textContent = prem ? "Formule en cours" : "À activer";
-    $("btn-billing-cancel").hidden = !prem || !governs;
-    $("btn-billing-premium").hidden = prem || !governs;
+    const paid = tier === "PROFESSIONNEL" || tier === "ENTREPRISE";
+    [["plan-essentiel", "ESSENTIEL", "mark-essentiel"],
+     ["plan-professionnel", "PROFESSIONNEL", "mark-professionnel"],
+     ["plan-entreprise", "ENTREPRISE", "mark-entreprise"]].forEach(([id, code, mark]) => {
+      const el = $(id);
+      if (el) el.classList.toggle("is-current", tier === code);
+      const m = $(mark);
+      if (m) m.textContent = tier === code ? "Formule en cours" : (code === "ESSENTIEL" ? "Toujours disponible" : "À activer");
+    });
+    $("btn-billing-cancel").hidden = !paid || !governs;
+    $("btn-billing-pro").hidden = !governs || tier === "PROFESSIONNEL";
+    $("btn-billing-ent").hidden = !governs || tier === "ENTREPRISE";
     const note = document.getElementById("plan-owner-only");
     if (note) note.hidden = governs;
   }
-  $("btn-billing-premium").addEventListener("click", () => { HireLinkGrowth.showPremium("recruiter"); });
+  $("btn-billing-pro").addEventListener("click", () => { HireLinkGrowth.showPremium("recruiter", "PROFESSIONNEL"); });
+  $("btn-billing-ent").addEventListener("click", () => { HireLinkGrowth.showPremium("recruiter", "ENTREPRISE"); });
   $("btn-billing-cancel").addEventListener("click", async () => {
     const ok = window.HireLink && HireLink.openModal
-      ? await HireLink.openModal({ title: "Résilier mon abonnement ?", description: "L'accès déjà payé reste ouvert jusqu'à la fin de période enregistrée. Aucun remboursement n'est émis.", confirmLabel: "Résilier" })
+      ? await HireLink.openModal({ title: "Résilier mon abonnement ?", description: "L'accès déjà payé reste ouvert jusqu'à la fin de période enregistrée. Aucun remboursement n'est émis. Retour à Essentiel.", confirmLabel: "Résilier" })
       : true;
     if (!ok) return;
     try {

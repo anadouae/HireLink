@@ -96,7 +96,7 @@ public class OrganizationService {
         org.setName(name == null || name.isBlank() ? "Organisation" : name.trim());
         org.setIce(ice);
         org.setOwner(owner);
-        org.setPlanTier(PlanTier.ACCES);
+        org.setPlanTier(PlanTier.ESSENTIEL);
         // A2 : le badge « vérifiée » s'obtient par une vérification portant sur CETTE organisation (ICE
         // contrôlée ou décision d'administration), jamais par héritage du profil de son créateur.
         org.setVerified(false);
@@ -175,13 +175,13 @@ public class OrganizationService {
     public void downgradeExpired(Long orgId) {
         Organization locked = organizationRepository.findByIdForUpdate(orgId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation introuvable"));
-        locked.setPlanTier(PlanTier.ACCES);
+        locked.setPlanTier(PlanTier.ESSENTIEL);
         locked.setSubscriptionEndsAt(null);
         locked.setCancelAtPeriodEnd(false);
         organizationRepository.save(locked);
         for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(orgId)) {
             if (m.getUser().getRole() == Role.RECRUTEUR) {
-                m.getUser().setPlanTier(PlanTier.ACCES);
+                m.getUser().setPlanTier(PlanTier.ESSENTIEL);
                 m.getUser().setSubscriptionEndsAt(null);
                 m.getUser().setCancelAtPeriodEnd(false);
                 userRepository.save(m.getUser());
@@ -343,7 +343,7 @@ public class OrganizationService {
         // B6 : le verrou de ligne sur l'entreprise sérialise les invitations simultanées. Sans lui, deux
         // requêtes lues en parallèle voient la même place libre et dépassent le plafond de sièges.
         organizationRepository.findByIdForUpdate(org.getId());
-        PlanTier tier = org.getPlanTier() != null ? org.getPlanTier() : PlanTier.ACCES;
+        PlanTier tier = PlanTier.normalize(org.getPlanTier(), Role.RECRUTEUR);
         int maxMembers = tier.seatLimit();
         List<Membership> activeMembers = membershipRepository.findByOrganizationIdAndActiveTrue(org.getId());
         boolean alreadyInOrg = activeMembers.stream().anyMatch(m -> m.getUser().getEmail().equalsIgnoreCase(cleanEmail));
