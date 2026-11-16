@@ -204,7 +204,7 @@ public class ExternalJobImportService {
         row.setOriginUrl(job.originUrl().trim());
         row.setApplyUrl(applyRaw);
         row.setBoardKey(blankToNull(job.boardKey()));
-        row.setCountryCode(blankToNull(job.countryCode()));
+        row.setCountryCode(normalizeIsoCountry(job.countryCode()));
         row.setUrlQuality(origin.quality().name());
         row.setUrlQualityReason(clip(origin.reason(), 240));
         row.setLocation(job.location());
@@ -255,6 +255,31 @@ public class ExternalJobImportService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** ISO-3166 alpha-2 uniquement (colonne country_code VARCHAR(8)). */
+    private static String normalizeIsoCountry(String raw) {
+        if (raw == null) return null;
+        String t = raw.trim();
+        if (t.isEmpty()) return null;
+        if (t.length() <= 3 && t.chars().allMatch(Character::isLetter)) {
+            return t.toUpperCase(java.util.Locale.ROOT);
+        }
+        String fold = TextMatcher.fold(t);
+        if (fold.contains("united states") || fold.equals("usa") || fold.equals("us")) return "US";
+        if (fold.contains("united kingdom") || fold.equals("uk") || fold.equals("great britain")) return "GB";
+        if (fold.contains("france")) return "FR";
+        if (fold.contains("germany") || fold.contains("deutschland")) return "DE";
+        if (fold.contains("canada")) return "CA";
+        if (fold.contains("morocco") || fold.contains("maroc")) return "MA";
+        if (fold.contains("netherlands") || fold.contains("holland")) return "NL";
+        if (fold.contains("spain") || fold.contains("espagne")) return "ES";
+        if (fold.contains("belgium") || fold.contains("belgique")) return "BE";
+        if (fold.contains("switzerland") || fold.contains("suisse")) return "CH";
+        if (fold.contains("ireland")) return "IE";
+        if (fold.contains("australia")) return "AU";
+        if (fold.contains("india")) return "IN";
+        return null;
     }
 
     private static String blankToNull(String value) {

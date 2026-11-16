@@ -7,14 +7,17 @@ import org.springframework.stereotype.Component;
 public class GreenhouseJobConnector extends AbstractAtsJobConnector {
 
     private final String apiBase;
+    private final boolean includeContent;
 
     public GreenhouseJobConnector(
             ExternalBoardRegistry registry,
             AtsHttpClient http,
             @Value("${hirelink.external-jobs.greenhouse.enabled:false}") boolean enabled,
-            @Value("${hirelink.external-jobs.greenhouse.api-base:https://boards-api.greenhouse.io}") String apiBase) {
+            @Value("${hirelink.external-jobs.greenhouse.api-base:https://boards-api.greenhouse.io}") String apiBase,
+            @Value("${hirelink.external-jobs.greenhouse.include-content:false}") boolean includeContent) {
         super(registry, http, enabled, (body, board) -> new GreenhouseJobParser().parse(body, board));
         this.apiBase = trimSlash(apiBase);
+        this.includeContent = includeContent;
     }
 
     @Override
@@ -28,7 +31,9 @@ public class GreenhouseJobConnector extends AbstractAtsJobConnector {
 
     @Override
     protected String buildUrl(ExternalBoardDefinition board) {
-        return apiBase + "/v1/boards/" + encode(board.boardKey()) + "/jobs?content=true";
+        // Sans content=true : titre, lieu, absolute_url (léger). Avec content : descriptions HTML (très volumineux).
+        return apiBase + "/v1/boards/" + encode(board.boardKey()) + "/jobs"
+                + (includeContent ? "?content=true" : "");
     }
 
     private static String encode(String key) {

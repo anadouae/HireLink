@@ -99,6 +99,8 @@ public class ArbeitnowWebJobSource implements WebJobSource {
             String inferred = geo.inferCountryCode(loc);
             if (inferred == null) inferred = defaultCc;
             boolean remote = n.path("remote").asBoolean(false);
+            String rawDesc = text(n, "description");
+            String desc = rawDesc == null ? null : (rawDesc.length() > 500 ? rawDesc.substring(0, 500) : rawDesc);
             DiscoveredJob job = new DiscoveredJob(
                     title,
                     text(n, "company_name") == null ? "Entreprise (via Arbeitnow)" : text(n, "company_name"),
@@ -108,7 +110,7 @@ public class ArbeitnowWebJobSource implements WebJobSource {
                     joinArr(n.path("job_types")),
                     remote ? "REMOTE" : null,
                     joinArr(n.path("tags")),
-                    null,
+                    desc,
                     deep,
                     deep,
                     code(),

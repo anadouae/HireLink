@@ -93,10 +93,19 @@
     const challenge = host.querySelector(".cap-challenge");
     const answer = host.querySelector(".cap-answer");
     const cap = {
+      disabled: false,
       draw: async function () {
         host.__token = "";
         try {
           const c = await HireLinkAPI.api("/auth/captcha", { method: "POST", body: {} });
+          if (c && c.kind === "disabled") {
+            cap.disabled = true;
+            host.hidden = true;
+            host.__token = "";
+            answer.value = "";
+            return;
+          }
+          cap.disabled = false;
           host.__token = c.token;
           if (c.kind === "image") challenge.innerHTML = c.svg;
           else challenge.textContent = c.question || "Répondez à la question.";
@@ -111,13 +120,14 @@
       },
       /** Affiche l’épreuve. force=true : toujours un nouveau jeton (après consommation / échec). */
       show: function (force) {
+        if (cap.disabled) { host.hidden = true; return Promise.resolve(); }
         host.hidden = false;
         return (!force && host.__token) ? Promise.resolve() : cap.draw();
       },
       hide: function () { host.hidden = true; host.__token = ""; challenge.innerHTML = ""; answer.value = ""; },
       value: function () { return { captchaToken: host.__token || "", captchaAnswer: answer.value.trim() }; },
       /** Après tout appel qui a consommé le jeton (succès ou 428). */
-      renew: function () { return cap.show(true); },
+      renew: function () { return cap.disabled ? Promise.resolve() : cap.show(true); },
     };
     host.querySelector(".cap-refresh").addEventListener("click", function () { cap.draw(); });
     host.__cap = cap;

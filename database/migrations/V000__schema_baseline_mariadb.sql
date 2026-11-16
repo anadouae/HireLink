@@ -198,51 +198,8 @@ CREATE TABLE `email_otps` (
   KEY `idx_otp_email_purpose` (`email`,`purpose`)
 ) ENGINE=InnoDB AUTO_INCREMENT=10 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `external_job_offers`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `external_job_offers` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `source` varchar(40) NOT NULL,
-  `external_id` varchar(80) NOT NULL,
-  `origin_url` varchar(500) NOT NULL,
-  `apply_url` varchar(500) DEFAULT NULL,
-  `company` varchar(200) NOT NULL,
-  `title` varchar(200) NOT NULL,
-  `location` varchar(160) DEFAULT NULL,
-  `contract_label` varchar(60) DEFAULT NULL,
-  `description` text DEFAULT NULL,
-  `skills` varchar(500) DEFAULT NULL,
-  `salary_min` int(11) DEFAULT NULL,
-  `salary_max` int(11) DEFAULT NULL,
-  `published_at` datetime(6) DEFAULT NULL,
-  `last_synced_at` datetime(6) NOT NULL,
-  `last_seen_at` datetime(6) DEFAULT NULL,
-  `available` bit(1) NOT NULL,
-  `hidden_by_admin` bit(1) NOT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_external_offer_source` (`source`,`external_id`),
-  UNIQUE KEY `UKk2m4y460t9dr9n5u7aaftgc8u` (`source`,`external_id`),
-  KEY `idx_external_offer_available` (`source`,`available`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
-DROP TABLE IF EXISTS `external_sync_runs`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `external_sync_runs` (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `source` varchar(40) NOT NULL,
-  `created_count` int(11) NOT NULL,
-  `updated_count` int(11) NOT NULL,
-  `withdrawn_count` int(11) NOT NULL,
-  `rejected_count` int(11) NOT NULL,
-  `duplicate_count` int(11) NOT NULL,
-  `kept_previous` bit(1) NOT NULL,
-  `message` varchar(300) NOT NULL,
-  `finished_at` datetime(6) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-/*!40101 SET character_set_client = @saved_cs_client */;
+-- external_job_offers removed (cache-only externals)
+-- external_sync_runs removed (cache-only externals)
 DROP TABLE IF EXISTS `job_offer_tags`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;

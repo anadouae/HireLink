@@ -106,6 +106,39 @@ public class JobSearchLexicon {
         return false;
     }
 
+    /**
+     * Requête destinée aux APIs publiques (souvent anglophones) : privilégie une variante ASCII
+     * du lexique (« développeur » → « software engineer » / « developer ») sans inventer de métier.
+     */
+    public String preferredApiQuery(String query) {
+        if (query == null || query.isBlank()) return "";
+        String original = query.trim();
+        List<String> variants = expand(original);
+        String best = original;
+        int bestScore = scoreApiCandidate(original);
+        for (String v : variants) {
+            if (v == null || v.isBlank()) continue;
+            int s = scoreApiCandidate(v);
+            if (s > bestScore) {
+                bestScore = s;
+                best = v;
+            }
+        }
+        return best;
+    }
+
+    private static int scoreApiCandidate(String v) {
+        String f = TextMatcher.fold(v);
+        if (f.length() < 3 || STOP.contains(f)) return -100;
+        // ASCII uniquement (APIs Remotive / Remote OK peu tolérantes au FR accentué)
+        boolean ascii = v.chars().allMatch(c -> c < 128);
+        if (!ascii) return -50;
+        int score = f.length();
+        if (f.contains(" ")) score += 12; // « software engineer », « data analyst »
+        if ("dev".equals(f) || "bi".equals(f) || "po".equals(f) || "pm".equals(f)) score -= 25;
+        return score;
+    }
+
     /** Indique si deux titres/entreprises sont quasi-doublons (déduplication soft). */
     public boolean nearDuplicate(String titleA, String companyA, String titleB, String companyB) {
         String ta = TextMatcher.compact(titleA);

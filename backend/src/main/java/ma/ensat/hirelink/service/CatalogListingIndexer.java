@@ -149,6 +149,10 @@ public class CatalogListingIndexer {
         target.setSortAt(src.getSortAt());
         target.setDedupeKey(src.getDedupeKey());
         target.setSearchBlob(src.getSearchBlob());
+        target.setSalaryMin(src.getSalaryMin());
+        target.setSalaryMax(src.getSalaryMax());
+        target.setExperienceLevel(src.getExperienceLevel());
+        target.setSector(src.getSector());
     }
 
 
@@ -205,6 +209,11 @@ public class CatalogListingIndexer {
         row.setWorkMode(offer.getWorkMode() == null ? null : offer.getWorkMode().name());
         row.setSkillsText(blankToNull(offer.getRequiredSkills()));
         row.setDescription(offer.getDescription());
+        row.setSalaryMin(offer.getSalaryMin());
+        row.setSalaryMax(offer.getSalaryMax());
+        row.setExperienceLevel(offer.getExperienceLevel() == null ? null : offer.getExperienceLevel().name());
+        Organization org = offer.getOrganization();
+        row.setSector(org != null && org.getSector() != null && !org.getSector().isBlank() ? org.getSector().trim() : null);
         row.setOriginUrl(null);
         row.setApplyUrl(null);
         row.setUrlQuality(null);
@@ -215,7 +224,7 @@ public class CatalogListingIndexer {
         row.setSortAt(published);
         row.setDedupeKey(null);
         row.setSearchBlob(blob(offer.getTitle(), company, offer.getLocation(), offer.getRequiredSkills(),
-                offer.getContractType(), offer.getDescription()));
+                offer.getContractType(), offer.getDescription(), row.getSector()));
         return row;
     }
 
@@ -231,11 +240,13 @@ public class CatalogListingIndexer {
         row.setLocationLabel(offer.getLocation());
         Geo geo = geoOf(offer.getLocation());
         if (offer.getCountryCode() != null && !offer.getCountryCode().isBlank()) {
-            geo = new Geo(geo.city, offer.getCountryCode().trim().toUpperCase(Locale.ROOT));
+            String cc = offer.getCountryCode().trim().toUpperCase(Locale.ROOT);
+            if (cc.length() > 8) cc = cc.substring(0, 8);
+            if (cc.length() <= 3) geo = new Geo(geo.city, cc);
         }
         row.setCity(geo.city);
         row.setCityFold(geo.city == null ? null : ma.ensat.hirelink.service.TextMatcher.fold(geo.city));
-        row.setCountryCode(geo.country);
+        row.setCountryCode(geo.country != null && geo.country.length() <= 8 ? geo.country : null);
         row.setContractLabel(offer.getContractLabel());
         row.setWorkMode(null);
         row.setSkillsText(blankToNull(offer.getSkills()));

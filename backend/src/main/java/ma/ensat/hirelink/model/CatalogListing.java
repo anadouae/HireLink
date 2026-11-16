@@ -68,6 +68,19 @@ public class CatalogListing {
     @Column(name = "work_mode", length = 24)
     private String workMode;
 
+    /** Plafond / plancher de rémunération (MAD) pour filtres serveur. */
+    @Column(name = "salary_min")
+    private Integer salaryMin;
+
+    @Column(name = "salary_max")
+    private Integer salaryMax;
+
+    @Column(name = "experience_level", length = 16)
+    private String experienceLevel;
+
+    @Column(length = 120)
+    private String sector;
+
     @Column(name = "skills_text", length = 500)
     private String skillsText;
 
@@ -129,6 +142,14 @@ public class CatalogListing {
     public void setContractLabel(String contractLabel) { this.contractLabel = contractLabel; }
     public String getWorkMode() { return workMode; }
     public void setWorkMode(String workMode) { this.workMode = workMode; }
+    public Integer getSalaryMin() { return salaryMin; }
+    public void setSalaryMin(Integer salaryMin) { this.salaryMin = salaryMin; }
+    public Integer getSalaryMax() { return salaryMax; }
+    public void setSalaryMax(Integer salaryMax) { this.salaryMax = salaryMax; }
+    public String getExperienceLevel() { return experienceLevel; }
+    public void setExperienceLevel(String experienceLevel) { this.experienceLevel = experienceLevel; }
+    public String getSector() { return sector; }
+    public void setSector(String sector) { this.sector = sector; }
     public String getSkillsText() { return skillsText; }
     public void setSkillsText(String skillsText) { this.skillsText = skillsText; }
     public String getDescription() { return description; }
