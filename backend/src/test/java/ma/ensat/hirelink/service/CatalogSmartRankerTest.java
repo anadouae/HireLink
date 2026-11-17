@@ -83,4 +83,42 @@ class CatalogSmartRankerTest {
         List<CatalogSmartRanker.ScoredListing> deduped = ranker.dedupe(ranked);
         assertEquals(1, deduped.size());
     }
+
+    @Test
+    void stagePfeNeRemontePasUnInternAleatoire() {
+        CatalogListing intern = listing(20, CatalogListing.ORIGIN_EXTERNAL,
+                "Software Intern", "Acme Remote", "Python,Git");
+        CatalogListing stagePfe = listing(21, CatalogListing.ORIGIN_INTERNAL,
+                "Stage PFE Développeur Java", "Atlas Digital", "Java,Spring,PFE");
+        List<CatalogSmartRanker.ScoredListing> ranked = ranker.rank("stage pfe", List.of(intern, stagePfe));
+        assertFalse(ranked.stream().anyMatch(s -> s.listing().getId() == 20L),
+                "Un Intern sans PFE ne doit pas matcher « stage pfe » via synonyme stage→intern seul");
+        assertTrue(ranked.stream().anyMatch(s -> s.listing().getId() == 21L));
+        assertEquals(21L, ranked.get(0).listing().getId());
+    }
+
+    @Test
+    void stageSeulPeutMatcherInternshipViaSynonyme() {
+        CatalogListing intern = listing(30, CatalogListing.ORIGIN_EXTERNAL,
+                "Software Internship", "Remote Co", "Java");
+        List<CatalogSmartRanker.ScoredListing> ranked = ranker.rank("stage", List.of(intern));
+        assertFalse(ranked.isEmpty());
+        assertEquals(30L, ranked.get(0).listing().getId());
+    }
+
+    @Test
+    void dedupeParLienIdentique() {
+        CatalogListing a = listing(40, CatalogListing.ORIGIN_EXTERNAL,
+                "Backend Engineer", "Zellige", "Go");
+        a.setApplyUrl("https://example.com/jobs/backend-1");
+        a.setOriginUrl("https://example.com/jobs/backend-1");
+        CatalogListing b = listing(41, CatalogListing.ORIGIN_EXTERNAL,
+                "Backend Engineer (dup)", "Other Mirror", "Go");
+        b.setApplyUrl("https://example.com/jobs/backend-1?utm=x");
+        b.setOriginUrl("https://example.com/jobs/backend-1?utm=x");
+        List<CatalogSmartRanker.ScoredListing> ranked = List.of(
+                new CatalogSmartRanker.ScoredListing(a, 0.9),
+                new CatalogSmartRanker.ScoredListing(b, 0.5));
+        assertEquals(1, ranker.dedupe(ranked).size());
+    }
 }

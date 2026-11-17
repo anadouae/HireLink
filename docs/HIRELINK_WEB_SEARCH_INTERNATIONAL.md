@@ -7,8 +7,11 @@
 | **Remotive** | Non | Gratuit (API publique) | Remote mondial | Fiche Remotive deep-link | Actif si `web-search.enabled` |
 | **Arbeitnow** | Non | Gratuit + attribution | Europe (DE/FR/NL/CH/UK…) | Fiche Arbeitnow / ATS | Actif |
 | **Remote OK** | Non | Gratuit (API publique) | Remote mondial | Fiche Remote OK | Actif |
+| **Himalayas** | Non | Gratuit (API publique) | Remote mondial | Deep-link Himalayas | Actif (attribution) |
+| **Jobicy** | Non | Gratuit (API publique) | Remote | Deep-link Jobicy | Actif (attribution) |
 | **Jooble** | Oui (1 clé = 1 pays) | Gratuit ~100 req/j | Régional (ex. MA) | Deep-link Jooble | Optionnel si clé |
-| **Adzuna** | Oui (app_id+key) | Essai / licence commerciale | 19 pays, **pas MA** | Annonces Adzuna | Non branché (clé + ToS commercial) |
+| **Adzuna** | Oui (app_id+key) | Essai / licence commerciale | 19 pays, **pas MA** | Annonces Adzuna | Optionnel si `HIRELINK_ADZUNA_*` ; sinon SKIPPED |
+| **Tavily / Serper** | Oui | Freemium | Repli Web structuré | URLs https filtrées « job-like » | Seulement si catalogue API mince + `q` non vide |
 
 **Ce n’est pas** un crawl de « tout le Web ». Aucune source gratuite sans clé ne donne un index mondial exhaustif d’offres on-site locales (Indeed/LinkedIn interdits sans partenariat).
 

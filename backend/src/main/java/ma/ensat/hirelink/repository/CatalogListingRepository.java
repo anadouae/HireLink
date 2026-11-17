@@ -25,7 +25,7 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
     void deleteByOrigin(@Param("origin") String origin);
 
     /**
-     * Predicats communs : q, geo, contrat, mode, source, origin, date,
+     * Predicats communs : q, geo, contrat, mode, source, origin, date, entreprise,
      * plus salaire min (plafond ou plancher de l'offre), experience exacte, secteur LIKE.
      */
     @Query(value = """
@@ -41,6 +41,7 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
               AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
               AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
               AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
+              AND (:company IS NULL OR LOWER(c.company_name) LIKE CONCAT('%', LOWER(:company), '%'))
             """, nativeQuery = true)
     long countFiltered(
             @Param("q") String q,
@@ -53,7 +54,8 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
             @Param("since") java.time.Instant since,
             @Param("minSalary") Integer minSalary,
             @Param("experience") String experience,
-            @Param("sector") String sector);
+            @Param("sector") String sector,
+            @Param("company") String company);
 
     @Query(value = """
             SELECT c.* FROM catalog_listings c
@@ -68,6 +70,7 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
               AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
               AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
               AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
+              AND (:company IS NULL OR LOWER(c.company_name) LIKE CONCAT('%', LOWER(:company), '%'))
             ORDER BY c.sort_at DESC, c.id DESC
             LIMIT :limit OFFSET :offset
             """, nativeQuery = true)
@@ -83,6 +86,7 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
             @Param("minSalary") Integer minSalary,
             @Param("experience") String experience,
             @Param("sector") String sector,
+            @Param("company") String company,
             @Param("limit") int limit,
             @Param("offset") int offset);
 
@@ -99,6 +103,7 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
               AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
               AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
               AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
+              AND (:company IS NULL OR LOWER(c.company_name) LIKE CONCAT('%', LOWER(:company), '%'))
             ORDER BY c.sort_at DESC, c.id DESC
             LIMIT :limit
             """, nativeQuery = true)
@@ -114,5 +119,6 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
             @Param("minSalary") Integer minSalary,
             @Param("experience") String experience,
             @Param("sector") String sector,
+            @Param("company") String company,
             @Param("limit") int limit);
 }

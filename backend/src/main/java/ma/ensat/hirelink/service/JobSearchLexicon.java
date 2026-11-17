@@ -56,6 +56,21 @@ public class JobSearchLexicon {
     }
 
     /**
+     * Tokens significatifs d'une requête (sans mots grammaticaux).
+     * Utilisés pour l'AND fort du classement catalogue.
+     */
+    public List<String> significantTokens(String query) {
+        String folded = TextMatcher.fold(query);
+        if (folded.isEmpty()) return List.of();
+        List<String> out = new ArrayList<>();
+        for (String token : folded.split(" ")) {
+            if (token.length() < 2 || STOP.contains(token)) continue;
+            out.add(token);
+        }
+        return out;
+    }
+
+    /**
      * Variantes de la requête : originale repliée + synonymes des tokens / bigrammes connus.
      * Plafond pour éviter une explosion combinatoire.
      */

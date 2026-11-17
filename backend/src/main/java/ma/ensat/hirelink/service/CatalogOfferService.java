@@ -127,9 +127,10 @@ public class CatalogOfferService {
             int page,
             int size) {
         return search(user, q, country, city, contract, workMode, source, origin, sinceDays,
-                null, null, null, forYou, minMatch, page, size);
+                null, null, null, null, forYou, minMatch, page, size);
     }
 
+    /** Compat tests / anciens appels sans filtre entreprise. */
     @Transactional
     public CatalogPage search(
             User user,
@@ -148,6 +149,29 @@ public class CatalogOfferService {
             Double minMatch,
             int page,
             int size) {
+        return search(user, q, country, city, contract, workMode, source, origin, sinceDays,
+                minSalary, experience, sector, null, forYou, minMatch, page, size);
+    }
+
+    @Transactional
+    public CatalogPage search(
+            User user,
+            String q,
+            String country,
+            String city,
+            String contract,
+            String workMode,
+            String source,
+            String origin,
+            Integer sinceDays,
+            Integer minSalary,
+            String experience,
+            String sector,
+            String company,
+            boolean forYou,
+            Double minMatch,
+            int page,
+            int size) {
         int safeSize = Math.min(maxPageSize, Math.max(1, size));
         int safePage = Math.max(0, page);
         String qn = blank(q);
@@ -161,6 +185,7 @@ public class CatalogOfferService {
         Integer minSalaryN = (minSalary != null && minSalary > 0) ? minSalary : null;
         String experienceN = blankUpper(experience);
         String sectorN = blank(sector);
+        String companyN = blank(company);
         Instant since = null;
         if (sinceDays != null && sinceDays > 0) {
             since = Instant.now().minus(Duration.ofDays(sinceDays));
@@ -172,22 +197,22 @@ public class CatalogOfferService {
         if (forYou || matchFloor > 0) {
             double threshold = matchFloor > 0 ? matchFloor : 0.0;
             return searchForYou(user, qn, countryN, cityN, cityRaw, contractN, workModeN, sourceN, originN, since,
-                    minSalaryN, experienceN, sectorN, safePage, safeSize, threshold);
+                    minSalaryN, experienceN, sectorN, companyN, safePage, safeSize, threshold);
         }
 
         // Recherche libre : fuzzy + synonymes + fusion Web (sans favoriser l'interne).
         if (qn != null) {
             return searchSmart(user, qn, countryN, cityN, cityRaw, contractN, workModeN, sourceN, originN, since,
-                    minSalaryN, experienceN, sectorN, safePage, safeSize);
+                    minSalaryN, experienceN, sectorN, companyN, safePage, safeSize);
         }
 
         long total = listings.countFiltered(null, countryN, cityN, contractN, workModeN, sourceN, originN, since,
-                minSalaryN, experienceN, sectorN);
+                minSalaryN, experienceN, sectorN, companyN);
         int offset = safePage * safeSize;
         List<CatalogListing> rows = total == 0 || offset >= total
                 ? List.of()
                 : listings.findFilteredPage(null, countryN, cityN, contractN, workModeN, sourceN, originN, since,
-                        minSalaryN, experienceN, sectorN, safeSize, offset);
+                        minSalaryN, experienceN, sectorN, companyN, safeSize, offset);
         List<Map<String, Object>> items = new ArrayList<>(rows.size());
         for (CatalogListing row : rows) {
             items.add(toDto(row, user, null, null));
@@ -227,12 +252,12 @@ public class CatalogOfferService {
             User user,
             String q, String country, String cityFold, String cityLabel, String contract, String workMode,
             String source, String origin, Instant since,
-            Integer minSalary, String experience, String sector,
+            Integer minSalary, String experience, String sector, String company,
             int page, int size) {
         // Préfiltre SQL sans q (accents / fautes) puis ranking in-memory.
         List<Object[]> candidateIds = listings.findForYouCandidates(
                 null, country, cityFold, contract, workMode, source, origin, since,
-                minSalary, experience, sector, smartScanCap);
+                minSalary, experience, sector, company, smartScanCap);
         Map<Long, CatalogListing> byId = new HashMap<>();
         if (!candidateIds.isEmpty()) {
             List<Long> ids = new ArrayList<>(candidateIds.size());
@@ -397,18 +422,18 @@ public class CatalogOfferService {
             User user,
             String q, String country, String cityFold, String cityLabel, String contract, String workMode,
             String source, String origin, Instant since,
-            Integer minSalary, String experience, String sector,
+            Integer minSalary, String experience, String sector, String company,
             int page, int size, double scoreThreshold) {
         // Profil vide : on liste quand même (score 0), jamais une liste vide « aucune offre au monde ».
         boolean canScore = user != null && matching.hasConfirmedSkills(user);
         // q smart : pas de LIKE SQL (accents / fautes) — filtre textuel après chargement.
         String sqlQ = null;
         long filteredTotal = listings.countFiltered(sqlQ, country, cityFold, contract, workMode, source, origin, since,
-                minSalary, experience, sector);
+                minSalary, experience, sector, company);
         boolean truncated = filteredTotal > forYouMaxScan;
         List<Object[]> candidates = listings.findForYouCandidates(
                 sqlQ, country, cityFold, contract, workMode, source, origin, since,
-                minSalary, experience, sector, forYouMaxScan);
+                minSalary, experience, sector, company, forYouMaxScan);
         Map<Long, CatalogListing> listingCache = new HashMap<>();
         if ((q != null && !q.isBlank()) || !candidates.isEmpty()) {
             List<Long> ids = new ArrayList<>();
@@ -580,6 +605,12 @@ public class CatalogOfferService {
         }
         if (score != null) {
             body.put("matchScore", score);
+        }
+        // Toujours exposer compétences présentes / manquantes quand calculables (transparence « match profil »).
+        if (user != null && matching.hasConfirmedSkills(user) && row.getSkillsText() != null && !row.getSkillsText().isBlank()) {
+            SkillMatchingService.MatchDetail skills = matching.explain(user.getSkills(), row.getSkillsText());
+            body.put("skillsPresent", skills.covered());
+            body.put("skillsMissing", skills.missing());
         }
         body.put("matchesProfile", matchAvailable && score != null && score >= forYouThreshold);
         body.put("matchAvailable", matchAvailable);

@@ -34,4 +34,10 @@ class JobSearchLexiconTest {
                 "Développeur Full-Stack Java", "Atlas Digital",
                 "Développeur Full-Stack Java", "OCP Group"));
     }
+
+    @Test
+    void significantTokensIgnoreStopWords() {
+        assertEquals(List.of("stage", "pfe"), lexicon.significantTokens("stage de pfe"));
+        assertTrue(lexicon.significantTokens("le développeur").contains("developpeur"));
+    }
 }
