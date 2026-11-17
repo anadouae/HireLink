@@ -156,6 +156,27 @@
   color: inherit;
 }
 .cs-filter-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; }
+.cs-active-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.75rem;
+}
+.cs-active-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid color-mix(in srgb, var(--brand, #7a2032) 28%, var(--border, #d1d5db));
+  background: color-mix(in srgb, var(--surface, #fff) 88%, #f3ebe3);
+  border-radius: 999px;
+  padding: 0.22rem 0.65rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  color: inherit;
+}
+.cs-active-chip:hover { border-color: var(--brand, #7a2032); }
+.cs-match-block { margin: 0.85rem 0; }
+.cs-src-line { font-size: 0.85rem; word-break: break-all; }
 .cs-origin-badge {
   display: inline-flex;
   align-items: center;

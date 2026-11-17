@@ -1,7 +1,47 @@
 # Reprise de mission — HireLink
 
 Document de passation. Aucun mot de passe, jeton ou secret n’y figure.
-Dernière mise à jour : 9 novembre 2026, après la mission finale (facturation).
+Dernière mise à jour : 17 novembre 2026 (qualité recherche offres candidat).
+
+## État au 17 novembre 2026 — qualité recherche candidat
+
+Branche : `cursor/candidate-search-quality-aa39` (suite de `main`). Objectifs livrés sans wipe DB ni publication forcée.
+
+### Phase 1 — qualité locale
+- Filtres LinkedIn-like stables (contrat, mode, date, expérience, entreprise, source…) + puces actives + Réinitialiser.
+- AND fort des mots-clés : `CatalogSmartRanker` exige chaque token significatif (synonymes **par token**). Empêche `stage pfe` ? Intern aléatoire via stage?intern seul.
+- « Correspond à mon profil » = reclassement + compétences présentes/manquantes exposées (`skillsPresent` / `skillsMissing` / `matchBreakdown`) — pas un filtre magique.
+- Dédup titre+entreprise+lien ; attribution source toujours affichée.
+- Bug corrigé : salaire / expérience / secteur / entreprise rechargent bien le catalogue serveur.
+
+### Phase 2 — APIs gratuites / bas coût
+- Conservé : Remotive, Arbeitnow, Remote OK, WWR, Jooble (clé optionnelle).
+- Ajouté : Himalayas, Jobicy (sans clé) ; Adzuna si `HIRELINK_ADZUNA_APP_ID` + `HIRELINK_ADZUNA_APP_KEY`.
+- Greenhouse/Lever/Ashby : inchangés (boards connus uniquement).
+- Secrets uniquement via env (voir `.env.example`). Sans clé ? source SKIPPED, clone OK.
+
+### Phase 3 — repli Web
+- Tavily (`HIRELINK_TAVILY_API_KEY`) ou Serper (`HIRELINK_SERPER_API_KEY`) : uniquement si catalogue API mince (`thin-threshold`, défaut 4) et `q` non vide. Pas à chaque frappe.
+
+### Vérification manuelle
+1. Candidat ? Offres : saisir `stage pfe` — ne doit pas remonter un Intern sans PFE/stage PFE.
+2. Activer filtres contrat / mode / date / expérience / entreprise — puces visibles ; Réinitialiser les efface.
+3. « Correspond à mon profil » : détail offre montre présentes / manquantes (si compétences profil).
+4. Badge Source + lien d’origine sur offres externes.
+5. Sans clés optionnelles : démarrage normal ; Adzuna / Tavily / Serper en SKIPPED.
+
+### Tests exécutés (17 nov. 2026)
+`mvn -Dtest=TextMatcherTest,CatalogSmartRankerTest,JobSearchLexiconTest,OptionalWebSourcesReadyTest,ExternalSourceCatalogWebAttributionTest,SkillMatchingServiceTest test` ? SUCCESS.
+Pas d’intégration MySQL sur cet agent (MariaDB absente) : tests catalogue HTTP non rejoués ici. Ne pas toucher la base `hirelink` de démo ni redémarrer 8081 sans accord.
+
+### Config clés optionnelles
+```
+HIRELINK_JOOBLE_API_KEY=
+HIRELINK_ADZUNA_APP_ID=
+HIRELINK_ADZUNA_APP_KEY=
+HIRELINK_TAVILY_API_KEY=
+HIRELINK_SERPER_API_KEY=
+```
 
 ## État au 9 novembre 2026, fin de mission finale
 

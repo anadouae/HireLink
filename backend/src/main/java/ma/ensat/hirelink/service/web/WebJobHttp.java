@@ -20,6 +20,18 @@ public final class WebJobHttp {
         return get(url, "application/json");
     }
 
+    /** POST JSON (Tavily / Serper fallback) — timeout court, pas de secrets dans l'URL. */
+    public static String postJson(String url, String jsonBody) throws Exception {
+        HttpRequest req = HttpRequest.newBuilder(URI.create(url))
+                .timeout(Duration.ofSeconds(18))
+                .header("Accept", "application/json")
+                .header("Content-Type", "application/json")
+                .header("User-Agent", "HireLink/1.0 (job-discovery; educational; +https://hirelink.local)")
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody == null ? "{}" : jsonBody))
+                .build();
+        return read(req, url);
+    }
+
     /** Flux texte/XML publics (ex. RSS We Work Remotely) — pas de scraping HTML de pages offre. */
     public static String getText(String url, String accept) throws Exception {
         return get(url, accept == null || accept.isBlank() ? "*/*" : accept);
@@ -32,6 +44,10 @@ public final class WebJobHttp {
                 .header("User-Agent", "HireLink/1.0 (job-discovery; educational; +https://hirelink.local)")
                 .GET()
                 .build();
+        return read(req, url);
+    }
+
+    private static String read(HttpRequest req, String url) throws Exception {
         HttpResponse<String> res = CLIENT.send(req, HttpResponse.BodyHandlers.ofString());
         int code = res.statusCode();
         if (code < 200 || code >= 300) {

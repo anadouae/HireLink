@@ -13,6 +13,10 @@ import java.util.Map;
 /**
  * Score de pertinence textuelle (fuzzy + synonymes) pour le catalogue unifié.
  * Ne favorise pas l'origine INTERNAL : le classement suit le score, puis la date.
+ * <p>
+ * Mots-clés forts : chaque token significatif de la requête doit matcher
+ * (synonymes autorisés <em>par token</em>), sinon score 0. Empêche
+ * « stage pfe » de remonter un « Software Intern » via le seul synonyme stage→intern.
  */
 @Component
 public class CatalogSmartRanker {
@@ -34,12 +38,35 @@ public class CatalogSmartRanker {
         return lexicon.expand(query);
     }
 
-    /** Score 0..1 d'une ligne catalogue contre la requête (meilleure variante). */
+    /** Score 0..1 d'une ligne catalogue contre la requête (AND des tokens + synonymes locaux). */
     public double scoreListing(String query, CatalogListing row) {
         if (query == null || query.isBlank() || row == null) return 0;
-        List<String> variants = lexicon.expand(query);
-        double best = 0;
-        for (String v : variants) {
+        List<String> tokens = lexicon.significantTokens(query);
+        if (tokens.isEmpty()) return 0;
+
+        // AND : chaque token (élargi à ses synonymes propres) doit toucher l'annonce.
+        double sum = 0;
+        for (String token : tokens) {
+            double best = bestAgainstToken(token, row);
+            if (best < MIN_SCORE) return 0;
+            sum += best;
+        }
+        double andScore = sum / tokens.size();
+
+        // Bonus phrase originale (sans explosion lexicale multi-token).
+        double phrase = scoreAgainst(TextMatcher.fold(query), row);
+        if (phrase > andScore) {
+            return clamp(Math.min(1.0, andScore + 0.12 * (phrase - andScore)));
+        }
+        return clamp(andScore);
+    }
+
+    /** Meilleur score d'un token et de ses synonymes contre une annonce. */
+    private double bestAgainstToken(String token, CatalogListing row) {
+        double best = scoreAgainst(token, row);
+        for (String v : lexicon.expand(token)) {
+            // Ignore les variantes multi-mots trop longues vs token court — elles diluent le AND.
+            if (v == null || v.isBlank()) continue;
             best = Math.max(best, scoreAgainst(v, row));
             if (best >= 0.98) return best;
         }
@@ -97,7 +124,7 @@ public class CatalogSmartRanker {
     }
 
     /**
-     * Déduplication soft titre+entreprise : conserve le meilleur score
+     * Déduplication titre+entreprise+lien : conserve le meilleur score
      * (origine indifférente — pas de priorité systématique INTERNAL).
      */
     public List<ScoredListing> dedupe(List<ScoredListing> ranked) {
@@ -106,10 +133,7 @@ public class CatalogSmartRanker {
             boolean dup = false;
             for (int i = 0; i < out.size(); i++) {
                 ScoredListing keep = out.get(i);
-                if (sameDedupeKey(keep.listing(), cand.listing())
-                        || lexicon.nearDuplicate(
-                        keep.listing().getTitle(), keep.listing().getCompanyName(),
-                        cand.listing().getTitle(), cand.listing().getCompanyName())) {
+                if (sameListing(keep.listing(), cand.listing())) {
                     dup = true;
                     if (cand.relevance() > keep.relevance()) {
                         out.set(i, cand);
@@ -126,10 +150,45 @@ public class CatalogSmartRanker {
         return out;
     }
 
-    private static boolean sameDedupeKey(CatalogListing a, CatalogListing b) {
+    private boolean sameListing(CatalogListing a, CatalogListing b) {
+        if (a == null || b == null) return false;
         String ka = a.getDedupeKey();
         String kb = b.getDedupeKey();
-        return ka != null && !ka.isBlank() && ka.equals(kb);
+        if (ka != null && !ka.isBlank() && ka.equals(kb)) return true;
+
+        String urlA = normalizeUrl(firstUrl(a));
+        String urlB = normalizeUrl(firstUrl(b));
+        if (urlA.length() > 12 && urlA.equals(urlB)) return true;
+
+        if (lexicon.nearDuplicate(a.getTitle(), a.getCompanyName(), b.getTitle(), b.getCompanyName())) {
+            // Même titre+entreprise : doublon même si URLs diffèrent (agrégateurs).
+            return true;
+        }
+        // Clé composite title|company|link quand le lien est connu des deux côtés.
+        if (urlA.length() > 8 && urlB.length() > 8) {
+            String ta = TextMatcher.compact(a.getTitle());
+            String tb = TextMatcher.compact(b.getTitle());
+            String ca = TextMatcher.compact(a.getCompanyName());
+            String cb = TextMatcher.compact(b.getCompanyName());
+            if (!ta.isEmpty() && ta.equals(tb) && !ca.isEmpty() && ca.equals(cb)) return true;
+        }
+        return false;
+    }
+
+    private static String firstUrl(CatalogListing row) {
+        if (row.getApplyUrl() != null && !row.getApplyUrl().isBlank()) return row.getApplyUrl();
+        return row.getOriginUrl() == null ? "" : row.getOriginUrl();
+    }
+
+    private static String normalizeUrl(String url) {
+        if (url == null) return "";
+        String u = url.trim().toLowerCase(Locale.ROOT);
+        int q = u.indexOf('?');
+        if (q > 0) u = u.substring(0, q);
+        int h = u.indexOf('#');
+        if (h > 0) u = u.substring(0, h);
+        if (u.endsWith("/")) u = u.substring(0, u.length() - 1);
+        return u;
     }
 
     public Map<String, Object> provenance(CatalogListing row, ExternalSourceCatalog sources) {

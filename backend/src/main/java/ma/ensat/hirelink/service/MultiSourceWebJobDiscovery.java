@@ -2,6 +2,7 @@ package ma.ensat.hirelink.service;
 
 import ma.ensat.hirelink.service.web.JobGeoVerifier;
 import ma.ensat.hirelink.service.web.WebJobSource;
+import ma.ensat.hirelink.service.web.WebSearchFallbackSource;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * N'impose jamais le Maroc. « Tous les pays » = country null / ALL.
  * Ne persiste rien. Signale honnêtement les sources utilisées et leurs limites.
  * Les appels sources sont parallélisés pour rester sous les délais UI.
+ * Repli Tavily/Serper uniquement si le catalogue API est mince et la requête non vide.
  */
 @Service
 @ConditionalOnProperty(name = "hirelink.web-search.enabled", havingValue = "true")
@@ -27,6 +29,7 @@ public class MultiSourceWebJobDiscovery implements WebJobDiscovery {
     private final List<WebJobSource> sources;
     private final JobGeoVerifier geo;
     private final JobSearchLexicon lexicon;
+    private final WebSearchFallbackSource webFallback;
     private final int perSourceCap;
     private final ExecutorService pool;
 
@@ -34,12 +37,14 @@ public class MultiSourceWebJobDiscovery implements WebJobDiscovery {
             List<WebJobSource> sources,
             JobGeoVerifier geo,
             JobSearchLexicon lexicon,
+            WebSearchFallbackSource webFallback,
             @Value("${hirelink.web-search.per-source-cap:15}") int perSourceCap) {
         this.sources = sources;
         this.geo = geo;
         this.lexicon = lexicon;
+        this.webFallback = webFallback;
         this.perSourceCap = Math.max(3, perSourceCap);
-        this.pool = Executors.newFixedThreadPool(Math.max(2, Math.min(6, Math.max(2, sources.size()))));
+        this.pool = Executors.newFixedThreadPool(Math.max(2, Math.min(8, Math.max(2, sources.size() + 1))));
     }
 
     @Override
@@ -128,13 +133,42 @@ public class MultiSourceWebJobDiscovery implements WebJobDiscovery {
             reports.add(new SourceReport(src.code(), src.label(), "OK", src.coverageNote(), added));
         }
 
+        // Repli Web (Tavily/Serper) : seulement si requête non vide et catalogue API mince.
+        // Jamais sur q vide (évite le déclenchement à chaque frappe / listage brut).
+        if (query != null && !query.isBlank()
+                && webFallback != null
+                && webFallback.isReady()
+                && merged.size() < webFallback.thinThreshold()) {
+            try {
+                List<DiscoveredJob> extra = webFallback.search(query, country, location,
+                        Math.min(want, webFallback.thinThreshold()));
+                int added = 0;
+                for (DiscoveredJob job : extra) {
+                    if (job == null) continue;
+                    if (!geo.matches(job, country, location)) continue;
+                    if (isDuplicate(merged, job)) continue;
+                    merged.add(job);
+                    added++;
+                }
+                reports.add(new SourceReport(webFallback.code(), webFallback.providerLabel(), "OK",
+                        "Repli Web (catalogue API mince < " + webFallback.thinThreshold() + ").", added));
+            } catch (Exception e) {
+                String msg = e.getMessage();
+                reports.add(new SourceReport(webFallback.code(), webFallback.providerLabel(), "ERROR",
+                        msg == null ? e.getClass().getSimpleName() : msg, 0));
+            }
+        } else if (webFallback != null && !webFallback.isReady()) {
+            reports.add(new SourceReport(webFallback.code(), "Web (Tavily/Serper)", "SKIPPED",
+                    webFallback.notReadyReason(), 0));
+        }
+
         String summary = humanCoverageSummary(country, location, ready.get(), errors.get(), merged.size(), reports);
 
-        if (ready.get() == 0) {
+        if (ready.get() == 0 && (webFallback == null || !webFallback.isReady())) {
             return DiscoveryResult.unavailable(
                     "La recherche Web directe est indisponible pour le moment. " + summary);
         }
-        if (merged.isEmpty() && errors.get() >= ready.get()) {
+        if (merged.isEmpty() && errors.get() >= Math.max(1, ready.get()) && (webFallback == null || !webFallback.isReady())) {
             return DiscoveryResult.error(
                     "La recherche Web n’a renvoyé aucune annonce exploitable. " + summary);
         }

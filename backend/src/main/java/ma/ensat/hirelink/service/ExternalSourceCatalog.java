@@ -18,6 +18,10 @@ public class ExternalSourceCatalog {
     public static final String REMOTE_OK = "REMOTE_OK";
     public static final String REMOTIVE = "REMOTIVE";
     public static final String ARBEITNOW = "ARBEITNOW";
+    public static final String HIMALAYAS = "HIMALAYAS";
+    public static final String JOBICY = "JOBICY";
+    public static final String ADZUNA = "ADZUNA";
+    public static final String WEB_FALLBACK = "WEB_FALLBACK";
     public static final String MAROC_EMPLOI = "MAROC_EMPLOI";
     public static final String GREENHOUSE = GreenhouseJobParser.SOURCE;
     public static final String LEVER = LeverJobParser.SOURCE;
@@ -78,6 +82,11 @@ public class ExternalSourceCatalog {
                 new SourceInfo(MAROC_EMPLOI, "Emploi Maroc (partenaires)", "https://hirelink.ma", marocEnabled, "maroc"),
                 new SourceInfo(REMOTIVE, "Remotive", "https://remotive.com", false, "web-search"),
                 new SourceInfo(ARBEITNOW, "Arbeitnow", "https://www.arbeitnow.com", false, "web-search"),
+                new SourceInfo(HIMALAYAS, "Himalayas", "https://himalayas.app", false, "web-search"),
+                new SourceInfo(JOBICY, "Jobicy", "https://jobicy.com", false, "web-search"),
+                new SourceInfo(ADZUNA, "Adzuna", "https://www.adzuna.com", false, "web-search"),
+                new SourceInfo("WE_WORK_REMOTELY", "We Work Remotely", "https://weworkremotely.com", false, "web-search"),
+                new SourceInfo(WEB_FALLBACK, "Web (Tavily/Serper)", "", false, "web-fallback"),
                 new SourceInfo(REMOTE_OK, "Remote OK", "https://remoteok.com", remoteOkEnabled, "remote"),
                 new SourceInfo(GREENHOUSE, "Greenhouse", "https://www.greenhouse.io", greenhouseEnabled, "ats"),
                 new SourceInfo(LEVER, "Lever", "https://www.lever.co", leverEnabled, "ats"),

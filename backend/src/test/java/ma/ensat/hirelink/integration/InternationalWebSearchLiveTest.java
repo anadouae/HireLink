@@ -51,7 +51,10 @@ class InternationalWebSearchLiveTest {
         JoobleHttpClient http = new JoobleHttpClient(2000, 8000, 1_000_000, "HireLink-LiveTest/1.0", "ma.jooble.org,jooble.org");
         JoobleJobConnector jooble = new JoobleJobConnector(http, false, "", "https://ma.jooble.org/api", "", "Maroc", 1);
         sources.add(new JoobleWebJobSource(jooble, geo, true, "MA", "Maroc"));
-        discovery = new MultiSourceWebJobDiscovery(sources, geo, new JobSearchLexicon(), 12);
+        // Repli Web sans clé : SKIPPED (attendu en live sans secrets).
+        ma.ensat.hirelink.service.web.WebSearchFallbackSource fallback =
+                new ma.ensat.hirelink.service.web.WebSearchFallbackSource(geo, cache, true, "", "", 4, 8, 1800);
+        discovery = new MultiSourceWebJobDiscovery(sources, geo, new JobSearchLexicon(), fallback, 12);
     }
 
     @Test

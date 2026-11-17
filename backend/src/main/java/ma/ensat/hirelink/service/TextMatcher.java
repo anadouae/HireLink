@@ -39,13 +39,22 @@ public class TextMatcher {
         double whole = single(compact(query), t, text);
         String[] words = fold(query).split(" ");
         if (words.length < 2) return whole;
+        // AND strict : chaque mot significatif doit matcher. Pas de repli silencieux
+        // sur un seul token (évite « stage pfe » → n'importe quel « Intern »).
         double sum = 0;
+        int counted = 0;
         for (String w : words) {
+            if (w.isBlank() || w.length() < 2) continue;
             double s = single(w.replace(" ", ""), t, text);
-            if (s == 0) return whole;
+            if (s == 0) {
+                // La phrase compacte entière peut encore sauver (« fullstack » vs « full stack »).
+                return whole;
+            }
             sum += s;
+            counted++;
         }
-        return Math.max(whole, 0.95 * sum / words.length);
+        if (counted == 0) return whole;
+        return Math.max(whole, 0.95 * sum / counted);
     }
 
     private static double single(String q, String t, String text) {

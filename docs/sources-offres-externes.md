@@ -1,6 +1,6 @@
 # Offres externes — sources autorisées
 
-État au 10 novembre 2026 : **Remote OK est la seule source branchée**. Les offres vivent dans `external_job_offers`, séparées de `job_offers`. L'import est désactivé par défaut (`hirelink.external-jobs.remoteok.enabled=false`) : aucune requête ne part tant que ce réglage n'est pas vrai. Le bouton mène au lien d'origine et une candidature HireLink n'est pas créée.
+État au 17 novembre 2026 : le **sync persisté** (`external_job_offers`) reste centré sur Remote OK / ATS allowlist / Jooble (flags off par défaut). La **recherche Web éphémère** du catalogue candidat (`hirelink.web-search.*`) agrège en parallèle Remotive, Arbeitnow, Remote OK, Himalayas, Jobicy, WWR, Jooble/Adzuna si clés, plus repli Tavily/Serper si le catalogue API est mince. Les offres sync vivent dans `external_job_offers`, séparées de `job_offers`. L'import Remote OK reste désactivé par défaut (`hirelink.external-jobs.remoteok.enabled=false`). Le bouton mène au lien d'origine et une candidature HireLink n'est pas créée.
 
 Une source n’est utilisable que si son contrat autorise l’affichage, impose la citation, et donne un lien pour postuler chez l’émetteur. Les offres ne doivent pas être inventées, ni transformées en candidatures HireLink.
 

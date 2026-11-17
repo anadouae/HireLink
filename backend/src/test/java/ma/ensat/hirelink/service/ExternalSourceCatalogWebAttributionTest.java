@@ -22,14 +22,21 @@ class ExternalSourceCatalogWebAttributionTest {
         assertEquals("https://remoteok.com", catalog.homeOf("REMOTE_OK"));
         assertEquals("We Work Remotely", catalog.labelOf("WE_WORK_REMOTELY"));
         assertEquals("https://weworkremotely.com", catalog.homeOf("WE_WORK_REMOTELY"));
+        assertEquals("Himalayas", catalog.labelOf("HIMALAYAS"));
+        assertEquals("https://himalayas.app", catalog.homeOf("HIMALAYAS"));
+        assertEquals("Jobicy", catalog.labelOf("JOBICY"));
+        assertEquals("Adzuna", catalog.labelOf("ADZUNA"));
 
         assertFalse(catalog.find("REMOTIVE").enabled());
         assertFalse(catalog.find("ARBEITNOW").enabled());
         assertFalse(catalog.find("REMOTE_OK").enabled());
         assertFalse(catalog.find("WE_WORK_REMOTELY").enabled());
+        assertFalse(catalog.find("HIMALAYAS").enabled());
+        assertFalse(catalog.find("JOBICY").enabled());
         assertTrue(catalog.enabled().stream().noneMatch(s ->
                 s.code().equals("REMOTIVE") || s.code().equals("ARBEITNOW")
-                        || s.code().equals("REMOTE_OK") || s.code().equals("WE_WORK_REMOTELY")));
+                        || s.code().equals("REMOTE_OK") || s.code().equals("WE_WORK_REMOTELY")
+                        || s.code().equals("HIMALAYAS") || s.code().equals("JOBICY")));
     }
 
     @Test

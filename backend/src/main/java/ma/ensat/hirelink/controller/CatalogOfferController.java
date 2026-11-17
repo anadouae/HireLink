@@ -37,6 +37,7 @@ public class CatalogOfferController {
             @RequestParam(required = false) Integer minSalary,
             @RequestParam(required = false) String experience,
             @RequestParam(required = false) String sector,
+            @RequestParam(required = false) String company,
             @RequestParam(required = false, defaultValue = "false") boolean forYou,
             @RequestParam(required = false, defaultValue = "0") Double minMatch,
             @RequestParam(required = false, defaultValue = "0") int page,
@@ -50,7 +51,7 @@ public class CatalogOfferController {
         String workModeFilter = normalizeWorkMode(workMode);
         CatalogOfferService.CatalogPage result = catalog.search(
                 user, q, countryFilter, city, contract, workModeFilter, source, origin, sinceDays,
-                minSalary, experience, sector, forYou, minMatch, page, size);
+                minSalary, experience, sector, company, forYou, minMatch, page, size);
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("page", result.page());
         body.put("size", result.size());

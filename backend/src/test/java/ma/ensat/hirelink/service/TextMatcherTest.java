@@ -31,4 +31,12 @@ class TextMatcherTest {
     void shortWordsAreNotFuzzy() {
         assertEquals(0, matcher.score("jvv", "Java"), 0);
     }
+
+    @Test
+    void multiWordRequiresEveryTokenOrWholePhrase() {
+        assertEquals(0, matcher.score("stage pfe", "Software Intern remote"), 0);
+        assertTrue(matcher.score("stage pfe", "Stage PFE développeur") > 0);
+        // Phrase compacte : full stack ↔ fullstack
+        assertTrue(matcher.score("full stack", "Fullstack Engineer") > 0);
+    }
 }

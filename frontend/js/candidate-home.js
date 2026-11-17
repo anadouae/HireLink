@@ -56,12 +56,21 @@
   const WEB_SRC_LABEL = {
     REMOTIVE: "Remotive", ARBEITNOW: "Arbeitnow", REMOTE_OK: "Remote OK", JOOBLE: "Jooble",
     WE_WORK_REMOTELY: "We Work Remotely", GREENHOUSE: "Greenhouse", LEVER: "Lever", ASHBY: "Ashby",
+    HIMALAYAS: "Himalayas", JOBICY: "Jobicy", ADZUNA: "Adzuna",
+    WEB_FALLBACK: "Web", TAVILY: "Tavily", SERPER: "Serper",
     HIRELINK: "HireLink",
   };
   const WEB_SRC_HOME = {
     REMOTIVE: "https://remotive.com", ARBEITNOW: "https://www.arbeitnow.com",
     REMOTE_OK: "https://remoteok.com", JOOBLE: "https://ma.jooble.org",
     WE_WORK_REMOTELY: "https://weworkremotely.com",
+    HIMALAYAS: "https://himalayas.app", JOBICY: "https://jobicy.com",
+    ADZUNA: "https://www.adzuna.com",
+  };
+  const FILTER_CHIP_LABELS = {
+    "f-country": "Pays", "f-city": "Ville", "f-contract": "Contrat", "f-mode": "Mode",
+    "f-since": "Date", "f-experience": "Expérience", "f-company": "Entreprise",
+    "f-source": "Source", "f-salary": "Salaire", "f-sector": "Secteur", "f-match": "Compatibilité",
   };
 
   function webSourceLabel(o) {
@@ -200,6 +209,7 @@
     if (minSal > 0) params.set("minSalary", String(minSal));
     if (val("f-experience")) params.set("experience", val("f-experience"));
     if (val("f-sector")) params.set("sector", val("f-sector"));
+    if (val("f-company").trim()) params.set("company", val("f-company").trim());
     const scope = currentScope();
     if (scope === "hirelink") params.set("origin", "internal");
     else if (scope === "external") params.set("origin", "external");
@@ -218,6 +228,55 @@
     setSearchVal("");
     setScope("all", false);
     hasSearched = false;
+    paintActiveChips();
+  }
+
+  function filterDisplayValue(id) {
+    const el = $(id);
+    if (!el) return "";
+    if (el.tagName === "SELECT") {
+      const opt = el.options[el.selectedIndex];
+      return opt ? String(opt.textContent || "").trim() : "";
+    }
+    return String(el.value || "").trim();
+  }
+
+  function paintActiveChips() {
+    const box = $("cs-active-chips");
+    if (!box) return;
+    box.replaceChildren();
+    const chips = [];
+    FILTERS.forEach((id) => {
+      if (id === "f-origin" || id === "f-skill" || id === "f-sent" || id === "f-pace") return;
+      const raw = val(id);
+      if (!raw || (id === "f-country" && raw === "ALL") || (id === "f-match" && raw === "0")) return;
+      chips.push({ id: id, label: FILTER_CHIP_LABELS[id] || id, value: filterDisplayValue(id) || raw });
+    });
+    if (matchOnly) chips.unshift({ id: "match-only", label: "Profil", value: "Reclassement" });
+    if (!chips.length) { box.hidden = true; return; }
+    box.hidden = false;
+    chips.forEach((c) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cs-active-chip";
+      btn.setAttribute("aria-label", "Retirer le filtre " + c.label);
+      const lab = document.createElement("span");
+      lab.textContent = c.label + " : " + c.value;
+      const x = document.createElement("span");
+      x.setAttribute("aria-hidden", "true");
+      x.textContent = "×";
+      btn.append(lab, x);
+      btn.addEventListener("click", () => {
+        if (c.id === "match-only") setMatchOnly(false);
+        else if ($(c.id)) {
+          $(c.id).value = c.id === "f-country" ? "ALL" : (c.id === "f-match" ? "0" : "");
+          if (c.id === "f-country") fillCitiesFromDirectory();
+          paintActiveChips();
+          if (hasSearched) load(false, false);
+        }
+      });
+      box.appendChild(btn);
+    });
   }
 
   function paintEmptyFirst() {
@@ -422,13 +481,52 @@
       source.textContent = "Source : " + webSourceLabel(o);
       actions.appendChild(source);
     }
+    const matchBlock = document.createElement("div");
+    matchBlock.className = "cs-match-block";
+    if (o.matchBreakdown && window.HireLinkMatch && typeof HireLinkMatch.panel === "function") {
+      const panel = HireLinkMatch.panel(o.matchBreakdown, { audience: "candidate" });
+      if (panel) matchBlock.appendChild(panel);
+    } else if ((o.skillsPresent && o.skillsPresent.length) || (o.skillsMissing && o.skillsMissing.length)) {
+      const h = document.createElement("h3");
+      h.className = "detail-sub";
+      h.textContent = o.matchAvailable
+        ? ("Compatibilité " + (o.matchScore != null ? Math.round(o.matchScore) + " %" : ""))
+        : "Compétences vs profil";
+      matchBlock.appendChild(h);
+      const note = document.createElement("p");
+      note.className = "muted";
+      note.textContent = o.matchLabel || "Reclassement transparent : compétences présentes et manquantes.";
+      matchBlock.appendChild(note);
+      if (o.skillsPresent && o.skillsPresent.length) {
+        const ok = document.createElement("p");
+        ok.innerHTML = "<strong>Présentes :</strong> ";
+        ok.appendChild(document.createTextNode(o.skillsPresent.join(", ")));
+        matchBlock.appendChild(ok);
+      }
+      if (o.skillsMissing && o.skillsMissing.length) {
+        const miss = document.createElement("p");
+        miss.innerHTML = "<strong>Manquantes :</strong> ";
+        miss.appendChild(document.createTextNode(o.skillsMissing.join(", ")));
+        matchBlock.appendChild(miss);
+      }
+    } else if (matchOnly || o.matchLabel) {
+      const note = document.createElement("p");
+      note.className = "muted";
+      note.textContent = o.matchLabel || "Activez des compétences dans votre profil pour voir présentes / manquantes.";
+      matchBlock.appendChild(note);
+    }
+    const srcLine = document.createElement("p");
+    srcLine.className = "cs-src-line muted";
+    srcLine.textContent = "Source : " + originBadge(o)
+      + (o.provenance && o.provenance.url ? " · " + o.provenance.url : "");
+
     if (o.external) {
       const notice = document.createElement("p");
       notice.className = "muted";
       notice.textContent = o.applyHint || "Candidature sur le site d’origine — HireLink ne suit pas ce dossier.";
-      body.append(desc, skillsTitle, boxes, notice, actions);
+      body.append(desc, skillsTitle, boxes, matchBlock, srcLine, notice, actions);
     } else {
-      body.append(desc, skillsTitle, boxes, actions);
+      body.append(desc, skillsTitle, boxes, matchBlock, srcLine, actions);
     }
     detail.append(head, body);
     openDrawer();
@@ -500,10 +598,9 @@
       $("filter-summary").textContent = totalElements + " offre" + (totalElements > 1 ? "s" : "")
         + " · page " + (page + 1);
       $("match-hint").textContent = matchOnly
-        ? "Classement par estimation de compatibilité."
+        ? "Reclassement par compatibilité + compétences présentes/manquantes (pas un filtre magique)."
         : (totalElements + " résultat" + (totalElements > 1 ? "s" : "") + " catalogue (+ Web si activé).");
-      const uniq = (list) => Array.from(new Set(list.filter(Boolean))).sort((a, b) => a.localeCompare(b, "fr"));
-      fillSelect("f-contract", uniq(cached.map((o) => (o.contractType || "").trim())));
+      paintActiveChips();
       renderGrid();
       paintPager();
       const applyId = new URLSearchParams(location.search).get("apply");
@@ -541,6 +638,7 @@
     matchOnly = on;
     matchToggle.checked = on;
     try { localStorage.setItem(MATCH_KEY, on ? "1" : "0"); } catch (_) {}
+    paintActiveChips();
     if (hasSearched) load(false, false);
   }
 
@@ -549,14 +647,20 @@
   FILTERS.forEach((id) => {
     const el = $(id);
     if (!el) return;
-    el.addEventListener("change", () => {
+    const reload = () => {
       if (id === "f-country") fillCitiesFromDirectory();
-      if (id === "f-salary" || id === "f-experience" || id === "f-sector") {
-        if (hasSearched) renderGrid();
-        return;
-      }
+      paintActiveChips();
+      // Tous les filtres visibles (salaire, expérience, secteur, entreprise…) sont serveur.
       if (hasSearched) load(false, false);
-    });
+    };
+    el.addEventListener("change", reload);
+    if (id === "f-company") {
+      let companyTimer = 0;
+      el.addEventListener("input", () => {
+        clearTimeout(companyTimer);
+        companyTimer = setTimeout(reload, 400);
+      });
+    }
   });
 
   document.querySelectorAll(".cs-chip[data-q]").forEach((btn) => {
