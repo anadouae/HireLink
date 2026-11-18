@@ -18,6 +18,9 @@
     ["Support", "support"]
   ];
   let offers = [];
+  /* Offres HireLink (publiées par les recruteurs) : base des entreprises, des villes et des chiffres.
+     Les offres web n’y entrent pas : leurs entreprises ne sont ni inscrites ni vérifiées sur HireLink. */
+  let directory = null;
   let mode = "offers";
   let companyCity = "";
 
@@ -89,7 +92,7 @@
     const lead = document.getElementById("offers-lead");
     if (lead) {
       let text = totalElements
-        ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " correspondent a la recherche (pagination serveur)."
+        ? totalElements + " offre" + (totalElements > 1 ? "s" : "") + " HireLink " + (totalElements > 1 ? "correspondent" : "correspond") + " à la recherche."
         : "Aucune offre pour cette recherche.";
       if (lastWebMsg) text += " — " + lastWebMsg;
       lead.textContent = text;
@@ -179,7 +182,7 @@
         }
         paintOffers(items, !append);
         const count = document.getElementById("offer-count");
-        if (count) count.textContent = totalElements ? String(totalElements) : "nos";
+        if (count) count.textContent = totalElements ? String(totalElements) : "Des";
         if (!append) {
           const contracts = Array.from(new Set(offers.map(function (o) { return o.contractType; }).filter(Boolean)));
           fillSelect("q-contract", contracts, "Type de contrat");
@@ -205,11 +208,23 @@
           const lead = document.getElementById("offers-lead");
           if (lead) lead.textContent = "Catalogue temporairement indisponible.";
           const count = document.getElementById("offer-count");
-          if (count) count.textContent = "nos";
+          if (count) count.textContent = "Des";
           moreBox.hidden = true;
         }
       })
       .finally(function () { loading = false; });
+  }
+
+  function hireLinkOffers() {
+    return directory || offers.filter(function (o) { return !o.external; });
+  }
+
+  /* Un seul appel, sans recherche web : jusqu’à 50 offres HireLink pour les entreprises, villes et chiffres. */
+  function loadDirectory() {
+    return fetch(base + "/catalog/offers?page=0&size=50&country=MA&origin=internal")
+      .then(function (r) { if (!r.ok) throw new Error("directory"); return r.json(); })
+      .then(function (data) { directory = (Array.isArray(data.items) ? data.items : []).filter(function (o) { return !o.external; }); })
+      .catch(function () { directory = null; });
   }
 
   function paintCompanies() {
@@ -217,7 +232,7 @@
     const tabs = document.getElementById("company-tabs");
     if (!box || !tabs) return;
     const map = new Map();
-    offers.forEach(function (o) {
+    hireLinkOffers().forEach(function (o) {
       const name = companyOf(o);
       const row = map.get(name) || { name: name, city: cityOf(o), n: 0, verified: false, logo: HireLinkOffer.mediaUrl(o.companyLogo) || "", sector: o.companySector || "" };
       row.n += 1;
@@ -265,7 +280,7 @@
     const row = document.getElementById("city-row");
     const foot = document.getElementById("footer-cities");
     const counts = new Map();
-    offers.forEach(function (o) {
+    hireLinkOffers().forEach(function (o) {
       const city = cityOf(o);
       counts.set(city, (counts.get(city) || 0) + 1);
     });
@@ -305,15 +320,16 @@
 
   /* Chiffres de la bande d’accueil, calculés sur les offres publiées. */
   function paintStats() {
-    const companies = new Set(offers.map(companyOf));
-    const cities = new Set(offers.map(cityOf));
+    const listed = hireLinkOffers();
+    const companies = new Set(listed.map(companyOf));
+    const cities = new Set(listed.map(cityOf));
     const quick = new Set(
-      offers
+      listed
         .filter(function (o) { return o.responsiveness === "REACTIF"; })
         .map(companyOf)
     );
     const values = {
-      offers: totalElements || offers.length,
+      offers: totalElements || listed.length,
       companies: companies.size,
       cities: cities.size,
       pace: quick.size
@@ -380,11 +396,11 @@
     const people = next === "people";
     if (contract) contract.hidden = people;
     if (submit) submit.textContent = people ? "Voir les dossiers" : "Rechercher";
-    if (input) input.placeholder = people ? "Metier ou competence…" : "Rechercher un poste, une entreprise…";
+    if (input) input.placeholder = people ? "Métier ou compétence…" : "Rechercher un poste, une entreprise…";
     if (hint) {
       hint.textContent = people
-        ? "Les dossiers ne sont pas publics. Le recruteur les ouvre apres connexion : CV, texte extrait, synthese, etapes."
-        : "Trouvez un poste parmi les offres publiees. La connexion sert a postuler avec votre CV.";
+        ? "Les dossiers ne sont pas publics. Le recruteur les ouvre après connexion : CV, texte extrait, synthèse, étapes."
+        : "Trouvez un poste parmi les offres publiées. La connexion sert à postuler avec votre CV.";
     }
   }
 
@@ -426,5 +442,6 @@
     const el = document.getElementById(id);
     if (el) el.addEventListener("change", function () { applyOffers(); });
   });
-  HireLinkPlaces.ready().then(function () { applyOffers(); });
+  // Premier chargement : pas de défilement automatique vers la liste (réservé aux recherches de l’utilisateur).
+  HireLinkPlaces.ready().then(loadDirectory).then(function () { fetchPage(false); });
 })();

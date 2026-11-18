@@ -7,11 +7,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>HireLink — Recrutement à performance équitable</title>
   <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
-  <meta name="description" content="HireLink : offres, candidatures et délais de réponse dans un même espace. Pour candidats et recruteurs." />
+  <meta name="description" content="HireLink : offres des recruteurs, recherche web en direct, candidatures suivies et délais de réponse dans un même espace. Pour candidats et recruteurs." />
+  <meta name="theme-color" content="#7a2032" />
   <meta property="og:title" content="HireLink — Recrutement à performance équitable" />
   <meta property="og:description" content="Chaque talent mérite une réponse. Chaque offre exige un engagement. Transparence bilatérale, ROI mesurable." />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="fr_FR" />
+  <meta property="og:site_name" content="HireLink" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&display=swap" rel="stylesheet" />
@@ -21,6 +23,7 @@
   <link rel="stylesheet" href="css/home.css?v=20261110g" />
   <link rel="stylesheet" href="css/public-dark.css?v=20261107b" />
   <link rel="stylesheet" href="css/premium.css?v=20261107b" />
+  <link rel="stylesheet" href="css/landing-profile.css?v=20261118v7" />
 </head>
 <body class="home">
   <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -52,7 +55,7 @@
       </div>
       <div class="hero-inner">
         <p class="eyebrow" data-reveal>Recrutement à performance équitable</p>
-        <h1 class="hero-title" id="hero-title" data-split>Plus de <em id="offer-count">—</em> offres ouvertes au Maroc</h1>
+        <h1 class="hero-title" id="hero-title" data-split><em id="offer-count">—</em> offres ouvertes au Maroc</h1>
         <p class="hero-lead" data-reveal>Stages, premiers emplois et CDI. Suivez vos candidatures et les délais de réponse, dans un même espace.</p>
 
         <form class="search-card" id="finder" data-reveal>
@@ -84,7 +87,7 @@
               <option value="90">90 derniers jours</option>
             </select>
           </div>
-          <p class="search-hint">Les offres web viennent d'une recherche en direct sur des sites d'emploi publics : rien n'est stocké chez nous, et la candidature se fait sur le site d'origine (HireLink ne suit pas ces candidatures).</p>
+          <p class="search-hint">Les offres web viennent d'une recherche en direct sur des sites d'emploi publics (Remotive, Arbeitnow, Remote OK, Himalayas, Jobicy, Adzuna, We Work Remotely) : rien n'est stocké chez nous, et la candidature se fait sur le site d'origine (HireLink ne suit pas ces candidatures).</p>
           <div class="quick-row">
             <span>Recherche rapide</span>
             <div id="quick-chips"></div>
@@ -129,7 +132,7 @@
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-                <img src="assets/landing/espace-candidat.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Tableau de bord candidat : suivi des candidatures, entretiens à venir et profil" />
+                <img src="assets/landing/candidat-tableau-de-bord.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Tableau de bord candidat : entretien à venir, suivi de trois candidatures étape par étape et profil complété" />
               </figure>
             </li>
             <li class="scene-step" data-scene-step>
@@ -146,7 +149,7 @@
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-                <img src="assets/landing/espace-recruteur.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Candidatures du recruteur : reçues, présélection, shortlist et entretien" />
+                <img src="assets/landing/recruteur-kanban.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Espace recruteur, vue Kanban des candidatures : colonnes Reçues, Présélection, Shortlist et Entretien, avec indicateurs de délai" />
               </figure>
             </li>
           </ol>
@@ -157,6 +160,82 @@
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <section class="block pcv" id="profil-cv" aria-labelledby="pcv-title">
+      <header class="block-head">
+        <p class="eyebrow">Profil et CV</p>
+        <h2 id="pcv-title" data-split>Votre CV remplit le profil, vous gardez la main</h2>
+        <p>Déposez votre CV une fois. HireLink lit ses sections et vous propose chaque élément : rien n’est enregistré sans votre accord.</p>
+      </header>
+      <div class="pcv-grid">
+        <div class="pcv-text">
+          <ol class="pcv-steps">
+            <li class="pcv-step" data-pcv-step>
+              <span class="pcv-step-num" aria-hidden="true">1</span>
+              <div><h3>Déposez votre CV</h3><p>PDF texte, TXT ou image. Le même fichier sert ensuite à vos candidatures.</p></div>
+            </li>
+            <li class="pcv-step" data-pcv-step>
+              <span class="pcv-step-num" aria-hidden="true">2</span>
+              <div><h3>HireLink vous propose</h3><p>Identité, expériences, formation, compétences et langues sont lues puis proposées une à une.</p></div>
+            </li>
+            <li class="pcv-step" data-pcv-step>
+              <span class="pcv-step-num" aria-hidden="true">3</span>
+              <div><h3>Vous vérifiez et validez</h3><p>Acceptez, corrigez ou refusez chaque proposition. Rien n’écrase votre profil automatiquement.</p></div>
+            </li>
+            <li class="pcv-step" data-pcv-step>
+              <span class="pcv-step-num" aria-hidden="true">4</span>
+              <div><h3>Votre profil est prêt</h3><p>Vos compétences confirmées servent à classer les offres pour vous : une aide, jamais un filtre d’exclusion.</p></div>
+            </li>
+          </ol>
+          <p class="pcv-next"><strong>Bientôt</strong><span>Déposer le CV dès la création du compte, pour pré-remplir le profil en une seule fois.</span></p>
+          <a class="link-arrow" href="auth.html?mode=register&amp;role=CANDIDAT">Créer mon profil candidat</a>
+        </div>
+        <figure class="pcv-demo" data-pcv>
+          <div class="pcv-stage" aria-hidden="true">
+            <div class="pcv-doc">
+              <span class="pcv-beam"></span>
+              <span class="pcv-doc-name">Sara El Amrani</span>
+              <span class="pcv-doc-role">Développeuse Full-Stack Java junior</span>
+              <span class="pcv-doc-h">EXPÉRIENCES</span>
+              <span class="pcv-doc-l w90"></span><span class="pcv-doc-l w75"></span>
+              <span class="pcv-doc-h">FORMATION</span>
+              <span class="pcv-doc-l w90"></span><span class="pcv-doc-l w60"></span>
+              <span class="pcv-doc-h">COMPÉTENCES</span>
+              <span class="pcv-doc-l w75"></span><span class="pcv-doc-l w45"></span>
+              <span class="pcv-doc-h">LANGUES</span>
+              <span class="pcv-doc-l w60"></span>
+              <span class="pcv-doc-file">cv-sara.pdf</span>
+            </div>
+            <div class="pcv-wire"><i></i><i></i><i></i></div>
+            <div class="pcv-card">
+              <div class="pcv-card-head">
+                <span class="pcv-avatar">SE</span>
+                <div>
+                  <span class="pcv-card-title">Mon profil</span>
+                  <span class="pcv-card-sub" data-pcv-sub>Chaque élément validé par vous</span>
+                </div>
+                <span class="pcv-ready">Profil prêt</span>
+              </div>
+              <div class="pcv-progress">
+                <div class="pcv-progress-row"><span>Profil complété</span><b data-pcv-percent>100 %</b></div>
+                <div class="pcv-bar"><i></i></div>
+              </div>
+              <ul class="pcv-fields">
+                <li class="pcv-field" data-pcv-field data-weight="20"><span class="pcv-label">Identité</span><span class="pcv-value">Sara El Amrani · Tétouan</span><span class="pcv-state"></span></li>
+                <li class="pcv-field" data-pcv-field data-weight="20"><span class="pcv-label">Expérience</span><span class="pcv-value">Stagiaire Java · Atlas Digital</span><span class="pcv-state"></span></li>
+                <li class="pcv-field" data-pcv-field data-weight="20"><span class="pcv-label">Formation</span><span class="pcv-value">Ingénieure · ENSA Tétouan</span><span class="pcv-state"></span></li>
+                <li class="pcv-field" data-pcv-field data-weight="25"><span class="pcv-label">Compétences</span><span class="pcv-value pcv-chips"><span class="pcv-chip">Java</span><span class="pcv-chip">Spring Boot</span><span class="pcv-chip">SQL</span><span class="pcv-chip">Git</span><span class="pcv-chip">Docker</span></span><span class="pcv-state"></span></li>
+                <li class="pcv-field" data-pcv-field data-weight="15"><span class="pcv-label">Langues</span><span class="pcv-value">Français · Anglais · Arabe</span><span class="pcv-state"></span></li>
+              </ul>
+            </div>
+          </div>
+          <figcaption class="pcv-caption">
+            <span>Illustration avec un profil fictif : le CV est lu, chaque section est proposée, puis validée par le candidat.</span>
+            <button type="button" class="pcv-replay" data-pcv-replay hidden>Rejouer</button>
+          </figcaption>
+        </figure>
       </div>
     </section>
 
@@ -207,7 +286,7 @@
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-                <img src="assets/landing/dossier-cv.webp" width="1366" height="840" loading="lazy" decoding="async" alt="Prévisualisation du CV déposé et analyse de sa lecture" />
+                <img src="assets/landing/candidat-espace-cv.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Espace CV du candidat : aperçu du CV PDF déposé et vérification technique de ses sections" />
               </figure>
             </li>
             <li class="scene-step" data-scene-step>
@@ -218,7 +297,7 @@
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-                <img src="assets/landing/dossier-synthese.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Liste des candidats : étape, correspondance et délai de réponse" />
+                <img src="assets/landing/recruteur-liste-candidatures.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Liste des candidatures de l’organisation : candidat, offre, étape, correspondance et délai de réponse" />
               </figure>
             </li>
             <li class="scene-step" data-scene-step>
@@ -229,7 +308,7 @@
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-                <img src="assets/landing/dossier-etapes.webp" width="1440" height="900" loading="lazy" decoding="async" alt="Détail d’une candidature : entretien daté et avancement du dossier" />
+                <img src="assets/landing/candidat-suivi-candidature.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Détail d’une candidature côté candidat : entretien daté, consignes et avancement du dossier" />
               </figure>
             </li>
           </ol>
@@ -410,6 +489,7 @@
         </div>
         <div class="footer-col">
           <span class="footer-label">Ressources</span>
+          <a href="#profil-cv">Profil et CV</a>
           <a href="#parcours">Parcours d’une candidature</a>
           <a href="security.html">Vérification des entreprises</a>
           <a href="help.html">Centre d’aide</a>
@@ -423,20 +503,21 @@
     </div>
   </footer>
 
-  <script src="js/config.js?v=20261109a"></script>
-  <script src="js/vendor/gsap.min.js?v=20261101r"></script>
-  <script src="js/vendor/ScrollTrigger.min.js?v=20261101r"></script>
-  <script src="js/vendor/lenis.min.js?v=20261101r"></script>
-  <script src="js/pricing-switch.js?v=20261101r"></script>
-  <script src="js/nav.js?v=20261101r"></script>
-  <script src="js/public-nav.js?v=20261106a"></script>
-  <script src="js/search.js?v=20261101r"></script>
-  <script src="js/places.js?v=20261103h"></script>
-  <script src="js/offer-card.js?v=20261110g"></script>
-  <script src="js/suggest.js?v=20261103g"></script>
-  <script src="js/landing-offers.js?v=20261118v6"></script>
-  <script src="js/footer-year.js?v=20261101r"></script>
-  <script src="js/home-motion.js?v=20261103k"></script>
-<script defer src="js/premium.js?v=20261106g"></script>
+  <script defer src="js/config.js?v=20261109a"></script>
+  <script defer src="js/vendor/gsap.min.js?v=20261101r"></script>
+  <script defer src="js/vendor/ScrollTrigger.min.js?v=20261101r"></script>
+  <script defer src="js/vendor/lenis.min.js?v=20261101r"></script>
+  <script defer src="js/pricing-switch.js?v=20261101r"></script>
+  <script defer src="js/nav.js?v=20261101r"></script>
+  <script defer src="js/public-nav.js?v=20261106a"></script>
+  <script defer src="js/search.js?v=20261101r"></script>
+  <script defer src="js/places.js?v=20261103h"></script>
+  <script defer src="js/offer-card.js?v=20261110g"></script>
+  <script defer src="js/suggest.js?v=20261103g"></script>
+  <script defer src="js/landing-offers.js?v=20261118v7"></script>
+  <script defer src="js/footer-year.js?v=20261101r"></script>
+  <script defer src="js/home-motion.js?v=20261103k"></script>
+  <script defer src="js/landing-profile.js?v=20261118v7"></script>
+  <script defer src="js/premium.js?v=20261106g"></script>
 </body>
 </html>
