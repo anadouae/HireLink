@@ -16,9 +16,13 @@
   const scrim = document.getElementById("cs-scrim");
   const matchToggle = document.getElementById("match-only");
   const FILTERS = [
-    "f-country", "f-city", "f-contract", "f-source", "f-salary", "f-experience",
-    "f-sector", "f-since", "f-mode", "f-match", "f-origin", "f-company", "f-skill", "f-sent", "f-pace",
+    "f-where", "f-contract", "f-mode", "f-since", "f-company",
+    "f-experience", "f-sector", "f-salary", "f-origin", "f-skill", "f-sent", "f-pace",
   ];
+  /** Filtres rangés sous « Plus de filtres ». */
+  const MORE_FILTERS = ["f-experience", "f-sector", "f-salary"];
+  /** Filtres sans pastille (provenance gérée par les onglets, champs techniques masqués). */
+  const NO_CHIP = ["f-origin", "f-skill", "f-sent", "f-pace"];
   const PAGE_SIZE = 24;
   const MATCH_KEY = "hirelink.matchOnly." + (session.userId || session.id || "me");
 
@@ -27,6 +31,20 @@
   let totalPages = 0;
   let loading = false;
   let cached = [];
+  /** Affichage progressif : offres HireLink d'abord, offres web ajoutées à la suite quand elles arrivent. */
+  let hlItems = [];
+  let webItems = [];
+  let hlTotal = 0;
+  let webTotal = 0;
+  let hlFacets = null;
+  let webFacets = null;
+  let hlSalaryAvailable = undefined;
+  let webState = "off"; // off | loading | done | failed
+  let webMeta = null;
+  let loadSeq = 0;
+  let reloadTimer = 0;
+  /** Délai unique appliqué à chaque changement de filtre (évite une requête par clic). */
+  const FILTER_DEBOUNCE_MS = 300;
   let appliedByOffer = new Map();
   let selectedId = new URLSearchParams(location.search).get("offer");
   let hasSearched = !!(selectedId || new URLSearchParams(location.search).get("apply") || new URLSearchParams(location.search).get("q"));
@@ -68,9 +86,13 @@
     ADZUNA: "https://www.adzuna.com",
   };
   const FILTER_CHIP_LABELS = {
-    "f-country": "Pays", "f-city": "Ville", "f-contract": "Contrat", "f-mode": "Mode",
-    "f-since": "Date", "f-experience": "Expérience", "f-company": "Entreprise",
-    "f-source": "Source", "f-salary": "Salaire", "f-sector": "Secteur", "f-match": "Compatibilité",
+    "f-where": "Où", "f-contract": "Contrat", "f-mode": "Mode", "f-since": "Date",
+    "f-company": "Entreprise", "f-experience": "Expérience", "f-salary": "Salaire", "f-sector": "Secteur",
+  };
+  /** Liste déroulante → clé des compteurs renvoyés par le serveur (data.facets). */
+  const FACET_KEYS = {
+    "f-contract": "contract", "f-mode": "workMode", "f-since": "since",
+    "f-experience": "experience", "f-sector": "sector", "f-salary": "minSalary",
   };
 
   function webSourceLabel(o) {
@@ -130,28 +152,6 @@
     if ([].some.call(sel.options, (o) => o.value === keep)) sel.value = keep;
   }
 
-  async function fillCitiesFromDirectory() {
-    await HireLinkPlaces.ready();
-    const country = val("f-country");
-    const rows = typeof HireLinkPlaces.listCities === "function"
-      ? HireLinkPlaces.listCities(country === "ALL" ? "" : country)
-      : [];
-    if (rows.length) {
-      fillSelect("f-city", rows, (c) => (HireLinkPlaces.flagOf(c) + " " + c).trim());
-      return;
-    }
-    // Repli : villes du catalogue places brut
-    try {
-      const all = await fetch((HireLinkAPI.API_BASE || "").replace(/\/$/, "") + "/catalog/places").then((r) => r.ok ? r.json() : []);
-      const codeMap = { MA: "Maroc", FR: "France", DE: "Allemagne", GB: "Royaume-Uni", ES: "Espagne", BE: "Belgique", CH: "Suisse", NL: "Pays-Bas", CA: "Canada", US: "États-Unis", AE: "Émirats", SN: "Sénégal", TN: "Tunisie", CI: "Côte d'Ivoire" };
-      const want = country === "ALL" || !country ? null : (codeMap[country] || country);
-      const cities = Array.from(new Set((all || [])
-        .filter((p) => p && p.city && (!want || String(p.country || "").toLowerCase() === String(want).toLowerCase()))
-        .map((p) => p.city))).sort((a, b) => a.localeCompare(b, "fr"));
-      fillSelect("f-city", cities, (c) => (HireLinkPlaces.flagOf(c) + " " + c).trim());
-    } catch (_) { /* ignore */ }
-  }
-
   function filtered() {
     // Salaire / expérience / secteur : filtrés côté serveur (/catalog/offers).
     return cached;
@@ -189,21 +189,20 @@
     if (origin) {
       origin.value = next === "hirelink" ? "hirelink" : (next === "external" ? "external" : "");
     }
-    if (reload && hasSearched) load(false, false);
+    if (reload && hasSearched) scheduleReload();
   }
 
   function buildCatalogQuery(pageNum) {
     const params = new URLSearchParams();
     params.set("page", String(pageNum));
     params.set("size", String(PAGE_SIZE));
-    params.set("country", val("f-country") || "ALL");
     params.set("forYou", matchOnly ? "true" : "false");
+    params.set("facets", "true");
     const search = searchVal().trim();
     if (search) params.set("q", search);
-    if (val("f-city")) params.set("city", val("f-city"));
+    if (val("f-where").trim()) params.set("where", val("f-where").trim());
     if (val("f-contract")) params.set("contract", val("f-contract"));
     if (val("f-mode")) params.set("workMode", val("f-mode"));
-    if (val("f-source")) params.set("source", val("f-source"));
     if (val("f-since")) params.set("sinceDays", val("f-since"));
     const minSal = Number(val("f-salary") || 0);
     if (minSal > 0) params.set("minSalary", String(minSal));
@@ -213,47 +212,77 @@
     const scope = currentScope();
     if (scope === "hirelink") params.set("origin", "internal");
     else if (scope === "external") params.set("origin", "external");
-    const minMatch = Number(val("f-match") || 0);
-    if (minMatch > 0) params.set("minMatch", String(minMatch));
+    const sort = val("f-sort");
+    if (sort && sort !== "relevance") params.set("sort", sort);
     return params.toString();
   }
 
-  function clearAll() {
-    FILTERS.forEach((id) => {
-      if (!$(id)) return;
-      if (id === "f-match") $(id).value = "0";
-      else if (id === "f-country") $(id).value = "ALL";
-      else $(id).value = "";
-    });
-    setSearchVal("");
+  /** Mêmes critères pour /catalog/web-offers (sans pagination ni classement profil). */
+  function buildWebQuery() {
+    const params = new URLSearchParams(buildCatalogQuery(0));
+    ["page", "size", "forYou"].forEach((k) => params.delete(k));
+    return params.toString();
+  }
+
+  /** Recharge après un changement de filtre, une seule fois si plusieurs changements se suivent en 300 ms. */
+  function scheduleReload() {
+    paintActiveChips();
+    clearTimeout(reloadTimer);
+    reloadTimer = setTimeout(() => { if (hasSearched) load(false, false); }, FILTER_DEBOUNCE_MS);
+  }
+
+  /** Vide les filtres (pas la recherche ni le tri). */
+  function clearFilters() {
+    FILTERS.forEach((id) => { if ($(id)) { $(id).value = ""; $(id).dataset.applied = ""; } });
     setScope("all", false);
+  }
+
+  function clearAll() {
+    clearFilters();
+    if ($("f-sort")) $("f-sort").value = "relevance";
+    setSearchVal("");
     hasSearched = false;
     paintActiveChips();
+  }
+
+  /** Libellé d'origine d'une option, sans le compteur « (12) ». */
+  function baseLabel(opt) {
+    if (!opt) return "";
+    if (!opt.dataset.label) opt.dataset.label = String(opt.textContent || "").trim();
+    return opt.dataset.label;
   }
 
   function filterDisplayValue(id) {
     const el = $(id);
     if (!el) return "";
-    if (el.tagName === "SELECT") {
-      const opt = el.options[el.selectedIndex];
-      return opt ? String(opt.textContent || "").trim() : "";
-    }
+    if (el.tagName === "SELECT") return baseLabel(el.options[el.selectedIndex]);
     return String(el.value || "").trim();
+  }
+
+  function paintMoreCount() {
+    const n = MORE_FILTERS.filter((id) => val(id)).length;
+    const badge = $("more-count");
+    if (!badge) return;
+    badge.hidden = n === 0;
+    badge.textContent = n ? String(n) : "";
   }
 
   function paintActiveChips() {
     const box = $("cs-active-chips");
+    const bar = $("cs-active-bar");
     if (!box) return;
     box.replaceChildren();
+    paintMoreCount();
     const chips = [];
     FILTERS.forEach((id) => {
-      if (id === "f-origin" || id === "f-skill" || id === "f-sent" || id === "f-pace") return;
-      const raw = val(id);
-      if (!raw || (id === "f-country" && raw === "ALL") || (id === "f-match" && raw === "0")) return;
+      if (NO_CHIP.indexOf(id) >= 0) return;
+      const raw = String(val(id)).trim();
+      if (!raw) return;
       chips.push({ id: id, label: FILTER_CHIP_LABELS[id] || id, value: filterDisplayValue(id) || raw });
     });
-    if (matchOnly) chips.unshift({ id: "match-only", label: "Profil", value: "Reclassement" });
-    if (!chips.length) { box.hidden = true; return; }
+    if (matchOnly) chips.unshift({ id: "match-only", label: "Profil", value: "Correspond à mon profil" });
+    if (!chips.length) { if (bar) bar.hidden = true; box.hidden = true; return; }
+    if (bar) bar.hidden = false;
     box.hidden = false;
     chips.forEach((c) => {
       const btn = document.createElement("button");
@@ -269,17 +298,59 @@
       btn.addEventListener("click", () => {
         if (c.id === "match-only") setMatchOnly(false);
         else if ($(c.id)) {
-          $(c.id).value = c.id === "f-country" ? "ALL" : (c.id === "f-match" ? "0" : "");
-          if (c.id === "f-country") fillCitiesFromDirectory();
-          paintActiveChips();
-          if (hasSearched) load(false, false);
+          $(c.id).value = "";
+          $(c.id).dataset.applied = "";
+          scheduleReload();
         }
       });
       box.appendChild(btn);
     });
   }
 
+  /** Compteurs serveur à côté de chaque choix (« Stage (12) ») ; ils tiennent compte des autres filtres actifs. */
+  function paintFacets(facets, salaryAvailable) {
+    Object.keys(FACET_KEYS).forEach((id) => {
+      const sel = $(id);
+      if (!sel) return;
+      const counts = facets ? (facets[FACET_KEYS[id]] || {}) : null;
+      const lookup = {};
+      if (counts) Object.keys(counts).forEach((k) => { lookup[S.fold(k)] = counts[k]; });
+      // Contrats présents dans les résultats mais absents de la liste : ajoutés à la volée.
+      [].slice.call(sel.querySelectorAll("option[data-dynamic]")).forEach((opt) => {
+        if (opt.value !== sel.value) opt.remove();
+      });
+      if (id === "f-contract" && counts) {
+        const known = new Set([].map.call(sel.options, (o) => S.fold(o.value)));
+        Object.keys(counts).forEach((label) => {
+          if (!label || label === "NON-PRECISE" || known.has(S.fold(label)) || !(counts[label] > 0)) return;
+          const opt = document.createElement("option");
+          opt.value = label;
+          const pretty = String(label).replace(/[_-]+/g, " ").trim();
+          opt.textContent = pretty.charAt(0).toUpperCase() + pretty.slice(1);
+          opt.dataset.dynamic = "1";
+          sel.appendChild(opt);
+          known.add(S.fold(label));
+        });
+      }
+      [].forEach.call(sel.options, (opt) => {
+        const label = baseLabel(opt);
+        if (!opt.value || !counts) { opt.textContent = label; return; }
+        const n = lookup[S.fold(opt.value)] || 0;
+        opt.textContent = label + " (" + n + ")";
+      });
+    });
+    const wrap = $("f-salary-wrap");
+    const note = $("f-salary-note");
+    const hideSalary = !!facets && salaryAvailable === false && !val("f-salary");
+    if (wrap) wrap.hidden = hideSalary;
+    if (note) note.hidden = !hideSalary;
+  }
+
   function paintEmptyFirst() {
+    // Annule une recherche (ou une réponse web) encore en route.
+    loadSeq++;
+    clearTimeout(reloadTimer);
+    webState = "off";
     offerList.className = "";
     offerList.replaceChildren();
     const box = document.createElement("div");
@@ -299,21 +370,27 @@
     const fresh = $("catalog-freshness");
     if (!el) return;
     const bits = [];
-    if (data && data.webSearchCoverage) bits.push(String(data.webSearchCoverage));
-    else if (data && data.webSearchAvailable === false) {
-      bits.push("Recherche Web inactive — catalogue indexé uniquement.");
+    if (webState === "loading") bits.push("Recherche web en direct en cours sur les sites d’emploi publics…");
+    else if (webState === "failed") bits.push("Recherche web momentanément indisponible : les offres HireLink restent affichées.");
+    else if (webState === "done" && data && Array.isArray(data.webSearchSources) && data.webSearchAvailable !== false) {
+      // Bilan lisible : offres web réellement affichées, sites qui ont répondu, sites ignorés.
+      const used = data.webSearchSources.filter((s) => s && s.status === "OK" && s.hits > 0).map((s) => s.label || s.code);
+      const down = data.webSearchSources.filter((s) => s && (s.status === "ERROR" || s.status === "TIMEOUT"
+        || (s.status === "SKIPPED" && /échecs/.test(s.note || "")))).length;
+      let txt = webTotal === 0
+        ? "Aucune offre web en direct pour ces critères."
+        : webTotal + " offre" + (webTotal > 1 ? "s" : "") + " web en direct" + (used.length ? " (" + used.join(", ") + ")" : "") + ".";
+      if (down) txt += " " + down + " site" + (down > 1 ? "s n’ont" : " n’a") + " pas répondu à temps : résultats partiels.";
+      txt += " Rien n’est stocké chez nous.";
+      bits.push(txt);
+    }
+    else if (data && data.webSearchAvailable === false && data.webSearchStatus !== "SKIPPED" && data.webSearchStatus !== "DEFERRED") {
+      bits.push("Recherche web indisponible pour le moment : seules les offres HireLink sont affichées.");
     }
     if (bits.length) { el.hidden = false; el.textContent = bits.join(" "); }
     else { el.hidden = true; el.textContent = ""; }
-    if (fresh) {
-      if (data && data.catalogCacheAt) {
-        fresh.hidden = false;
-        const t = new Date(data.catalogCacheAt);
-        fresh.textContent = "Fraîcheur cache catalogue : "
-          + (isNaN(t.getTime()) ? data.catalogCacheAt : t.toLocaleString("fr-FR"))
-          + (data.catalogCacheNote ? " — " + data.catalogCacheNote : "");
-      } else fresh.hidden = true;
-    }
+    // Plus de mention de « cache » : les offres HireLink sont lues en base, les offres web en direct.
+    if (fresh) fresh.hidden = true;
   }
 
   function fmtDate(o) {
@@ -329,8 +406,24 @@
     const b = o.salaryMax;
     if (a == null && b == null) return "";
     const fmt = (n) => Number(n).toLocaleString("fr-FR");
-    if (a != null && b != null && a !== b) return fmt(a) + " – " + fmt(b) + " MAD";
-    return fmt(a != null ? a : b) + " MAD";
+    const cur = o.external ? (o.salaryCurrency || "") : (o.salaryCurrency || "MAD");
+    let text = (a != null && b != null && a !== b)
+      ? fmt(a) + " – " + fmt(b)
+      : fmt(a != null ? a : b);
+    if (cur) text += " " + cur;
+    // Période : seulement pour les offres web, et seulement si la source la dit.
+    if (o.external) {
+      const labels = { YEAR: "par an", MONTH: "par mois", WEEK: "par semaine", DAY: "par jour", HOUR: "par heure" };
+      text += " " + (labels[o.salaryPeriod] || "période non précisée");
+    }
+    return text;
+  }
+
+  /** Score affiché sur la carte seulement si le profil du candidat permet de le calculer. */
+  function compatPercent(o) {
+    if (!o || !o.matchAvailable || o.matchScore == null) return null;
+    const n = Math.round(Number(o.matchScore));
+    return isNaN(n) ? null : Math.max(0, Math.min(100, n));
   }
 
   function originBadge(o) {
@@ -406,16 +499,18 @@
     src.className = "cs-src";
     src.textContent = originBadge(o);
     meta.appendChild(src);
-    if (o.external) {
-      const badge = document.createElement("span");
-      badge.className = "cs-origin-badge";
-      badge.textContent = "Source externe";
-      meta.appendChild(badge);
-    } else {
-      const badge = document.createElement("span");
-      badge.className = "cs-origin-badge";
-      badge.textContent = "Publiée sur HireLink";
-      meta.appendChild(badge);
+    // Badge d'origine : Offre HireLink (candidature dans HireLink) / Offre web (en direct, non stockée).
+    const badge = document.createElement("span");
+    badge.className = "cs-origin-badge";
+    badge.textContent = o.external ? "Offre web" : "Offre HireLink";
+    meta.appendChild(badge);
+    const compat = compatPercent(o);
+    if (compat != null) {
+      const c = document.createElement("span");
+      c.className = "cs-compat" + (compat >= 70 ? " is-high" : (compat >= 40 ? " is-mid" : ""));
+      c.textContent = "Compatible à " + compat + " %";
+      c.title = o.matchLabel || "Estimation de compatibilité avec votre profil.";
+      meta.appendChild(c);
     }
     const actions = document.createElement("div");
     actions.className = "cs-card-actions";
@@ -532,20 +627,157 @@
     openDrawer();
   }
 
+  /** Filtres actifs qui peuvent être retirés depuis l'état vide, avec le nombre d'offres attendu si connu. */
+  function emptySuggestions(facets) {
+    const out = [];
+    FILTERS.forEach((id) => {
+      if (NO_CHIP.indexOf(id) >= 0) return;
+      const raw = String(val(id)).trim();
+      if (!raw) return;
+      let n = null;
+      const key = FACET_KEYS[id];
+      // Compteurs d'une dimension = résultats sans ce filtre (ils tiennent compte des autres filtres).
+      if (facets && key && key !== "since" && key !== "minSalary" && facets[key]) {
+        n = Object.keys(facets[key]).reduce((sum, k) => sum + (Number(facets[key][k]) || 0), 0);
+      }
+      out.push({ id: id, label: FILTER_CHIP_LABELS[id] || id, value: filterDisplayValue(id) || raw, n: n });
+    });
+    out.sort((x, y) => (y.n == null ? -1 : y.n) - (x.n == null ? -1 : x.n));
+    return out;
+  }
+
+  function paintEmptyResults(box, facets) {
+    const q = searchVal().trim();
+    const h = document.createElement("h2");
+    h.textContent = "Aucun résultat";
+    const p = document.createElement("p");
+    const sugg = emptySuggestions(facets);
+    p.textContent = sugg.length
+      ? "Aucune offre pour « " + q + " » avec ces filtres. Retirez un filtre pour élargir la recherche :"
+      : "Aucune offre pour « " + q + " ». Essayez un mot-clé plus général ou un synonyme (ex. « développeur » plutôt que « développeur React senior »).";
+    box.append(h, p);
+    const actions = document.createElement("div");
+    actions.className = "cs-empty-actions";
+    sugg.forEach((s) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "cs-active-chip";
+      const lab = document.createElement("span");
+      lab.textContent = "Retirer « " + s.label + " : " + s.value + " »";
+      btn.appendChild(lab);
+      if (s.n != null) {
+        const n = document.createElement("small");
+        n.textContent = s.n === 0 ? "aucune offre" : s.n + " offre" + (s.n > 1 ? "s" : "");
+        btn.appendChild(n);
+      }
+      btn.addEventListener("click", () => {
+        const el = $(s.id);
+        if (!el) return;
+        el.value = "";
+        el.dataset.applied = "";
+        scheduleReload();
+      });
+      actions.appendChild(btn);
+    });
+    if (sugg.length > 1) {
+      const all = document.createElement("button");
+      all.type = "button";
+      all.className = "btn btn-ghost btn-sm";
+      all.textContent = "Retirer tous les filtres";
+      all.addEventListener("click", () => { clearFilters(); scheduleReload(); });
+      actions.appendChild(all);
+    }
+    if (currentScope() !== "all") {
+      const scope = document.createElement("button");
+      scope.type = "button";
+      scope.className = "btn btn-ghost btn-sm";
+      scope.textContent = "Chercher dans toutes les offres";
+      scope.addEventListener("click", () => setScope("all", true));
+      actions.appendChild(scope);
+    }
+    if (actions.childNodes.length) box.appendChild(actions);
+  }
+
+  function webPendingNode() {
+    const n = document.createElement("div");
+    n.className = "cs-web-pending";
+    n.id = "cs-web-pending";
+    n.setAttribute("role", "status");
+    n.textContent = "Recherche des offres web en direct…";
+    return n;
+  }
+
   function renderGrid(resetDetail) {
     const list = filtered();
     offerList.className = "cs-grid";
     offerList.replaceChildren();
     if (!list.length) {
+      if (webState === "loading") {
+        offerList.appendChild(webPendingNode());
+        return;
+      }
       const box = document.createElement("div");
       box.className = "cs-empty";
-      box.innerHTML = "<h2>Aucun résultat</h2><p>Aucune offre pour cette recherche. Essayez un autre mot-clé ou élargissez les filtres.</p>";
+      paintEmptyResults(box, mergedFacets());
       offerList.appendChild(box);
       if (resetDetail !== false) closeDrawer();
       return;
     }
     list.forEach((o) => offerList.appendChild(card(o, String(o.id) === String(selectedId))));
+    if (webState === "loading") offerList.appendChild(webPendingNode());
     S.mark(offerList, searchVal().trim());
+  }
+
+  /** Ajoute les cartes web à la suite des cartes HireLink déjà affichées (pas de re-rendu, pas de saut). */
+  function appendWebCards() {
+    const pending = $("cs-web-pending");
+    if (!hlItems.length || !offerList.classList.contains("cs-grid") || !pending) { renderGrid(false); return; }
+    pending.remove();
+    const frag = document.createDocumentFragment();
+    webItems.forEach((o) => frag.appendChild(card(o, String(o.id) === String(selectedId))));
+    offerList.appendChild(frag);
+    S.mark(offerList, searchVal().trim());
+  }
+
+  /** Compteurs HireLink + web additionnés (« Stage (12) »). */
+  function mergedFacets() {
+    if (!hlFacets) return webFacets;
+    if (!webFacets) return hlFacets;
+    const out = {};
+    Object.keys(hlFacets).forEach((k) => { out[k] = hlFacets[k]; });
+    Object.keys(FACET_KEYS).forEach((id) => {
+      const key = FACET_KEYS[id];
+      const a = hlFacets[key] || {};
+      const b = webFacets[key] || {};
+      const sum = {};
+      const byFold = {};
+      [a, b].forEach((m) => Object.keys(m).forEach((label) => {
+        const f = S.fold(label);
+        const target = byFold[f] || label;
+        byFold[f] = target;
+        sum[target] = (sum[target] || 0) + (Number(m[label]) || 0);
+      }));
+      out[key] = sum;
+    });
+    out.salaryAvailable = !!(hlFacets.salaryAvailable || webFacets.salaryAvailable);
+    out.total = (Number(hlFacets.total) || 0) + (Number(webFacets.total) || 0);
+    return out;
+  }
+
+  function paintCounts() {
+    totalElements = hlTotal + webTotal;
+    const facets = mergedFacets();
+    paintFacets(facets || null, facets ? facets.salaryAvailable : hlSalaryAvailable);
+    let summary = totalElements + " résultat" + (totalElements > 1 ? "s" : "");
+    if (totalPages > 1) summary += " · page " + (page + 1) + " / " + totalPages;
+    if (webState === "loading") summary += " · recherche web en cours…";
+    $("filter-summary").textContent = summary;
+    const parts = [hlTotal + " offre" + (hlTotal > 1 ? "s" : "") + " HireLink"];
+    if (webState === "done") parts.push(webTotal + " offre" + (webTotal > 1 ? "s" : "") + " web");
+    $("match-hint").textContent = matchOnly
+      ? "Reclassement par compatibilité + compétences présentes/manquantes (pas un filtre magique)."
+      : parts.join(" · ") + ".";
+    paintWebBanner(webMeta);
   }
 
   function paintPager() {
@@ -556,21 +788,51 @@
     box.hidden = false;
     const label = document.createElement("span");
     label.className = "muted";
-    label.textContent = "Page " + (page + 1) + " / " + totalPages + " · " + totalElements + " offre(s)";
+    label.textContent = "Page " + (page + 1) + " / " + totalPages + " · " + hlTotal + " offre(s) HireLink";
     box.appendChild(label);
     if (page + 1 < totalPages) {
       const more = document.createElement("button");
       more.type = "button";
       more.className = "btn btn-soft btn-sm";
-      more.textContent = "Afficher la suite";
+      more.textContent = "Charger plus d’offres";
       more.addEventListener("click", () => { page += 1; load(true, true); });
       box.appendChild(more);
     }
   }
 
+  async function loadWeb(seq) {
+    try {
+      const w = await HireLinkAPI.api("/catalog/web-offers?" + buildWebQuery());
+      if (seq !== loadSeq) return;
+      webItems = (w && Array.isArray(w.items)) ? w.items : [];
+      webTotal = Number((w && w.totalElements) || webItems.length);
+      webFacets = (w && w.facets) || null;
+      webMeta = w || null;
+      webState = "done";
+    } catch (_) {
+      if (seq !== loadSeq) return;
+      webItems = [];
+      webTotal = 0;
+      webFacets = null;
+      webState = "failed";
+    }
+    cached = hlItems.concat(webItems);
+    paintCounts();
+    if (webItems.length) appendWebCards();
+    else renderGrid(false);
+    const pending = $("cs-web-pending");
+    if (pending) pending.remove();
+    if (selectedId) {
+      const target = cached.find((o) => String(o.id) === String(selectedId));
+      if (target && !detail.classList.contains("is-open")) showDetail(target);
+    }
+  }
+
   async function load(quiet, append) {
     if (!hasSearched) { paintEmptyFirst(); return; }
-    if (loading) return;
+    if (append && loading) return;
+    // Toute nouvelle recherche remplace la précédente : une réponse arrivée en retard est ignorée.
+    const seq = ++loadSeq;
     loading = true;
     if (!quiet && !append) {
       offerList.className = "";
@@ -584,22 +846,28 @@
       if (!append) page = 0;
       const qs = buildCatalogQuery(page);
       const [data, mine] = await Promise.all([
-        HireLinkAPI.api("/catalog/offers?" + qs),
+        HireLinkAPI.api("/catalog/offers?" + qs + "&web=false"),
         HireLinkAPI.api("/applications/mine").catch(() => []),
         HireLinkPlaces.ready(),
       ]);
+      if (seq !== loadSeq) return;
       if (!data || !Array.isArray(data.items)) throw new Error("Catalogue temporairement indisponible");
-      totalElements = Number(data.totalElements || 0);
+      hlTotal = Number(data.totalElements || 0);
       totalPages = Number(data.totalPages || 0);
-      cached = append ? cached.concat(data.items) : data.items;
+      hlItems = append ? hlItems.concat(data.items) : data.items;
+      if (!append) {
+        webItems = [];
+        webTotal = 0;
+        webFacets = null;
+        hlFacets = data.facets || null;
+        hlSalaryAvailable = data.salaryAvailable;
+        webMeta = data;
+        webState = data.webDeferred ? "loading" : "off";
+      }
+      cached = hlItems.concat(webItems);
       appliedByOffer = new Map((mine || []).map((a) => [a.jobOfferId, { appId: a.id, status: a.status }]));
       matchToggle.checked = matchOnly;
-      paintWebBanner(data);
-      $("filter-summary").textContent = totalElements + " offre" + (totalElements > 1 ? "s" : "")
-        + " · page " + (page + 1);
-      $("match-hint").textContent = matchOnly
-        ? "Reclassement par compatibilité + compétences présentes/manquantes (pas un filtre magique)."
-        : (totalElements + " résultat" + (totalElements > 1 ? "s" : "") + " catalogue (+ Web si activé).");
+      paintCounts();
       paintActiveChips();
       renderGrid();
       paintPager();
@@ -612,7 +880,9 @@
         const target = cached.find((o) => String(o.id) === String(selectedId));
         if (target) showDetail(target);
       }
+      if (!append && data.webDeferred) loadWeb(seq);
     } catch (err) {
+      if (seq !== loadSeq) return;
       offerList.className = "";
       offerList.replaceChildren();
       const p = document.createElement("p");
@@ -621,7 +891,7 @@
       p.textContent = "Catalogue temporairement indisponible";
       offerList.appendChild(p);
     } finally {
-      loading = false;
+      if (seq === loadSeq) loading = false;
     }
   }
 
@@ -638,30 +908,63 @@
     matchOnly = on;
     matchToggle.checked = on;
     try { localStorage.setItem(MATCH_KEY, on ? "1" : "0"); } catch (_) {}
-    paintActiveChips();
-    if (hasSearched) load(false, false);
+    scheduleReload();
   }
 
   matchToggle.addEventListener("change", () => setMatchOnly(matchToggle.checked));
-  $("btn-clear-filters").addEventListener("click", () => { clearAll(); paintEmptyFirst(); fillCitiesFromDirectory(); });
+  $("btn-clear-filters").addEventListener("click", () => { clearAll(); paintEmptyFirst(); });
+  const clearChips = $("btn-clear-chips");
+  if (clearChips) {
+    clearChips.addEventListener("click", () => {
+      clearFilters();
+      if (matchOnly) { setMatchOnly(false); return; }
+      scheduleReload();
+    });
+  }
+  const moreBtn = $("btn-more-filters");
+  if (moreBtn) {
+    moreBtn.addEventListener("click", () => {
+      const panel = $("cs-more-filters");
+      const open = moreBtn.getAttribute("aria-expanded") !== "true";
+      moreBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      moreBtn.classList.toggle("is-open", open);
+      if (panel) panel.hidden = !open;
+    });
+  }
+  const sortSel = $("f-sort");
+  if (sortSel) sortSel.addEventListener("change", () => scheduleReload());
   FILTERS.forEach((id) => {
     const el = $(id);
     if (!el) return;
     const reload = () => {
-      if (id === "f-country") fillCitiesFromDirectory();
-      paintActiveChips();
-      // Tous les filtres visibles (salaire, expérience, secteur, entreprise…) sont serveur.
-      if (hasSearched) load(false, false);
+      // Champs texte (Où, Entreprise) : appliqués à la validation (choix, Entrée, sortie du champ).
+      const now = String(el.value || "").trim();
+      if (el.tagName === "INPUT" && now === (el.dataset.applied || "")) return;
+      el.dataset.applied = now;
+      // Tous les filtres sont appliqués côté serveur, 300 ms après le dernier changement.
+      scheduleReload();
     };
     el.addEventListener("change", reload);
-    if (id === "f-company") {
-      let companyTimer = 0;
-      el.addEventListener("input", () => {
-        clearTimeout(companyTimer);
-        companyTimer = setTimeout(reload, 400);
-      });
-    }
+    // Croix native du champ de recherche : retire le filtre.
+    if (el.tagName === "INPUT") el.addEventListener("search", () => { if (!el.value) reload(); });
   });
+  // Entreprise : propositions limitées aux noms d'entreprises (serveur) : entreprises HireLink actives
+  // + entreprises des offres web affichées.
+  const companyInput = $("f-company");
+  if (companyInput) {
+    companyInput.hlSuggestParams = function () {
+      const names = [];
+      const seen = new Set();
+      cached.forEach((o) => {
+        if (!o || !o.external || !o.companyName) return;
+        const k = S.fold(o.companyName);
+        if (!k || seen.has(k) || o.companyName.length > 80) return;
+        seen.add(k);
+        names.push(o.companyName.replace(/\|/g, " "));
+      });
+      return { context: names.slice(0, 40).join("|") };
+    };
+  }
 
   document.querySelectorAll(".cs-chip[data-q]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -698,7 +1001,6 @@
   }
   if (scrim) scrim.addEventListener("click", closeDrawer);
 
-  fillCitiesFromDirectory();
   if (hasSearched) load(false, false);
   else paintEmptyFirst();
   document.addEventListener("visibilitychange", () => {

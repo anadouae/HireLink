@@ -41,49 +41,48 @@ public class CatalogSmartRanker {
     /** Score 0..1 d'une ligne catalogue contre la requête (AND des tokens + synonymes locaux). */
     public double scoreListing(String query, CatalogListing row) {
         if (query == null || query.isBlank() || row == null) return 0;
-        List<String> tokens = lexicon.significantTokens(query);
-        if (tokens.isEmpty()) return 0;
-
-        // AND : chaque token (élargi à ses synonymes propres) doit toucher l'annonce.
-        double sum = 0;
-        for (String token : tokens) {
-            double best = bestAgainstToken(token, row);
-            if (best < MIN_SCORE) return 0;
-            sum += best;
-        }
-        double andScore = sum / tokens.size();
-
-        // Bonus phrase originale (sans explosion lexicale multi-token).
-        double phrase = scoreAgainst(TextMatcher.fold(query), row);
-        if (phrase > andScore) {
-            return clamp(Math.min(1.0, andScore + 0.12 * (phrase - andScore)));
-        }
-        return clamp(andScore);
+        PreparedQuery preparedQuery = PreparedQuery.of(query, lexicon);
+        if (preparedQuery.tokens.isEmpty()) return 0;
+        return scorePrepared(preparedQuery, PreparedListing.of(row));
     }
 
-    /** Meilleur score d'un token et de ses synonymes contre une annonce. */
-    private double bestAgainstToken(String token, CatalogListing row) {
-        double best = scoreAgainst(token, row);
-        for (String v : lexicon.expand(token)) {
-            // Ignore les variantes multi-mots trop longues vs token court — elles diluent le AND.
-            if (v == null || v.isBlank()) continue;
-            best = Math.max(best, scoreAgainst(v, row));
+    /** Meilleur score d'un token et de ses synonymes (déjà repliés) contre une annonce préparée. */
+    private double bestAgainstToken(List<TextMatcher.FoldedText> variants, PreparedListing row) {
+        // Même flux que l'ancien code : le token est évalué d'abord ; le seuil 0,98
+        // n'interrompt la boucle qu'à partir des synonymes (expand).
+        double best = scoreAgainst(variants.get(0), row);
+        for (int i = 1; i < variants.size(); i++) {
+            best = Math.max(best, scoreAgainst(variants.get(i), row));
             if (best >= 0.98) return best;
         }
         return best;
     }
 
-    private double scoreAgainst(String variant, CatalogListing row) {
-        double title = matcher.score(variant, nullToEmpty(row.getTitle())) * 1.0;
-        double company = matcher.score(variant, nullToEmpty(row.getCompanyName())) * 0.55;
-        double skills = matcher.score(variant, nullToEmpty(row.getSkillsText())) * 0.75;
-        double place = matcher.score(variant,
-                nullToEmpty(row.getCity()) + " " + nullToEmpty(row.getLocationLabel()) + " " + nullToEmpty(row.getCountryCode())) * 0.45;
-        double contract = matcher.score(variant,
-                nullToEmpty(row.getContractLabel()) + " " + nullToEmpty(row.getWorkMode())) * 0.35;
-        double desc = matcher.score(variant, nullToEmpty(row.getDescription())) * 0.25;
-        double blob = matcher.score(variant, nullToEmpty(row.getSearchBlob())) * 0.4;
+    private double scoreAgainst(TextMatcher.FoldedText variant, PreparedListing row) {
+        double title = matcher.scorePrepared(variant, row.title) * 1.0;
+        double company = matcher.scorePrepared(variant, row.company) * 0.55;
+        double skills = matcher.scorePrepared(variant, row.skills) * 0.75;
+        double place = matcher.scorePrepared(variant, row.place) * 0.45;
+        double contract = matcher.scorePrepared(variant, row.contract) * 0.35;
+        double desc = matcher.scorePrepared(variant, row.description) * 0.25;
+        double blob = matcher.scorePrepared(variant, row.searchBlob) * 0.4;
         return clamp(Math.max(title, Math.max(company, Math.max(skills, Math.max(place, Math.max(contract, Math.max(desc, blob)))))));
+    }
+
+    private double scorePrepared(PreparedQuery query, PreparedListing row) {
+        double sum = 0;
+        for (List<TextMatcher.FoldedText> variants : query.variantsByToken) {
+            double best = bestAgainstToken(variants, row);
+            if (best < MIN_SCORE) return 0;
+            sum += best;
+        }
+        double andScore = sum / query.tokens.size();
+        // Bonus phrase originale (sans explosion lexicale multi-token).
+        double phrase = scoreAgainst(query.phrase, row);
+        if (phrase > andScore) {
+            return clamp(Math.min(1.0, andScore + 0.12 * (phrase - andScore)));
+        }
+        return clamp(andScore);
     }
 
     /** Score d'une annonce Web éphémère. */
@@ -106,11 +105,38 @@ public class CatalogSmartRanker {
     }
 
     public List<ScoredListing> rank(String query, List<CatalogListing> rows) {
+        return rank(query, rows, null);
+    }
+
+    /**
+     * Classe les annonces par pertinence. {@code scoreMemo} (optionnel, limité à la requête courante)
+     * réutilise un score déjà calculé pour le même identifiant, et y enregistre les nouveaux scores
+     * (y compris 0) afin d'éviter un second parcours pour les compteurs de filtres.
+     */
+    public List<ScoredListing> rank(String query, List<CatalogListing> rows, Map<Long, Double> scoreMemo) {
         List<ScoredListing> out = new ArrayList<>();
         if (rows == null) return out;
         boolean hasQuery = query != null && !query.isBlank();
+        PreparedQuery preparedQuery = null;
+        if (hasQuery) {
+            preparedQuery = PreparedQuery.of(query, lexicon);
+        }
         for (CatalogListing row : rows) {
-            double s = hasQuery ? scoreListing(query, row) : 1.0;
+            Double cached = (scoreMemo != null && row != null && row.getId() != null)
+                    ? scoreMemo.get(row.getId()) : null;
+            double s;
+            if (!hasQuery) {
+                s = 1.0;
+            } else if (cached != null) {
+                s = cached;
+            } else if (preparedQuery.tokens.isEmpty()) {
+                s = 0;
+            } else {
+                s = scorePrepared(preparedQuery, PreparedListing.of(row));
+            }
+            if (hasQuery && scoreMemo != null && row != null && row.getId() != null && cached == null) {
+                scoreMemo.put(row.getId(), s);
+            }
             if (!hasQuery || s >= MIN_SCORE) {
                 out.add(new ScoredListing(row, s));
             }
@@ -226,5 +252,77 @@ public class CatalogSmartRanker {
         if (v < 0) return 0;
         if (v > 1) return 1;
         return v;
+    }
+
+    /**
+     * Requête préparée une fois par appel de classement : tokens, synonymes et phrase,
+     * chacun déjà replié.
+     */
+    private static final class PreparedQuery {
+        final List<String> tokens;
+        final List<List<TextMatcher.FoldedText>> variantsByToken;
+        final TextMatcher.FoldedText phrase;
+
+        private PreparedQuery(List<String> tokens, List<List<TextMatcher.FoldedText>> variantsByToken,
+                              TextMatcher.FoldedText phrase) {
+            this.tokens = tokens;
+            this.variantsByToken = variantsByToken;
+            this.phrase = phrase;
+        }
+
+        static PreparedQuery of(String query, JobSearchLexicon lexicon) {
+            List<String> tokens = lexicon.significantTokens(query);
+            List<List<TextMatcher.FoldedText>> variantsByToken = new ArrayList<>(tokens.size());
+            for (String token : tokens) {
+                List<TextMatcher.FoldedText> variants = new ArrayList<>();
+                // Même ordre que l'ancien bestAgainstToken : le token d'abord, puis lexicon.expand.
+                variants.add(TextMatcher.FoldedText.ofRaw(token));
+                for (String v : lexicon.expand(token)) {
+                    if (v == null || v.isBlank()) continue;
+                    variants.add(TextMatcher.FoldedText.ofRaw(v));
+                }
+                variantsByToken.add(variants);
+            }
+            // L'ancien code passait fold(query) à score(), qui repliait une seconde fois.
+            TextMatcher.FoldedText phrase = TextMatcher.FoldedText.ofRaw(TextMatcher.fold(query));
+            return new PreparedQuery(tokens, variantsByToken, phrase);
+        }
+    }
+
+    /** Champs d'une annonce repliés une seule fois, réutilisés pour tous les tokens et synonymes. */
+    private static final class PreparedListing {
+        final TextMatcher.FoldedText title;
+        final TextMatcher.FoldedText company;
+        final TextMatcher.FoldedText skills;
+        final TextMatcher.FoldedText place;
+        final TextMatcher.FoldedText contract;
+        final TextMatcher.FoldedText description;
+        final TextMatcher.FoldedText searchBlob;
+
+        private PreparedListing(TextMatcher.FoldedText title, TextMatcher.FoldedText company,
+                                TextMatcher.FoldedText skills, TextMatcher.FoldedText place,
+                                TextMatcher.FoldedText contract, TextMatcher.FoldedText description,
+                                TextMatcher.FoldedText searchBlob) {
+            this.title = title;
+            this.company = company;
+            this.skills = skills;
+            this.place = place;
+            this.contract = contract;
+            this.description = description;
+            this.searchBlob = searchBlob;
+        }
+
+        static PreparedListing of(CatalogListing row) {
+            return new PreparedListing(
+                    TextMatcher.FoldedText.ofRaw(nullToEmpty(row.getTitle())),
+                    TextMatcher.FoldedText.ofRaw(nullToEmpty(row.getCompanyName())),
+                    TextMatcher.FoldedText.ofRaw(nullToEmpty(row.getSkillsText())),
+                    TextMatcher.FoldedText.ofRaw(nullToEmpty(row.getCity()) + " " + nullToEmpty(row.getLocationLabel())
+                            + " " + nullToEmpty(row.getCountryCode())),
+                    TextMatcher.FoldedText.ofRaw(nullToEmpty(row.getContractLabel()) + " " + nullToEmpty(row.getWorkMode())),
+                    TextMatcher.FoldedText.ofRaw(nullToEmpty(row.getDescription())),
+                    TextMatcher.FoldedText.ofRaw(nullToEmpty(row.getSearchBlob()))
+            );
+        }
     }
 }

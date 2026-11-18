@@ -95,13 +95,17 @@
         </section>
 
         <section id="view-external" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Sources et intégrations</p><h1>Sources externes</h1><p>Deux mécanismes distincts : <strong>import catalogue</strong> (annonces stockées) et <strong>recherche Web directe</strong> (résultats temporaires). Masquer une annonce importée la retire de la vitrine sans créer de compte recruteur.</p></div>
-            <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="ext-refresh">Actualiser l’affichage</button><button type="button" class="btn btn-primary btn-sm" id="ext-sync">Synchroniser l’import catalogue</button></div></div>
-          <section class="rc-card"><div class="rc-card-body" id="ext-status"><p class="rc-muted">Chargement…</p></div></section>
-          <section class="rc-card is-flush" style="margin-top:1rem"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Annonce</th><th>Entreprise annoncée</th><th>Source</th><th></th></tr></thead>
-            <tbody id="ext-body"></tbody>
-          </table></div></section>
+          <div class="rc-head"><div><p class="rc-eyebrow">Sources et intégrations</p><h1>Recherche web</h1><p>Les offres web proposées aux candidats sont cherchées en direct, au moment de la recherche. Rien n’est stocké ni à modérer ici.</p></div></div>
+          <section class="rc-card"><div class="rc-card-body">
+            <h2 style="margin:0 0 .5rem;font-size:1.05rem">Comment ça fonctionne</h2>
+            <ul style="margin:0 0 .85rem;padding-left:1.2rem;line-height:1.6">
+              <li><strong>Offres HireLink</strong> : publiées par les recruteurs, stockées dans HireLink ; le candidat postule dans HireLink.</li>
+              <li><strong>Offres web</strong> : à chaque recherche, HireLink interroge en direct des sites d’emploi publics (Remotive, Arbeitnow, Remote OK, Himalayas, Jobicy, Adzuna, We Work Remotely) et affiche leurs réponses.</li>
+              <li>Aucune offre web n’est enregistrée : une offre retirée par son site d’origine disparaît aussitôt des résultats.</li>
+              <li>Le candidat postule sur le site d’origine ; HireLink ne crée pas de candidature pour une offre web.</li>
+            </ul>
+            <p class="rc-muted" style="margin:0">Une source lente ou indisponible est simplement ignorée pour la recherche en cours : les autres résultats restent affichés.</p>
+          </div></section>
         </section>
 
         <section id="view-offers" hidden>
@@ -166,7 +170,7 @@
   <script defer src="../js/places.js?v=20261103h"></script>
   <script defer src="../js/in-app-help.js?v=20261105s"></script>
   <script defer src="../js/credits.js?v=20261105v"></script>
-  <script defer src="../js/app-shell.js?v=20261110h"></script>
-  <script defer src="../js/admin.js?v=20261110h"></script>
+  <script defer src="../js/app-shell.js?v=20261118v6"></script>
+  <script defer src="../js/admin.js?v=20261118v6"></script>
 </body>
 </html>

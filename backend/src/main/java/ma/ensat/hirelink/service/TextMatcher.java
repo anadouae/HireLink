@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import java.text.Normalizer;
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 /**
  * Normalisation et correspondance floue partagées par toutes les recherches du serveur
@@ -17,11 +18,18 @@ public class TextMatcher {
     /** Score minimal d'une correspondance « directe » (égalité, préfixe, début de mot ou sous-chaîne). */
     public static final double DIRECT = 0.6;
 
+    /** Marques diacritiques retirées après normalisation NFD. */
+    private static final Pattern MARKS = Pattern.compile("\\p{M}");
+
+    /** Tout sauf lettres, chiffres, + et # devient une espace (C++ / C# conservés). */
+    private static final Pattern NON_TOKEN = Pattern.compile("[^\\p{L}\\p{N}+#]+");
+
     /** Minuscules, sans accents, ponctuation remplacée par une espace (seuls + et # sont conservés : C++, C#). */
     public static String fold(String value) {
         if (value == null) return "";
-        String s = Normalizer.normalize(value, Normalizer.Form.NFD).replaceAll("\\p{M}", "").toLowerCase(Locale.ROOT);
-        return s.replaceAll("[^\\p{L}\\p{N}+#]+", " ").trim();
+        String s = MARKS.matcher(Normalizer.normalize(value, Normalizer.Form.NFD)).replaceAll("")
+                .toLowerCase(Locale.ROOT);
+        return NON_TOKEN.matcher(s).replaceAll(" ").trim();
     }
 
     /** Forme repliée sans espaces : « Node.js », « node js » et « nodejs » deviennent identiques. */
@@ -30,22 +38,60 @@ public class TextMatcher {
     }
 
     /**
+     * Texte déjà normalisé ({@link #fold}), forme compacte et mots, pour réutiliser le repli
+     * sans le recalculer à chaque token ou synonyme.
+     */
+    public static final class FoldedText {
+        public final String folded;
+        public final String compact;
+        public final String[] words;
+
+        private FoldedText(String folded, String compact, String[] words) {
+            this.folded = folded;
+            this.compact = compact;
+            this.words = words;
+        }
+
+        /** Replie le texte brut une fois. */
+        public static FoldedText ofRaw(String value) {
+            return ofFolded(fold(value));
+        }
+
+        /**
+         * Construit à partir d'une chaîne déjà obtenue par {@link #fold}.
+         * {@code split(" ")} reprend le même découpage que l'ancien algorithme (chaîne vide → un mot vide).
+         */
+        public static FoldedText ofFolded(String folded) {
+            String f = folded == null ? "" : folded;
+            return new FoldedText(f, f.replace(" ", ""), f.split(" "));
+        }
+    }
+
+    /**
      * Score de 0 à 1 de {@code query} par rapport à {@code text} : 1 égalité, ≈ 0,9 préfixe, 0,75 début de mot,
      * 0,6 sous-chaîne, puis 0,2 à 0,5 pour une faute de frappe. 0 si rien ne correspond.
      * Une saisie de plusieurs mots doit retrouver chacun de ses mots dans le texte (ordre libre).
      */
     public double score(String query, String text) {
-        String t = compact(text);
-        double whole = single(compact(query), t, text);
-        String[] words = fold(query).split(" ");
-        if (words.length < 2) return whole;
+        return scorePrepared(FoldedText.ofRaw(query), FoldedText.ofRaw(text));
+    }
+
+    /**
+     * Même valeurs que {@link #score(String, String)} lorsque {@code query} et {@code text}
+     * ont déjà été repliés (folded / compact / words).
+     */
+    public double scorePrepared(FoldedText query, FoldedText text) {
+        if (query == null) query = FoldedText.ofFolded("");
+        if (text == null) text = FoldedText.ofFolded("");
+        double whole = singlePrepared(query.compact, text);
+        if (query.words.length < 2) return whole;
         // AND strict : chaque mot significatif doit matcher. Pas de repli silencieux
         // sur un seul token (évite « stage pfe » → n'importe quel « Intern »).
         double sum = 0;
         int counted = 0;
-        for (String w : words) {
+        for (String w : query.words) {
             if (w.isBlank() || w.length() < 2) continue;
-            double s = single(w.replace(" ", ""), t, text);
+            double s = singlePrepared(w.replace(" ", ""), text);
             if (s == 0) {
                 // La phrase compacte entière peut encore sauver (« fullstack » vs « full stack »).
                 return whole;
@@ -57,11 +103,12 @@ public class TextMatcher {
         return Math.max(whole, 0.95 * sum / counted);
     }
 
-    private static double single(String q, String t, String text) {
+    private static double singlePrepared(String q, FoldedText text) {
+        String t = text.compact;
         if (q.isEmpty() || t.isEmpty()) return 0;
         if (q.equals(t)) return 1;
         if (t.startsWith(q)) return 0.85 + 0.05 * q.length() / t.length();
-        String[] words = fold(text).split(" ");
+        String[] words = text.words;
         for (String word : words) {
             if (word.startsWith(q)) return 0.75;
         }

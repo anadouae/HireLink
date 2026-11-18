@@ -10,7 +10,7 @@
   const VIEW_TITLE = {
     dash: "Tableau de bord", orgs: "Entreprises", users: "Comptes", moderation: "Modération", offers: "Offres",
     plans: "Plans & factures", audit: "Journal d’audit", emails: "Journal des e-mails",
-    external: "Sources externes",
+    external: "Recherche web",
   };
   const STATUS_FR = App.STATUS_FR;
   const PAY_FR = { NON_PAYEE: "Non payée", PAYEE: "Payée", ANNULEE: "Annulée", AVOIR: "Avoir historique", EMISE: "Non payée", REGLEE: "Payée", OFFERTE: "Payée" };
@@ -49,7 +49,6 @@
     App.setActive(view);
     if (view === "audit") loadAudit();
     if (view === "emails") loadEmails();
-    if (view === "external") loadExternal();
     window.scrollTo(0, 0);
   }
   window.addEventListener("hashchange", () => show((location.hash || "").slice(1)));
@@ -720,104 +719,7 @@
     } catch (err) { fail("E-mail", err); }
   });
 
-  async function loadExternal() {
-    const box = $("ext-status");
-    const body = $("ext-body");
-    if (!box || !body) return;
-    try {
-      const data = await HireLinkAPI.api("/admin/external-offers/status");
-      const last = data.last;
-      const enabled = !!data.enabled;
-      const importCat = data.importCatalog || {};
-      const webDirect = data.webDirectSearch || {};
-      const sources = data.sources || [];
-      const sourceLines = sources.length
-        ? sources.map((s) => {
-            const on = !!s.enabled;
-            const run = s.last;
-            const kind = (s.kind || s.channel || "").toString().toLowerCase().includes("web")
-              ? " (recherche Web — pas d’import)"
-              : " (import catalogue)";
-            return '<div><span class="rc-muted">' + esc(s.label || s.code) + kind + "</span><strong>" +
-              (on ? "Import activé" : "Import désactivé") +
-              (run ? " · sync " + esc(App.fmtDateTime(run.finishedAt || "")) : "") +
-              "</strong></div>";
-          }).join("")
-        : '<div><span class="rc-muted">Connecteurs d’import</span><strong>Aucun configuré</strong></div>';
-      box.innerHTML =
-        '<div class="ext-status-grid">' +
-        '<div style="grid-column:1/-1"><strong>1. Import catalogue (stocké)</strong><p class="rc-muted" style="margin:.35rem 0 0">' +
-        esc(importCat.summary || (enabled
-          ? "Les annonces importées sont stockées et visibles dans le catalogue."
-          : "Aucun connecteur d’import n’est activé. Cela n’empêche pas une Recherche Web distincte côté candidat.")) +
-        "</p></div>" +
-        sourceLines +
-        '<div><span class="rc-muted">Annonces importées visibles</span><strong>' + (data.availableCount || 0) + "</strong></div>" +
-        '<div><span class="rc-muted">Masquées</span><strong>' + (data.hiddenCount || 0) + "</strong></div>" +
-        '<div><span class="rc-muted">Dernière synchronisation (import uniquement)</span><strong>' +
-        (last ? esc(App.fmtDateTime(last.finishedAt || last.startedAt || "")) + (last.message ? " · " + esc(last.message) : "") : "Jamais — normal si l’import est désactivé") +
-        "</strong></div>" +
-        '<div style="grid-column:1/-1;margin-top:.6rem"><strong>2. Recherche Web directe</strong><p class="rc-muted" style="margin:.35rem 0 0">' +
-        esc(webDirect.summary || "État de la recherche Web non communiqué par l’API.") +
-        (Array.isArray(webDirect.providers) && webDirect.providers.length
-          ? " Fournisseurs prévus : " + webDirect.providers.map(esc).join(", ") + "."
-          : "") +
-        "</p></div>" +
-        '<p class="rc-muted" style="grid-column:1/-1;margin:0">La synchronisation ci-dessous concerne uniquement l’import catalogue. Elle n’active pas la Recherche Web et n’est pas lancée automatiquement.</p>' +
-        "</div>";
-      if (extSync) {
-        extSync.disabled = !enabled;
-        extSync.title = enabled ? "Importer / mettre à jour le catalogue stocké" : "Import catalogue désactivé dans la configuration";
-        extSync.textContent = enabled ? "Synchroniser l’import catalogue" : "Synchronisation import indisponible";
-      }
-      if (extRefresh) extRefresh.textContent = "Actualiser l’affichage";
-      body.replaceChildren();
-      const rows = data.offers || [];
-      if (!rows.length) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 4;
-        td.textContent = "Aucune annonce externe visible.";
-        tr.appendChild(td);
-        body.appendChild(tr);
-      }
-      rows.forEach((o) => {
-        const tr = document.createElement("tr");
-        [o.title, o.companyName, o.sourceLabel].forEach((text) => {
-          const td = document.createElement("td");
-          td.textContent = text || "";
-          tr.appendChild(td);
-        });
-        const td = document.createElement("td");
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn btn-ghost btn-sm";
-        btn.textContent = "Masquer";
-        btn.addEventListener("click", async () => {
-          try {
-            await HireLinkAPI.api("/admin/external-offers/" + encodeURIComponent(o.id) + "/hide", { method: "POST" });
-            loadExternal();
-          } catch (err) { fail("Masquage", err); }
-        });
-        td.appendChild(btn);
-        tr.appendChild(td);
-        body.appendChild(tr);
-      });
-    } catch (err) { fail("Sources externes", err); }
-  }
-  const extRefresh = $("ext-refresh");
-  const extSync = $("ext-sync");
-  if (extRefresh) extRefresh.addEventListener("click", loadExternal);
-  if (extSync) extSync.addEventListener("click", async () => {
-    if (extSync.disabled) {
-      App.toast("Sources externes", "La synchronisation est désactivée dans la configuration.", "warn");
-      return;
-    }
-    try {
-      await HireLinkAPI.api("/external-offers/sync", { method: "POST" });
-      loadExternal();
-    } catch (err) { fail("Synchronisation", err); }
-  });
+  // Vue « Recherche web » : page explicative statique (offres web en direct, rien n'est stocké ni masqué).
 
   /* ------------------------------------------------------------------ données */
   const SOURCES = {

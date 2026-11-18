@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="../css/match.css?v=20261103a" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
   <link rel="stylesheet" href="../css/premium.css?v=20261107b" />
-  <link rel="stylesheet" href="../css/candidate-search.css?v=20261117searchq" />
+  <link rel="stylesheet" href="../css/candidate-search.css?v=20261118v6b" />
   <script data-role="CANDIDAT" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -34,7 +34,7 @@
         <section class="cs-hero" aria-labelledby="cs-title">
           <p class="rc-eyebrow">Espace candidat</p>
           <h1 id="cs-title">Trouvez le poste qui vous avance</h1>
-          <p class="cs-lead">Tapez un métier pour lancer la recherche. HireLink croise ses offres et des sources publiques autorisées — la candidature externe s’ouvre toujours sur le site d’origine.</p>
+          <p class="cs-lead">Tapez un métier pour lancer la recherche. HireLink affiche ses offres et une recherche web en direct sur des sites d’emploi publics — la candidature à une offre web s’ouvre toujours sur le site d’origine.</p>
           <div class="cs-search-wrap">
             <label class="sr-only" for="cs-search">Rechercher une offre</label>
             <input id="cs-search" type="search" placeholder="Ex. développeur, infirmier, commercial…" autocomplete="off" />
@@ -51,146 +51,124 @@
               <span class="cs-scope-thumb" aria-hidden="true"></span>
               <button type="button" class="cs-scope-btn is-active" data-scope="all" aria-pressed="true">Tout</button>
               <button type="button" class="cs-scope-btn" data-scope="hirelink" aria-pressed="false">Publiées sur HireLink</button>
-              <button type="button" class="cs-scope-btn" data-scope="external" aria-pressed="false">Sources externes</button>
+              <button type="button" class="cs-scope-btn" data-scope="external" aria-pressed="false">Offres web</button>
             </div>
-            <p class="cs-scope-hint">Choisissez ce que vous voulez voir : tout le catalogue, les offres publiées sur HireLink, ou les sources externes.</p>
+            <p class="cs-scope-hint">Offres HireLink : vous postulez dans HireLink. Offres web : recherche en direct sur des sites d’emploi publics, rien n’est stocké chez nous ; la candidature s’ouvre sur le site d’origine.</p>
           </div>
           <p id="web-search-banner" class="muted catalog-web-banner cs-fresh" hidden role="status"></p>
           <p id="catalog-freshness" class="cs-fresh" hidden></p>
         </section>
 
-        <div class="cs-filter-actions">
-          <label class="match-toggle">
-            <span class="switch"><input type="checkbox" id="match-only" role="switch" /><span class="slider"></span></span>
-            <span class="match-toggle-text"><strong>Correspond à mon profil</strong><small id="match-hint">Reclasse par compatibilité et montre compétences présentes / manquantes — ne filtre pas magiquement.</small></span>
-          </label>
-          <span class="muted" id="filter-summary"></span>
-          <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-filters">Réinitialiser</button>
-        </div>
-
-        <div class="cs-active-chips" id="cs-active-chips" aria-live="polite" hidden></div>
-
         <div class="cs-filters" id="offer-advanced" role="search" aria-label="Filtres d'offres">
-          <label>Pays
-            <select id="f-country" name="country" aria-label="Filtrer par pays" data-testid="catalog-country">
-              <option value="ALL">Tous les pays</option>
-              <option value="MA">Maroc</option>
-              <option value="FR">France</option>
-              <option value="DE">Allemagne</option>
-              <option value="GB">Royaume-Uni</option>
-              <option value="ES">Espagne</option>
-              <option value="BE">Belgique</option>
-              <option value="CH">Suisse</option>
-              <option value="NL">Pays-Bas</option>
-              <option value="CA">Canada</option>
-              <option value="US">États-Unis</option>
-              <option value="AE">Émirats</option>
-              <option value="SN">Sénégal</option>
-              <option value="TN">Tunisie</option>
-              <option value="CI">Côte d'Ivoire</option>
-            </select>
-          </label>
-          <label>Ville
-            <select id="f-city"><option value="">Toutes</option></select>
-          </label>
-          <label>Contrat
-            <select id="f-contract">
-              <option value="">Tous</option>
-              <option value="CDI">CDI</option>
-              <option value="CDD">CDD</option>
-              <option value="Stage">Stage</option>
-              <option value="Alternance">Alternance</option>
-              <option value="Freelance">Freelance</option>
-              <option value="Temps partiel">Temps partiel</option>
-              <option value="Internship">Internship</option>
-            </select>
-          </label>
-          <label>Mode
-            <select id="f-mode">
-              <option value="">Tous</option>
-              <option value="REMOTE">Remote</option>
-              <option value="HYBRID">Hybride</option>
-              <option value="ONSITE">Présentiel</option>
-            </select>
-          </label>
-          <label>Date
-            <select id="f-since">
-              <option value="">Toutes</option>
-              <option value="7">7 jours</option>
-              <option value="30">30 jours</option>
-              <option value="90">90 jours</option>
-            </select>
-          </label>
-          <label>Expérience
-            <select id="f-experience">
-              <option value="">Tous</option>
-              <option value="JUNIOR">Junior</option>
-              <option value="INTERMEDIATE">Confirmé</option>
-              <option value="SENIOR">Senior</option>
-              <option value="EXPERT">Expert</option>
-            </select>
-          </label>
-          <label>Entreprise
-            <input type="search" id="f-company" placeholder="Nom d'entreprise" autocomplete="organization" />
-          </label>
-          <label>Source
-            <select id="f-source" title="Filtre code source côté serveur">
-              <option value="">Toutes</option>
-              <option value="HIRELINK">HireLink</option>
-              <option value="GREENHOUSE">Greenhouse</option>
-              <option value="LEVER">Lever</option>
-              <option value="REMOTE_OK">Remote OK</option>
-              <option value="REMOTIVE">Remotive</option>
-              <option value="ARBEITNOW">Arbeitnow</option>
-              <option value="HIMALAYAS">Himalayas</option>
-              <option value="JOBICY">Jobicy</option>
-              <option value="WE_WORK_REMOTELY">We Work Remotely</option>
-              <option value="ASHBY">Ashby</option>
-              <option value="JOOBLE">Jooble</option>
-              <option value="ADZUNA">Adzuna</option>
-              <option value="WEB_FALLBACK">Web (Tavily/Serper)</option>
-            </select>
-          </label>
-          <label>Salaire min. (MAD)
-            <select id="f-salary">
-              <option value="">Tous</option>
-              <option value="5000">≥ 5 000</option>
-              <option value="8000">≥ 8 000</option>
-              <option value="12000">≥ 12 000</option>
-              <option value="15000">≥ 15 000</option>
-              <option value="20000">≥ 20 000</option>
-            </select>
-          </label>
-          <label>Secteur
-            <select id="f-sector">
-              <option value="">Tous</option>
-              <option value="Informatique">Informatique</option>
-              <option value="Finance">Finance</option>
-              <option value="Santé">Santé</option>
-              <option value="Commerce">Commerce</option>
-              <option value="Industrie">Industrie</option>
-              <option value="Services">Services</option>
-              <option value="Éducation">Éducation</option>
-            </select>
-          </label>
-          <label>Compatibilité min.
-            <select id="f-match">
-              <option value="0">Toutes</option>
-              <option value="40">≥ 40 %</option>
-              <option value="60">≥ 60 %</option>
-              <option value="80">≥ 80 %</option>
-            </select>
-          </label>
+          <div class="cs-filters-main">
+            <label class="cs-f-where">Où
+              <input type="search" id="f-where" data-suggest="place" placeholder="Ville ou pays" autocomplete="off" data-testid="catalog-where" />
+            </label>
+            <label>Contrat
+              <select id="f-contract">
+                <option value="">Tous</option>
+                <option value="CDI">CDI</option>
+                <option value="CDD">CDD</option>
+                <option value="Stage">Stage</option>
+                <option value="Alternance">Alternance</option>
+                <option value="Freelance">Freelance</option>
+                <option value="Temps plein">Temps plein</option>
+                <option value="Temps partiel">Temps partiel</option>
+                <option value="NON-PRECISE">Non précisé</option>
+              </select>
+            </label>
+            <label>Mode
+              <select id="f-mode">
+                <option value="">Tous</option>
+                <option value="REMOTE">Remote</option>
+                <option value="HYBRID">Hybride</option>
+                <option value="ONSITE">Présentiel</option>
+                <option value="NON-PRECISE">Non précisé</option>
+              </select>
+            </label>
+            <label>Date
+              <select id="f-since">
+                <option value="">Toutes</option>
+                <option value="7">7 jours</option>
+                <option value="30">30 jours</option>
+                <option value="90">90 jours</option>
+              </select>
+            </label>
+            <label class="cs-f-company">Entreprise
+              <input type="search" id="f-company" data-suggest="company" placeholder="Nom d'entreprise" autocomplete="off" />
+            </label>
+            <button type="button" class="cs-more-btn" id="btn-more-filters" aria-expanded="false" aria-controls="cs-more-filters">
+              <span>Plus de filtres</span><span class="cs-more-count" id="more-count" hidden></span>
+            </button>
+          </div>
+          <div class="cs-filters-more" id="cs-more-filters" hidden>
+            <label>Expérience
+              <select id="f-experience">
+                <option value="">Tous</option>
+                <option value="JUNIOR">Junior</option>
+                <option value="INTERMEDIATE">Confirmé</option>
+                <option value="SENIOR">Senior</option>
+                <option value="EXPERT">Expert</option>
+                <option value="NON-PRECISE">Non précisé</option>
+              </select>
+            </label>
+            <label>Secteur
+              <select id="f-sector">
+                <option value="">Tous</option>
+                <option value="Informatique">Informatique</option>
+                <option value="Finance">Finance</option>
+                <option value="Santé">Santé</option>
+                <option value="Commerce">Commerce</option>
+                <option value="Industrie">Industrie</option>
+                <option value="Services">Services</option>
+                <option value="Éducation">Éducation</option>
+                <option value="NON-PRECISE">Non précisé</option>
+              </select>
+            </label>
+            <label id="f-salary-wrap">Salaire min. (MAD)
+              <select id="f-salary">
+                <option value="">Tous</option>
+                <option value="5000">≥ 5 000</option>
+                <option value="8000">≥ 8 000</option>
+                <option value="12000">≥ 12 000</option>
+                <option value="15000">≥ 15 000</option>
+                <option value="20000">≥ 20 000</option>
+              </select>
+            </label>
+            <p class="cs-more-note muted" id="f-salary-note" hidden>Aucune offre de ces résultats n’indique de salaire en MAD : le filtre Salaire est masqué.</p>
+            <p class="cs-more-note muted">« Non précisé » : offres qui ne renseignent pas ce critère. Le nombre est affiché à côté de chaque choix, rien n’est écarté sans que vous le voyiez.</p>
+          </div>
           <label class="sr-only">Provenance (badge)
             <select id="f-origin" hidden aria-hidden="true">
               <option value="">Toutes</option>
               <option value="hirelink">HireLink</option>
-              <option value="external">Externes</option>
+              <option value="external">Offres web</option>
             </select>
           </label>
           <label hidden>Compétence<select id="f-skill"><option value="">Toutes</option></select></label>
           <label hidden>Candidature<select id="f-sent"><option value=""></option></select></label>
           <label hidden>Pace<select id="f-pace"><option value=""></option></select></label>
+        </div>
+
+        <div class="cs-active-bar" id="cs-active-bar" hidden>
+          <div class="cs-active-chips" id="cs-active-chips" aria-live="polite"></div>
+          <button type="button" class="cs-clear-all" id="btn-clear-chips">Tout effacer</button>
+        </div>
+
+        <div class="cs-filter-actions">
+          <p class="cs-count" id="filter-summary" aria-live="polite"></p>
+          <label class="match-toggle">
+            <span class="switch"><input type="checkbox" id="match-only" role="switch" /><span class="slider"></span></span>
+            <span class="match-toggle-text"><strong>Correspond à mon profil</strong><small id="match-hint">Reclasse par compatibilité et montre compétences présentes / manquantes — ne filtre pas magiquement.</small></span>
+          </label>
+          <label class="cs-sort">Trier par
+            <select id="f-sort" data-testid="catalog-sort">
+              <option value="relevance">Pertinence</option>
+              <option value="date">Date</option>
+              <option value="compatibility">Compatibilité</option>
+            </select>
+          </label>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-clear-filters">Réinitialiser</button>
         </div>
 
         <div class="cs-layout">
@@ -219,8 +197,8 @@
   <script defer src="../js/offer-card.js?v=20261110g"></script>
   <script defer src="../js/apply-wizard.js?v=20261110e"></script>
   <script defer src="../js/apply-profile-gate.js?v=20261106f"></script>
-  <script defer src="../js/suggest.js?v=20261103g"></script>
+  <script defer src="../js/suggest.js?v=20261118v6"></script>
   <script defer src="../js/match.js?v=20261110e"></script>
-  <script defer src="../js/candidate-home.js?v=20261117searchq"></script>
+  <script defer src="../js/candidate-home.js?v=20261118v6c"></script>
 </body>
 </html>

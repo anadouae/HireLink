@@ -141,10 +141,104 @@
 }
 
 .cs-filters {
+  margin: 0.85rem 0 0.75rem;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid color-mix(in srgb, var(--brand, #7a2032) 14%, var(--border, #e5e7eb));
+  border-radius: 16px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface, #fff) 94%, #f5f1ec), var(--surface, #fff));
+}
+.cs-filters-main {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: minmax(180px, 1.4fr) repeat(3, minmax(120px, 1fr)) minmax(170px, 1.3fr) auto;
   gap: 0.65rem 0.75rem;
-  margin: 0.85rem 0 1rem;
+  align-items: end;
+}
+.cs-filters-more {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 0.65rem 0.75rem;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed color-mix(in srgb, var(--brand, #7a2032) 22%, var(--border, #e5e7eb));
+}
+.cs-filters-more[hidden] { display: none; }
+.cs-filters label[hidden] { display: none; }
+.cs-more-note { grid-column: 1 / -1; margin: 0; font-size: 0.8rem; }
+.cs-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 38px;
+  padding: 0.35rem 0.85rem;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand, #7a2032) 35%, var(--border, #d1d5db));
+  background: var(--surface, #fff);
+  color: var(--brand, #7a2032);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cs-more-btn::after { content: "▾"; font-size: 0.75rem; transition: transform 0.15s ease; }
+.cs-more-btn.is-open::after { transform: rotate(180deg); }
+.cs-more-btn:hover, .cs-more-btn.is-open {
+  background: color-mix(in srgb, var(--brand, #7a2032) 8%, var(--surface, #fff));
+  border-color: var(--brand, #7a2032);
+}
+.cs-more-btn:focus-visible { outline: 2px solid color-mix(in srgb, var(--brand, #7a2032) 55%, #c4a574); outline-offset: 2px; }
+.cs-more-count {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: var(--brand, #7a2032);
+  color: #fff;
+  font-size: 0.72rem;
+  line-height: 1.25rem;
+  text-align: center;
+}
+.cs-more-count[hidden] { display: none; }
+.cs-active-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  margin: 0 0 0.75rem;
+}
+.cs-active-bar[hidden] { display: none; }
+.cs-active-bar .cs-active-chips { margin: 0; }
+.cs-clear-all {
+  border: 0;
+  background: none;
+  padding: 0.2rem 0.3rem;
+  color: var(--brand, #7a2032);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.cs-clear-all:hover { color: color-mix(in srgb, var(--brand, #7a2032) 75%, #000); }
+.cs-count { margin: 0 auto 0 0; font-weight: 700; font-size: 1rem; color: var(--text, #1a1214); }
+.cs-sort { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.85rem; color: var(--muted, #64748b); white-space: nowrap; flex-shrink: 0; }
+.cs-sort select {
+  min-height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border, #d1d5db);
+  padding: 0.25rem 0.5rem;
+  background: var(--surface, #fff);
+  color: inherit;
+}
+.cs-meta .cs-compat {
+  background: color-mix(in srgb, #c4a574 22%, transparent);
+  color: #6b4f1d;
+  font-weight: 600;
+}
+.cs-meta .cs-compat.is-mid { background: color-mix(in srgb, #c4a574 30%, transparent); }
+.cs-meta .cs-compat.is-high { background: color-mix(in srgb, var(--brand, #7a2032) 14%, transparent); color: var(--brand, #7a2032); }
+@media (max-width: 1100px) {
+  .cs-filters-main { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
 }
 .cs-filters label { display: grid; gap: 0.25rem; font-size: 0.8rem; color: var(--muted, #64748b); }
 .cs-filters select, .cs-filters input {
@@ -175,6 +269,7 @@
   color: inherit;
 }
 .cs-active-chip:hover { border-color: var(--brand, #7a2032); }
+.cs-active-chip span[aria-hidden="true"] { font-size: 1rem; line-height: 1; color: var(--brand, #7a2032); }
 .cs-match-block { margin: 0.85rem 0; }
 .cs-src-line { font-size: 0.85rem; word-break: break-all; }
 .cs-origin-badge {
@@ -197,6 +292,34 @@
 }
 .cs-empty h2 { margin: 0 0 0.4rem; font-size: 1.15rem; }
 .cs-empty p { margin: 0; color: var(--muted, #64748b); }
+.cs-grid > .cs-empty { grid-column: 1 / -1; }
+.cs-empty-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
+.cs-empty-actions .cs-active-chip { background: var(--surface, #fff); }
+.cs-empty-actions .cs-active-chip small { color: var(--muted, #64748b); }
+.cs-empty-tip { margin-top: 0.85rem !important; font-size: 0.85rem; }
+/* Offres web en cours de chargement : bandeau en fin de liste, les cartes HireLink restent en place. */
+.cs-web-pending {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  border: 1px dashed color-mix(in srgb, var(--brand, #7a2032) 25%, var(--border, #d1d5db));
+  color: var(--muted, #64748b);
+  font-size: 0.9rem;
+}
+.cs-web-pending::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--brand, #7a2032) 30%, transparent);
+  border-top-color: var(--brand, #7a2032);
+  animation: cs-spin 0.8s linear infinite;
+}
+@keyframes cs-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .cs-web-pending::before { animation: none; } }
 
 .cs-grid {
   display: grid;

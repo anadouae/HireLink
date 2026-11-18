@@ -83,6 +83,14 @@ public class JobicyWebJobSource implements WebJobSource {
                 String inferred = geo.inferCountryCode(loc);
                 String skills = joinTags(n.path("jobIndustry"));
                 if (skills == null) skills = joinTags(n.path("jobType"));
+                Integer minSal = WebJobFields.amount(WebJobFields.first(n, "salaryMin", "annualSalaryMin"));
+                Integer maxSal = WebJobFields.amount(WebJobFields.first(n, "salaryMax", "annualSalaryMax"));
+                String period = WebJobFields.period(text(n, "salaryPeriod"));
+                // annualSalaryMin / annualSalaryMax : le nom du champ dit explicitement « annuel ».
+                if (period == null && (n.hasNonNull("annualSalaryMin") || n.hasNonNull("annualSalaryMax"))
+                        && (minSal != null || maxSal != null)) {
+                    period = "YEAR";
+                }
                 DiscoveredJob job = new DiscoveredJob(
                         title,
                         company == null ? "Entreprise (via Jobicy)" : company,
@@ -97,7 +105,8 @@ public class JobicyWebJobSource implements WebJobSource {
                         deep,
                         code(),
                         label(),
-                        homeUrl());
+                        homeUrl()).withDetails(WebJobFields.date(WebJobFields.first(n, "pubDate", "publishedAt")),
+                        minSal, maxSal, text(n, "salaryCurrency"), period);
                 if (!geo.matches(job, countryCode, location)) continue;
                 out.add(job);
                 if (out.size() >= Math.max(limit, 20)) break;

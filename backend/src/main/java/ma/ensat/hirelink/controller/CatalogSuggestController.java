@@ -1,6 +1,7 @@
 package ma.ensat.hirelink.controller;
 
 import ma.ensat.hirelink.model.ContractType;
+import ma.ensat.hirelink.service.CompanySuggestService;
 import ma.ensat.hirelink.service.PlaceCatalogService;
 import ma.ensat.hirelink.service.TextMatcher;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +25,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Suggestions de métiers, lieux, nationalités, écoles, contrats, modes de travail et niveaux.
+ * Suggestions d'entreprises, de métiers, lieux, nationalités, écoles, contrats, modes de travail et niveaux.
  * Classement par pertinence (insensible aux accents, tolérant aux fautes de frappe) via {@link TextMatcher} ;
  * ESCO (Commission européenne) complète les métiers. Les compétences sont servies par {@code /api/v1/skills}.
  */
@@ -110,21 +111,27 @@ public class CatalogSuggestController {
 
     private final TextMatcher matcher;
     private final PlaceCatalogService places;
+    private final CompanySuggestService companies;
     private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
 
-    public CatalogSuggestController(TextMatcher matcher, PlaceCatalogService places) {
+    public CatalogSuggestController(TextMatcher matcher, PlaceCatalogService places, CompanySuggestService companies) {
         this.matcher = matcher;
         this.places = places;
+        this.companies = companies;
     }
 
     @GetMapping("/suggest")
     public List<Suggestion> suggest(
             @RequestParam(defaultValue = "job") String kind,
             @RequestParam(defaultValue = "") String q,
-            @RequestParam(required = false) String country
+            @RequestParam(required = false) String country,
+            @RequestParam(required = false) String context
     ) {
         String query = q.trim();
         return switch (kind.toLowerCase(Locale.ROOT)) {
+            // Noms d'entreprises uniquement (jamais de titres d'offres), 2 caractères minimum, 8 au plus.
+            case "company" -> companies.suggest(query, context).stream()
+                    .map(name -> new Suggestion(name, "", "")).toList();
             case "place" -> places.search(query, country, LIMIT).stream()
                     .map(p -> new Suggestion(p.label(), p.flag(), p.city().isEmpty() ? "" : p.country())).toList();
             case "city" -> places.searchCities(query, country, LIMIT).stream()

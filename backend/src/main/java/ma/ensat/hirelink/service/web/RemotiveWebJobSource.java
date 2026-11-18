@@ -74,6 +74,7 @@ public class RemotiveWebJobSource implements WebJobSource {
                 if (title == null || deep == null) continue;
                 String loc = text(n, "candidate_required_location");
                 String inferred = geo.inferCountryCode(loc);
+                WebJobFields.ParsedPay pay = WebJobFields.pay(text(n, "salary"));
                 DiscoveredJob job = new DiscoveredJob(
                         title,
                         text(n, "company_name") == null ? "Entreprise (via Remotive)" : text(n, "company_name"),
@@ -88,7 +89,8 @@ public class RemotiveWebJobSource implements WebJobSource {
                         deep,
                         code(),
                         label(),
-                        homeUrl());
+                        homeUrl()).withDetails(WebJobFields.date(n.get("publication_date")),
+                        pay.min(), pay.max(), pay.currency(), pay.period());
                 if (!geo.matches(job, countryCode, location)) continue;
                 out.add(job);
                 if (out.size() >= Math.max(limit, 20)) break;

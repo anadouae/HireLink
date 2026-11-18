@@ -36,6 +36,10 @@ public class CatalogListingIndexer {
     private final PlaceCatalogService places;
     private final ExternalOfferListability listability;
 
+    /** Projection des annonces importées dans le catalogue candidat (désactivée : recherche = HireLink + Web direct). */
+    @org.springframework.beans.factory.annotation.Value("${hirelink.catalog.include-imported:false}")
+    private boolean includeImported;
+
     public CatalogListingIndexer(
             CatalogListingRepository listings,
             JobOfferRepository jobOffers,
@@ -63,7 +67,7 @@ public class CatalogListingIndexer {
                 kept++;
             }
         }
-        for (ExternalJobOffer offer : externalOffers.findAll()) {
+        for (ExternalJobOffer offer : includeImported ? externalOffers.findAll() : java.util.List.<ExternalJobOffer>of()) {
             if (!isExternalListable(offer)) continue;
             CatalogListing row = fromExternal(offer);
             if (acceptDedupe(byDedupe, row)) {
@@ -90,7 +94,9 @@ public class CatalogListingIndexer {
     @Transactional
     public void syncExternal(ExternalJobOffer offer) {
         if (offer == null || offer.getId() == null) return;
-        if (!isExternalListable(offer)) {
+        // Annonces importées retirées de la recherche candidat : plus projetées dans le catalogue
+        // (la table external_job_offers reste intacte ; include-imported=true rétablit l'indexation).
+        if (!includeImported || !isExternalListable(offer)) {
             removeByOriginRef(CatalogListing.ORIGIN_EXTERNAL, offer.getId());
             return;
         }

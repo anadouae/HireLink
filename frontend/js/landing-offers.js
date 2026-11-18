@@ -104,10 +104,10 @@
       const origin = ((document.getElementById("q-origin") || {}).value) || "";
       HireLinkSearch.emptyState(root, document.getElementById("q-text").value.trim(), {
         emptyTitle: origin === "external"
-          ? "Aucune source externe active actuellement"
+          ? "Aucune offre web pour cette recherche"
           : "Aucune offre pour cette recherche",
         emptyHint: origin === "external"
-          ? "Les sources externes sont désactivées sur cette démonstration."
+          ? "La recherche web en direct n’a rien renvoyé pour le moment : essayez un autre métier ou retirez un filtre."
           : undefined,
         onClear: function () {
           ["q-text", "q-city", "q-contract", "q-origin", "q-since"].forEach(function (id) {
@@ -125,7 +125,7 @@
       const published = o.publishedAtTrusted ? o.publishedAt : null;
       root.appendChild(HireLinkOffer.card(o, {
         variant: "showcase",
-        badge: o.external ? "Offre externe" : "Offre HireLink",
+        badge: o.external ? "Offre web" : "Offre HireLink",
         footText: o.external
           ? (HireLinkOffer.externalLinkPolicy(o).trusted ? HireLinkOffer.externalLinkPolicy(o).label : "Lien non garanti")
           : ("Postuler sur HireLink" + (ago(published) ? " · " + ago(published) : "")),

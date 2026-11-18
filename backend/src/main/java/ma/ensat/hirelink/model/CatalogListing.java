@@ -17,7 +17,14 @@ import java.time.Instant;
                 @Index(name = "idx_catalog_sort", columnList = "sort_at, id"),
                 @Index(name = "idx_catalog_country_city", columnList = "country_code, city"),
                 @Index(name = "idx_catalog_source", columnList = "source_code"),
-                @Index(name = "idx_catalog_dedupe", columnList = "dedupe_key")
+                @Index(name = "idx_catalog_dedupe", columnList = "dedupe_key"),
+                // Filtres de la recherche candidat (ddl-auto=update crée les index manquants).
+                @Index(name = "idx_catalog_origin", columnList = "origin"),
+                @Index(name = "idx_catalog_city_fold", columnList = "city_fold"),
+                @Index(name = "idx_catalog_contract", columnList = "contract_label"),
+                @Index(name = "idx_catalog_work_mode", columnList = "work_mode"),
+                @Index(name = "idx_catalog_published", columnList = "published_at"),
+                @Index(name = "idx_catalog_company", columnList = "company_name")
         })
 public class CatalogListing {
 

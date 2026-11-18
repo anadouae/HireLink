@@ -27,20 +27,22 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
     /**
      * Predicats communs : q, geo, contrat, mode, source, origin, date, entreprise,
      * plus salaire min (plafond ou plancher de l'offre), experience exacte, secteur LIKE.
+     * Valeur « NON-PRECISE » (contrat, mode, experience, secteur) : offres sans cette information.
      */
     @Query(value = """
             SELECT COUNT(*) FROM catalog_listings c
             WHERE (:q IS NULL OR LOWER(c.search_blob) LIKE CONCAT('%', LOWER(:q), '%'))
               AND (:country IS NULL OR c.country_code = :country)
               AND (:city IS NULL OR c.city_fold = :city OR LOWER(c.city) = LOWER(:city))
-              AND (:contract IS NULL OR c.contract_label = :contract)
-              AND (:workMode IS NULL OR c.work_mode = :workMode)
+              AND (:contract IS NULL OR (:contract = 'NON-PRECISE' AND IFNULL(c.contract_label, '') = '') OR c.contract_label = :contract)
+              AND (:workMode IS NULL OR (:workMode = 'NON-PRECISE' AND IFNULL(c.work_mode, '') = '') OR c.work_mode = :workMode)
               AND (:source IS NULL OR c.source_code = :source)
               AND (:origin IS NULL OR c.origin = :origin)
               AND (:since IS NULL OR (c.published_trusted = 1 AND c.published_at IS NOT NULL AND c.published_at >= :since))
               AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
-              AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
-              AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
+              AND (:experience IS NULL OR (:experience = 'NON-PRECISE' AND IFNULL(c.experience_level, '') = '') OR UPPER(c.experience_level) = UPPER(:experience))
+              AND (:sector IS NULL OR (:sector = 'NON-PRECISE' AND IFNULL(c.sector, '') = '')
+                   OR (:sector <> 'NON-PRECISE' AND LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%')))
               AND (:company IS NULL OR LOWER(c.company_name) LIKE CONCAT('%', LOWER(:company), '%'))
             """, nativeQuery = true)
     long countFiltered(
@@ -62,14 +64,15 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
             WHERE (:q IS NULL OR LOWER(c.search_blob) LIKE CONCAT('%', LOWER(:q), '%'))
               AND (:country IS NULL OR c.country_code = :country)
               AND (:city IS NULL OR c.city_fold = :city OR LOWER(c.city) = LOWER(:city))
-              AND (:contract IS NULL OR c.contract_label = :contract)
-              AND (:workMode IS NULL OR c.work_mode = :workMode)
+              AND (:contract IS NULL OR (:contract = 'NON-PRECISE' AND IFNULL(c.contract_label, '') = '') OR c.contract_label = :contract)
+              AND (:workMode IS NULL OR (:workMode = 'NON-PRECISE' AND IFNULL(c.work_mode, '') = '') OR c.work_mode = :workMode)
               AND (:source IS NULL OR c.source_code = :source)
               AND (:origin IS NULL OR c.origin = :origin)
               AND (:since IS NULL OR (c.published_trusted = 1 AND c.published_at IS NOT NULL AND c.published_at >= :since))
               AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
-              AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
-              AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
+              AND (:experience IS NULL OR (:experience = 'NON-PRECISE' AND IFNULL(c.experience_level, '') = '') OR UPPER(c.experience_level) = UPPER(:experience))
+              AND (:sector IS NULL OR (:sector = 'NON-PRECISE' AND IFNULL(c.sector, '') = '')
+                   OR (:sector <> 'NON-PRECISE' AND LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%')))
               AND (:company IS NULL OR LOWER(c.company_name) LIKE CONCAT('%', LOWER(:company), '%'))
             ORDER BY c.sort_at DESC, c.id DESC
             LIMIT :limit OFFSET :offset
@@ -95,14 +98,15 @@ public interface CatalogListingRepository extends JpaRepository<CatalogListing, 
             WHERE (:q IS NULL OR LOWER(c.search_blob) LIKE CONCAT('%', LOWER(:q), '%'))
               AND (:country IS NULL OR c.country_code = :country)
               AND (:city IS NULL OR c.city_fold = :city OR LOWER(c.city) = LOWER(:city))
-              AND (:contract IS NULL OR c.contract_label = :contract)
-              AND (:workMode IS NULL OR c.work_mode = :workMode)
+              AND (:contract IS NULL OR (:contract = 'NON-PRECISE' AND IFNULL(c.contract_label, '') = '') OR c.contract_label = :contract)
+              AND (:workMode IS NULL OR (:workMode = 'NON-PRECISE' AND IFNULL(c.work_mode, '') = '') OR c.work_mode = :workMode)
               AND (:source IS NULL OR c.source_code = :source)
               AND (:origin IS NULL OR c.origin = :origin)
               AND (:since IS NULL OR (c.published_trusted = 1 AND c.published_at IS NOT NULL AND c.published_at >= :since))
               AND (:minSalary IS NULL OR IFNULL(c.salary_max, c.salary_min) >= :minSalary)
-              AND (:experience IS NULL OR UPPER(c.experience_level) = UPPER(:experience))
-              AND (:sector IS NULL OR LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%'))
+              AND (:experience IS NULL OR (:experience = 'NON-PRECISE' AND IFNULL(c.experience_level, '') = '') OR UPPER(c.experience_level) = UPPER(:experience))
+              AND (:sector IS NULL OR (:sector = 'NON-PRECISE' AND IFNULL(c.sector, '') = '')
+                   OR (:sector <> 'NON-PRECISE' AND LOWER(IFNULL(c.sector, '')) LIKE CONCAT('%', LOWER(:sector), '%')))
               AND (:company IS NULL OR LOWER(c.company_name) LIKE CONCAT('%', LOWER(:company), '%'))
             ORDER BY c.sort_at DESC, c.id DESC
             LIMIT :limit

@@ -120,7 +120,9 @@ public class AdzunaWebJobSource implements WebJobSource {
                         deep,
                         code(),
                         label(),
-                        homeUrl());
+                        homeUrl()).withDetails(WebJobFields.date(n.get("created")),
+                        WebJobFields.amount(n.get("salary_min")), WebJobFields.amount(n.get("salary_max")),
+                        currencyOf(country));
                 if (!geo.matches(job, countryCode, location)) continue;
                 out.add(job);
                 if (out.size() >= Math.max(limit, 20)) break;
@@ -130,6 +132,22 @@ public class AdzunaWebJobSource implements WebJobSource {
         } catch (Exception e) {
             throw new IllegalStateException("Adzuna indisponible : " + e.getMessage(), e);
         }
+    }
+
+    /** Devise des montants Adzuna selon le pays interrogé (null si inconnue : montant non affiché comme comparable). */
+    private static String currencyOf(String country) {
+        return switch (country == null ? "" : country.toLowerCase(Locale.ROOT)) {
+            case "fr", "de", "nl", "it", "es", "at", "be" -> "EUR";
+            case "gb" -> "GBP";
+            case "us" -> "USD";
+            case "ca" -> "CAD";
+            case "au" -> "AUD";
+            case "ch" -> "CHF";
+            case "pl" -> "PLN";
+            case "in" -> "INR";
+            case "br" -> "BRL";
+            default -> null;
+        };
     }
 
     private String mapCountry(String countryCode) {

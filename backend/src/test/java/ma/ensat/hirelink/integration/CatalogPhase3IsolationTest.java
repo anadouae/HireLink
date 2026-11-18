@@ -62,6 +62,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Phase 3 — catalogue unifie + Jooble (fixtures) sur hirelink_ext_phase03 uniquement.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        // Pipeline d'import conservé (désactivé par défaut) : ce test vérifie son comportement quand il est rétabli.
+        "hirelink.catalog.include-imported=true",
         "spring.datasource.url=jdbc:mysql://127.0.0.1:3306/hirelink_ext_phase03?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=8000",
         "spring.datasource.username=root",
         "spring.datasource.password=",

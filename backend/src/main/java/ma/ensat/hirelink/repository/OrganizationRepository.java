@@ -16,6 +16,14 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
 
     java.util.List<Organization> findTop10ByNameContainingIgnoreCaseOrIceContainingIgnoreCase(String name, String ice);
 
+    /** Noms des entreprises actives (créateur actif ou non renseigné) : suggestions du filtre Entreprise. */
+    @Query("SELECT o.name FROM Organization o LEFT JOIN o.owner u WHERE u IS NULL OR u.active = true")
+    List<String> findActiveNames();
+
+    /** Noms des entreprises désactivées (compte créateur suspendu) : jamais proposées en suggestion. */
+    @Query("SELECT o.name FROM Organization o JOIN o.owner u WHERE u.active = false")
+    List<String> findInactiveNames();
+
     /** Verrou de ligne : deux facturasions simultanées de la même entreprise ne reçoivent pas le même numéro. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT o FROM Organization o WHERE o.id = :id")

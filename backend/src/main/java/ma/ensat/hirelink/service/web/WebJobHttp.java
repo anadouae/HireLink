@@ -6,11 +6,22 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
-/** Client HTTP partagé pour sources Web publiques (timeouts courts, User-Agent explicite). */
+/**
+ * Client HTTP partagé pour sources Web publiques (timeouts courts, User-Agent explicite).
+ * Délais alignés sur le délai par source de l'agrégateur (3 s par défaut) : une source lente libère
+ * son fil d'exécution peu après avoir été ignorée.
+ */
 public final class WebJobHttp {
 
+    /** Connexion TCP/TLS. */
+    static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(2);
+    /** Réponse complète d'une source (GET JSON / RSS). */
+    static final Duration READ_TIMEOUT = Duration.ofMillis(3500);
+    /** Repli Tavily/Serper (désactivé par défaut). */
+    static final Duration POST_TIMEOUT = Duration.ofSeconds(5);
+
     private static final HttpClient CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(8))
+            .connectTimeout(CONNECT_TIMEOUT)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .build();
 
@@ -23,7 +34,7 @@ public final class WebJobHttp {
     /** POST JSON (Tavily / Serper fallback) — timeout court, pas de secrets dans l'URL. */
     public static String postJson(String url, String jsonBody) throws Exception {
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(18))
+                .timeout(POST_TIMEOUT)
                 .header("Accept", "application/json")
                 .header("Content-Type", "application/json")
                 .header("User-Agent", "HireLink/1.0 (job-discovery; educational; +https://hirelink.local)")
@@ -39,7 +50,7 @@ public final class WebJobHttp {
 
     private static String get(String url, String accept) throws Exception {
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofSeconds(20))
+                .timeout(READ_TIMEOUT)
                 .header("Accept", accept)
                 .header("User-Agent", "HireLink/1.0 (job-discovery; educational; +https://hirelink.local)")
                 .GET()

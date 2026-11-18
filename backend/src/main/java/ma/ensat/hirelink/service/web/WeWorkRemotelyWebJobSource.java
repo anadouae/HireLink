@@ -29,6 +29,7 @@ public class WeWorkRemotelyWebJobSource implements WebJobSource {
     private static final Pattern DESC = Pattern.compile("<description>([\\s\\S]*?)</description>", Pattern.CASE_INSENSITIVE);
     private static final Pattern REGION = Pattern.compile("<region>([\\s\\S]*?)</region>", Pattern.CASE_INSENSITIVE);
     private static final Pattern CATEGORY = Pattern.compile("<category>([\\s\\S]*?)</category>", Pattern.CASE_INSENSITIVE);
+    private static final Pattern PUB_DATE = Pattern.compile("<pubDate>([\\s\\S]*?)</pubDate>", Pattern.CASE_INSENSITIVE);
 
     private final JobGeoVerifier geo;
     private final WebJobFetchCache cache;
@@ -105,7 +106,7 @@ public class WeWorkRemotelyWebJobSource implements WebJobSource {
                         deep,
                         code(),
                         label(),
-                        homeUrl());
+                        homeUrl()).withDetails(WebJobFields.date(unescape(tag(PUB_DATE, block))), null, null, null);
                 if (!geo.matches(job, countryCode, location)) continue;
                 out.add(job);
                 if (out.size() >= Math.max(limit, 40)) break;

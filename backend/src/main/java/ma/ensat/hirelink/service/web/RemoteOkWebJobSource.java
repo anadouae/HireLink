@@ -88,7 +88,8 @@ public class RemoteOkWebJobSource implements WebJobSource {
                         deep,
                         code(),
                         label(),
-                        homeUrl());
+                        homeUrl()).withDetails(WebJobFields.date(WebJobFields.first(n, "date", "epoch")),
+                        WebJobFields.amount(n.get("salary_min")), WebJobFields.amount(n.get("salary_max")), "USD");
                 if (!geo.matches(job, countryCode, location)) continue;
                 out.add(job);
                 if (out.size() >= Math.max(limit, 20)) break;

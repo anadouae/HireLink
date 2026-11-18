@@ -115,7 +115,7 @@ public class ArbeitnowWebJobSource implements WebJobSource {
                     deep,
                     code(),
                     label(),
-                    homeUrl());
+                    homeUrl()).withDetails(WebJobFields.date(n.get("created_at")), null, null, null);
             if (!geo.matches(job, country, city)) continue;
             out.add(job);
         }

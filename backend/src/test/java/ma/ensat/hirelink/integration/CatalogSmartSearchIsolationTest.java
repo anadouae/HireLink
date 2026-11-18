@@ -37,6 +37,8 @@ import static org.junit.jupiter.api.Assertions.*;
  * Base dédiée ; ne touche ni 8081 ni la démo hirelink.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
+        // Pipeline d'import conservé (désactivé par défaut) : ce test vérifie son comportement quand il est rétabli.
+        "hirelink.catalog.include-imported=true",
         "spring.datasource.url=jdbc:mysql://127.0.0.1:3306/hirelink_smart_search_iso?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectTimeout=8000",
         "spring.datasource.username=root",
         "spring.datasource.password=",

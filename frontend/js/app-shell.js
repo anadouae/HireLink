@@ -238,7 +238,7 @@
         { id: "users", href: "admin.html#users", label: "Comptes", icon: "users" },
         { id: "orgs", href: "admin.html#orgs", label: "Entreprises", icon: "building" },
         { id: "offers", href: "admin.html#offers", label: "Offres", icon: "briefcase" },
-        { id: "external", href: "admin.html#external", label: "Sources externes", icon: "file" },
+        { id: "external", href: "admin.html#external", label: "Recherche web", icon: "file" },
         { id: "moderation", href: "admin.html#moderation", label: "Signalements", icon: "flag" },
         { section: "Référentiel" },
         { id: "plans", href: "admin.html#plans", label: "Plans & factures", icon: "card" },

@@ -94,7 +94,11 @@ public class HimalayasWebJobSource implements WebJobSource {
                         deep,
                         code(),
                         label(),
-                        homeUrl());
+                        homeUrl()).withDetails(WebJobFields.date(WebJobFields.first(n, "pubDate", "publishedAt", "createdAt")),
+                        WebJobFields.amount(WebJobFields.first(n, "minSalary", "salaryMin")),
+                        WebJobFields.amount(WebJobFields.first(n, "maxSalary", "salaryMax")),
+                        firstText(n, "currency", "salaryCurrency"),
+                        WebJobFields.period(firstText(n, "salaryPeriod")));
                 if (!geo.matches(job, countryCode, location)) continue;
                 out.add(job);
                 if (out.size() >= Math.max(limit, 20)) break;
