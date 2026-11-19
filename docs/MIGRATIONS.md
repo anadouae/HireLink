@@ -1,29 +1,34 @@
-# Stratégie migrations HireLink
+# StratÃ©gie migrations HireLink
 
 ## Constat
-`spring.jpa.hibernate.ddl-auto=update` (démo locale) crée automatiquement les tables manquantes. C’est pratique en développement, mais **non auditable** et risqué en production.
+`spring.jpa.hibernate.ddl-auto=update` (dÃ©mo locale) crÃ©e automatiquement les tables manquantes. Câ€™est pratique en dÃ©veloppement, mais **non auditable** et risquÃ© en production.
 
-`application-prod.properties` fixe déjà `ddl-auto=validate`.
+`application-prod.properties` fixe dÃ©jÃ  `ddl-auto=validate`.
 
 ## Cible
-1. **Install propre** : `database/apply-migrations.ps1 -Database <nom> -Fresh` (V000 puis V001…**V006**) puis démarrer avec `validate`.
-2. **Mise à jour** : même script **sans** `-Fresh` — réapplique V001…V006 de façon idempotente.
-3. **Démo actuelle** : conserver `update` jusqu’à bascule explicite.
+1. **Install propre** : `database/apply-migrations.ps1 -Database <nom> -Fresh` (V000 puis V001â€¦**V012**) puis dÃ©marrer avec `validate`.
+2. **Mise Ã  jour** : mÃªme script **sans** `-Fresh` â€” rÃ©applique V001â€¦V012 de faÃ§on idempotente.
+3. **DÃ©mo actuelle** : conserver `update` jusquâ€™Ã  bascule explicite.
 
 ## Fichiers
-`database/migrations/V000` … `V006` + runner `database/apply-migrations.ps1`.
+`database/migrations/V000` â€¦ `V012` (pas de V007) + runner `database/apply-migrations.ps1`.
 
 | Version | Contenu |
 |---|---|
 | V000 | Baseline (uniquement avec `-Fresh`) |
-| V001 | Consentements légaux |
+| V001 | Consentements lÃ©gaux |
 | V002 | Offres externes |
 | V003 | Factures candidat (`organization_id` nullable) |
-| V004 | Qualité URL / quarantaine |
+| V004 | QualitÃ© URL / quarantaine |
 | V005 | Boards ATS |
 | V006 | `catalog_listings` + Pour toi |
+| V008 | Filtres salaire / expÃ©rience / secteur du catalogue |
+| V009 | Messages de la page Support |
+| V010 | Photos de profil en `MEDIUMBLOB` |
+| V011 | AccÃ¨s des entreprises (dÃ©sactivation, retrait) |
+| V012 | Brouillons dâ€™import CV et versions de profil restaurables |
 
-Client SQL : paramètre `-Mysql` (défaut XAMPP). Le runner retire un éventuel BOM UTF-8.
+Client SQL : paramÃ¨tre `-Mysql` (dÃ©faut XAMPP). Le runner retire un Ã©ventuel BOM UTF-8.
 
 ## Exemples
 ```powershell
@@ -32,5 +37,5 @@ Client SQL : paramètre `-Mysql` (défaut XAMPP). Le runner retire un éventuel BOM
 ```
 
 ## Scripts de lancement
-`LANCER-HIRELINK.bat` / `LANCER-HIRELINK-DEMO.bat` : config locale (`update`).  
-Lab `validate` : properties additionnel hors démo + base migrée V000–V006.
+`scripts\LANCER-BACKEND.bat` : config locale (`update`).  
+Lab `validate` : properties additionnel hors dÃ©mo + base migrÃ©e V000â€“V012.

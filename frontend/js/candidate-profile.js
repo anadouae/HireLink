@@ -14,8 +14,14 @@
     if (saveBar) saveBar.classList.toggle("is-clean", !dirty);
   }
 
+  /** Prévient le guide candidat (rappel de la barre du haut + symbole ∞). */
+  function guide(detail) {
+    document.dispatchEvent(new CustomEvent("hirelink:guide", { detail: detail }));
+  }
+
   function bindDirty() {
-    ["pf-level", "pf-first", "pf-last", "pf-phone", "pf-city", "pf-country", "pf-job-title", "pf-presentation", "pf-availability", "pf-email-edit"].forEach((id) => {
+    ["pf-level", "pf-first", "pf-last", "pf-phone", "pf-city", "pf-country", "pf-job-title", "pf-presentation", "pf-availability", "pf-mode", "pf-email-edit",
+      "pf-nat", "pf-birth", "pf-gender", "pf-school", "pf-domain", "pf-grad-year"].forEach((id) => {
       const node = document.getElementById(id);
       if (!node) return;
       node.addEventListener("input", () => setDirty(true));
@@ -88,6 +94,9 @@
   let pendingFile = null;
   let cvObjectUrl = "";
   let hasCv = false;
+  let draftAvailable = false;
+  let currentDraftId = null;
+  let draftSaveTimer = null;
 
   function photoKey() {
     return "hirelink.photo." + meId;
@@ -485,6 +494,7 @@
     const field = document.getElementById("cv-experience");
     if (field && summary) field.value = summary;
     paintAnalysis();
+    scheduleDraftSave();
   }
 
   function readSections() {
@@ -516,12 +526,49 @@
       });
     }
     const eduNew = sectionValue(sections, "education");
-    if (eduNew && eduNew.trim().length > 8) {
+    const structuredEducation = {
+      school: sectionValue(sections, "education_school"),
+      degree: sectionValue(sections, "education_degree"),
+      domain: sectionValue(sections, "education_domain"),
+      startDate: sectionValue(sections, "education_start"),
+      endDate: sectionValue(sections, "education_end"),
+      graduationYear: sectionValue(sections, "graduation_year"),
+    };
+    if (Object.values(structuredEducation).some((value) => value.trim())) {
+      extractProposals.push({
+        id: "education_structured",
+        label: "Formation structurée",
+        current: educations.map((e) => [e.school, e.degree, e.domain, e.startDate, e.endDate].filter(Boolean).join(" · ")).join(" ; "),
+        proposed: Object.values(structuredEducation).filter(Boolean).join(" · "),
+        accepted: false,
+        education: structuredEducation,
+      });
+    } else if (eduNew && eduNew.trim().length > 8) {
       extractProposals.push({
         id: "education_text",
         label: "Formation (texte extrait)",
         current: educations.map((e) => [e.degree, e.school].filter(Boolean).join(" · ")).join(" ; "),
         proposed: eduNew,
+        accepted: false,
+      });
+    }
+    const preferredLocations = sectionValue(sections, "preferred_locations");
+    if (preferredLocations && preferredLocations.trim()) {
+      extractProposals.push({
+        id: "preferred_locations",
+        label: "Lieux recherchés",
+        current: (document.getElementById("pf-loc") || {}).value || "",
+        proposed: preferredLocations,
+        accepted: false,
+      });
+    }
+    const workMode = sectionValue(sections, "work_mode");
+    if (workMode && workMode.trim()) {
+      extractProposals.push({
+        id: "work_mode",
+        label: "Mode de travail",
+        current: (document.getElementById("pf-mode") || {}).value || "",
+        proposed: workMode,
         accepted: false,
       });
     }
@@ -542,23 +589,66 @@
           current: false,
           missions: "",
           achievements: "",
+          datesIncomplete: !!row.datesIncomplete,
         },
       });
     });
+    const expected = [
+      ["identity", "Identité", sectionValue(sections, "identity")],
+      ["experience", "Expérience", sectionValue(sections, "experience") || (rows || []).length],
+      ["education", "Formation", eduNew || Object.values(structuredEducation).join("")],
+      ["skills", "Compétences", skillsNew],
+      ["languages", "Langues", sectionValue(sections, "languages")],
+      ["projects", "Projets académiques", sectionValue(sections, "projects")],
+    ];
+    expected.forEach(([id, label, value]) => {
+      if (value) return;
+      extractProposals.push({
+        id: "missing_" + id,
+        label,
+        current: "",
+        proposed: "Non détecté",
+        status: "MISSING",
+        missing: true,
+      });
+    });
+    extractProposals.forEach((proposal) => {
+      proposal.status = proposal.status || (proposal.accepted ? "ACCEPTED" : "DETECTED");
+      if (proposal.status === "DETECTED" && proposal.experience && proposal.experience.datesIncomplete) {
+        proposal.status = "VERIFY";
+      }
+      if (proposal.status === "DETECTED" && proposal.education
+          && !proposal.education.startDate && !proposal.education.endDate
+          && proposal.education.graduationYear) {
+        proposal.status = "VERIFY";
+      }
+      delete proposal.accepted;
+    });
     paintExtractReview();
   }
+
+  const extractStatusLabels = {
+    DETECTED: "Détecté",
+    ACCEPTED: "Accepté",
+    MODIFIED: "Modifié",
+    REFUSED: "Refusé",
+    MISSING: "Manquant",
+    VERIFY: "À vérifier",
+  };
 
   function paintExtractReview() {
     const box = document.getElementById("cv-extract-review");
     const items = document.getElementById("cv-extract-items");
     if (!box || !items) return;
-    if (!extractProposals.length) {
-      box.hidden = true;
-      items.replaceChildren();
-      return;
-    }
     box.hidden = false;
     items.replaceChildren();
+    if (!extractProposals.length) {
+      const empty = document.createElement("p");
+      empty.className = "muted";
+      empty.textContent = "Non détecté dans ce CV. Vous pouvez l’ajouter à la main.";
+      items.appendChild(empty);
+      return;
+    }
     extractProposals.forEach((p, idx) => {
       const row = document.createElement("div");
       row.className = "cv-extract-item";
@@ -570,22 +660,28 @@
       if (p.current) {
         const was = document.createElement("span");
         was.className = "was";
-        was.textContent = p.current.slice(0, 160);
+        was.textContent = "Actuel : " + p.current.slice(0, 160);
         body.appendChild(was);
       }
       const prop = document.createElement("span");
-      prop.textContent = p.proposed.slice(0, 240);
+      prop.textContent = "CV : " + p.proposed.slice(0, 240);
       body.append(title, document.createElement("br"), prop);
       diff.appendChild(body);
-      const toggle = document.createElement("button");
-      toggle.type = "button";
-      toggle.className = "btn btn-sm " + (p.accepted ? "btn-primary" : "btn-soft");
-      toggle.textContent = p.accepted ? "Acceptée" : "Accepter";
-      toggle.addEventListener("click", () => {
-        extractProposals[idx].accepted = !extractProposals[idx].accepted;
+      const status = document.createElement("select");
+      status.className = "form-control cv-extract-status";
+      status.setAttribute("aria-label", "État de " + p.label);
+      Object.entries(extractStatusLabels).forEach(([value, label]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = label;
+        option.selected = value === (p.status || "DETECTED");
+        status.appendChild(option);
+      });
+      status.addEventListener("change", () => {
+        extractProposals[idx].status = status.value;
         paintExtractReview();
       });
-      row.append(diff, toggle);
+      row.append(diff, status);
       items.appendChild(row);
     });
   }
@@ -593,13 +689,33 @@
   function applyAcceptedExtract() {
     let changed = false;
     extractProposals.forEach((p) => {
-      if (!p.accepted) return;
+      if (p.missing || !["ACCEPTED", "MODIFIED"].includes(p.status)) return;
       changed = true;
       if (p.id === "skills") {
         const merged = mergeCsv((document.getElementById("pf-skills") || {}).value, p.proposed);
         mountSkills(merged);
+      } else if (p.id === "preferred_locations") {
+        const loc = document.getElementById("pf-loc");
+        if (loc) {
+          loc.value = p.proposed;
+          if (pickers.loc) pickers.loc.refresh();
+        }
+      } else if (p.id === "work_mode") {
+        const mode = document.getElementById("pf-mode");
+        if (mode) mode.value = p.proposed;
       } else if (p.experience) {
         experiences.push(p.experience);
+      } else if (p.id === "education_structured") {
+        educations.push({
+          school: p.education.school,
+          degree: p.education.degree,
+          domain: p.education.domain,
+          startDate: p.education.startDate,
+          endDate: p.education.endDate,
+          description: "Lu dans votre CV — à vérifier.",
+        });
+        const graduation = document.getElementById("pf-grad-year");
+        if (graduation && p.education.graduationYear) graduation.value = p.education.graduationYear;
       } else if (p.id === "education_text") {
         educations.push({
           school: "",
@@ -607,18 +723,18 @@
           domain: "",
           startDate: "",
           endDate: "",
-          description: "Issu de l’extraction CV — à vérifier.",
+          description: "Lu dans votre CV — à vérifier.",
         });
       }
     });
     if (changed) {
       setDirty(true);
       renderCareer();
-      HireLink.toast("Extraction", "Propositions acceptées ajoutées au profil. Enregistrez pour conserver.", "ok");
+      HireLink.toast("Lecture du CV", "Propositions acceptées ajoutées au profil. Enregistrez pour conserver.", "ok");
     } else {
-      HireLink.toast("Extraction", "Aucune proposition acceptée.", "info");
+      HireLink.toast("Lecture du CV", "Aucune proposition acceptée.", "info");
     }
-    extractProposals = extractProposals.filter((p) => !p.accepted);
+    extractProposals = extractProposals.filter((p) => !["ACCEPTED", "MODIFIED"].includes(p.status));
     paintExtractReview();
   }
 
@@ -685,8 +801,10 @@
     hasCv = !!profile.cvFileName;
     setCvDeleteVisible(!!profile.cvFileName);
     if (!profile.cvFileName) {
-      if (label) label.textContent = "Formats : PDF (texte), TXT, MD, image. Pas de DOCX.";
+      if (label) label.textContent = "Formats : PDF, TXT, MD ou image.";
       showCvEmpty();
+      // Premier passage sans CV : on commence par l'étape 1 (le CV), sauf si une vue a été demandée.
+      if (!location.hash && typeof setProfileView === "function") setProfileView("cv");
       return;
     }
     if (label) label.textContent = profile.cvFileName;
@@ -727,6 +845,18 @@
     }
   }
 
+  /** Libellés affichés pour chaque point du CV : [titre, si complet, si à compléter]. */
+  const CV_CHECK_FR = {
+    cv_file: ["CV ajouté", "Votre CV est enregistré.", "Ajoutez votre CV."],
+    text_extractable: ["CV lisible", "Le contenu de votre CV a pu être lu.", "Le CV n’a pas pu être lu : complétez votre profil à la main ou ajoutez un PDF texte."],
+    contact: ["Coordonnées", "E-mail et téléphone ou ville renseignés.", "Ajoutez un téléphone ou une ville."],
+    identity_section: ["Identité", "Nom et présentation renseignés.", "Complétez la partie identité."],
+    experience_section: ["Expériences", "Au moins une expérience renseignée.", "Ajoutez au moins une expérience."],
+    education_section: ["Formation", "Au moins une formation renseignée.", "Ajoutez au moins une formation."],
+    skills: ["Compétences", "Au moins 3 compétences.", "Ajoutez au moins 3 compétences."],
+    languages: ["Langues", "Langues renseignées.", "Indiquez les langues que vous parlez."],
+  };
+
   async function paintQuality() {
     try {
       const q = await HireLinkAPI.api("/me/cv-quality");
@@ -736,12 +866,14 @@
       const list = document.getElementById("cv-findings");
       if (scoreEl) scoreEl.textContent = (q.passed || 0) + " / " + (q.total || 0);
       if (bar) bar.style.width = q.total ? Math.round((100 * q.passed) / q.total) + "%" : "0%";
-      if (legend) legend.textContent = q.disclaimer || "Vérification technique déterministe.";
+      if (legend) legend.textContent = "Une liste simple pour ne rien oublier. Elle ne modifie pas le classement des offres.";
       if (list) {
         list.innerHTML = (q.checks || []).map((c) => {
+          const fr = CV_CHECK_FR[c.id] || null;
+          const label = fr ? fr[0] : String(c.label || "");
+          const detail = fr ? (c.ok ? fr[1] : fr[2]) : String(c.detail || "");
           return '<li class="' + (c.ok ? "is-ok" : "is-ko") + '"><span><strong>' +
-            String(c.label || "").replace(/</g, "") + "</strong> — " +
-            String(c.detail || "").replace(/</g, "") + "</span></li>";
+            label.replace(/</g, "") + "</strong> — " + detail.replace(/</g, "") + "</span></li>";
         }).join("");
       }
     } catch (_) {
@@ -752,8 +884,8 @@
   function paintAnalysisLocal() {
     const s = sectionState();
     const checks = [
-      { label: "Document CV", ok: hasCv, detail: hasCv ? "Fichier associé." : "Aucun CV déposé." },
-      { label: "Texte / sections", ok: (s.identity + s.experience + s.education + s.skills).length > 40, detail: "Sections confirmées ou à compléter." },
+      { label: "CV ajouté", ok: hasCv, detail: hasCv ? "Votre CV est enregistré." : "Ajoutez votre CV." },
+      { label: "CV lisible", ok: (s.identity + s.experience + s.education + s.skills).length > 40, detail: "Parties du CV confirmées ou à compléter." },
       { label: "Compétences", ok: s.skills.split(/[,;\n]/).filter((x) => x.trim()).length >= 3, detail: "Au moins 3 compétences." },
     ];
     const ok = checks.filter((c) => c.ok).length;
@@ -787,6 +919,124 @@
     HireLink.toast(title, message, "ok");
   }
 
+  function draftPayload() {
+    return {
+      sections: readSections(),
+      extractProposals,
+    };
+  }
+
+  async function saveCvDraft(step, file) {
+    const fd = new FormData();
+    if (file) fd.append("file", file);
+    fd.append("step", step || "REVIEW");
+    fd.append("payload", JSON.stringify(draftPayload()));
+    try {
+      const res = await HireLinkAPI.authFetch("/me/cv-draft", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || data.error || "Enregistrement du brouillon impossible");
+      draftAvailable = true;
+      currentDraftId = data && data.draft ? data.draft.id : currentDraftId;
+      const button = document.getElementById("cv-resume-draft");
+      if (button) button.hidden = false;
+      const label = document.getElementById("cv-file-label");
+      if (label && step === "REVIEW") label.textContent = (pendingFile || file ? (pendingFile || file).name : "CV") + " · brouillon enregistré";
+      return data;
+    } catch (err) {
+      HireLink.toast("Brouillon CV", err.message, "danger");
+      return null;
+    }
+  }
+
+  function scheduleDraftSave() {
+    if (!draftAvailable && !pendingFile) return;
+    clearTimeout(draftSaveTimer);
+    draftSaveTimer = setTimeout(() => saveCvDraft("REVIEW"), 700);
+  }
+
+  async function deleteCvDraft() {
+    clearTimeout(draftSaveTimer);
+    try {
+      await HireLinkAPI.api("/me/cv-draft", { method: "DELETE" });
+      draftAvailable = false;
+      currentDraftId = null;
+      const button = document.getElementById("cv-resume-draft");
+      if (button) button.hidden = true;
+    } catch (err) {
+      HireLink.toast("Brouillon CV", "Le brouillon n’a pas pu être supprimé : " + err.message, "danger");
+    }
+  }
+
+  async function loadCvDraft() {
+    try {
+      const data = await HireLinkAPI.api("/me/cv-draft");
+      const draft = data && data.draft;
+      const button = document.getElementById("cv-resume-draft");
+      if (!draft) {
+        draftAvailable = false;
+        currentDraftId = null;
+        if (button) button.hidden = true;
+        return;
+      }
+      draftAvailable = true;
+      currentDraftId = draft.id || null;
+      if (button) {
+        button.hidden = false;
+        button.textContent = "Reprendre mon import";
+      }
+      const label = document.getElementById("cv-file-label");
+      if (label) label.textContent = (draft.fileName || "CV") + " · brouillon disponible";
+    } catch (err) {
+      HireLink.toast("Brouillon CV", err.message, "danger");
+    }
+  }
+
+  async function resumeCvDraft() {
+    const data = await HireLinkAPI.api("/me/cv-draft");
+    const draft = data && data.draft;
+    if (!draft) {
+      draftAvailable = false;
+      currentDraftId = null;
+      const button = document.getElementById("cv-resume-draft");
+      if (button) button.hidden = true;
+      HireLink.toast("Brouillon CV", "Aucun brouillon à reprendre.", "info");
+      return;
+    }
+    const payload = draft.payload || {};
+    currentDraftId = draft.id || null;
+    const sections = payload.sections || payload;
+    fillSections(sections, sections.experiences || payload.experiences || [], payload.extractionNote || "");
+    if (Array.isArray(payload.extractProposals)) {
+      extractProposals = payload.extractProposals;
+      paintExtractReview();
+    }
+    if (draft.fileName) {
+      const response = await HireLinkAPI.authFetch("/me/cv-draft/file");
+      if (!response.ok) throw new Error("Fichier du brouillon introuvable");
+      const blob = await response.blob();
+      pendingFile = new File([blob], draft.fileName, { type: blob.type || "application/octet-stream" });
+      if (cvObjectUrl) URL.revokeObjectURL(cvObjectUrl);
+      cvObjectUrl = URL.createObjectURL(blob);
+      const name = draft.fileName.toLowerCase();
+      if (/\.(png|jpe?g|webp|gif)$/.test(name)) showDocument(cvObjectUrl, "image");
+      else if (name.endsWith(".pdf")) showDocument(cvObjectUrl, "pdf");
+      else showDocument(await blob.text(), "text");
+      hasCv = true;
+      setConfirmCv(true);
+      document.getElementById("cv-workbench").hidden = false;
+      document.getElementById("cv-empty").innerHTML = "";
+      document.getElementById("cv-file-label").textContent = draft.fileName + " · import repris";
+    }
+    const edit = document.querySelector("#cv-section .cv-edit");
+    if (edit) {
+      edit.open = true;
+      edit.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    paintProgress();
+    guide({ phase: "review" });
+    HireLink.toast("Import repris", "Votre CV et les sections précédemment lues sont de nouveau disponibles.", "ok");
+  }
+
   async function load() {
     try {
       const p = await HireLinkAPI.api("/me");
@@ -802,6 +1052,13 @@
       document.getElementById("pf-job-title").value = p.jobTitle || "";
       document.getElementById("pf-presentation").value = p.companyPresentation || "";
       document.getElementById("pf-availability").value = p.availability || "";
+      document.getElementById("pf-mode").value = ["Sur site", "Hybride", "Télétravail"].includes(p.workMode) ? p.workMode : "";
+      document.getElementById("pf-nat").value = p.nationality || "";
+      document.getElementById("pf-birth").value = p.birthDate || "";
+      document.getElementById("pf-gender").value = p.gender || "";
+      document.getElementById("pf-school").value = p.school || "";
+      document.getElementById("pf-domain").value = p.educationDomain || "";
+      document.getElementById("pf-grad-year").value = p.graduationYear != null ? p.graduationYear : "";
       if (p.pendingEmail) {
         const pend = document.getElementById("pf-email-pending");
         const box = document.getElementById("pf-email-change");
@@ -835,9 +1092,11 @@
       }
       Object.values(pickers).forEach((x) => x.refresh());
       paintFacts(p);
+      if (window.HireLinkSuggest) HireLinkSuggest.boot();
       showPhoto(localStorage.getItem(photoKey()), p.fullName);
       await loadCareer();
       await showSavedCv(p);
+      await loadCvDraft();
       setDirty(false);
       paintProgress();
     } catch (err) {
@@ -845,46 +1104,93 @@
     }
   }
 
+  function currentProfilePayload() {
+    const graduation = parseInt(document.getElementById("pf-grad-year").value, 10);
+    return {
+      firstName: document.getElementById("pf-first").value.trim(),
+      lastName: document.getElementById("pf-last").value.trim(),
+      phone: document.getElementById("pf-phone").value.trim(),
+      city: document.getElementById("pf-city").value.trim(),
+      country: document.getElementById("pf-country").value.trim(),
+      jobTitle: document.getElementById("pf-job-title").value.trim(),
+      companyPresentation: document.getElementById("pf-presentation").value.trim(),
+      availability: document.getElementById("pf-availability").value.trim(),
+      workMode: document.getElementById("pf-mode").value,
+      skills: document.getElementById("pf-skills").value,
+      soughtRoles: document.getElementById("pf-roles").value,
+      preferredLocations: document.getElementById("pf-loc").value,
+      preferredContracts: document.getElementById("pf-contracts").value,
+      experienceLevel: document.getElementById("pf-level").value,
+      nationality: document.getElementById("pf-nat").value.trim(),
+      birthDate: document.getElementById("pf-birth").value,
+      gender: document.getElementById("pf-gender").value,
+      school: document.getElementById("pf-school").value.trim(),
+      educationDomain: document.getElementById("pf-domain").value.trim(),
+      graduationYear: Number.isNaN(graduation) ? null : graduation,
+    };
+  }
+
+  async function commitCvImport() {
+    syncCareerFromDom();
+    const payload = {
+      draftId: currentDraftId,
+      profile: currentProfilePayload(),
+      career: {
+        experiences,
+        educations,
+        presentation: document.getElementById("pf-presentation").value.trim(),
+        jobTitle: document.getElementById("pf-job-title").value.trim(),
+        country: document.getElementById("pf-country").value.trim(),
+      },
+      sections: readSections(),
+      items: extractProposals,
+    };
+    const fd = new FormData();
+    if (pendingFile) fd.append("file", pendingFile);
+    fd.append("payload", JSON.stringify(payload));
+    const res = await HireLinkAPI.authFetch("/me/cv/commit", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || data.error || "Enregistrement unique impossible");
+    pendingFile = null;
+    hasCv = true;
+    setCvDeleteVisible(true);
+    extractProposals = [];
+    setDirty(false);
+    await deleteCvDraft();
+    toastSaved("CV et profil enregistrés", "Le fichier, les sections et le profil ont été sauvegardés ensemble.");
+    paintAnalysis();
+    paintProgress();
+    guide({ refresh: true });
+    return data;
+  }
+
   document.getElementById("profile-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     syncCareerFromDom();
-    const skills = document.getElementById("pf-skills").value;
     const btn = document.getElementById("btn-save-profile");
     if (btn) btn.disabled = true;
     try {
-      await HireLinkAPI.api("/me", {
-        method: "PATCH",
-        body: {
-          firstName: document.getElementById("pf-first").value.trim(),
-          lastName: document.getElementById("pf-last").value.trim(),
-          phone: document.getElementById("pf-phone").value.trim(),
-          city: document.getElementById("pf-city").value.trim(),
-          country: document.getElementById("pf-country").value.trim(),
-          jobTitle: document.getElementById("pf-job-title").value.trim(),
-          companyPresentation: document.getElementById("pf-presentation").value.trim(),
-          availability: document.getElementById("pf-availability").value.trim(),
-          skills,
-          soughtRoles: document.getElementById("pf-roles").value,
-          preferredLocations: document.getElementById("pf-loc").value,
-          preferredContracts: document.getElementById("pf-contracts").value,
-          experienceLevel: document.getElementById("pf-level").value,
-        },
-      });
-      await HireLinkAPI.api("/me/career", {
-        method: "PUT",
-        body: {
-          experiences,
-          educations,
-          presentation: document.getElementById("pf-presentation").value.trim(),
-          jobTitle: document.getElementById("pf-job-title").value.trim(),
-          country: document.getElementById("pf-country").value.trim(),
-        },
-      });
+      const committedImport = pendingFile || hasCv;
+      if (committedImport) await commitCvImport();
+      else {
+        await HireLinkAPI.api("/me", { method: "PATCH", body: currentProfilePayload() });
+        await HireLinkAPI.api("/me/career", {
+          method: "PUT",
+          body: {
+            experiences,
+            educations,
+            presentation: document.getElementById("pf-presentation").value.trim(),
+            jobTitle: document.getElementById("pf-job-title").value.trim(),
+            country: document.getElementById("pf-country").value.trim(),
+          },
+        });
+      }
       const name = (document.getElementById("pf-first").value + " " + document.getElementById("pf-last").value).trim();
       if (name) document.getElementById("pf-name").textContent = name;
       setDirty(false);
-      toastSaved("Profil enregistré", "Parcours et préférences à jour");
+      if (!committedImport) toastSaved("Profil enregistré", "Parcours et préférences à jour");
       paintProgress();
+      guide({ refresh: true });
       paintAnalysis();
     } catch (err) {
       HireLink.toast("Erreur", err.message, "danger");
@@ -994,6 +1300,8 @@
     pendingFile = file;
     setConfirmCv(true);
     document.getElementById("cv-file-label").textContent = file.name + " · lecture en cours";
+    await saveCvDraft("READING", file);
+    guide({ phase: "extracting" });
     const fd = new FormData();
     fd.append("file", file);
     try {
@@ -1008,9 +1316,10 @@
       const chars = data.chars || 0;
       document.getElementById("cv-file-label").textContent = file.name + " · " + chars + " caractères lus";
       if (chars < 20 && (name.endsWith(".pdf") || /\.(png|jpe?g|webp|gif)$/.test(name))) {
-        HireLink.toast("Extraction", "Document peu ou pas lisible (scan sans OCR). Complétez le profil à la main.", "info");
+        HireLink.toast("Lecture du CV", "Ce document est difficile à lire. Complétez votre profil à la main ou ajoutez un PDF texte.", "info");
       }
       fillSections(data.sections || {}, data.experiences || [], data.extractionNote || "");
+      await saveCvDraft("REVIEW");
       if (cvObjectUrl) URL.revokeObjectURL(cvObjectUrl);
       cvObjectUrl = URL.createObjectURL(file);
       if (file.type.indexOf("image/") === 0 || /\.(png|jpe?g|webp|gif)$/.test(name)) showDocument(cvObjectUrl, "image");
@@ -1025,7 +1334,9 @@
       }
       HireLink.toast("CV lu", "Relisez les propositions, acceptez ou refusez, puis confirmez", "ok");
       paintProgress();
+      guide({ phase: "review" });
     } catch (err) {
+      guide({ phase: "clear" });
       document.getElementById("cv-file-label").textContent = file.name + " · " + err.message;
       HireLink.toast("Import CV", err.message, "danger");
     }
@@ -1033,11 +1344,28 @@
 
   const extractApply = document.getElementById("cv-extract-apply");
   if (extractApply) extractApply.addEventListener("click", applyAcceptedExtract);
+  const extractAccept = document.getElementById("cv-extract-accept-all");
+  if (extractAccept) extractAccept.addEventListener("click", () => {
+    extractProposals.forEach((proposal) => {
+      if (!proposal.missing) proposal.status = "ACCEPTED";
+    });
+    applyAcceptedExtract();
+  });
   const extractRefuse = document.getElementById("cv-extract-refuse-all");
   if (extractRefuse) extractRefuse.addEventListener("click", () => {
-    extractProposals = [];
+    extractProposals.forEach((proposal) => { proposal.status = "REFUSED"; });
     paintExtractReview();
-    HireLink.toast("Extraction", "Toutes les propositions ont été refusées.", "info");
+    HireLink.toast("Lecture du CV", "Toutes les propositions ont été refusées.", "info");
+  });
+  const extractManual = document.getElementById("cv-extract-add-manual");
+  if (extractManual) extractManual.addEventListener("click", () => {
+    const edit = document.querySelector("#cv-section .cv-edit") || document.querySelector(".cv-edit");
+    if (edit) edit.open = true;
+    const firstField = document.getElementById("cv-identity") || document.getElementById("cv-education");
+    if (firstField) {
+      firstField.focus();
+      firstField.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
   });
 
   const cvDelete = document.getElementById("cv-delete");
@@ -1048,11 +1376,13 @@
       try {
         await HireLinkAPI.api("/me/cv", { method: "DELETE" });
         pendingFile = null;
+        await deleteCvDraft();
         if (cvObjectUrl) URL.revokeObjectURL(cvObjectUrl);
         cvObjectUrl = "";
         showCvEmpty();
         setConfirmCv(false);
         HireLink.toast("CV", "CV retiré de votre espace", "ok");
+        guide({ refresh: true });
       } catch (err) {
         HireLink.toast("CV", err.message, "danger");
       }
@@ -1068,34 +1398,24 @@
 
   document.getElementById("cv-sections").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const btn = document.getElementById("btn-confirm-cv");
-    if (btn) btn.disabled = true;
-    const fd = new FormData();
-    if (pendingFile) fd.append("file", pendingFile);
-    fd.append("sections", JSON.stringify(readSections()));
+    const form = document.getElementById("profile-form");
+    if (form && typeof form.requestSubmit === "function") form.requestSubmit();
+  });
+
+  const cvSections = document.getElementById("cv-sections");
+  if (cvSections) {
+    cvSections.addEventListener("input", scheduleDraftSave);
+    cvSections.addEventListener("change", scheduleDraftSave);
+  }
+  const resumeDraft = document.getElementById("cv-resume-draft");
+  if (resumeDraft) resumeDraft.addEventListener("click", async () => {
+    resumeDraft.disabled = true;
     try {
-      const res = await HireLinkAPI.authFetch("/me/cv", {
-        method: "POST",
-        body: fd,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || data.error || "Confirmation impossible");
-      pendingFile = null;
-      hasCv = true;
-      setCvDeleteVisible(true);
-      if (data.skills) {
-        document.getElementById("pf-skills").value = data.skills;
-        mountSkills(data.skills);
-      }
-      const box = document.getElementById("cv-empty");
-      if (box) box.innerHTML = "<p class='muted'>Sections ajoutées au profil.</p>";
-      toastSaved("CV confirmé", "Les sections font partie du profil");
-      paintAnalysis();
-      paintProgress();
+      await resumeCvDraft();
     } catch (err) {
-      HireLink.toast("CV", err.message, "danger");
+      HireLink.toast("Brouillon CV", err.message, "danger");
     } finally {
-      if (btn) btn.disabled = false;
+      resumeDraft.disabled = false;
     }
   });
 
@@ -1204,7 +1524,8 @@
       if (btn) setProfileView(btn.getAttribute("data-profile-view"));
     });
   }
-  if (location.hash === "#cv") setProfileView("cv");
+  window.setCandidateProfileView = setProfileView;
+  if (location.hash === "#cv" || location.hash === "#cv-section") setProfileView("cv");
 
   bindDirty();
   setDirty(false);

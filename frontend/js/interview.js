@@ -299,7 +299,7 @@
       let lastData = null;
       const ok = await HireLink.openModal({
         title: "Reporter l’entretien",
-        description: "Nouveau créneau obligatoire. L’ancien reste dans l’historique. L’e-mail n’est jamais annoncé comme « envoyé » sans confirmation SMTP.",
+        description: "Choisissez un nouveau créneau. L’ancien reste visible dans l’historique.",
         bodyHtml: '<div id="iv-slot"></div>',
         confirmLabel: "Reporter le créneau",
         large: true,

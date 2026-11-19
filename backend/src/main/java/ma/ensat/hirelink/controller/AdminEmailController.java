@@ -8,6 +8,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -32,12 +33,47 @@ public class AdminEmailController {
         this.outbox = outbox;
     }
 
+    public record PageOut(List<Row> rows, long total, int page, int size, int pages, List<String> kinds,
+                          java.util.Map<String, Long> counts) {}
+
+    /**
+     * Journal des e-mails, filtré côté serveur. Les dates (AAAA-MM-JJ) sont des jours locaux
+     * Africa/Casablanca ; « to » est inclus.
+     */
     @GetMapping
-    public List<Row> latest() {
-        return outbox.findAllByOrderByCreatedAtDescIdDesc(PageRequest.of(0, PAGE_SIZE)).stream()
+    public PageOut latest(
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String kind,
+            @RequestParam(required = false) String q,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size
+    ) {
+        Instant fromAt = AdminDates.dayStart(from);
+        Instant toAt = AdminDates.dayEndExclusive(to);
+        SentEmail.Status st = null;
+        if (status != null && !status.isBlank()) {
+            try {
+                st = SentEmail.Status.valueOf(status.trim().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Statut inconnu");
+            }
+        }
+        String k = kind == null || kind.isBlank() ? null : kind.trim().toUpperCase();
+        String like = q == null || q.isBlank() ? null : "%" + q.trim().toLowerCase() + "%";
+        int safe = Math.min(PAGE_SIZE, Math.max(5, size));
+        var result = outbox.search(fromAt, toAt, st, k, like, PageRequest.of(Math.max(0, page), safe));
+        List<Row> rows = result.getContent().stream()
                 .map(e -> new Row(e.getId(), e.getRecipient(), e.getSubject(), e.getKind(), e.getStatus().name(), e.getError(),
                         e.getCreatedAt(), e.getBodyHtml() != null))
                 .toList();
+        java.util.Map<String, Long> counts = new java.util.LinkedHashMap<>();
+        for (SentEmail.Status s : SentEmail.Status.values()) {
+            counts.put(s.name(), outbox.search(fromAt, toAt, s, k, like, PageRequest.of(0, 1)).getTotalElements());
+        }
+        return new PageOut(rows, result.getTotalElements(), result.getNumber(), safe, result.getTotalPages(),
+                outbox.distinctKinds(), counts);
     }
 
     @GetMapping("/{id}")

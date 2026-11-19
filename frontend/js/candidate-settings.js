@@ -1,284 +1,138 @@
+/** Paramètres candidat : alertes, apparence, formule et factures, données et sécurité. Le profil et le CV ont leur propre page. */
 (function () {
-  const session = HireLinkApp.mount({});
+  const RC = HireLinkApp;
+  const session = RC.mount({ active: "settings", title: "Paramètres" });
   if (!session) return;
-
-  document.querySelectorAll("[data-settings]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-settings");
-      document.querySelectorAll(".settings-panel").forEach((panel) => {
-        panel.hidden = panel.id !== "set-" + id;
-      });
-      document.querySelectorAll("[data-settings]").forEach((other) => {
-        other.classList.toggle("is-on", other === btn);
-      });
-    });
-  });
+  const $ = (id) => document.getElementById(id);
+  const TABS = ["alertes", "apparence", "plans", "donnees"];
+  // Anciennes ancres (liens d'e-mails, favoris) : on les redirige vers l'onglet qui porte la même chose aujourd'hui.
+  const LEGACY = { privacy: "alertes", parameters: "alertes", notifications: "alertes", "set-plans": "plans", compte: "donnees" };
+  // Le profil, le parcours et le CV ne sont plus ici : ces anciennes ancres ouvrent la page Profil & CV.
+  const MOVED = { account: "candidate-profile.html#profil", search: "candidate-profile.html#profil", parcours: "candidate-profile.html#profil", cv: "candidate-profile.html#cv", "set-cv": "candidate-profile.html#cv" };
 
   function openTab(id) {
-    const btn = document.querySelector('[data-settings="' + id + '"]');
-    if (btn) {
-      btn.click();
-      return;
-    }
-    document.querySelectorAll(".settings-panel").forEach((panel) => {
-      panel.hidden = panel.id !== "set-" + id;
+    document.querySelectorAll(".rc-tab").forEach((b) => {
+      const on = b.dataset.t === id;
+      b.classList.toggle("is-on", on);
+      b.setAttribute("aria-selected", on ? "true" : "false");
     });
-    document.querySelectorAll("[data-settings]").forEach((other) => other.classList.remove("is-on"));
+    document.querySelectorAll(".rc-panel").forEach((p) => (p.hidden = p.id !== "tab-" + id));
   }
+  document.querySelector(".rc-tabs").addEventListener("click", (e) => {
+    const b = e.target.closest(".rc-tab");
+    if (!b) return;
+    openTab(b.dataset.t);
+    history.replaceState(null, "", "#" + b.dataset.t);
+  });
   function applyHash() {
-    const hash = (location.hash || "").replace("#", "");
-    if (hash === "plans" || hash === "set-plans") openTab("plans");
-    else if (hash === "cv" || hash === "set-cv") openTab("cv");
-    else if (hash === "search" || hash === "parcours") openTab("search");
-    else if (hash === "privacy" || hash === "parameters") openTab("privacy");
+    const h = location.hash.slice(1);
+    if (MOVED[h]) { location.replace(MOVED[h]); return; }
+    const id = LEGACY[h] || h;
+    openTab(TABS.includes(id) ? id : "alertes");
   }
   applyHash();
   window.addEventListener("hashchange", applyHash);
 
-  function refreshBilling() {
-    const prem = HireLinkAPI.isPremium();
-    const essentiel = document.querySelector('[data-plan-mark="essentiel"]');
-    const performance = document.querySelector('[data-plan-mark="performance"]');
-    if (essentiel) essentiel.textContent = prem ? "Toujours disponible" : "Formule en cours";
-    if (performance) performance.textContent = prem ? "Formule en cours" : "À activer";
-    const foldE = document.getElementById("fold-essentiel");
-    const foldP = document.getElementById("fold-performance");
-    if (foldE) foldE.open = !prem;
-    if (foldP) foldP.open = !!prem;
-    const cancel = document.getElementById("btn-billing-cancel");
-    const go = document.getElementById("btn-billing-premium");
-    if (cancel) cancel.hidden = !prem;
-    if (go) go.hidden = !!prem;
-  }
-
+  /* Alertes */
   HireLinkAPI.api("/me")
-    .then((p) => {
-      const bits = String(p.fullName || "").trim().split(/\s+/);
-      document.getElementById("set-first").value = p.firstName || bits[0] || "";
-      document.getElementById("set-last").value = p.lastName || bits.slice(1).join(" ") || "";
-      document.getElementById("set-email").value = p.email || session.email || "";
-      showSettingsCv(p);
-      document.getElementById("set-nat").value = p.nationality || "";
-      document.getElementById("set-city").value = p.city || "";
-      document.getElementById("set-birth").value = p.birthDate || "";
-      document.getElementById("set-gender").value = p.gender || "";
-      const dial = (p.phone || "").match(/^\+(\d+)/);
-      const country = document.getElementById("set-phone-country");
-      if (p.phoneCountry && dial) {
-        const wanted = p.phoneCountry + "|+" + dial[1];
-        if ([].some.call(country.options, (o) => o.value === wanted)) country.value = wanted;
-      }
-      document.getElementById("set-phone").value = dial ? (p.phone || "").replace(/^\+\d+/, "") : (p.phone || "");
-      document.getElementById("set-school").value = p.school || "";
-      const levelSel = document.getElementById("set-level");
-      const level = p.experienceLevel || "";
-      if (level && ![].some.call(levelSel.options, (o) => o.value === level)) {
-        const opt = document.createElement("option");
-        opt.value = level;
-        opt.textContent = level;
-        levelSel.appendChild(opt);
-      }
-      levelSel.value = level;
-      document.getElementById("set-domain").value = p.educationDomain || "";
-      document.getElementById("set-grad-year").value = p.graduationYear != null ? p.graduationYear : "";
-      document.getElementById("set-mode").value = p.workMode || "";
-      const availSel = document.getElementById("set-avail");
-      const avail = p.availability || "";
-      if (avail && ![].some.call(availSel.options, (o) => o.value === avail)) {
-        const opt = document.createElement("option");
-        opt.value = avail;
-        opt.textContent = /^\d{4}-\d{2}-\d{2}$/.test(avail) ? ("À partir du " + avail) : avail;
-        availSel.appendChild(opt);
-      }
-      availSel.value = avail;
-      document.getElementById("set-role").value = p.soughtRoles || "";
-      document.getElementById("set-mail").checked = p.emailNotifications !== false;
-      paintContracts(String(p.preferredContracts || "").split(",").map((s) => s.trim().toLowerCase()));
-      if (window.HireLinkSuggest) HireLinkSuggest.boot();
-    })
-    .catch((err) => HireLink.toast("Compte", err.message, "danger"));
+    .then((p) => { $("set-mail").checked = p.emailNotifications !== false; })
+    .catch((err) => RC.toast("Paramètres", err.message, "danger"));
 
-  /** Les types de contrat viennent du même référentiel que les offres et l'inscription. */
-  function paintContracts(chosen) {
-    HireLinkAPI.api("/catalog/suggest?kind=contract&q=").then((rows) => {
-      const set = document.getElementById("set-contracts");
-      set.querySelectorAll("label").forEach((n) => n.remove());
-      (rows || []).forEach((r) => {
-        const label = document.createElement("label");
-        const box = document.createElement("input");
-        box.type = "checkbox";
-        box.value = r.label;
-        box.checked = chosen.indexOf(r.label.toLowerCase()) >= 0;
-        label.append(box, " " + r.label);
-        set.appendChild(label);
-      });
-    }).catch(() => {});
-  }
-
-  document.getElementById("btn-save-mail").addEventListener("click", async () => {
+  $("btn-save-mail").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    RC.busy(btn, true);
     try {
-      await HireLinkAPI.api("/me", { method: "PATCH", body: { emailNotifications: document.getElementById("set-mail").checked } });
-      HireLink.toast("E-mails", "Préférence enregistrée", "ok");
+      await HireLinkAPI.api("/me", { method: "PATCH", body: { emailNotifications: $("set-mail").checked } });
+      RC.toast("Alertes", "Préférence enregistrée", "ok");
     } catch (err) {
-      HireLink.toast("E-mails", err.message, "danger");
+      RC.toast("Alertes", err.message, "danger");
+    } finally {
+      RC.busy(btn, false);
     }
   });
 
-  function profileBody() {
-    const country = document.getElementById("set-phone-country").value.split("|");
-    const local = document.getElementById("set-phone").value.replace(/\D/g, "").replace(/^0/, "");
-    const contracts = Array.from(document.querySelectorAll("#set-contracts input:checked")).map((n) => n.value).join(", ");
-    return {
-      firstName: document.getElementById("set-first").value.trim(),
-      lastName: document.getElementById("set-last").value.trim(),
-      fullName: (document.getElementById("set-first").value.trim() + " " + document.getElementById("set-last").value.trim()).trim(),
-      phone: local ? country[1] + local : "",
-      phoneCountry: country[0],
-      nationality: document.getElementById("set-nat").value.trim(),
-      gender: document.getElementById("set-gender").value,
-      birthDate: document.getElementById("set-birth").value,
-      city: document.getElementById("set-city").value.trim(),
-      school: document.getElementById("set-school").value.trim(),
-      experienceLevel: document.getElementById("set-level").value.trim(),
-      educationDomain: document.getElementById("set-domain").value.trim(),
-      graduationYear: (function () {
-        const raw = document.getElementById("set-grad-year").value;
-        if (!raw) return null;
-        const n = parseInt(raw, 10);
-        return Number.isNaN(n) ? null : n;
-      })(),
-      workMode: document.getElementById("set-mode").value,
-      availability: document.getElementById("set-avail").value,
-      soughtRoles: document.getElementById("set-role").value.trim(),
-      preferredContracts: contracts,
-    };
+  /* Apparence */
+  const dark = $("theme-toggle");
+  if (dark && window.HireLinkTheme) {
+    dark.checked = HireLinkTheme.current() === "dark";
+    dark.addEventListener("change", () => {
+      HireLinkTheme.apply(dark.checked ? "dark" : "light");
+      const t = $("rc-theme");
+      if (t) t.innerHTML = RC.svg(dark.checked ? "sun" : "moon");
+    });
   }
 
-  async function saveProfile(e) {
-    e.preventDefault();
-    try {
-      await HireLinkAPI.api("/me", { method: "PATCH", body: profileBody() });
-      HireLink.toast("Enregistré", "Profil mis à jour", "ok");
-      const card = document.querySelector(".card, .panel, form");
-      if (card) {
-        card.classList.remove("hl-saved-flash");
-        void card.offsetWidth;
-        card.classList.add("hl-saved-flash");
-      }
-    } catch (err) {
-      HireLink.toast("Erreur", err.message, "danger");
-    }
+  /* Formule */
+  function refreshBilling() {
+    const prem = HireLinkAPI.isPremium();
+    const free = document.querySelector('[data-plan-mark="gratuit"]');
+    const perf = document.querySelector('[data-plan-mark="performance"]');
+    if (free) free.textContent = prem ? "Toujours disponible" : "Formule en cours";
+    if (perf) perf.textContent = prem ? "Formule en cours" : "À activer";
+    $("plan-gratuit").classList.toggle("is-current", !prem);
+    $("plan-performance").classList.toggle("is-current", !!prem);
+    $("btn-billing-cancel").hidden = !prem;
+    $("btn-billing-premium").hidden = !!prem;
   }
 
-  document.getElementById("settings-account").addEventListener("submit", saveProfile);
-  document.getElementById("settings-path").addEventListener("submit", saveProfile);
-
-  document.getElementById("btn-billing-premium").onclick = () => {
+  $("btn-billing-premium").addEventListener("click", () => {
     if (window.HireLinkGrowth) HireLinkGrowth.showPremium("candidate");
-  };
-  document.getElementById("btn-billing-cancel").onclick = async () => {
+  });
+  $("btn-billing-cancel").addEventListener("click", async () => {
     const ok = window.HireLink && HireLink.openModal
-      ? await HireLink.openModal({ title: "Résilier mon abonnement ?", description: "L'accès déjà payé reste ouvert jusqu'à la fin de période enregistrée. Aucun remboursement n'est émis.", confirmLabel: "Résilier" })
-      : true;
+      ? await HireLink.openModal({
+          title: "Résilier mon abonnement ?",
+          description: "Vous gardez Performance jusqu’à la fin de la période déjà payée, puis vous revenez à Gratuit. Aucun remboursement n’est émis.",
+          confirmLabel: "Résilier",
+          cancelLabel: "Garder Performance",
+          danger: true,
+        })
+      : window.confirm("Résilier mon abonnement ?");
     if (!ok) return;
     try {
       const r = await HireLinkAPI.api("/billing/subscription", { method: "DELETE" });
-      HireLink.toast("Plan", r.message || "Résiliation enregistrée", "info");
+      RC.toast("Formule", r.message || "Résiliation enregistrée", "info");
       refreshBilling();
     } catch (err) {
-      HireLink.toast("Plan", err.message, "danger");
+      RC.toast("Formule", err.message, "danger");
     }
-  };
-
-  if (window.HireLinkInvoices) HireLinkInvoices.mount(document.getElementById("my-invoices"), "mine");
-
-  HireLinkCredits.load(true).then((c) => {
-    const line = document.getElementById("credits-line");
-    if (!line || !c) return;
-    const used = (c.byFeature || []).reduce((n, f) => n + f.actions, 0);
-    line.textContent =
-      "Formule " + (c.planLabel || (c.premium ? "Performance" : "Essentiel")) +
-      (c.monthlyMad ? " · " + c.monthlyMad + " MAD / mois" : " · gratuite") +
-      " · " + c.remaining + " crédit" + (c.remaining > 1 ? "s" : "") + " sur " + c.limit +
-      " · " + c.costPerAction + " crédit par synthèse, recharge dans " + c.daysToReset + " jours" +
-      (used ? " · " + used + " action" + (used > 1 ? "s" : "") + " ce mois" : ".");
-  }).catch(() => {});
-
-  Promise.all([
-    HireLinkAPI.api("/me").catch(function () { return null; }),
-    HireLinkAPI.api("/applications/mine").catch(function () { return []; }),
-  ]).then(function (pack) {
-    const me = pack[0];
-    const apps = pack[1] || [];
-    const box = document.getElementById("advice-box");
-    if (!box) return;
-    const tips = [];
-    if (!me || !me.cvFileName) tips.push("Déposez votre CV. La synthèse n’a rien à lire tant que le document n’est pas là.");
-    else if (!String(me.cvSections || "").trim()) tips.push("Confirmez les sections lues dans le CV avant de les garder. Le score de correspondance utilise les compétences confirmées, pas le texte brut du CV.");
-    else tips.push("Le CV est lisible. Lancez la synthèse pour voir ce qui manque pour le métier visé, puis ajustez les compétences.");
-    if (apps.some(function (a) { return a.status === "INTERVIEW"; })) tips.push("Un entretien est ouvert. Relisez le poste avant le jour J. La synthèse ne répond pas à votre place.");
-    box.innerHTML = tips.map(function (t) { return "<p>" + t + "</p>"; }).join("");
   });
 
-  const exportBtn = document.getElementById("btn-export-data");
-  if (exportBtn) {
-    exportBtn.onclick = async () => {
-      try {
-        const data = await HireLinkAPI.api("/me/export");
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = "hirelink-export-" + (session.email || "me") + ".json";
-        a.click();
-        HireLink.toast("Copie prête", "Le fichier de votre compte a été téléchargé.", "ok");
-      } catch (err) {
-        HireLink.toast("Export", err.message, "danger");
-      }
-    };
-  }
+  if (window.HireLinkInvoices) HireLinkInvoices.mount($("my-invoices"), "mine");
 
-  async function showSettingsCv(me) {
-    const frame = document.getElementById("set-cv-frame");
-    const empty = document.getElementById("set-cv-empty");
-    if (!frame) return;
-    if (!me || !me.cvFileName) {
-      frame.hidden = true;
-      if (empty) empty.hidden = false;
-      return;
-    }
-    try {
-      const token = HireLinkAPI.getToken();
-      const res = await HireLinkAPI.authFetch("/me/cv", {
-      });
-      if (!res.ok) return;
-      const url = URL.createObjectURL(await res.blob());
-      frame.src = url;
-      frame.hidden = false;
-      if (empty) empty.hidden = true;
-    } catch (_) {}
-  }
-
-  const setCvFile = document.getElementById("set-cv-file");
-  if (setCvFile) {
-    setCvFile.addEventListener("change", async function () {
-      const file = setCvFile.files && setCvFile.files[0];
-      if (!file) return;
-      const fd = new FormData();
-      fd.append("file", file);
-      try {
-        const token = HireLinkAPI.getToken();
-        const res = await HireLinkAPI.authFetch("/me/cv", {
-          method: "POST",
-          body: fd,
-        });
-        if (!res.ok) throw new Error("Envoi impossible");
-        HireLink.toast("CV", "Document enregistré", "ok");
-        location.reload();
-      } catch (err) {
-        HireLink.toast("CV", err.message, "danger");
-      }
+  if (window.HireLinkCredits) {
+    HireLinkCredits.load(true).then((c) => {
+      const line = $("credits-line");
+      if (!line || !c) return;
+      const days = Number(c.daysToReset);
+      line.textContent =
+        "Il vous reste " + c.remaining + " aide" + (c.remaining > 1 ? "s" : "") + " IA sur " + c.limit +
+        (Number.isFinite(days) && days >= 0 ? " · renouvellement dans " + days + " jour" + (days > 1 ? "s" : "") : "") + ".";
+    }).catch(() => {
+      const line = $("credits-line");
+      if (line) line.textContent = "Le détail de vos aides IA est momentanément indisponible.";
     });
   }
+
+  /* Données */
+  $("btn-export-data").addEventListener("click", async (e) => {
+    const btn = e.currentTarget;
+    RC.busy(btn, true);
+    try {
+      const data = await HireLinkAPI.api("/me/export");
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "hirelink-mes-donnees.json";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      RC.toast("Copie prête", "Le fichier de votre compte a été téléchargé.", "ok");
+    } catch (err) {
+      RC.toast("Export", err.message, "danger");
+    } finally {
+      RC.busy(btn, false);
+    }
+  });
 
   refreshBilling();
 })();

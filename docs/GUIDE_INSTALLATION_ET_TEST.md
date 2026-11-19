@@ -47,15 +47,13 @@ Ce guide s’adresse à quelqu’un qui n’a jamais lancé le projet. Il expliq
 
 ## 3. Préparer la base de données
 
-1. Dans une invite de commandes : `mysql -u root -p` (saisissez votre mot de passe ; avec XAMPP, `mysql -u root`).
-2. Collez cette commande puis Entrée (l’UTF-8 complet est indispensable : les notifications contiennent des « → » et des accents) :  
-   `CREATE DATABASE hirelink CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;`
-3. Tapez `exit;` pour quitter. (Les tables sont créées automatiquement au premier démarrage du backend.)
-4. **Si votre mot de passe root n’est pas vide** : ouvrez `backend\src\main\resources\application.properties` et renseignez la ligne `spring.datasource.password=` (ex. `spring.datasource.password=MonMotDePasse`). Ne committez jamais cette valeur ; mieux : mettez-la dans `application-local.properties` (voir §5).
+Le backend de développement vise `hirelink_test`, sans création automatique de base ni de schéma.
+Créez cette base de test explicitement, puis appliquez les migrations SQL dans
+`database/migrations/README.md`. `spring.jpa.hibernate.ddl-auto=validate` vérifie le schéma et ne le répare pas.
+Les seeds, migrations/bootstrap au démarrage et synchronisations sont désactivés par défaut.
 
-> **Vous aviez déjà une base `hirelink` (version précédente) ?** Ne la supprimez pas : au démarrage, le backend (`spring.jpa.hibernate.ddl-auto=update`) ajoute tout seul les nouvelles colonnes et les deux tables des offres externes (`external_job_offers`, `external_sync_runs`). Les offres, candidatures et comptes existants sont conservés. Le script `database/migrate_external_offers.sql` fait la même création de tables, sans supprimer de données, et peut être relancé. Il a été vérifié sur une base vide et sur une copie du schéma, pas sur la base de démonstration. Sauvegardez toujours avant (`mysqldump -u root --single-transaction --databases hirelink > sauvegarde.sql`, fichier à garder hors de Git). **Seul cas particulier** : si le démarrage s’arrête avec `Data truncated for column 'status'`, exécutez une fois : `ALTER TABLE applications MODIFY status ENUM('SUBMITTED','SCREENING','SHORTLISTED','INTERVIEW','OFFER','HIRED','REJECTED','WITHDRAWN') NOT NULL;` puis redémarrez.
-
-L’import Remote OK est **éteint** dans `application.properties` (`hirelink.external-jobs.remoteok.enabled=false`). Le premier démarrage ne contacte pas Remote OK. Les offres externes sont internationales et à distance : elles ne sont pas des offres situées au Maroc.
+N’utilisez pas la base `hirelink` pour les essais. Son accès exige le profil `realdb`,
+`HIRELINK_REALDB_URL` et `HIRELINK_REALDB_CONFIRMATION=I_CONFIRM_HIRELINK_REALDB`.
 
 ## 4. Démarrer le backend
 
@@ -77,8 +75,8 @@ mvn spring-boot:run
 ### Comment savoir que c’est prêt ?
 
 1. Dans la console, attendez la ligne `Started HireLinkApplication in … seconds`.
-2. **Attendez ensuite le bandeau « HireLink — comptes de démonstration »** (quelques secondes de plus au tout premier démarrage : les comptes et offres de démonstration sont créés *après* le message « Started »). Si vous testez avant ce bandeau, la connexion peut échouer : patientez, c’est normal.
-3. Ouvrez http://localhost:8081/api/v1/health dans le navigateur. Vous devez voir `{"application":"HireLink","status":"UP",…,"database":{"connected":true}}`.
+2. Le seed est désactivé par défaut ; seuls les comptes déjà présents dans `hirelink_test` peuvent se connecter.
+3. Ouvrez http://localhost:8081/api/v1/health et vérifiez la base active dans `information_schema.PROCESSLIST`.
 
 ## 5. Clés et secrets (facultatif)
 
@@ -139,8 +137,8 @@ Vous lisez alors, à la demande du code :
 ════════════════════════════════════════
 ```
 
-`LANCER-HIRELINK-DEMO.bat` passe explicitement cette option à `false` (aucun secret dans les journaux) : avec ce
-script, une inscription ou une réinitialisation par e-mail ne peut aboutir **que** si un SMTP est configuré ; sinon
+Pour une démonstration sans aucun code dans les journaux, laissez cette option à `false` : dans ce cas,
+une inscription ou une réinitialisation par e-mail ne peut aboutir **que** si un SMTP est configuré ; sinon
 utilisez la commande ci-dessus ou les comptes déjà semés (§7). Au démarrage sans SMTP et sans opt-in, le backend
 affiche l'avertissement `Codes et liens de sécurité : ni envoyés ni affichés…` pour signaler le choix à faire.
 

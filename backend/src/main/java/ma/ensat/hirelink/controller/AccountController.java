@@ -88,7 +88,7 @@ public class AccountController {
     @PostMapping("/otp")
     public AuthDtos.Message reauthOtp(@AuthenticationPrincipal User user) {
         account.requestReauthOtp(user);
-        return new AuthDtos.Message("Code envoyé (en démo locale : voir la console du serveur).");
+        return new AuthDtos.Message("Code envoyé.");
     }
 
     @PostMapping("/password")

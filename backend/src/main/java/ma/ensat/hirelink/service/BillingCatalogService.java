@@ -33,6 +33,9 @@ public class BillingCatalogService {
     @Value("${hirelink.billing.vat-rate:}")
     private String vatRate;
 
+    @Value("${hirelink.startup-migrations.enabled:false}")
+    private boolean startupMigrationsEnabled;
+
     public BillingCatalogService(CommercialPlanRepository planRepository,
                                  BillingInvoiceRepository invoiceRepository,
                                  ma.ensat.hirelink.repository.OrganizationRepository organizationRepository,
@@ -43,9 +46,25 @@ public class BillingCatalogService {
         this.userRepository = userRepository;
     }
 
+    /** Anciennes formules : gardées en base pour l'historique des factures, jamais proposées ni affichées. */
+    public static final Set<String> RETIRED_CODES = Set.of("ACCES", "PREMIUM");
+
     @Transactional
     public List<CommercialPlan> plans() {
         return planRepository.findAll();
+    }
+
+    /** Formules proposées aujourd'hui (sans les anciennes), dans l'ordre du catalogue. */
+    @Transactional
+    public List<CommercialPlan> catalog() {
+        List<String> order = List.of("ESSENTIEL", "PROFESSIONNEL", "ENTREPRISE", "GRATUIT", "PERFORMANCE");
+        return planRepository.findAll().stream()
+                .filter(p -> p.getCode() != null && !RETIRED_CODES.contains(p.getCode().trim().toUpperCase()))
+                .sorted(java.util.Comparator.comparingInt(p -> {
+                    int i = order.indexOf(p.getCode().trim().toUpperCase());
+                    return i < 0 ? order.size() : i;
+                }))
+                .toList();
     }
 
     @Transactional
@@ -295,17 +314,18 @@ public class BillingCatalogService {
     }
 
     /**
-     * Filet de sécurité si la migration Vague 2 n’a pas encore tourné :
+     * Filet de sécurité si la vérification du catalogue n’a pas encore tourné :
      * catalogue minimal. La source de vérité à jour est PlanCatalogMigrationService.
      */
     @EventListener(ApplicationReadyEvent.class)
     public void ensureDefaults() {
+        if (!startupMigrationsEnabled) return;
         if (planRepository.count() > 0) return;
-        seed("ESSENTIEL", "Essentiel", "RECRUTEUR", 0, 0, 0, "3 offres actives\n1 siège");
-        seed("PROFESSIONNEL", "Professionnel", "RECRUTEUR", 299, 2990, 100, "20 offres actives\n5 sièges\n100 crédits IA / mois");
-        seed("ENTREPRISE", "Entreprise", "RECRUTEUR", 699, 6990, 200, "Offres illimitées (garde-fou)\n25 sièges\n200 crédits IA / mois");
-        seed("GRATUIT", "Gratuit", "CANDIDAT", 0, 0, 5, "5 crédits IA / 30 jours");
-        seed("PERFORMANCE", "Performance", "CANDIDAT", 39, 390, 40, "40 crédits IA / mois");
+        seed("ESSENTIEL", "Essentiel", "RECRUTEUR", 0, 0, 0, PlanCatalogMigrationService.ESSENTIEL_FEATURES);
+        seed("PROFESSIONNEL", "Professionnel", "RECRUTEUR", 299, 2990, 100, PlanCatalogMigrationService.PROFESSIONNEL_FEATURES);
+        seed("ENTREPRISE", "Entreprise", "RECRUTEUR", 699, 6990, 200, PlanCatalogMigrationService.ENTREPRISE_FEATURES);
+        seed("GRATUIT", "Gratuit", "CANDIDAT", 0, 0, 5, PlanCatalogMigrationService.GRATUIT_FEATURES);
+        seed("PERFORMANCE", "Performance", "CANDIDAT", 39, 390, 40, PlanCatalogMigrationService.PERFORMANCE_FEATURES);
     }
 
     private void seed(String code, String label, String audience, int month, int year, int credits, String features) {

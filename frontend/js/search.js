@@ -217,6 +217,7 @@
     function close() {
       menu.hidden = true;
       active = -1;
+      input.removeAttribute("aria-busy");
       input.setAttribute("aria-expanded", "false");
       input.removeAttribute("aria-activedescendant");
     }
@@ -302,10 +303,22 @@
       const query = input.value.trim();
       if (query.length < minChars) { close(); return; }
       const mine = ++seq;
+      menu.hidden = false;
+      menu.replaceChildren();
+      const loading = document.createElement("div");
+      loading.className = "hl-combo-empty";
+      loading.textContent = "Chargement…";
+      menu.appendChild(loading);
+      input.setAttribute("aria-busy", "true");
+      input.setAttribute("aria-expanded", "true");
       Promise.resolve(opts.fetch(query)).then(function (list) {
         if (mine !== seq || document.activeElement !== input) return;
+        input.removeAttribute("aria-busy");
         paint(list || [], query);
-      }).catch(close);
+      }).catch(function () {
+        input.removeAttribute("aria-busy");
+        close();
+      });
     }
 
     input.addEventListener("input", function () {

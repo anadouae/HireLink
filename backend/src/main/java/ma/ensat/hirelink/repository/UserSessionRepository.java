@@ -20,4 +20,8 @@ public interface UserSessionRepository extends JpaRepository<UserSession, String
     @Modifying
     @Query("delete from UserSession s where s.absoluteExpiresAt < :limit or (s.revokedAt is not null and s.revokedAt < :limit)")
     int purgeOlderThan(@Param("limit") Instant limit);
+
+    /** Comptes distincts ayant utilisé HireLink depuis une date (tableau de bord d'administration). */
+    @org.springframework.data.jpa.repository.Query("select count(distinct s.userId) from UserSession s where s.lastUsedAt >= :since")
+    long countDistinctUsersActiveSince(@org.springframework.data.repository.query.Param("since") java.time.Instant since);
 }

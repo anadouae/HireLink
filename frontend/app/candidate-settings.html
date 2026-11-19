@@ -15,8 +15,9 @@
   <link rel="stylesheet" href="../css/app.css?v=20261105l" />
   <link rel="stylesheet" href="../css/components.css?v=20261104h" />
   <link rel="stylesheet" href="../css/search.css?v=20261103d" />
-  <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
   <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/settings-page.css?v=20261118v8" />
+  <link rel="stylesheet" href="../css/candidate-guide.css?v=20261118v8" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
   <link rel="stylesheet" href="../css/premium.css?v=20261107b" />
   <link rel="stylesheet" href="../css/pay-sim.css?v=20261109a" />
@@ -28,184 +29,67 @@
     <aside class="rc-sidebar" id="rc-sidebar" aria-label="Menu principal"></aside>
     <div class="rc-main">
       <header class="rc-topbar" id="rc-topbar"></header>
-      <main class="rc-content settings-page" id="rc-content">
+      <main class="rc-content" id="rc-content">
         <div class="rc-head">
           <div>
             <p class="rc-eyebrow">Espace candidat</p>
             <h1>Paramètres</h1>
-            <p class="rc-muted">Votre identité, votre recherche d’emploi et votre compte.</p>
+            <p>Vos alertes, l’apparence, votre formule et vos données. Vos informations et votre CV se gèrent dans <a href="candidate-profile.html">Profil &amp; CV</a>.</p>
           </div>
         </div>
-        <div class="settings-layout">
-          <nav class="settings-nav" aria-label="Sections">
-            <button type="button" class="is-on" data-settings="account">Profil</button>
-            <button type="button" data-settings="search">Parcours</button>
-            <button type="button" data-settings="cv">CV</button>
-            <button type="button" data-settings="privacy">Compte</button>
-            <button type="button" data-settings="plans" hidden>Formules</button>
-          </nav>
-          <div class="settings-panels">
-            <section class="settings-panel" id="set-account">
-              <article class="settings-card">
-                <header class="card-header"><h2>Informations personnelles</h2><p>Nom affiché sur vos candidatures.</p></header>
-                <form id="settings-account">
-                  <div class="card-body form-grid">
-                    <label class="input-group">Prénom<input id="set-first" class="form-control" /></label>
-                    <label class="input-group">Nom<input id="set-last" class="form-control" /></label>
-                    <label class="input-group">E-mail<input id="set-email" class="form-control" disabled /></label>
-                    <label class="input-group">Téléphone
-                      <span class="phone-inline">
-                        <select id="set-phone-country" class="form-control">
-                          <option value="Maroc|+212">🇲🇦 +212</option>
-                          <option value="France|+33">🇫🇷 +33</option>
-                          <option value="Espagne|+34">🇪🇸 +34</option>
-                          <option value="Tunisie|+216">🇹🇳 +216</option>
-                          <option value="Algérie|+213">🇩🇿 +213</option>
-                          <option value="Belgique|+32">🇧🇪 +32</option>
-                          <option value="Canada|+1">🇨🇦 +1</option>
-                        </select>
-                        <input id="set-phone" class="form-control" inputmode="tel" placeholder="6 12 34 56 78" />
-                      </span>
-                    </label>
-                    <label class="input-group">Nationalité<input id="set-nat" class="form-control" data-suggest="nationality" placeholder="Rechercher une nationalité" /></label>
-                    <label class="input-group">Genre
-                      <select id="set-gender" class="form-control">
-                        <option value="">Non précisé</option>
-                        <option>Femme</option>
-                        <option>Homme</option>
-                      </select>
-                    </label>
-                    <label class="input-group">Date de naissance<input id="set-birth" class="form-control" type="date" /></label>
-                    <label class="input-group">Ville de résidence<input id="set-city" class="form-control" data-suggest="place" placeholder="Votre ville" /></label>
-                  </div>
-                  <footer class="card-footer"><button type="submit" class="btn btn-primary">Enregistrer</button></footer>
-                </form>
-              </article>
-            </section>
-            <section class="settings-panel" id="set-search" hidden>
-              <article class="settings-card">
-                <header class="card-header"><h2>Parcours</h2><p>École, niveau, mode de travail et contrats recherchés.</p></header>
-                <form id="settings-path">
-                  <div class="card-body form-grid">
-                    <label class="input-group">École<input id="set-school" class="form-control" data-suggest="school" placeholder="Rechercher une école" /></label>
-                    <label class="input-group">Niveau d'expérience
-                      <select id="set-level" class="form-control">
-                        <option value="">—</option>
-                        <option>Stagiaire</option>
-                        <option>Junior</option>
-                        <option>Confirmé</option>
-                        <option>Senior</option>
-                        <option>Lead</option>
-                        <option>Manager</option>
-                      </select>
-                    </label>
-                    <label class="input-group">Domaine de formation<input id="set-domain" class="form-control" data-suggest="domain" placeholder="Informatique, Finance…" /></label>
-                    <label class="input-group">Année d'obtention (ou prévue)<input id="set-grad-year" class="form-control" type="number" min="1950" max="2100" placeholder="2026" /></label>
-                    <label class="input-group">Type de travail
-                      <select id="set-mode" class="form-control">
-                        <option value="">—</option>
-                        <option>Télétravail</option>
-                        <option>Sur site</option>
-                        <option>Hybride</option>
-                        <option>Indifférent</option>
-                      </select>
-                    </label>
-                    <label class="input-group">Disponibilité
-                      <select id="set-avail" class="form-control">
-                        <option value="">—</option>
-                        <option>Immédiatement</option>
-                        <option>Sous 1 mois</option>
-                        <option>Sous 3 mois</option>
-                      </select>
-                    </label>
-                    <label class="input-group">Métier recherché<input id="set-role" class="form-control" data-suggest="job" placeholder="Rechercher un métier" /></label>
-                    <fieldset class="check-set" id="set-contracts">
-                      <legend>Types de contrat</legend>
-                    </fieldset>
-                  </div>
-                  <footer class="card-footer"><button type="submit" class="btn btn-primary">Enregistrer</button></footer>
-                </form>
-              </article>
-            </section>
-            <section class="settings-panel" id="set-cv" hidden>
-              <article class="settings-card">
-                <header class="card-header"><h2>Prévisualisation CV</h2><p>Visualisez et gérez votre CV.</p></header>
-                <div class="card-body">
-                  <iframe id="set-cv-frame" class="cv-doc-view" title="CV" hidden></iframe>
-                  <p id="set-cv-empty" class="muted">Aucun CV déposé.</p>
-                  <label class="btn btn-primary">Upload CV
-                    <input type="file" id="set-cv-file" accept=".pdf,.txt,.md" hidden />
-                  </label>
-                  <a class="btn btn-ghost" href="candidate-profile.html#cv-section">Analyse et sections</a>
-                </div>
-              </article>
-            </section>
-            <section class="settings-panel" id="set-plans" hidden>
-              <article class="settings-card">
-                <header class="card-header">
-                  <h2>Deux façons d’utiliser HireLink</h2>
-                  <p>Ouvrez une formule pour voir ce qu’elle change. Le prix n’est pas le sujet ici : c’est ce que vous pouvez faire.</p>
-                </header>
-                <div class="card-body plan-folds">
-                  <details class="plan-fold" id="fold-essentiel" open>
-                    <summary><span>Essentiel</span><em data-plan-mark="essentiel">Formule de départ</em></summary>
-                    <ul>
-                      <li>Postuler et voir chaque étape du dossier</li>
-                      <li>Offres classées selon vos compétences</li>
-                      <li>Quelques synthèses du CV déjà déposé</li>
-                    </ul>
-                    <p>La synthèse relit les sections de votre CV et dit ce qui manque pour le métier visé. Elle ne postule pas à votre place.</p>
-                  </details>
-                  <details class="plan-fold" id="fold-performance">
-                    <summary><span>Performance</span><em data-plan-mark="performance">À activer</em></summary>
-                    <ul>
-                      <li>40 usages de l’assistant IA par mois (Essentiel : 5)</li>
-                      <li>Synthèses du CV et réécriture du profil</li>
-                      <li>Préparation d’entretien à partir du poste et de votre CV</li>
-                      <li>Contrôle de la langue sur le profil</li>
-                    </ul>
-                    <p><strong>39 MAD / mois.</strong> Même logique qu’Essentiel : la synthèse lit votre CV et dit ce qui manque. Elle ne postule pas. Ces quatre usages sont déjà offerts en Essentiel, Performance relève seulement le compteur mensuel — votre profil n’est pas mieux classé ni mis en avant. Vous pouvez revenir à Essentiel à tout moment.</p>
-                  </details>
-                </div>
-                <footer class="card-footer">
-                  <button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Résilier mon abonnement</button>
-                  <button type="button" class="btn btn-primary" id="btn-billing-premium">Activer Performance</button>
-                </footer>
-              </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Mes factures</h2><p>Uniquement les factures dont vous êtes le débiteur.</p></header>
-                <div class="card-body" id="my-invoices"></div>
-              </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Conseil à partir de votre dossier</h2><p id="credits-line">La synthèse s’appuie sur le CV déjà déposé.</p></header>
-                <div class="card-body" id="advice-box"><p class="muted">Lecture…</p></div>
-                <footer class="card-footer"><a class="btn btn-soft" href="candidate-profile.html#cv-coach">Ouvrir la synthèse du CV</a></footer>
-              </article>
-            </section>
-            <section class="settings-panel" id="set-privacy" hidden>
-              <article class="settings-card">
-                <header class="card-header"><h2>E-mails</h2><p>Les e-mails de sécurité et de compte sont toujours envoyés.</p></header>
-                <div class="card-body">
-                  <label class="check-line"><input type="checkbox" id="set-mail" /> Recevoir aussi mes alertes par e-mail (candidatures et entretiens)</label>
-                </div>
-                <footer class="card-footer"><button type="button" class="btn btn-primary" id="btn-save-mail">Enregistrer</button></footer>
-              </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Mes données</h2><p>Téléchargez une copie de tout ce que HireLink conserve sur vous.</p></header>
-                <div class="card-body" style="display:flex;justify-content:flex-end">
-                  <button type="button" class="btn btn-secondary" id="btn-export-data">Exporter mes données</button>
-                </div>
-              </article>
-              <article class="settings-card">
-                <header class="card-header"><h2>Sécurité du compte</h2><p>Mot de passe, double authentification, passkeys, appareils connectés, désactivation ou suppression du compte : tout est regroupé sur la page Sécurité.</p></header>
-                <div class="card-body" style="display:flex;justify-content:flex-end">
-                  <a class="btn btn-secondary" href="security.html">Ouvrir la page Sécurité</a>
-                </div>
-              </article>
-            </section>
-          </div>
+        <div class="rc-tabs" role="tablist" aria-label="Sections des paramètres">
+          <button type="button" class="rc-tab is-on" role="tab" data-t="alertes">Alertes</button>
+          <button type="button" class="rc-tab" role="tab" data-t="apparence">Apparence</button>
+          <button type="button" class="rc-tab" role="tab" data-t="plans">Formule</button>
+          <button type="button" class="rc-tab" role="tab" data-t="donnees">Données et sécurité</button>
         </div>
-      
+
+        <div class="rc-panel" id="tab-alertes" role="tabpanel">
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Alertes</h2><p>La cloche vous signale l’avancement de vos candidatures et vos entretiens. Les e-mails de sécurité et de compte sont toujours envoyés.</p></div></div>
+            <div class="rc-card-body">
+              <div class="rc-setting"><div>Recevoir aussi par e-mail<small>Candidatures et entretiens</small></div><label class="switch"><input type="checkbox" id="set-mail" checked /><span class="slider"></span></label></div>
+            </div>
+            <div class="rc-card-foot"><button type="button" class="btn btn-primary" id="btn-save-mail">Enregistrer</button></div>
+          </section>
+        </div>
+
+        <div class="rc-panel" id="tab-apparence" role="tabpanel" hidden>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Apparence</h2><p>Le thème est mémorisé sur cet appareil.</p></div></div>
+            <div class="rc-card-body"><div class="rc-setting"><div>Mode sombre<small>Plus confortable en faible luminosité</small></div><label class="switch"><input type="checkbox" id="theme-toggle" /><span class="slider"></span></label></div></div>
+          </section>
+        </div>
+
+        <div class="rc-panel" id="tab-plans" role="tabpanel" hidden>
+          <div class="rc-grid rc-plan-grid">
+            <section class="rc-card rc-plan" id="plan-gratuit"><div class="rc-card-head"><div><h2>Gratuit</h2><p data-plan-mark="gratuit">Formule en cours</p></div></div>
+              <div class="rc-card-body"><ul class="rc-checks">
+                <li>Postuler et suivre chaque étape de vos candidatures</li>
+                <li>Offres classées selon vos compétences</li>
+                <li>5 aides IA tous les 30 jours</li>
+              </ul></div></section>
+            <section class="rc-card rc-plan" id="plan-performance"><div class="rc-card-head"><div><h2>Performance · 39 MAD / mois</h2><p data-plan-mark="performance">À activer</p></div></div>
+              <div class="rc-card-body"><ul class="rc-checks">
+                <li>40 aides IA par mois</li>
+                <li>Synthèse du CV et amélioration du profil</li>
+                <li>Préparation d’entretien à partir du poste et de votre CV</li>
+              </ul>
+              <p class="rc-muted rc-plan-note">Votre profil n’est pas mis en avant artificiellement : le classement suit vos compétences. Vous pouvez revenir à Gratuit à tout moment.</p></div>
+              <div class="rc-card-foot">
+                <button type="button" class="btn btn-ghost" id="btn-billing-cancel" hidden>Résilier mon abonnement</button>
+                <button type="button" class="btn btn-primary" id="btn-billing-premium">Passer en Performance</button>
+              </div></section>
+          </div>
+          <section class="rc-card rc-plan-usage"><div class="rc-card-head"><div><h2>Aides IA</h2><p id="credits-line">Chargement…</p></div></div></section>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Mes factures</h2><p>Les factures de vos abonnements.</p></div></div>
+            <div class="rc-card-body" id="my-invoices"></div></section>
+        </div>
+
+        <div class="rc-panel" id="tab-donnees" role="tabpanel" hidden>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Mes données</h2><p>Téléchargez une copie de tout ce que HireLink conserve sur vous.</p></div></div>
+            <div class="rc-card-foot"><button type="button" class="btn btn-secondary" id="btn-export-data">Exporter mes données</button></div></section>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Sécurité du compte</h2><p>Mot de passe, double authentification, clés d’accès, appareils connectés, désactivation ou suppression du compte.</p></div></div>
+            <div class="rc-card-foot"><a class="btn btn-secondary" href="security.html">Ouvrir la page Sécurité</a></div></section>
+        </div>
       </main>
     </div>
   </div>
@@ -215,13 +99,11 @@
   <script defer src="../js/ui.js?v=20261106g"></script>
   <script defer src="../js/api.js?v=20261109a"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
-  <script defer src="../js/places.js?v=20261103h"></script>
-  <script defer src="../js/in-app-help.js?v=20261105s"></script>
-  <script defer src="../js/credits.js?v=20261105v"></script>
-  <script defer src="../js/app-shell.js?v=20261110b"></script>
-  <script defer src="../js/growth.js?v=20261106g"></script>
-  <script defer src="../js/suggest.js?v=20261103g"></script>
+  <script defer src="../js/credits.js?v=20261118d"></script>
+  <script defer src="../js/app-shell.js?v=20261118v8"></script>
+  <script defer src="../js/candidate-guide.js?v=20261118v8"></script>
+  <script defer src="../js/growth.js?v=20261118c"></script>
   <script defer src="../js/invoices.js?v=20261109a"></script>
-  <script defer src="../js/candidate-settings.js?v=20261109b"></script>
+  <script defer src="../js/candidate-settings.js?v=20261118v8"></script>
 </body>
 </html>

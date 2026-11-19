@@ -30,56 +30,57 @@
       <span class="brand-mark"></span>
       <span class="brand-name">Hi<span class="r-pulse">r</span>e<span>Link</span></span>
     </a>
-    <nav class="nav" aria-label="Sur cette page">
-      <a href="index.html#offres">Offres</a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="index.html#espaces">Espaces</a>
+      <a href="index.html#profil-cv">Profil et CV</a>
       <a href="index.html#entreprises">Entreprises</a>
-      <a href="index.html#candidats">Candidats</a>
-      <a href="index.html#metiers">Métiers</a>
-      <a href="index.html#parcours">Parcours</a>
       <a href="index.html#tarifs">Formules</a>
+      <a href="help.html">Help</a>
+      <a href="support.html">Support</a>
     </nav>
     <a class="btn btn-primary btn-sm" href="auth.html?mode=login">Connexion</a>
   </header>
 
-  <main class="legal-main">
+  <main class="legal-main" id="contenu">
     <p class="eyebrow">Confiance</p>
-    <h1>Sécurité &amp; confiance</h1>
-    <p class="lead">Les mêmes réflexes que les plateformes SaaS sérieuses : prouver qui vous êtes, protéger les accès, expliquer les décisions.</p>
+    <h1>Sécurité et confiance</h1>
+    <p class="lead">Savoir qui publie, protéger votre compte, expliquer chaque décision : voici ce que HireLink fait concrètement.</p>
 
     <div class="sec-grid">
       <article class="sec-card">
-        <h3>Authentification</h3>
-        <p>JWT signé, BCrypt, OTP e-mail, Google Sign-In. Sessions sans cookie serveur (stateless).</p>
+        <h3>Connexion protégée</h3>
+        <p>Code par e-mail, mot de passe, compte Google ou clé d’accès. La double authentification s’active en un clic depuis votre espace.</p>
       </article>
       <article class="sec-card">
-        <h3>Employeurs vérifiés</h3>
-        <p>ICE + raison sociale + e-mail de domaine. Publication bloquée tant que non validé. Signalements d’offres (≥3 → suspension).</p>
+        <h3>Entreprises vérifiées</h3>
+        <p>Le badge « Entreprise vérifiée » repose sur une adresse e-mail professionnelle au nom de l’entreprise. L’ICE, facultatif, complète la fiche.</p>
       </article>
       <article class="sec-card">
-        <h3>Données protégées</h3>
-        <p>Isolation multi-tenant par organisation. Rôles RH / HM. En-têtes HSTS-ready, X-Frame-Options, no-store.</p>
+        <h3>Données cloisonnées</h3>
+        <p>Chaque entreprise ne voit que ses offres et les candidatures reçues. Un CV n’est visible que par les entreprises auxquelles vous postulez.</p>
       </article>
       <article class="sec-card">
-        <h3>Décisions responsables</h3>
-        <p>Machine d’états pipeline. Refus catalogue obligatoire. Timeline horodatée. SLA monitoré.</p>
+        <h3>Décisions expliquées</h3>
+        <p>Chaque candidature suit des étapes claires. Un refus est toujours accompagné d’un motif, et chaque étape est datée.</p>
       </article>
     </div>
 
     <section class="legal-block">
-      <h2>Engagements concrets (niveau SaaS)</h2>
+      <h2>Nos engagements</h2>
       <ul>
-        <li>Mots de passe hachés BCrypt — jamais stockés en clair</li>
-        <li>Jetons JWT à durée limitée + CORS strict par origine</li>
-        <li>Checklist RH avant chaque avance (identité, CV lu, SLA)</li>
-        <li>Catalogue de motifs de refus — pas de rejet silencieux</li>
-        <li>Badge de réactivité employeur — médiane des premières réponses, calculée sur les vraies décisions</li>
-        <li>Import CV côté serveur — validation avant enregistrement</li>
+        <li>Les mots de passe ne sont jamais conservés en clair.</li>
+        <li>Les sessions expirent d’elles-mêmes et se renouvellent en toute sécurité.</li>
+        <li>Pas de refus silencieux : le candidat connaît toujours l’étape de sa candidature.</li>
+        <li>Le badge de réactivité d’une entreprise est calculé sur ses vraies réponses aux candidats.</li>
+        <li>Votre CV est vérifié avant d’être enregistré et supprimé avec votre compte.</li>
+        <li>Export de vos données, désactivation ou suppression du compte à tout moment.</li>
       </ul>
     </section>
 
-    <p style="margin-top:2rem">
-      <a class="btn btn-soft" href="help.html">Centre d’aide</a>
-      <a class="btn btn-primary" href="auth.html?mode=register" style="margin-left:0.5rem">Créer un compte</a>
+    <p class="hp-cta">
+      <a class="btn btn-soft" href="help.html">Help</a>
+      <a class="btn btn-soft" href="support.html">Support</a>
+      <a class="btn btn-primary" href="auth.html?mode=register">Créer un compte</a>
     </p>
   </main>
 
@@ -96,21 +97,21 @@
       <nav class="footer-nav" aria-label="Pied de page">
         <div class="footer-col">
           <span class="footer-label">Produit</span>
-          <a href="index.html#produit">Fonctionnalités</a>
+          <a href="index.html#espaces">Espaces</a>
           <a href="index.html#tarifs">Tarifs</a>
           <a href="index.html#parcours">Parcours</a>
         </div>
         <div class="footer-col">
           <span class="footer-label">Confiance</span>
           <a href="security.html">Sécurité</a>
-          <a href="help.html">Aide &amp; FAQ</a>
+          <a href="help.html">Help</a>
+          <a href="support.html">Support</a>
           <a href="about.html">À propos</a>
         </div>
         <div class="footer-col">
           <span class="footer-label">Accès</span>
           <a href="auth.html?mode=login">Connexion</a>
           <a href="auth.html?mode=register">Créer un compte</a>
-          <a href="about.html#contact">Contact</a>
         </div>
       </nav>
     </div>

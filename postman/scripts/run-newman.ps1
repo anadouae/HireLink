@@ -6,7 +6,7 @@
   - Cible par défaut : http://127.0.0.1:18081/api/v1 (ISO)
   - Interdit : port 8081 / base hirelink (démo)
   - Mots de passe : HL_CANDIDATE_PASSWORD, HL_RECRUITER_PASSWORD, HL_ADMIN_PASSWORD
-  - Aucun contournement CAPTCHA / OTP / MFA
+  - Aucun contournement OTP / MFA
 #>
 $ErrorActionPreference = "Stop"
 $PostmanDir = Resolve-Path (Join-Path $PSScriptRoot "..")

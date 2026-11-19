@@ -41,8 +41,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -260,11 +258,12 @@ class FinalisationCoverageIntegrationTest {
         assertEquals("pr\u00E9cision \u0641\u0627\u0637\u0645\u0629", refus.getBody().get("rejectionReason"));
 
         User admin = compte(Role.ADMINISTRATEUR, "Admin Courrier");
-        ResponseEntity<String> emails = http.exchange("/api/v1/admin/emails", HttpMethod.GET, auth(token(admin)), String.class);
+        ResponseEntity<String> emails = http.exchange("/api/v1/admin/emails?size=100", HttpMethod.GET, auth(token(admin)), String.class);
         assertEquals(HttpStatus.OK, emails.getStatusCode());
         assertTrue(emails.getBody().contains("LOGGED"));
-        assertFalse(emails.getBody().contains("\"SENT\""));
-        ResponseEntity<String> journal = http.exchange("/api/v1/admin/audit?page=0&size=50", HttpMethod.GET, auth(token(admin)), String.class);
+        // Sans SMTP, aucune ligne n'est « envoyée » (le compteur par statut, lui, cite toujours SENT).
+        assertFalse(emails.getBody().contains("\"status\":\"SENT\""));
+        ResponseEntity<String> journal = http.exchange("/api/v1/admin/audit?action=APPLICATION_REFUSED&page=0&size=50", HttpMethod.GET, auth(token(admin)), String.class);
         assertEquals(HttpStatus.OK, journal.getStatusCode());
         assertTrue(journal.getBody().contains("APPLICATION_REFUSED"));
     }
@@ -398,47 +397,18 @@ class FinalisationCoverageIntegrationTest {
     }
 
     private String connexion(String email, String password) {
-        for (int i = 0; i < 4; i++) {
-            Map<String, String> captcha = captcha();
-            ResponseEntity<Map> res = http.exchange("/api/v1/auth/login", HttpMethod.POST,
-                    new HttpEntity<>(Map.of("email", email, "password", password, "captchaToken", captcha.get("token"), "captchaAnswer", captcha.get("answer")), jsonHeaders()), Map.class);
-            if (res.getStatusCode() == HttpStatus.OK && res.getBody() != null && res.getBody().get("accessToken") != null) {
-                return String.valueOf(res.getBody().get("accessToken"));
-            }
+        ResponseEntity<Map> res = http.exchange("/api/v1/auth/login", HttpMethod.POST,
+                new HttpEntity<>(Map.of("email", email, "password", password), jsonHeaders()), Map.class);
+        if (res.getStatusCode() == HttpStatus.OK && res.getBody() != null && res.getBody().get("accessToken") != null) {
+            return String.valueOf(res.getBody().get("accessToken"));
         }
         return "";
     }
 
     private boolean connexionEchoue(String email, String password) {
-        for (int i = 0; i < 4; i++) {
-            Map<String, String> captcha = captcha();
-            ResponseEntity<String> res = http.exchange("/api/v1/auth/login", HttpMethod.POST,
-                    new HttpEntity<>(Map.of("email", email, "password", password, "captchaToken", captcha.get("token"), "captchaAnswer", captcha.get("answer")), jsonHeaders()), String.class);
-            if (res.getStatusCode().value() != 428) return res.getStatusCode() != HttpStatus.OK;
-        }
-        return false;
-    }
-
-    private Map<String, String> captcha() {
-        ResponseEntity<Map> res = http.exchange("/api/v1/auth/captcha", HttpMethod.POST, new HttpEntity<>(Map.of(), jsonHeaders()), Map.class);
-        String kind = String.valueOf(res.getBody().get("kind"));
-        String answer;
-        if ("question".equals(kind)) {
-            String question = String.valueOf(res.getBody().get("question"));
-            Matcher nombres = Pattern.compile("(\\d+)").matcher(question);
-            int a = nombres.find() ? Integer.parseInt(nombres.group()) : 0;
-            int b = nombres.find() ? Integer.parseInt(nombres.group()) : 0;
-            answer = String.valueOf(question.contains("+") ? a + b : a - b);
-        } else {
-            Matcher glyphes = Pattern.compile("x=\"(\\d+)\"[^>]*>([A-Z0-9])<").matcher(String.valueOf(res.getBody().get("svg")));
-            StringBuilder mot = new StringBuilder();
-            java.util.List<int[]> ordre = new java.util.ArrayList<>();
-            while (glyphes.find()) ordre.add(new int[]{Integer.parseInt(glyphes.group(1)), glyphes.group(2).charAt(0)});
-            ordre.sort(java.util.Comparator.comparingInt(p -> p[0]));
-            for (int[] p : ordre) mot.append((char) p[1]);
-            answer = mot.toString();
-        }
-        return Map.of("token", String.valueOf(res.getBody().get("token")), "answer", answer);
+        ResponseEntity<String> res = http.exchange("/api/v1/auth/login", HttpMethod.POST,
+                new HttpEntity<>(Map.of("email", email, "password", password), jsonHeaders()), String.class);
+        return res.getStatusCode() != HttpStatus.OK;
     }
 
     private String token(User user) {

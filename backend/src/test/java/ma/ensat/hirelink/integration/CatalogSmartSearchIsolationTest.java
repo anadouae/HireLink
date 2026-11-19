@@ -53,7 +53,6 @@ import static org.junit.jupiter.api.Assertions.*;
         "hirelink.external-jobs.ashby.enabled=false",
         "hirelink.external-jobs.jooble.enabled=false",
         "hirelink.web-search.enabled=false",
-        "hirelink.catalog.rebuild-on-startup=false",
         "hirelink.jwt.secret=hirelink-smart-search-iso-key-not-for-real-use-0000",
         "hirelink.security.bcrypt-strength=4",
         "hirelink.swagger.enabled=false"

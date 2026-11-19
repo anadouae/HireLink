@@ -19,6 +19,28 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findByActorUserIdAndActionInOrderByIdDesc(Long actorUserId, Collection<String> actions, Pageable pageable);
 
     List<AuditLog> findTop2000ByOrderByIdDesc();
+
+    /**
+     * Journal filtré côté serveur : actions (liste facultative), période [from, to[, recherche libre
+     * sur le compte ou le détail, et résultat (réussi / échoué). Paginé avec total.
+     */
+    @Query("""
+            select a from AuditLog a
+            where (:allActions = true or a.action in :actions)
+              and (:fromAt is null or a.createdAt >= :fromAt)
+              and (:toAt is null or a.createdAt < :toAt)
+              and (:q is null or lower(a.actorEmail) like :q or lower(a.detail) like :q)
+              and (:success is null or a.success = :success)
+            order by a.id desc
+            """)
+    org.springframework.data.domain.Page<AuditLog> search(
+            @Param("allActions") boolean allActions,
+            @Param("actions") Collection<String> actions,
+            @Param("fromAt") Instant fromAt,
+            @Param("toAt") Instant toAt,
+            @Param("q") String q,
+            @Param("success") Boolean success,
+            Pageable pageable);
     List<AuditLog> findTop2000ByActionOrderByIdDesc(String action);
 
     /** Journal d'audit : on garde un an, pas davantage — la table ne sert qu'à relire une décision récente. */

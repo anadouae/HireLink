@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="../css/search.css?v=20261103d" />
   <link rel="stylesheet" href="../css/skills.css?v=20261103a" />
   <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
+  <link rel="stylesheet" href="../css/candidate-guide.css?v=20261118v8" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
   <link rel="stylesheet" href="../css/premium.css?v=20261107b" />
   <link rel="stylesheet" href="../css/candidate-profile-v3.css?v=20261115a" />
@@ -33,13 +34,15 @@
           <div>
             <p class="eyebrow">Profil</p>
             <h1>Profil &amp; CV</h1>
-            <p class="muted">Informations personnelles, parcours, compétences, puis votre espace CV. L’extraction propose : vous acceptez ou refusez chaque élément. Aucun score d’embauche.</p>
+            <p class="muted">Commencez par votre CV, puis complétez votre profil. Les éléments lus dans le CV vous sont proposés : vous gardez ce qui est juste.</p>
           </div>
         </div>
 
-        <div class="rc-seg profile-view-seg" role="tablist" aria-label="Vue Profil ou CV" id="profile-view-seg">
-          <button type="button" class="rc-seg-btn is-on" data-profile-view="profile" aria-selected="true">Mon profil</button>
-          <button type="button" class="rc-seg-btn" data-profile-view="cv" aria-selected="false">Mon CV</button>
+        <div id="cg-hub" class="cg-hub" hidden></div>
+
+        <div class="rc-seg profile-view-seg" role="tablist" aria-label="Vue CV ou Profil" id="profile-view-seg">
+          <button type="button" class="rc-seg-btn" data-profile-view="cv" aria-selected="false">1 · Mon CV</button>
+          <button type="button" class="rc-seg-btn is-on" data-profile-view="profile" aria-selected="true">2 · Mon profil</button>
         </div>
 
         <div id="view-profile">
@@ -90,15 +93,31 @@
               </div>
               <div class="field">
                 <label for="pf-city">Ville</label>
-                <input id="pf-city" class="form-control" maxlength="80" />
+                <input id="pf-city" class="form-control" data-suggest="city" maxlength="80" autocomplete="off" placeholder="Rechercher une ville" />
               </div>
               <div class="field">
                 <label for="pf-country">Pays</label>
-                <input id="pf-country" class="form-control" maxlength="80" />
+                <input id="pf-country" class="form-control" data-suggest="country" maxlength="80" autocomplete="off" placeholder="Rechercher un pays" />
+              </div>
+              <div class="field">
+                <label for="pf-nat">Nationalité</label>
+                <input id="pf-nat" class="form-control" data-suggest="nationality" maxlength="80" placeholder="Rechercher une nationalité" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="pf-birth">Date de naissance</label>
+                <input id="pf-birth" class="form-control" type="date" />
+              </div>
+              <div class="field">
+                <label for="pf-gender">Genre</label>
+                <select id="pf-gender" class="form-control">
+                  <option value="">Non précisé</option>
+                  <option>Femme</option>
+                  <option>Homme</option>
+                </select>
               </div>
               <div class="field">
                 <label for="pf-job-title">Titre professionnel</label>
-                <input id="pf-job-title" class="form-control" maxlength="120" placeholder="ex. Développeuse Full-Stack" />
+                <input id="pf-job-title" class="form-control" data-suggest="job" maxlength="120" placeholder="ex. Développeuse Full-Stack" autocomplete="off" />
               </div>
               <div class="field field-full">
                 <label for="pf-presentation">Présentation</label>
@@ -146,7 +165,28 @@
               </div>
               <div class="field">
                 <label for="pf-availability">Disponibilité</label>
-                <input id="pf-availability" class="form-control" maxlength="40" placeholder="ex. Immédiate, 1 mois" />
+                <input id="pf-availability" class="form-control" data-suggest="availability" maxlength="40" placeholder="ex. Immédiate, 1 mois" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="pf-mode">Mode de travail</label>
+                <select id="pf-mode" class="form-control">
+                  <option value="">Indifférent</option>
+                  <option>Sur site</option>
+                  <option>Hybride</option>
+                  <option>Télétravail</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="pf-school">École ou université principale</label>
+                <input id="pf-school" class="form-control" data-suggest="school" maxlength="160" placeholder="Rechercher une école" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="pf-domain">Domaine de formation</label>
+                <input id="pf-domain" class="form-control" data-suggest="domain" maxlength="120" placeholder="Informatique, Finance…" autocomplete="off" />
+              </div>
+              <div class="field">
+                <label for="pf-grad-year">Année d’obtention (ou prévue)</label>
+                <input id="pf-grad-year" class="form-control" type="number" min="1950" max="2100" placeholder="2026" />
               </div>
               <div class="field field-full">
                 <label>Métiers recherchés</label>
@@ -198,7 +238,7 @@
             <header class="cv-col-head">
               <div>
                 <h2>Espace CV</h2>
-                <p class="muted">Déposer, prévisualiser, remplacer ou supprimer. Formats acceptés : PDF (texte), TXT, MD, images (aperçu). Pas de DOCX.</p>
+                <p class="muted">Ajoutez, consultez, remplacez ou supprimez votre CV. Formats acceptés : PDF, TXT, MD ou image. Les fichiers Word ne sont pas acceptés : enregistrez-les d’abord en PDF.</p>
               </div>
             </header>
             <div class="cv-toolbar">
@@ -222,14 +262,17 @@
               <label class="btn btn-primary">Déposer un CV
                 <input type="file" id="cv-file" accept=".pdf,.txt,.md,image/png,image/jpeg,image/webp,image/gif" hidden />
               </label>
-              <span id="cv-file-label" class="muted">PDF avec texte, TXT ou image. Un PDF scanné sans OCR ne pourra pas être extrait.</span>
+              <button type="button" class="btn btn-soft" id="cv-resume-draft" hidden>Reprendre mon import</button>
+              <span id="cv-file-label" class="muted">PDF, TXT ou image. Un PDF scanné peut être difficile à lire.</span>
             </div>
             <div id="cv-extract-review" class="cv-extract-review" hidden>
-              <h3>Propositions d’extraction</h3>
-              <p class="muted">Comparez avec votre profil. Acceptez ou refusez chaque proposition — rien n’écrase automatiquement.</p>
+              <h3>Ce que HireLink a lu dans votre CV</h3>
+              <p class="muted">Chaque élément garde son état. Rien n’écrase automatiquement votre profil.</p>
               <div id="cv-extract-items"></div>
               <div class="cv-extract-actions">
+                <button type="button" class="btn btn-soft btn-sm" id="cv-extract-add-manual">Ajouter à la main</button>
                 <button type="button" class="btn btn-soft btn-sm" id="cv-extract-refuse-all">Tout refuser</button>
+                <button type="button" class="btn btn-soft btn-sm" id="cv-extract-accept-all">Tout accepter</button>
                 <button type="button" class="btn btn-primary btn-sm" id="cv-extract-apply">Appliquer les acceptées</button>
               </div>
             </div>
@@ -245,22 +288,22 @@
                 <div class="cv-section-field"><label for="cv-education">Formation</label><textarea id="cv-education"></textarea></div>
                 <div class="cv-section-field"><label for="cv-skills-read">Compétences</label><textarea id="cv-skills-read"></textarea></div>
                 <div class="cv-section-field"><label for="cv-languages">Langues</label><textarea id="cv-languages"></textarea></div>
-                <button type="submit" class="btn btn-primary btn-sm" id="btn-confirm-cv">Confirmer ces sections</button>
+                <button type="submit" class="btn btn-primary btn-sm" id="btn-confirm-cv">Enregistrer le CV et le profil</button>
               </form>
             </details>
           </div>
 
           <aside class="cv-analysis" id="cv-coach">
             <header class="cv-col-head">
-              <h2>Vérification technique</h2>
+              <h2>Votre CV en un coup d’œil</h2>
             </header>
             <div class="score-card checklist-card">
               <div class="score-card-top">
-                <span>Contrôles passés</span>
+                <span>Points complets</span>
                 <strong id="cv-score">—</strong>
               </div>
               <div class="score-track" aria-hidden="true"><span id="cv-score-bar"></span></div>
-              <p class="cv-score-legend" id="cv-score-legend">Vérification technique déterministe. Ce n’est pas une certification ATS, ni une probabilité d’embauche.</p>
+              <p class="cv-score-legend" id="cv-score-legend">Une liste simple pour ne rien oublier. Elle ne modifie pas le classement des offres.</p>
             </div>
             <ul class="cv-findings" id="cv-findings"></ul>
             <p class="cv-level" id="cv-level" hidden></p>
@@ -283,11 +326,12 @@
   <script defer src="../js/api.js?v=20261109a"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
   <script defer src="../js/places.js?v=20261103h"></script>
-  <script defer src="../js/in-app-help.js?v=20261105s"></script>
-  <script defer src="../js/credits.js?v=20261115a"></script>
-  <script defer src="../js/app-shell.js?v=20261110b"></script>
-  <script defer src="../js/growth.js?v=20261106g"></script>
+  <script defer src="../js/credits.js?v=20261118d"></script>
+  <script defer src="../js/app-shell.js?v=20261118v8"></script>
+  <script defer src="../js/candidate-guide.js?v=20261118v8"></script>
+  <script defer src="../js/growth.js?v=20261118c"></script>
   <script defer src="../js/skills.js?v=20261101r"></script>
-  <script defer src="../js/candidate-profile.js?v=20261115a"></script>
+  <script defer src="../js/suggest.js?v=20261103g"></script>
+  <script defer src="../js/candidate-profile.js?v=20261118v8b"></script>
 </body>
 </html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <script src="js/public-theme.js?v=20261101r"></script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Contact &amp; support — HireLink</title>
+  <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
+  <meta name="description" content="Contactez le support HireLink : question, compte ou espace entreprise." />
+  <meta name="theme-color" content="#7a2032" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/tokens.css?v=20261103a" />
+  <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
+  <link rel="stylesheet" href="css/landing.css?v=20261107b" />
+  <link rel="stylesheet" href="css/components.css?v=20261104h" />
+  <link rel="stylesheet" href="css/legal.css?v=20261106a" />
+  <link rel="stylesheet" href="css/motion.css?v=20261103a" />
+  <link rel="stylesheet" href="css/public-dark.css?v=20261118v8" />
+  <link rel="stylesheet" href="css/premium.css?v=20261107b" />
+  <link rel="stylesheet" href="css/help-support.css?v=20261118v8" />
+</head>
+<body class="landing-body">
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="HireLink">
+      <span class="brand-mark"></span>
+      <span class="brand-name">Hi<span class="r-pulse">r</span>e<span>Link</span></span>
+    </a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="index.html#espaces">Espaces</a>
+      <a href="index.html#profil-cv">Profil et CV</a>
+      <a href="index.html#entreprises">Entreprises</a>
+      <a href="index.html#tarifs">Formules</a>
+      <a href="help.html">Help</a>
+      <a href="support.html" aria-current="page">Contact &amp; support</a>
+    </nav>
+    <a class="btn btn-primary btn-sm" href="auth.html?mode=login">Se connecter</a>
+  </header>
+
+  <main class="legal-main support-main" id="contenu">
+    <p class="eyebrow">Contact &amp; support</p>
+    <h1>Comment pouvons-nous vous aider ?</h1>
+    <p class="lead">Une question sur HireLink, votre compte ou votre espace entreprise ? Écrivez-nous : nous répondons par e-mail. Pour les questions fréquentes, consultez d’abord le <a href="help.html">guide d’aide</a>.</p>
+
+    <form class="support-form" id="support-form" novalidate>
+      <div class="support-grid">
+        <label class="support-field support-field--wide">
+          <span>Sujet de votre demande</span>
+          <select id="sp-topic" name="topic" required>
+            <option value="QUESTION">Une question sur HireLink</option>
+            <option value="COMPTE">Mon compte ou ma connexion</option>
+            <option value="ENTREPRISE">Mon espace entreprise</option>
+            <option value="AUTRE">Autre</option>
+          </select>
+        </label>
+        <label class="support-field">
+          <span>Votre nom</span>
+          <input id="sp-name" name="name" maxlength="120" autocomplete="name" required />
+        </label>
+        <label class="support-field">
+          <span>Votre adresse e-mail</span>
+          <input id="sp-email" name="email" type="email" maxlength="160" autocomplete="email" required />
+        </label>
+        <label class="support-field support-field--wide" id="sp-ref-row" hidden>
+          <span>Offre ou contenu concerné</span>
+          <input id="sp-ref" name="reference" maxlength="200" placeholder="Lien ou nom de l’offre" />
+        </label>
+        <label class="support-field support-field--wide">
+          <span>Objet</span>
+          <input id="sp-subject" name="subject" maxlength="160" required />
+        </label>
+        <label class="support-field support-field--wide">
+          <span>Votre message</span>
+          <textarea id="sp-message" name="message" rows="7" maxlength="4000" required placeholder="Décrivez la situation et ce que vous voyez à l’écran."></textarea>
+          <small class="support-count" id="sp-count" aria-live="polite">0 / 4000</small>
+        </label>
+        <label class="support-hp" aria-hidden="true">
+          <span>Ne pas remplir</span>
+          <input id="sp-website" name="website" tabindex="-1" autocomplete="off" />
+        </label>
+      </div>
+      <p class="support-error" id="sp-error" role="alert" hidden></p>
+      <div class="support-actions">
+        <button type="submit" class="btn btn-primary" id="sp-send">Envoyer ma demande</button>
+        <span class="support-hint">Vos informations servent uniquement à traiter votre demande.</span>
+      </div>
+    </form>
+
+    <section class="support-done" id="support-done" hidden tabindex="-1">
+      <h2>Demande envoyée</h2>
+      <p id="sp-done-text">Merci. Nous vous répondons par e-mail dès que possible.</p>
+      <p class="hp-cta"><a class="btn btn-soft" href="help.html">Retour à Help</a> <button type="button" class="btn btn-primary" id="sp-again">Nouvelle demande</button></p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <a class="brand" href="index.html">
+          <span class="brand-mark brand-mark--pulse" aria-hidden="true"></span>
+          <span class="brand-name">Hi<span class="r-pulse">r</span>e<span class="footer-live-gold">Link</span></span>
+        </a>
+        <p>Plateforme de recrutement : offres, dossiers, délais tenus.</p>
+      </div>
+      <nav class="footer-nav" aria-label="Pied de page">
+        <div class="footer-col">
+          <span class="footer-label">Découvrir</span>
+          <a href="index.html#espaces">Espaces</a>
+          <a href="index.html#profil-cv">Profil et CV</a>
+          <a href="index.html#tarifs">Formules</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-label">Espaces</span>
+          <a href="auth.html?mode=register&amp;role=CANDIDAT">Espace candidat</a>
+          <a href="auth.html?mode=register&amp;role=RECRUTEUR">Espace entreprise</a>
+          <a href="auth.html?mode=login">Connexion</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-label">Ressources</span>
+          <a href="help.html">Help</a>
+          <a href="support.html">Contact &amp; support</a>
+          <a href="security.html">Sécurité</a>
+          <a href="about.html">À propos</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-label">Légal</span>
+          <a href="legal/cgu.html">CGU</a>
+          <a href="legal/confidentialite.html">Confidentialité</a>
+        </div>
+      </nav>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span id="footer-year">2026</span> HireLink</span>
+    </div>
+  </footer>
+  <script defer src="js/config.js?v=20261109a"></script>
+  <script defer src="js/api.js?v=20261109a"></script>
+  <script defer src="js/footer-year.js?v=20261101r"></script>
+  <script defer src="js/nav.js?v=20261101r"></script>
+  <script defer src="js/public-nav.js?v=20261106a"></script>
+  <script defer src="js/support.js?v=20261118v8"></script>
+</body>
+</html>

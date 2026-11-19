@@ -10,7 +10,9 @@ import org.springframework.stereotype.Component;
  * Actualisation planifiée des boards ATS allowlistés (Greenhouse / Lever / Ashby).
  */
 @Component
-@ConditionalOnProperty(name = "hirelink.external-jobs.ats.scheduled-sync", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+        name = {"hirelink.external-jobs.sync-enabled", "hirelink.external-jobs.ats.scheduled-sync"},
+        havingValue = "true")
 public class AtsBoardsSyncJob {
 
     private static final Logger log = LoggerFactory.getLogger(AtsBoardsSyncJob.class);

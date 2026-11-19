@@ -34,6 +34,28 @@ import java.util.regex.Pattern;
 public class CatalogSuggestController {
 
     private static final int LIMIT = 24;
+    private static final int LIMIT_RESULTS = 8;
+    private static final Map<String, List<String>> ALIASES = Map.ofEntries(
+            Map.entry("javascript", List.of("JS")),
+            Map.entry("java", List.of("J2EE")),
+            Map.entry("developpeur", List.of("dev")),
+            Map.entry("intelligence artificielle", List.of("IA")),
+            Map.entry("docker", List.of("conteneurs")),
+            Map.entry("teletravail", List.of("remote", "télétravail")),
+            Map.entry("devops", List.of("MLOps", "CI/CD")),
+            Map.entry("developpeuse", List.of("dev")),
+            Map.entry("cybersecurite", List.of("cybersécurité", "sécurité informatique"))
+    );
+    private static final List<String> LANGUAGES = List.of(
+            "Français", "Anglais", "Arabe", "Espagnol", "Allemand", "Amazigh", "Portugais",
+            "Italien", "Néerlandais", "Chinois", "Japonais", "Coréen", "Turc", "Hindi"
+    );
+    private static final List<String> SKILLS = List.of(
+            "Java", "Spring Boot", "JavaScript", "TypeScript", "React", "React Native", "Angular",
+            "Vue.js", "Node.js", "Python", "Docker", "Kubernetes", "Git", "GitHub", "GitLab",
+            "CI/CD", "DevOps", "MLOps", "MySQL", "PostgreSQL", "MongoDB", "REST", "API testing",
+            "Selenium", "JUnit", "Postman", "Cypress", "Linux", "AWS", "Azure", "Intelligence artificielle"
+    );
 
     private static final List<String> JOBS = List.of(
             "Développeur Java junior", "Développeur Java confirmé", "Développeur full-stack",
@@ -61,8 +83,14 @@ public class CatalogSuggestController {
     );
     private static final List<String> CONTRACTS = ContractType.PREFERENCES;
     private static final List<String> MODES = List.of("Télétravail", "Sur site", "Hybride", "Indifférent");
+    private static final List<String> AVAILABILITIES = List.of(
+            "Immédiate", "Dans 1 mois", "Dans 2 mois", "Dans 3 mois",
+            "Sous 15 jours", "Partiellement disponible", "Pas disponible"
+    );
     private static final List<String> DOMAINS = List.of(
-            "Informatique", "Génie logiciel", "Réseaux et télécoms", "Cybersécurité", "Data / IA",
+            "Informatique", "Ingénierie", "Ingénierie logicielle", "Génie logiciel", "Réseaux et télécoms",
+            "Systèmes d'information", "Développement web", "Développement mobile", "Intelligence artificielle",
+            "Cybersécurité", "Data / IA", "Data science", "Analyse de données", "Cloud computing",
             "Génie civil", "Génie industriel", "Génie électrique", "Génie mécanique", "Génie des procédés",
             "Finance", "Comptabilité", "Marketing", "Commerce", "Management", "Ressources humaines",
             "Droit", "Économie", "Architecture", "Design", "Médecine", "Pharmacie", "Biologie",
@@ -132,16 +160,22 @@ public class CatalogSuggestController {
             // Noms d'entreprises uniquement (jamais de titres d'offres), 2 caractères minimum, 8 au plus.
             case "company" -> companies.suggest(query, context).stream()
                     .map(name -> new Suggestion(name, "", "")).toList();
-            case "place" -> places.search(query, country, LIMIT).stream()
+            case "place" -> places.search(query, country, LIMIT_RESULTS).stream()
                     .map(p -> new Suggestion(p.label(), p.flag(), p.city().isEmpty() ? "" : p.country())).toList();
-            case "city" -> places.searchCities(query, country, LIMIT).stream()
+            case "city" -> places.searchCities(query, country, LIMIT_RESULTS).stream()
                     .map(p -> new Suggestion(p.city(), p.flag(), p.country())).toList();
-            case "nationality" -> places.nationalities(query, LIMIT).stream()
+            case "country" -> places.search(query, null, LIMIT_RESULTS).stream()
+                    .filter(p -> p.city().isEmpty())
+                    .map(p -> new Suggestion(p.country(), p.flag(), p.country())).toList();
+            case "nationality" -> places.nationalities(query, LIMIT_RESULTS).stream()
                     .map(n -> new Suggestion(n.label(), n.flag(), n.country())).toList();
             case "school" -> rankSchools(query);
-            case "contract" -> rank(CONTRACTS, query);
-            case "mode" -> rank(MODES, query);
-            case "domain" -> rank(DOMAINS, query);
+            case "contract" -> rank(CONTRACTS, query, "Contrat");
+            case "mode" -> rank(MODES, query, "Mode");
+            case "availability" -> rank(AVAILABILITIES, query, "Disponibilité");
+            case "domain" -> rank(DOMAINS, query, "Domaine");
+            case "language" -> rank(LANGUAGES, query, "Langue");
+            case "skill" -> rank(SKILLS, query, "Compétence");
             default -> jobs(query);
         };
     }
@@ -176,15 +210,49 @@ public class CatalogSuggestController {
     }
 
     private List<Suggestion> rank(List<String> items, String query) {
-        if (TextMatcher.fold(query).isEmpty()) return items.stream().limit(LIMIT).map(i -> new Suggestion(i, "", "")).toList();
+        return rank(items, query, "Suggestion");
+    }
+
+    private List<Suggestion> rank(List<String> items, String query, String category) {
+        if (TextMatcher.fold(query).isEmpty()) {
+            return items.stream().limit(LIMIT_RESULTS).map(i -> new Suggestion(i, "", category)).toList();
+        }
         record Hit(String label, double score) {}
         return new ArrayList<>(items.stream()
-                .map(i -> new Hit(i, matcher.score(query, i)))
+                .map(i -> new Hit(i, aliasScore(query, i)))
                 .filter(h -> h.score() > 0)
                 .sorted(Comparator.comparingDouble(Hit::score).reversed())
-                .limit(LIMIT)
-                .map(h -> new Suggestion(h.label(), "", ""))
+                .limit(LIMIT_RESULTS)
+                .map(h -> new Suggestion(h.label(), "", category))
                 .toList());
+    }
+
+    private double aliasScore(String query, String label) {
+        double score = Math.max(matcher.score(query, label), matcher.score(query, expandedAliasLabel(label)));
+        String foldedLabel = TextMatcher.fold(label);
+        String foldedQuery = TextMatcher.fold(query);
+        for (Map.Entry<String, List<String>> entry : ALIASES.entrySet()) {
+            String foldedKey = TextMatcher.fold(entry.getKey());
+            boolean sameConcept = foldedLabel.equals(foldedKey)
+                    || foldedLabel.contains(foldedKey)
+                    || entry.getValue().stream().anyMatch(alias ->
+                            foldedLabel.equals(TextMatcher.fold(alias)));
+            if (!sameConcept) continue;
+            if (matcher.score(foldedQuery, foldedKey) > 0
+                    || entry.getValue().stream().anyMatch(alias ->
+                            matcher.score(foldedQuery, TextMatcher.fold(alias)) > 0)) {
+                score = Math.max(score, 0.85);
+            }
+        }
+        return score;
+    }
+
+    private String expandedAliasLabel(String label) {
+        String folded = TextMatcher.fold(label);
+        return ALIASES.entrySet().stream()
+                .filter(entry -> TextMatcher.fold(entry.getKey()).equals(folded))
+                .flatMap(entry -> entry.getValue().stream())
+                .reduce(label, (a, b) -> a + " " + b);
     }
 
     private List<Suggestion> rankSchools(String query) {

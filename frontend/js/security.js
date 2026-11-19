@@ -33,13 +33,13 @@
       if (legalEl) {
         try {
           const rows = await api("/auth/legal-acceptances");
-          if (!rows || !rows.length) {
-            legalEl.textContent = "Aucun enregistrement (comptes créés avant cette version).";
+          const granted = (rows || []).filter((r) => r.granted);
+          if (!granted.length) {
+            legalEl.textContent = "Aucun accord enregistré pour ce compte.";
           } else {
-            legalEl.textContent = rows
-              .filter((r) => r.granted)
-              .map((r) => r.purpose + " · " + r.documentVersion + (r.acceptedAt ? " · " + fmt(r.acceptedAt) : ""))
-              .join(" · ") || "—";
+            const last = granted.map((r) => r.acceptedAt).filter(Boolean).sort().pop();
+            legalEl.textContent = "Conditions d’utilisation et politique de confidentialité acceptées"
+              + (last ? " le " + fmt(last) : "") + ".";
           }
         } catch (_) {
           legalEl.textContent = "Impossible de charger les accords pour le moment.";
@@ -149,8 +149,8 @@
     if (!admin) {
       h +=
         '<section class="rc-card" id="sec-data"><div class="rc-card-head"><div><h2>Mes données et mon compte</h2><p>Droits d’accès et d’effacement (loi 09-08 / RGPD).</p></div></div><div class="rc-card-body">' +
-        '<div class="sec-row"><div><strong>Accords acceptés</strong><span class="rc-muted" id="sec-legal-summary">Chargement des versions…</span></div><div class="sec-actions"><a class="btn btn-ghost btn-sm" href="../legal/cgu.html" target="_blank" rel="noopener">CGU</a><a class="btn btn-ghost btn-sm" href="../legal/confidentialite.html" target="_blank" rel="noopener">Confidentialité</a></div></div>' +
-        '<div class="sec-row"><div><strong>Exporter mes données</strong><span class="rc-muted">Fichier JSON : profil, compétences et candidatures.</span></div><div class="sec-actions"><button type="button" class="btn btn-soft btn-sm" data-act="export">Télécharger</button></div></div>' +
+        '<div class="sec-row"><div><strong>Accords acceptés</strong><span class="rc-muted" id="sec-legal-summary">Chargement des versions…</span></div><div class="sec-actions"><a class="btn btn-ghost btn-sm" href="../legal/conditions.html" target="_blank" rel="noopener">Lire les conditions</a></div></div>' +
+        '<div class="sec-row"><div><strong>Exporter mes données</strong><span class="rc-muted">Fichier de vos données : profil, compétences et candidatures.</span></div><div class="sec-actions"><button type="button" class="btn btn-soft btn-sm" data-act="export">Télécharger</button></div></div>' +
         '<div class="sec-row"><div><strong>Désactiver mon compte</strong><span class="rc-muted">Connexion impossible ; le support peut le réactiver. Vos données sont conservées.</span></div><div class="sec-actions"><button type="button" class="btn btn-ghost btn-sm" data-act="deactivate">Désactiver</button></div></div>' +
         '<div class="sec-row"><div><strong>Supprimer mon compte et anonymiser mes données</strong><span class="rc-muted">Irréversible : nom, e-mail, CV, passkeys et appareils sont effacés.</span></div><div class="sec-actions"><button type="button" class="btn btn-danger btn-sm" data-act="erase">Supprimer</button></div></div>' +
         "</div></section>";

@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 LEGAL = ROOT / "frontend" / "legal"
-REQUIRED = ("cgu.html", "confidentialite.html")
+REQUIRED = ("conditions.html", "cgu.html", "confidentialite.html")
 
 
 def check(path: Path) -> list[str]:

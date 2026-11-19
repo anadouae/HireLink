@@ -20,10 +20,10 @@ public class LegalConsentService {
     private final LegalAcceptanceRepository repository;
     private final AuditService audit;
 
-    @Value("${hirelink.legal.terms-version:cgu:2026-11-12}")
+    @Value("${hirelink.legal.terms-version:cgu:2026-11-18}")
     private String termsVersion;
 
-    @Value("${hirelink.legal.privacy-version:privacy:2026-11-12}")
+    @Value("${hirelink.legal.privacy-version:privacy:2026-11-18}")
     private String privacyVersion;
 
     public LegalConsentService(LegalAcceptanceRepository repository, AuditService audit) {
@@ -43,27 +43,32 @@ public class LegalConsentService {
         Map<String, Object> m = new LinkedHashMap<>();
         m.put("termsVersion", termsVersion);
         m.put("privacyVersion", privacyVersion);
-        m.put("termsPath", "legal/cgu.html");
-        m.put("privacyPath", "legal/confidentialite.html");
+        // Un seul document et une seule case à l'inscription : l'acceptation vaut pour les deux versions.
+        m.put("legalPath", "legal/conditions.html");
+        m.put("termsPath", "legal/conditions.html#conditions");
+        m.put("privacyPath", "legal/conditions.html#confidentialite");
         m.put("marketingEnabled", false);
-        m.put("draftNotice", "Documents pedagogiques - textes a valider avant usage juridique definitif.");
         return m;
     }
 
-    /** Refuse la creation de compte si les versions obligatoires ne correspondent pas aux versions courantes. */
+    /**
+     * Refuse la création de compte si l'accord manque ou ne porte pas sur les versions courantes.
+     * L'inscription présente une seule case (conditions d'utilisation + confidentialité) : le client
+     * envoie les deux versions, et les deux acceptations sont enregistrées ensemble.
+     */
     public void assertSignupConsents(String acceptTermsVersion, String acceptPrivacyVersion) {
         if (acceptTermsVersion == null || acceptTermsVersion.isBlank()
                 || acceptPrivacyVersion == null || acceptPrivacyVersion.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Acceptez les Conditions generales et la Politique de confidentialite pour creer un compte.");
+                    "Acceptez les conditions d’utilisation et la politique de confidentialité pour créer un compte.");
         }
         if (!termsVersion.equals(acceptTermsVersion.trim())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Version des CGU incorrecte ou obsolete. Rouvrez le document et reessayez.");
+                    "Les conditions d’utilisation ont été mises à jour. Rechargez la page, puis cochez à nouveau la case.");
         }
         if (!privacyVersion.equals(acceptPrivacyVersion.trim())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Version de la Politique de confidentialite incorrecte ou obsolete. Rouvrez le document et reessayez.");
+                    "Les conditions d’utilisation ont été mises à jour. Rechargez la page, puis cochez à nouveau la case.");
         }
     }
 

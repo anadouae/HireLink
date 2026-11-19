@@ -16,7 +16,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * Abonnement et factures. Le paiement est simulé : le serveur fixe le montant et n'active
@@ -27,7 +26,6 @@ import java.util.Set;
 @RequestMapping("/api/v1/billing")
 public class BillingController {
 
-    private static final Set<String> RETIRED = Set.of("ACCES", "PREMIUM");
 
     private final BillingCatalogService billingCatalogService;
     private final PaymentService payments;
@@ -46,10 +44,7 @@ public class BillingController {
     public List<Map<String, Object>> plans(@AuthenticationPrincipal User user) {
         String audience = user.getRole() == Role.CANDIDAT ? "CANDIDAT" : "RECRUTEUR";
         List<Map<String, Object>> out = new ArrayList<>();
-        for (CommercialPlan plan : billingCatalogService.plans()) {
-            if (RETIRED.contains(plan.getCode())) continue;
-            String feat = plan.getFeatures() == null ? "" : plan.getFeatures();
-            if (feat.contains("[RETIRÉ")) continue;
+        for (CommercialPlan plan : billingCatalogService.catalog()) {
             if (user.getRole() == Role.ADMINISTRATEUR || audience.equals(plan.getAudience())) {
                 out.add(billingCatalogService.toPlan(plan));
             }

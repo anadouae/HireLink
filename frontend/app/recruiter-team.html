@@ -102,11 +102,11 @@
             </div>
             <div class="rc-form">
               <div class="rc-field"><label for="co-name">Nom</label><input id="co-name" required /></div>
-              <div class="rc-field"><label for="co-ice">ICE</label><input id="co-ice" placeholder="15 chiffres (ex. 001234567000014)" inputmode="numeric" autocomplete="off" /></div>
+              <div class="rc-field"><label for="co-ice">ICE (facultatif)</label><input id="co-ice" placeholder="15 chiffres (ex. 001234567000014)" inputmode="numeric" autocomplete="off" /></div>
               <div class="is-full" id="ice-status" aria-live="polite"></div>
               <div class="rc-field"><label for="co-website">Site web</label><input id="co-website" placeholder="https://" /></div>
               <div class="rc-field"><label for="co-sector">Secteur</label><input id="co-sector" placeholder="Technologie, Banque…" /></div>
-              <div class="rc-field"><label for="co-city">Ville</label><input id="co-city" /></div>
+              <div class="rc-field"><label for="co-city">Ville</label><input id="co-city" data-suggest="city" autocomplete="off" /></div>
               <div class="rc-field"><label for="co-color">Couleur de l’entreprise</label><div class="hq-color"><input type="color" id="co-color" value="#7a2032" /><button type="button" class="btn btn-ghost btn-sm" id="co-color-auto">Couleur du logo</button></div></div>
               <div class="rc-field is-full"><label for="co-bio">Présentation</label><textarea id="co-bio" rows="4" maxlength="1200" placeholder="Ce que fait l’entreprise, pour qui, et comment elle recrute."></textarea></div>
               <div class="is-full rc-row"><button type="submit" class="btn btn-primary">Enregistrer la fiche</button><button type="button" class="btn btn-soft" id="btn-recheck" hidden>Relancer la vérification</button></div>
@@ -143,9 +143,8 @@
   <script defer src="../js/api.js?v=20261109a"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
   <script defer src="../js/places.js?v=20261103h"></script>
-  <script defer src="../js/in-app-help.js?v=20261105s"></script>
-  <script defer src="../js/credits.js?v=20261105v"></script>
-  <script defer src="../js/app-shell.js?v=20261110b"></script>
-  <script defer src="../js/recruiter-team.js?v=20261110f"></script>
+  <script defer src="../js/credits.js?v=20261118d"></script>
+  <script defer src="../js/app-shell.js?v=20261118v8"></script>
+  <script defer src="../js/recruiter-team.js?v=20261118b"></script>
 </body>
 </html>

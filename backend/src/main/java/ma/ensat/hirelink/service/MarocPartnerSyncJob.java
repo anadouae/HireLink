@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 
 /** Synchronisation planifiee du flux partenaires Maroc. */
 @Component
-@ConditionalOnProperty(name = "hirelink.external-jobs.maroc.enabled", havingValue = "true")
+@ConditionalOnProperty(
+        name = {"hirelink.external-jobs.sync-enabled", "hirelink.external-jobs.maroc.enabled"},
+        havingValue = "true")
 public class MarocPartnerSyncJob {
 
     private static final Logger log = LoggerFactory.getLogger(MarocPartnerSyncJob.class);

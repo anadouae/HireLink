@@ -33,7 +33,6 @@ public class AuthService {
     static final String LOCKED = "Trop de tentatives. Pour votre sécurité, réessayez dans quelques minutes.";
     private static final int ACCOUNT_MAX_FAILS = 5;
     private static final int IP_MAX_FAILS = 30;
-    private static final int CAPTCHA_AFTER_FAILS = 2;
     private static final long LOCK_WINDOW_SECONDS = 900;
 
     private final UserRepository userRepository;
@@ -47,7 +46,6 @@ public class AuthService {
     private final AuditService audit;
     private final AuthThrottle throttle;
     private final TotpService totp;
-    private final CaptchaService captcha;
     private final NotificationService notifications;
     private final MailService mail;
     private final WebAuthnService webAuthn;
@@ -71,7 +69,6 @@ public class AuthService {
             AuditService audit,
             AuthThrottle throttle,
             TotpService totp,
-            CaptchaService captcha,
             NotificationService notifications,
             MailService mail,
             WebAuthnService webAuthn,
@@ -89,7 +86,6 @@ public class AuthService {
         this.audit = audit;
         this.throttle = throttle;
         this.totp = totp;
-        this.captcha = captcha;
         this.notifications = notifications;
         this.mail = mail;
         this.webAuthn = webAuthn;
@@ -192,10 +188,6 @@ public class AuthService {
             throw e;
         }
         User user = userRepository.findByEmailIgnoreCase(email).orElse(null);
-        if (Math.max(throttle.count(acctKey, LOCK_WINDOW_SECONDS), throttle.count(ipKey, LOCK_WINDOW_SECONDS)) >= CAPTCHA_AFTER_FAILS) {
-            // Le premier essai et le second restent instantanés : le CAPTCHA n'arrive que sous tentatives répétées.
-            captcha.assertValid(req.captchaToken(), req.captchaAnswer());
-        }
         String hash = user != null && user.getPasswordHash() != null && !user.getPasswordHash().isBlank() ? user.getPasswordHash() : null;
         boolean ok = passwordEncoder.matches(req.password(), hash != null ? hash : dummyHash) && hash != null;
         if (!ok) {
@@ -627,8 +619,8 @@ public class AuthService {
         if (role != Role.RECRUTEUR) {
             return;
         }
-        // Inscription libre : ICE + raison sociale + email — aucun document.
-        // Badge / publication a posteriori (companyVerified).
+        // Inscription libre : raison sociale + e-mail (ICE facultatif) — aucun document.
+        // Badge automatique si l’e-mail est professionnel (companyVerified).
         var result = companyVerificationService.verify(ice, company, user.getId(), user.getEmail());
         companyVerificationService.apply(user, result);
     }

@@ -10,9 +10,7 @@ public class AuthDtos {
 
     public record RequestOtp(
             @NotBlank @Email @Size(max = 160) String email,
-            @NotBlank @Size(max = 16) String purpose,
-            @Size(max = 64) String captchaToken,
-            @Size(max = 24) String captchaAnswer
+            @NotBlank @Size(max = 16) String purpose
     ) {}
 
     public record VerifyRegisterOtp(
@@ -64,9 +62,7 @@ public class AuthDtos {
 
     public record PasswordLogin(
             @NotBlank @Email @Size(max = 160) String email,
-            @NotBlank @Size(max = 200) String password,
-            @Size(max = 64) String captchaToken,
-            @Size(max = 24) String captchaAnswer
+            @NotBlank @Size(max = 200) String password
     ) {}
 
     public record SetPassword(
@@ -85,9 +81,7 @@ public class AuthDtos {
     ) {}
 
     public record ForgotPassword(
-            @NotBlank @Email @Size(max = 160) String email,
-            @Size(max = 64) String captchaToken,
-            @Size(max = 24) String captchaAnswer
+            @NotBlank @Email @Size(max = 160) String email
     ) {}
 
     public record ResetPassword(

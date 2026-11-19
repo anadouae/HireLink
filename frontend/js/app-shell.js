@@ -84,6 +84,7 @@
     user: '<circle cx="12" cy="8" r="3.4"/><path d="M5.2 19.5c.7-3 3-4.6 6.8-4.6s6.1 1.6 6.8 4.6"/>',
     inbox: '<path d="M4 13.5 6.2 5.5h11.6L20 13.5v5a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 18.5z"/><path d="M4 13.5h4.5l1 2.2h5l1-2.2H20"/>',
     alert: '<path d="M12 4 3.5 19h17z"/><path d="M12 10v4M12 16.8h.01"/>',
+    flag: '<path d="M6 20.5V4.5"/><path d="M6 5h10.5l-2 3.8 2 3.7H6"/>',
     chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
     file: '<path d="M7 3.5h7.2L19.5 9v11.5A1.5 1.5 0 0 1 18 22H7a1.5 1.5 0 0 1-1.5-1.5v-17A1.5 1.5 0 0 1 7 3.5z"/><path d="M14 3.5V9h5.5M8.5 13h7M8.5 16.5h7"/>',
     card: '<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><path d="M3 10h18M7 15h3"/>',
@@ -212,7 +213,7 @@
         { id: "security", href: "security.html", label: "Sécurité", icon: "shield" },
         { id: "settings", href: "recruiter-settings.html", label: "Paramètres", icon: "settings" },
       ],
-      menu: [["recruiter-settings.html#compte", "user", "Mon compte"], ["recruiter-team.html", "building", "Entreprise & équipe"], ["security.html", "shield", "Sécurité"], ["recruiter-settings.html", "settings", "Paramètres"]],
+      menu: [["recruiter-settings.html#compte", "user", "Mon compte"], ["recruiter-team.html", "building", "Entreprise & équipe"], ["security.html", "shield", "Sécurité"], ["recruiter-settings.html", "settings", "Paramètres"], ["../help.html", "help", "Help"], ["../support.html", "inbox", "Support"]],
     },
     CANDIDAT: {
       home: "candidate-dashboard.html", label: "Espace candidat", plans: "candidate-settings.html#plans",
@@ -229,7 +230,7 @@
         { id: "security", href: "security.html", label: "Sécurité", icon: "shield" },
         { id: "settings", href: "candidate-settings.html", label: "Paramètres", icon: "settings" },
       ],
-      menu: [["candidate-profile.html", "user", "Mon profil"], ["security.html", "shield", "Sécurité"], ["candidate-settings.html", "settings", "Paramètres"]],
+      menu: [["candidate-profile.html", "user", "Mon profil"], ["security.html", "shield", "Sécurité"], ["candidate-settings.html", "settings", "Paramètres"], ["../help.html", "help", "Help"], ["../support.html", "inbox", "Support"]],
     },
     ADMINISTRATEUR: {
       home: "admin.html", label: "Administration", plans: null, premiumKey: null, noBell: true, noSearch: true,
@@ -238,8 +239,8 @@
         { id: "users", href: "admin.html#users", label: "Comptes", icon: "users" },
         { id: "orgs", href: "admin.html#orgs", label: "Entreprises", icon: "building" },
         { id: "offers", href: "admin.html#offers", label: "Offres", icon: "briefcase" },
-        { id: "external", href: "admin.html#external", label: "Recherche web", icon: "file" },
-        { id: "moderation", href: "admin.html#moderation", label: "Signalements", icon: "flag" },
+        { id: "external", href: "admin.html#external", label: "Sources externes", icon: "file" },
+        { id: "support", href: "admin.html#support", label: "Messages du support", icon: "help" },
         { section: "Référentiel" },
         { id: "plans", href: "admin.html#plans", label: "Plans & factures", icon: "card" },
         { section: "Sécurité" },
@@ -275,7 +276,7 @@
     });
     var isRec = session.role === "RECRUTEUR";
     var cardHref = isRec ? "recruiter-team.html" : session.role === "CANDIDAT" ? "candidate-profile.html" : "admin.html#dash";
-    html += '</nav><a class="rc-orgcard" href="' + cardHref + '" id="rc-orgcard" data-tip="' + esc(isRec ? "Entreprise & équipe" : "Mon compte") + '"><div class="rc-orgmark" id="rc-orgmark">·</div><div><strong id="rc-orgname">' + esc(isRec ? "Organisation" : session.fullName || CFG.label) + '</strong><span id="rc-orgrole">' + (isRec ? "&nbsp;" : esc(CFG.label)) + "</span></div></a>";
+    html += '</nav><a class="rc-orgcard" href="' + cardHref + '" id="rc-orgcard" data-tip="' + esc(isRec ? "Entreprise & équipe" : session.role === "CANDIDAT" ? "Profil & CV" : "Mon compte") + '"><div class="rc-orgmark" id="rc-orgmark">·</div><div><strong id="rc-orgname">' + esc(isRec ? "Organisation" : session.fullName || CFG.label) + '</strong><span id="rc-orgrole">' + (isRec ? "&nbsp;" : esc(CFG.label)) + "</span></div></a>";
     side.innerHTML = html;
     bindCollapse(side);
     if (isRec) paintOrg();
@@ -728,7 +729,7 @@
         }
       }
       if (c && c.allowed === false && window.HireLinkGrowth) {
-        HireLinkGrowth.maybeSuggest({ aiExhausted: true, role: (session && session.role) || "RECRUTEUR" });
+        HireLinkGrowth.maybeSuggest({ aiExhausted: true, aiLimit: c.limit, role: (session && session.role) || "RECRUTEUR" });
       }
     }).catch(function () {});
   }

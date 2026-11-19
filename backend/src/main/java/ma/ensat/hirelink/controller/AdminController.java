@@ -63,6 +63,8 @@ public class AdminController {
     private final OfferReportRepository offerReportRepository;
     private final JobOfferService jobOfferService;
     private final PaymentService paymentService;
+    private final ma.ensat.hirelink.service.AdminInsightsService insights;
+    private final ma.ensat.hirelink.service.AdminOrganizationService orgAdmin;
 
     public AdminController(
             UserRepository userRepository,
@@ -82,8 +84,12 @@ public class AdminController {
             AiCreditService aiCreditService,
             OfferReportRepository offerReportRepository,
             JobOfferService jobOfferService,
-            PaymentService paymentService
+            PaymentService paymentService,
+            ma.ensat.hirelink.service.AdminInsightsService insights,
+            ma.ensat.hirelink.service.AdminOrganizationService orgAdmin
     ) {
+        this.insights = insights;
+        this.orgAdmin = orgAdmin;
         this.audit = audit;
         this.sessionService = sessionService;
         this.auditLogRepository = auditLogRepository;
@@ -129,6 +135,14 @@ public class AdminController {
         return body;
     }
 
+    /** Tableau de bord : revenus, répartition des formules, comptes, inscriptions et actions en attente. */
+    @GetMapping("/overview")
+    public Map<String, Object> overview(@AuthenticationPrincipal User user,
+                                        @RequestParam(defaultValue = "week") String granularity) {
+        requireAdmin(user);
+        return insights.overview(granularity);
+    }
+
     @GetMapping("/users")
     public List<Map<String, Object>> users(@AuthenticationPrincipal User user) {
         requireAdmin(user);
@@ -150,6 +164,7 @@ public class AdminController {
             row.put("orgRole", m == null ? null : m.getOrgRole().name());
             row.put("orgId", m == null ? null : m.getOrganization().getId());
             row.put("orgName", m == null ? null : m.getOrganization().getName());
+            row.put("createdAt", u.getCreatedAt() == null ? "" : u.getCreatedAt().toString());
             rows.add(row);
         }
         return rows;
@@ -163,7 +178,7 @@ public class AdminController {
     ) {
         requireAdmin(admin);
         User u = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User introuvable"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Compte introuvable"));
         boolean active = Boolean.TRUE.equals(body.get("active"));
         if (!active && u.getId().equals(admin.getId())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Vous ne pouvez pas désactiver votre propre compte");
@@ -177,22 +192,36 @@ public class AdminController {
         return Map.of("id", u.getId(), "active", u.isActive());
     }
 
-    /** Journal d'audit : les 200 derniers évènements de sécurité (filtre optionnel par action). */
+    /** Déconnecte un compte de tous ses appareils (le compte reste actif). */
+    @PostMapping("/users/{id}/revoke-sessions")
+    public Map<String, Object> revokeUserSessions(@AuthenticationPrincipal User admin, @PathVariable Long id) {
+        requireAdmin(admin);
+        int n = orgAdmin.revokeSessions(admin, id);
+        return Map.of("id", id, "revoked", n);
+    }
+
+    /**
+     * Journal d'audit filtré côté serveur : actions (liste séparée par des virgules), période du/au
+     * (jours locaux, fin incluse), recherche sur le compte ou le détail, résultat. Paginé.
+     */
     @GetMapping("/audit")
-    public List<Map<String, Object>> auditLog(
+    public Map<String, Object> auditLog(
             @AuthenticationPrincipal User user,
             @RequestParam(required = false) String action,
+            @RequestParam(required = false) String actions,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String result,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size
     ) {
         requireAdmin(user);
         int safe = Math.min(100, Math.max(1, size));
         var pageable = org.springframework.data.domain.PageRequest.of(Math.max(0, page), safe);
-        var rows = action == null || action.isBlank()
-                ? auditLogRepository.findAllByOrderByIdDesc(pageable)
-                : auditLogRepository.findByActionOrderByIdDesc(action.trim(), pageable);
+        var rows = searchAudit(action, actions, from, to, q, result, pageable);
         List<Map<String, Object>> out = new ArrayList<>();
-        for (var a : rows) {
+        for (var a : rows.getContent()) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("id", a.getId());
             m.put("at", a.getCreatedAt().toString());
@@ -205,14 +234,45 @@ public class AdminController {
             m.put("detail", a.getDetail());
             out.add(m);
         }
-        return out;
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("rows", out);
+        body.put("total", rows.getTotalElements());
+        body.put("page", rows.getNumber());
+        body.put("size", safe);
+        body.put("pages", rows.getTotalPages());
+        return body;
+    }
+
+    private org.springframework.data.domain.Page<ma.ensat.hirelink.model.AuditLog> searchAudit(
+            String action, String actions, String from, String to, String q, String result,
+            org.springframework.data.domain.Pageable pageable) {
+        java.util.Set<String> codes = new java.util.LinkedHashSet<>();
+        if (action != null && !action.isBlank()) codes.add(action.trim());
+        if (actions != null && !actions.isBlank()) {
+            for (String c : actions.split(",")) if (!c.isBlank()) codes.add(c.trim());
+        }
+        String like = q == null || q.isBlank() ? null : "%" + q.trim().toLowerCase() + "%";
+        Boolean success = "ok".equalsIgnoreCase(result) ? Boolean.TRUE : "fail".equalsIgnoreCase(result) ? Boolean.FALSE : null;
+        return auditLogRepository.search(codes.isEmpty(), codes.isEmpty() ? List.of("-") : codes,
+                AdminDates.dayStart(from), AdminDates.dayEndExclusive(to), like, success, pageable);
     }
 
     @GetMapping("/organizations")
     @Transactional(readOnly = true)
     public List<Map<String, Object>> organizations(@AuthenticationPrincipal User user) {
         requireAdmin(user);
-        return organizationRepository.findAllWithOwner().stream().map(this::orgSummary).toList();
+        // Une requête par table, pas une par entreprise : la liste reste rapide avec beaucoup d'entreprises.
+        Map<Long, List<Membership>> membersByOrg = new java.util.HashMap<>();
+        for (Membership m : membershipRepository.findAllActiveWithOrganization()) {
+            membersByOrg.computeIfAbsent(m.getOrganization().getId(), k -> new ArrayList<>()).add(m);
+        }
+        Map<Long, Integer> offersByRecruiter = new java.util.HashMap<>();
+        for (JobOffer o : jobOfferRepository.findAllWithRecruiter()) {
+            if (o.getRecruiter() != null) offersByRecruiter.merge(o.getRecruiter().getId(), 1, Integer::sum);
+        }
+        return organizationRepository.findAllWithOwner().stream()
+                .map(org -> orgSummary(org, membersByOrg.getOrDefault(org.getId(), List.of()), offersByRecruiter))
+                .toList();
     }
 
     @GetMapping("/organizations/{id}")
@@ -248,9 +308,14 @@ public class AdminController {
         Organization org = organizationRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise introuvable"));
         if (body.containsKey("verified")) {
-            boolean verified = Boolean.TRUE.equals(body.get("verified"));
-            companyVerificationService.markAdminDecision(org, verified);
-            audit.ok(verified ? "ORG_VERIFIED" : "ORG_VERIFICATION_REMOVED", admin, "ORGANIZATION", org.getId(), org.getName() + " · ICE " + org.getIce());
+            // La vérification est automatique (e-mail professionnel). L'administration peut seulement retirer un badge.
+            if (Boolean.TRUE.equals(body.get("verified"))) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "La vérification est automatique. Vous pouvez seulement retirer un badge, ou relancer le contrôle automatique.");
+            }
+            boolean verified = false;
+            companyVerificationService.revokeByAdmin(org);
+            audit.ok("ORG_VERIFICATION_REMOVED", admin, "ORGANIZATION", org.getId(), org.getName());
             for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
                 if (m.getUser().getRole() == Role.RECRUTEUR) {
                     m.getUser().setCompanyVerified(verified);
@@ -268,11 +333,51 @@ public class AdminController {
             if (requested != org.getPlanTier()) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
-                        "Une formule payante s'active apres le paiement de la facture par le createur de l'espace. L'administrateur ne modifie pas ce statut.");
+                        "Une formule payante s’active après le paiement de la facture par le créateur de l’espace. L’administration ne modifie pas la formule.");
             }
         }
         organizationRepository.save(org);
         return orgSummary(org);
+    }
+
+    /** Relance le contrôle automatique (e-mail professionnel du créateur), par exemple après un retrait de badge. */
+    @PostMapping("/organizations/{id}/recheck")
+    @Transactional
+    public Map<String, Object> recheckOrganization(@AuthenticationPrincipal User admin, @PathVariable Long id) {
+        requireAdmin(admin);
+        Organization org = organizationRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Entreprise introuvable"));
+        org = organizationService.recheckByAdmin(org);
+        for (Membership m : membershipRepository.findByOrganizationIdAndActiveTrue(org.getId())) {
+            if (m.getUser().getRole() == Role.RECRUTEUR) {
+                m.getUser().setCompanyVerified(org.isVerified());
+                m.getUser().setVerificationStatus(org.getVerificationStatus());
+            }
+        }
+        audit.ok("ORG_VERIFICATION_RECHECKED", admin, "ORGANIZATION", org.getId(), org.getName() + (org.isVerified() ? " · vérifiée" : " · non vérifiée"));
+        return orgSummary(org);
+    }
+
+    /** Désactive (active=false) ou réactive (active=true) une entreprise. */
+    @PatchMapping("/organizations/{id}/active")
+    @Transactional
+    public Map<String, Object> setOrganizationActive(
+            @AuthenticationPrincipal User admin,
+            @PathVariable Long id,
+            @RequestBody Map<String, Boolean> body
+    ) {
+        requireAdmin(admin);
+        boolean active = Boolean.TRUE.equals(body.get("active"));
+        Organization org = active ? orgAdmin.reactivate(admin, id) : orgAdmin.deactivate(admin, id);
+        return orgSummary(organizationRepository.findById(org.getId()).orElse(org));
+    }
+
+    /** Retire une entreprise : plus d'accès ni d'offres en ligne ; factures et historique conservés. */
+    @DeleteMapping("/organizations/{id}")
+    public Map<String, Object> removeOrganization(@AuthenticationPrincipal User admin, @PathVariable Long id) {
+        requireAdmin(admin);
+        Organization org = orgAdmin.remove(admin, id);
+        return Map.of("id", org.getId(), "removed", true);
     }
 
     @GetMapping("/invoices")
@@ -491,12 +596,19 @@ public class AdminController {
 
     /** Export CSV (séparateur point-virgule, BOM UTF-8) : la copie d'écran du journal ne suffit pas à un auditeur. */
     @GetMapping(value = "/audit/export", produces = "text/csv;charset=UTF-8")
-    public ResponseEntity<String> exportAudit(@AuthenticationPrincipal User admin, @RequestParam(required = false) String action) {
+    public ResponseEntity<String> exportAudit(
+            @AuthenticationPrincipal User admin,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String actions,
+            @RequestParam(required = false) String from,
+            @RequestParam(required = false) String to,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String result
+    ) {
         requireAdmin(admin);
         String filter = action == null || action.isBlank() ? "" : action.trim();
-        List<ma.ensat.hirelink.model.AuditLog> rows = filter.isEmpty()
-                ? auditLogRepository.findTop2000ByOrderByIdDesc()
-                : auditLogRepository.findTop2000ByActionOrderByIdDesc(filter);
+        List<ma.ensat.hirelink.model.AuditLog> rows = searchAudit(action, actions, from, to, q, result,
+                org.springframework.data.domain.PageRequest.of(0, 2000)).getContent();
         StringBuilder csv = new StringBuilder("Date;Action;Compte;Cible;IP;Résultat;Détail\n");
         for (var a : rows) {
             csv.append(csvCell(a.getCreatedAt() == null ? "" : a.getCreatedAt().toString())).append(';')
@@ -507,8 +619,10 @@ public class AdminController {
                     .append(csvCell(a.isSuccess() ? "ok" : "échec")).append(';')
                     .append(csvCell(a.getDetail() == null ? "" : a.getDetail())).append('\n');
         }
-        audit.ok("AUDIT_EXPORTED", admin, "AUDIT_LOG", null, rows.size() + " ligne(s)" + (filter.isEmpty() ? "" : " · action=" + filter));
-        String name = "audit-hirelink-" + java.time.LocalDate.now() + (filter.isEmpty() ? "" : "-" + filter.toLowerCase()) + ".csv";
+        boolean period = (from != null && !from.isBlank()) || (to != null && !to.isBlank());
+        audit.ok("AUDIT_EXPORTED", admin, "AUDIT_LOG", null, rows.size() + " ligne(s)"
+                + (filter.isEmpty() ? "" : " · action=" + filter) + (period ? " · période " + (from == null ? "" : from) + "→" + (to == null ? "" : to) : ""));
+        String name = "audit-hirelink-" + java.time.LocalDate.now(AdminDates.ZONE) + (filter.isEmpty() ? "" : "-" + filter.toLowerCase()) + ".csv";
         return ResponseEntity.ok()
                 .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + "\"")
                 .contentType(new org.springframework.http.MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
@@ -565,7 +679,8 @@ public class AdminController {
     @GetMapping("/plans")
     public List<Map<String, Object>> plans(@AuthenticationPrincipal User user) {
         requireAdmin(user);
-        return billingCatalogService.plans().stream().map(billingCatalogService::toPlan).toList();
+        // Les anciennes formules restent en base pour les factures passées, mais ne sont plus listées.
+        return billingCatalogService.catalog().stream().map(billingCatalogService::toPlan).toList();
     }
 
     @PatchMapping("/plans/{code}")
@@ -690,9 +805,17 @@ public class AdminController {
 
     private Map<String, Object> orgSummary(Organization org) {
         List<Membership> members = membershipRepository.findByOrganizationIdAndActiveTrue(org.getId());
+        Map<Long, Integer> offersByRecruiter = new java.util.HashMap<>();
+        for (Membership m : members) {
+            offersByRecruiter.put(m.getUser().getId(), jobOfferRepository.findByRecruiterId(m.getUser().getId()).size());
+        }
+        return orgSummary(org, members, offersByRecruiter);
+    }
+
+    private Map<String, Object> orgSummary(Organization org, List<Membership> members, Map<Long, Integer> offersByRecruiter) {
         int offers = 0;
         for (Membership m : members) {
-            offers += jobOfferRepository.findByRecruiterId(m.getUser().getId()).size();
+            offers += offersByRecruiter.getOrDefault(m.getUser().getId(), 0);
         }
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", org.getId());
@@ -712,6 +835,12 @@ public class AdminController {
         row.put("memberCount", members.size());
         row.put("offerCount", offers);
         row.put("createdAt", org.getCreatedAt() == null ? "" : org.getCreatedAt().toString());
+        row.put("accessStatus", org.isRemoved() ? "REMOVED" : org.isAccessActive() ? "ACTIVE" : "DISABLED");
+        row.put("accessLabel", ma.ensat.hirelink.service.AdminOrganizationService.accessLabel(org));
+        row.put("accessChangedAt", org.getAccessChangedAt() == null ? "" : org.getAccessChangedAt().toString());
+        row.put("emailDomain", org.getOwner() == null || org.getOwner().getEmail() == null || !org.getOwner().getEmail().contains("@")
+                ? "" : org.getOwner().getEmail().substring(org.getOwner().getEmail().indexOf('@') + 1));
+        row.put("planLabel", PlanTier.normalize(org.getPlanTier(), Role.RECRUTEUR).displayLabel());
         return row;
     }
 

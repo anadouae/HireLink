@@ -1,4 +1,9 @@
 
+-- DANGER: this baseline contains DROP TABLE statements.
+-- NEVER run it on `hirelink` or any database containing data.
+-- Verify SELECT DATABASE() targets a disposable test database before execution.
+-- Prefer apply-migrations.ps1 -Database hirelink_test -Fresh for isolated tests.
+
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
@@ -543,7 +548,7 @@ DROP TABLE IF EXISTS `user_avatars`;
 CREATE TABLE `user_avatars` (
   `user_id` bigint(20) NOT NULL,
   `content_type` varchar(40) NOT NULL,
-  `data` tinyblob NOT NULL,
+  `data` mediumblob NOT NULL,
   `updated_at` datetime(6) NOT NULL,
   PRIMARY KEY (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

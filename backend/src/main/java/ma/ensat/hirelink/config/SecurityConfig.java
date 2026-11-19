@@ -67,7 +67,6 @@ public class SecurityConfig {
                             "/api/v1/health",
                             "/api/v1/auth/config",
                             "/api/v1/auth/legal",
-                            "/api/v1/auth/captcha",
                             "/api/v1/auth/request-otp",
                             "/api/v1/auth/verify-register-otp",
                             "/api/v1/auth/verify-login-otp",

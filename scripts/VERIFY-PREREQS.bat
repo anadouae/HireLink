@@ -33,9 +33,21 @@ if errorlevel 1 (
   echo [OK] Client mysql present
 )
 
+where py >nul 2>nul
+if errorlevel 1 (
+  where python >nul 2>nul
+  if errorlevel 1 (
+    echo [ERREUR] Python absent — requis pour servir le frontend ^(py -m http.server 5500^).
+  ) else (
+    echo [OK] Python present
+  )
+) else (
+  echo [OK] Python present ^(py^)
+)
+
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [INFO] Node.js absent — requis seulement pour servir le frontend ^(npx serve^) ou Playwright.
+  echo [INFO] Node.js absent — requis seulement pour les tests Playwright.
 ) else (
   echo [OK] Node.js present
 )

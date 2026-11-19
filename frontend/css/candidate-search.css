@@ -298,28 +298,45 @@
 .cs-empty-actions .cs-active-chip small { color: var(--muted, #64748b); }
 .cs-empty-tip { margin-top: 0.85rem !important; font-size: 0.85rem; }
 /* Offres web en cours de chargement : bandeau en fin de liste, les cartes HireLink restent en place. */
-.cs-web-pending {
+/* Chargement de la recherche : hauteur fixe, messages qui se relaient. */
+.cs-loader {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.85rem 1rem;
-  border-radius: 14px;
-  border: 1px dashed color-mix(in srgb, var(--brand, #7a2032) 25%, var(--border, #d1d5db));
+  justify-content: center;
+  gap: 0.85rem;
+  min-height: 160px;
+  padding: 1rem 1.25rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--brand, #7a2032) 14%, var(--border, #e5e0d8));
+  background: color-mix(in srgb, var(--brand, #7a2032) 3%, var(--surface, #fff));
   color: var(--muted, #64748b);
-  font-size: 0.9rem;
+  font-size: 0.92rem;
 }
-.cs-web-pending::before {
-  content: "";
-  width: 14px;
-  height: 14px;
+.cs-loader--web {
+  min-height: 64px;
+  border-style: dashed;
+  background: transparent;
+}
+.cs-loader-dots { display: inline-flex; gap: 5px; flex: none; }
+.cs-loader-dots i {
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  border: 2px solid color-mix(in srgb, var(--brand, #7a2032) 30%, transparent);
-  border-top-color: var(--brand, #7a2032);
-  animation: cs-spin 0.8s linear infinite;
+  background: var(--brand, #7a2032);
+  opacity: 0.25;
+  animation: cs-loader-dot 1.2s ease-in-out infinite;
 }
-@keyframes cs-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .cs-web-pending::before { animation: none; } }
+.cs-loader-dots i:nth-child(2) { animation-delay: 0.15s; }
+.cs-loader-dots i:nth-child(3) { animation-delay: 0.3s; }
+.cs-loader-msg { display: inline-block; min-width: 18rem; }
+.cs-loader-msg.is-in { animation: cs-loader-msg 0.35s ease-out both; }
+@keyframes cs-loader-dot { 0%, 80%, 100% { opacity: 0.25; transform: translateY(0); } 40% { opacity: 1; transform: translateY(-4px); } }
+@keyframes cs-loader-msg { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .cs-loader-dots i { animation: none; opacity: 0.6; }
+  .cs-loader-msg.is-in { animation: none; }
+}
 
 .cs-grid {
   display: grid;

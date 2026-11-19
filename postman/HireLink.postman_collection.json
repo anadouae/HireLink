@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "HireLink API — ISO",
-    "description": "Suite API professionnelle HireLink (endpoints Spring réels uniquement).\n\n**Cible :** instance ISO (`baseUrl`, défaut http://127.0.0.1:18081/api/v1).\n**Interdit :** base démo `hirelink` / port 8081 / JAR F3C2.\n**Auth :** CAPTCHA one-shot résolu côté client (pas de bypass). OTP / MFA / reset token = manuels.\n**Comptes seed :** documentés dans DataSeeder (mots de passe via variables d'environnement Newman).",
+    "description": "Suite API professionnelle HireLink (endpoints Spring réels uniquement).\n\n**Cible :** instance ISO (`baseUrl`, défaut http://127.0.0.1:18081/api/v1).\n**Interdit :** base démo `hirelink` / port 8081 / JAR F3C2.\n**Auth :** e-mail + mot de passe. OTP / MFA / reset token = manuels (pas de contournement).\n**Comptes seed :** documentés dans DataSeeder (mots de passe via variables d'environnement Newman).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -159,61 +159,10 @@
     },
     {
       "name": "1. Authentification et sécurité",
-      "description": "CAPTCHA obligatoire pour login/forgot. Admin MFA : assert challenge sans jeton. Pas de contournement OTP/MFA.",
+      "description": "Connexion e-mail + mot de passe. Admin MFA : assert challenge sans jeton. Pas de contournement OTP/MFA.",
       "item": [
         {
-          "name": "CAPTCHA challenge",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Accept",
-                "value": "application/json",
-                "type": "text"
-              },
-              {
-                "key": "X-HireLink-CSRF",
-                "value": "1",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/auth/captcha",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "auth",
-                "captcha"
-              ]
-            },
-            "description": "POST /auth/captcha — épreuve serveur one-shot",
-            "body": {
-              "mode": "raw",
-              "raw": "{}"
-            }
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
-                  "pm.test(\"JSON parseable\", function () { pm.response.to.be.json; });",
-                  "pm.test(\"token captcha\", () => { const j = pm.response.json(); pm.expect(j.token).to.be.a(\"string\").that.is.not.empty; pm.environment.set(\"captchaToken\", j.token); });"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Login candidat (CAPTCHA)",
+          "name": "Login candidat",
           "request": {
             "method": "POST",
             "header": [
@@ -243,54 +192,13 @@
                 "login"
               ]
             },
-            "description": "POST /auth/login — rôle CANDIDAT seed. CAPTCHA résolu en prerequest.",
+            "description": "POST /auth/login — rôle CANDIDAT seed.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{candidateEmail}}\",\n  \"password\": \"{{candidatePassword}}\",\n  \"captchaToken\": \"{{captchaToken}}\",\n  \"captchaAnswer\": \"{{captchaAnswer}}\"\n}"
+              "raw": "{\n  \"email\": \"{{candidateEmail}}\",\n  \"password\": \"{{candidatePassword}}\"\n}"
             }
           },
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const base = pm.environment.get(\"baseUrl\");",
-                  "const csrf = [",
-                  "  { key: \"X-HireLink-CSRF\", value: \"1\" },",
-                  "  { key: \"Content-Type\", value: \"application/json\" },",
-                  "  { key: \"Accept\", value: \"application/json\" }",
-                  "];",
-                  "function solve(cap) {",
-                  "  if (cap.kind === \"question\" && cap.question) {",
-                  "    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);",
-                  "    if (!m) throw new Error(\"CAPTCHA question illisible\");",
-                  "    const a = Number(m[1]), b = Number(m[3]);",
-                  "    return m[2] === \"+\" ? String(a + b) : String(a - b);",
-                  "  }",
-                  "  const texts = [...String(cap.svg || \"\").matchAll(/<text[^>]*\\sx=\"(\\d+)\"[^>]*>([^<]+)<\\/text>/g)]",
-                  "    .map((x) => ({ x: Number(x[1]), ch: x[2] }))",
-                  "    .sort((a, b) => a.x - b.x);",
-                  "  const ans = texts.map((t) => t.ch).join(\"\");",
-                  "  if (!ans) throw new Error(\"CAPTCHA image vide\");",
-                  "  return ans;",
-                  "}",
-                  "// Newman attend la fin de pm.sendRequest avant la requête principale.",
-                  "pm.sendRequest({",
-                  "  url: base + \"/auth/captcha\",",
-                  "  method: \"POST\",",
-                  "  header: csrf,",
-                  "  body: { mode: \"raw\", raw: \"{}\" }",
-                  "}, function (err, res) {",
-                  "  if (err) throw err;",
-                  "  if (res.code === 429) throw new Error(\"CAPTCHA throttled (429)\");",
-                  "  const cap = res.json();",
-                  "  pm.environment.set(\"captchaToken\", cap.token);",
-                  "  pm.environment.set(\"captchaAnswer\", solve(cap));",
-                  "});"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -305,7 +213,7 @@
           ]
         },
         {
-          "name": "Login recruteur (CAPTCHA)",
+          "name": "Login recruteur",
           "request": {
             "method": "POST",
             "header": [
@@ -338,51 +246,10 @@
             "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{recruiterEmail}}\",\n  \"password\": \"{{recruiterPassword}}\",\n  \"captchaToken\": \"{{captchaToken}}\",\n  \"captchaAnswer\": \"{{captchaAnswer}}\"\n}"
+              "raw": "{\n  \"email\": \"{{recruiterEmail}}\",\n  \"password\": \"{{recruiterPassword}}\"\n}"
             }
           },
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const base = pm.environment.get(\"baseUrl\");",
-                  "const csrf = [",
-                  "  { key: \"X-HireLink-CSRF\", value: \"1\" },",
-                  "  { key: \"Content-Type\", value: \"application/json\" },",
-                  "  { key: \"Accept\", value: \"application/json\" }",
-                  "];",
-                  "function solve(cap) {",
-                  "  if (cap.kind === \"question\" && cap.question) {",
-                  "    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);",
-                  "    if (!m) throw new Error(\"CAPTCHA question illisible\");",
-                  "    const a = Number(m[1]), b = Number(m[3]);",
-                  "    return m[2] === \"+\" ? String(a + b) : String(a - b);",
-                  "  }",
-                  "  const texts = [...String(cap.svg || \"\").matchAll(/<text[^>]*\\sx=\"(\\d+)\"[^>]*>([^<]+)<\\/text>/g)]",
-                  "    .map((x) => ({ x: Number(x[1]), ch: x[2] }))",
-                  "    .sort((a, b) => a.x - b.x);",
-                  "  const ans = texts.map((t) => t.ch).join(\"\");",
-                  "  if (!ans) throw new Error(\"CAPTCHA image vide\");",
-                  "  return ans;",
-                  "}",
-                  "// Newman attend la fin de pm.sendRequest avant la requête principale.",
-                  "pm.sendRequest({",
-                  "  url: base + \"/auth/captcha\",",
-                  "  method: \"POST\",",
-                  "  header: csrf,",
-                  "  body: { mode: \"raw\", raw: \"{}\" }",
-                  "}, function (err, res) {",
-                  "  if (err) throw err;",
-                  "  if (res.code === 429) throw new Error(\"CAPTCHA throttled (429)\");",
-                  "  const cap = res.json();",
-                  "  pm.environment.set(\"captchaToken\", cap.token);",
-                  "  pm.environment.set(\"captchaAnswer\", solve(cap));",
-                  "});"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -429,51 +296,10 @@
             "description": "Si MFA admin activé : 200 + mfaRequired sans accessToken. Ne pas appeler /mfa/verify sans TOTP manuel.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\",\n  \"captchaToken\": \"{{captchaToken}}\",\n  \"captchaAnswer\": \"{{captchaAnswer}}\"\n}"
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
             }
           },
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const base = pm.environment.get(\"baseUrl\");",
-                  "const csrf = [",
-                  "  { key: \"X-HireLink-CSRF\", value: \"1\" },",
-                  "  { key: \"Content-Type\", value: \"application/json\" },",
-                  "  { key: \"Accept\", value: \"application/json\" }",
-                  "];",
-                  "function solve(cap) {",
-                  "  if (cap.kind === \"question\" && cap.question) {",
-                  "    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);",
-                  "    if (!m) throw new Error(\"CAPTCHA question illisible\");",
-                  "    const a = Number(m[1]), b = Number(m[3]);",
-                  "    return m[2] === \"+\" ? String(a + b) : String(a - b);",
-                  "  }",
-                  "  const texts = [...String(cap.svg || \"\").matchAll(/<text[^>]*\\sx=\"(\\d+)\"[^>]*>([^<]+)<\\/text>/g)]",
-                  "    .map((x) => ({ x: Number(x[1]), ch: x[2] }))",
-                  "    .sort((a, b) => a.x - b.x);",
-                  "  const ans = texts.map((t) => t.ch).join(\"\");",
-                  "  if (!ans) throw new Error(\"CAPTCHA image vide\");",
-                  "  return ans;",
-                  "}",
-                  "// Newman attend la fin de pm.sendRequest avant la requête principale.",
-                  "pm.sendRequest({",
-                  "  url: base + \"/auth/captcha\",",
-                  "  method: \"POST\",",
-                  "  header: csrf,",
-                  "  body: { mode: \"raw\", raw: \"{}\" }",
-                  "}, function (err, res) {",
-                  "  if (err) throw err;",
-                  "  if (res.code === 429) throw new Error(\"CAPTCHA throttled (429)\");",
-                  "  const cap = res.json();",
-                  "  pm.environment.set(\"captchaToken\", cap.token);",
-                  "  pm.environment.set(\"captchaAnswer\", solve(cap));",
-                  "});"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {
@@ -520,51 +346,10 @@
             "description": "",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"{{candidateEmail}}\",\n  \"password\": \"WrongPassword-NotSeed-000!\",\n  \"captchaToken\": \"{{captchaToken}}\",\n  \"captchaAnswer\": \"{{captchaAnswer}}\"\n}"
+              "raw": "{\n  \"email\": \"{{candidateEmail}}\",\n  \"password\": \"WrongPassword-NotSeed-000!\"\n}"
             }
           },
           "event": [
-            {
-              "listen": "prerequest",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "const base = pm.environment.get(\"baseUrl\");",
-                  "const csrf = [",
-                  "  { key: \"X-HireLink-CSRF\", value: \"1\" },",
-                  "  { key: \"Content-Type\", value: \"application/json\" },",
-                  "  { key: \"Accept\", value: \"application/json\" }",
-                  "];",
-                  "function solve(cap) {",
-                  "  if (cap.kind === \"question\" && cap.question) {",
-                  "    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);",
-                  "    if (!m) throw new Error(\"CAPTCHA question illisible\");",
-                  "    const a = Number(m[1]), b = Number(m[3]);",
-                  "    return m[2] === \"+\" ? String(a + b) : String(a - b);",
-                  "  }",
-                  "  const texts = [...String(cap.svg || \"\").matchAll(/<text[^>]*\\sx=\"(\\d+)\"[^>]*>([^<]+)<\\/text>/g)]",
-                  "    .map((x) => ({ x: Number(x[1]), ch: x[2] }))",
-                  "    .sort((a, b) => a.x - b.x);",
-                  "  const ans = texts.map((t) => t.ch).join(\"\");",
-                  "  if (!ans) throw new Error(\"CAPTCHA image vide\");",
-                  "  return ans;",
-                  "}",
-                  "// Newman attend la fin de pm.sendRequest avant la requête principale.",
-                  "pm.sendRequest({",
-                  "  url: base + \"/auth/captcha\",",
-                  "  method: \"POST\",",
-                  "  header: csrf,",
-                  "  body: { mode: \"raw\", raw: \"{}\" }",
-                  "}, function (err, res) {",
-                  "  if (err) throw err;",
-                  "  if (res.code === 429) throw new Error(\"CAPTCHA throttled (429)\");",
-                  "  const cap = res.json();",
-                  "  pm.environment.set(\"captchaToken\", cap.token);",
-                  "  pm.environment.set(\"captchaAnswer\", solve(cap));",
-                  "});"
-                ]
-              }
-            },
             {
               "listen": "test",
               "script": {

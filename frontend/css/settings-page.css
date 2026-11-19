@@ -1,0 +1,13 @@
+/* Pages Paramètres (candidat et recruteur) */
+.rc-plan-intro { margin: 0 0 1rem; font-size: var(--text-sm); }
+.rc-plan-grid { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.rc-plan.is-current { border-color: var(--burgundy, #7a2032); box-shadow: 0 0 0 1px var(--burgundy, #7a2032) inset; }
+.rc-plan-note { margin: 0.9rem 0 0; font-size: var(--text-sm); }
+.rc-plan-owner { margin: 0 0 0.6rem; font-size: var(--text-sm); }
+.rc-card--spaced { margin-top: 1rem; }
+.rc-plan-usage { margin-bottom: 1.1rem; }
+.rc-inline-link { color: var(--burgundy, #7a2032); font-weight: 600; }
+.rc-pill--field { margin-top: 0.3rem; }
+.rc-logo--round { border-radius: 50%; }
+.rc-panel > .rc-card + .rc-card { margin-top: 1rem; }
+.rc-plan .rc-card-foot:not(:has(> :not([hidden]))) { display: none; }

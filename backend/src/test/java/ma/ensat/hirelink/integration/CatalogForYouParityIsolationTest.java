@@ -52,7 +52,6 @@ import static org.junit.jupiter.api.Assertions.*;
         "hirelink.external-jobs.jooble.enabled=false",
         "hirelink.web-search.enabled=false",
         "hirelink.web-search.max-results=10",
-        "hirelink.catalog.rebuild-on-startup=false",
         "hirelink.catalog.for-you-threshold=50",
         "hirelink.jwt.secret=hirelink-foryou-parity-iso-key-not-for-real-use-0",
         "hirelink.security.bcrypt-strength=4",

@@ -40,7 +40,7 @@ class LegalConsentServiceTest {
     void refusesStaleTermsVersion() {
         ResponseStatusException ex = assertThrows(ResponseStatusException.class,
                 () -> service.assertSignupConsents("cgu:old", "privacy:2026-11-12"));
-        assertTrue(ex.getReason().toLowerCase().contains("cgu"));
+        assertTrue(ex.getReason().toLowerCase().contains("conditions"));
     }
 
     @Test

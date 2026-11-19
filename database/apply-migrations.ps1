@@ -15,6 +15,10 @@ if ($Database -eq "hirelink") {
   Write-Host "ATTENTION: cible 'hirelink' (base demo habituelle). Preferer une base isolee pour les essais." -ForegroundColor Yellow
 }
 
+if ($Fresh -and $Database -ieq "hirelink") {
+  throw "Refus du mode -Fresh sur hirelink : le baseline V000 contient des DROP TABLE."
+}
+
 Write-Host "Migrations dir: $root"
 Write-Host "=== HireLink migrations -> $Database ==="
 
@@ -53,7 +57,14 @@ $incremental = @(
   "V003__billing_invoice_org_nullable.sql",
   "V004__external_offer_url_quality.sql",
   "V005__external_job_boards_ats.sql",
-  "V006__catalog_listings.sql"
+  "V006__catalog_listings.sql",
+  "V008__catalog_salary_experience_sector.sql",
+  "V009__support_requests.sql",
+  "V010__user_avatar_mediumblob.sql",
+  "V011__organization_access.sql",
+  "V012__cv_import_drafts.sql",
+  "V013__billing_promotions.sql",
+  "V014__align_profile_schema.sql"
 )
 
 foreach ($name in $incremental) {
@@ -74,5 +85,5 @@ UNION ALL SELECT CONCAT('external_job_boards=', COUNT(*)) FROM information_schem
 UNION ALL SELECT CONCAT('url_quality_col=', COUNT(*)) FROM information_schema.columns WHERE table_schema='$Database' AND table_name='external_job_offers' AND column_name='url_quality';
 "@
 
-Write-Host "Migrations V001-V006 appliquees avec succes sur $Database"
+Write-Host "Migrations V001-V012 appliquees avec succes sur $Database"
 exit 0

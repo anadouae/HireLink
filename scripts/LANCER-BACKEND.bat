@@ -13,6 +13,7 @@ echo ============================================================
 echo   HireLink — Backend
 echo   Port : %HIRELINK_PORT%
 echo   Frontend attendu : %HIRELINK_FE_ORIGIN%
+echo   Base par defaut : hirelink_test (ddl-auto=validate)
 echo ============================================================
 echo.
 

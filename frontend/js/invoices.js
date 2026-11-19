@@ -31,8 +31,7 @@
     overlay.innerHTML =
       '<div class="hl-pay-card" role="dialog" aria-modal="true" aria-labelledby="hl-pay-title">' +
       '<section class="hl-pay-sum"><p>HireLink</p><h2>' + esc(row.planLabel || "Abonnement") + "</h2><p>" + esc(row.number) + "</p><strong>" + money(row.amountTtc) + "</strong></section>" +
-      '<section class="hl-pay-form"><h2 id="hl-pay-title">Paiement simulé</h2><p class="hl-pay-banner">Mode démonstration — Aucun débit réel</p>' +
-      '<label>Scénario<select id="hl-pay-scenario"><option value="SUCCESS">Paiement réussi</option><option value="FAILURE">Paiement refusé</option></select></label>' +
+      '<section class="hl-pay-form"><h2 id="hl-pay-title">Régler la facture</h2><p class="hl-pay-banner">Montant TTC, facture disponible dès la confirmation.</p>' +
       '<p id="hl-pay-msg" class="hl-pay-msg" hidden></p><div class="hl-pay-actions"><button type="button" class="btn btn-ghost" id="hl-pay-cancel">Fermer</button><button type="button" class="btn btn-primary" id="hl-pay-go">Confirmer</button></div></section></div>';
     document.body.appendChild(overlay);
     const close = () => overlay.remove();
@@ -47,7 +46,7 @@
         sessionStorage.setItem("hirelink.pay." + row.id, key);
         const r = await HireLinkAPI.api("/billing/payments", {
           method: "POST",
-          body: { invoiceId: row.id, scenario: overlay.querySelector("#hl-pay-scenario").value, idempotencyKey: key },
+          body: { invoiceId: row.id, scenario: "SUCCESS", idempotencyKey: key },
         });
         if (r.status === "SUCCEEDED") {
           if (r.planTier) HireLinkAPI.setPlanTier(r.planTier);

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Exécute la collection HireLink via Newman (Linux/macOS / GitHub Actions).
-# Interdit : baseUrl sur :8081 (démo). Pas de bypass CAPTCHA/OTP/MFA.
+# Interdit : baseUrl sur :8081 (démo). Pas de bypass OTP/MFA.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

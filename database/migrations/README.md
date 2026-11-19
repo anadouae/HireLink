@@ -1,42 +1,60 @@
 # Migrations SQL HireLink (MariaDB / MySQL)
 
 ## Objectif
-Rendre le schÈma **explicite et reproductible** sans dÈpendre de `spring.jpa.hibernate.ddl-auto=update` en production.
+Rendre le sch√©ma **explicite et reproductible** sans d√©pendre de `spring.jpa.hibernate.ddl-auto=update` en production.
 
-| Environnement | `ddl-auto` recommandÈ | Migrations |
+| Environnement | `ddl-auto` recommand√© | Migrations |
 |---|---|---|
-| Install propre | `validate` (aprËs scripts) | `V000` (`-Fresh`) puis `V001`Ö`V006` |
-| Mise ‡ jour | `validate` | `V001`Ö`V006` (idempotents) |
-| DÈmo locale | `update` possible | optionnel si schÈma dÈj‡ alignÈ |
+| Install propre | `validate` (apr√®s scripts) | `V000` (`-Fresh`) puis `V001`‚Ä¶`V014` |
+| Mise √† jour | `validate` | `V001`‚Ä¶`V014` (idempotents) |
+| D√©mo locale | `update` possible | optionnel si sch√©ma d√©j√† align√© |
 
 ## Fichiers
 
-| Fichier | RÙle |
+| Fichier | R√¥le |
 |---|---|
-| `V000__schema_baseline_mariadb.sql` | SchÈma baseline (`CREATE TABLE`) ó **uniquement** avec `-Fresh` |
-| `V001__legal_acceptances.sql` | Consentements lÈgaux |
+| `V000__schema_baseline_mariadb.sql` | Sch√©ma baseline (`CREATE TABLE`) ‚Äî **uniquement** avec `-Fresh` |
+| `V001__legal_acceptances.sql` | Consentements l√©gaux |
 | `V002__external_offers.sql` | Offres externes + sync |
 | `V003__billing_invoice_org_nullable.sql` | Factures candidat (`organization_id` NULL) |
-| `V004__external_offer_url_quality.sql` | QualitÈ URL / quarantaine |
+| `V004__external_offer_url_quality.sql` | Qualit√© URL / quarantaine |
 | `V005__external_job_boards_ats.sql` | Boards ATS + colonnes |
 | `V006__catalog_listings.sql` | Projection catalogue + Pour toi |
+| `V008__catalog_salary_experience_sector.sql` | Filtres salaire / exp√©rience / secteur du catalogue |
+| `V009__support_requests.sql` | Messages de la page Support |
+| `V010__user_avatar_mediumblob.sql` | Photos de profil : `user_avatars.data` en `MEDIUMBLOB` |
+| `V011__organization_access.sql` | Acc√®s des entreprises (d√©sactivation r√©versible, retrait) |
+| `V012__cv_import_drafts.sql` | Brouillons d‚Äôimport CV et versions de profil restaurables |
+| `V013__billing_promotions.sql` | Tables des promotions de facturation et leur journal d‚Äô√©v√©nements |
+| `R013__billing_promotions.sql` | Rollback V013 (supprime les deux tables et leurs donn√©es) |
+| `V014__align_profile_schema.sql` | Colonnes de profil absentes du baseline et pr√©sentes sur HireLink |
+| `R014__align_profile_schema.sql` | Rollback V014 (supprime ces cinq colonnes et leurs donn√©es) |
 
-`V001`ñ`V006` sont conÁus pour Ítre **rÈ-exÈcutables** (`IF NOT EXISTS` / `MODIFY` idempotent). `-Fresh` est le seul mode destructeur (DROP DATABASE).
+Il n‚Äôy a pas de `V007` (num√©ro non utilis√©). Les tables `billing_promotions` et
+`billing_promotion_events`, auparavant cr√©√©es uniquement par Hibernate, sont d√©sormais
+g√©r√©es explicitement par V013 afin de fonctionner avec `ddl-auto=validate`.
+
+`V001`‚Äì`V012` sont con√ßus pour √™tre **r√©-ex√©cutables** (`IF NOT EXISTS` / colonnes test√©es dans `information_schema`). `-Fresh` est le seul mode destructeur (DROP DATABASE).
 
 ## Application (PowerShell)
 
 ```powershell
-# Install propre isolÈe (recommandÈ pour tests)
+# Install propre isol√©e (recommand√© pour tests)
 .\database\apply-migrations.ps1 -Database hirelink_lab -Fresh
 
-# Mise ‡ jour d'une base dÈj‡ migrÈe jusqu'‡ V002 (ajoute V003ñV006)
+# Mise √† jour d'une base existante (applique V001 √† V012, sans effet sur ce qui existe d√©j√†)
 .\database\apply-migrations.ps1 -Database hirelink_lab
 
-# Clone professeur (machine neuve) ó aprËs sauvegarde si donnÈes existantes
+# Machine neuve ‚Äî apr√®s sauvegarde si donn√©es existantes
 .\database\apply-migrations.ps1 -Database hirelink -Fresh
 ```
 
-Le runner **níapplique pas** V000 sans `-Fresh` (Èvite díÈcraser une base peuplÈe).
+Le runner **n‚Äôapplique pas** V000 sans `-Fresh` (√©vite d‚Äô√©craser une base peupl√©e) et refuse
+`-Fresh` sur `hirelink`. V000 contient des `DROP TABLE` : ne l‚Äôex√©cutez jamais sur une base
+qui contient des donn√©es; v√©rifiez `SELECT DATABASE()` avant toute ex√©cution manuelle.
+
+Pour annuler V013, ex√©cutez `R013__billing_promotions.sql`; pour annuler V014, ex√©cutez
+`R014__align_profile_schema.sql`. Ex√©cutez les rollbacks uniquement sur la base de test cibl√©e.
 
 ## Validation Hibernate
 

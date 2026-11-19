@@ -686,10 +686,11 @@ public class OrganizationService {
                 org.setLogoUrl(url);
             }
         }
-        // L'identité légale (nom + ICE) ne se revérifie que si elle change : enregistrer une présentation, un logo ou une
-        // ville ne retire jamais le statut « vérifiée » (y compris par l'admin). Changer le nom ou l'ICE relance la vérification.
+        // L'identité (nom, ICE facultatif) ne se revérifie que si elle change : enregistrer une présentation, un logo ou une
+        // ville ne retire jamais le badge. Un badge retiré par l'administration n'est pas rendu automatiquement.
         boolean identityChanged = !sameText(previousName, org.getName()) || !sameText(previousIce, org.getIce());
-        if (identityChanged && org.getIce() != null && !org.getIce().isBlank() && org.getName() != null) {
+        boolean revoked = "ADMIN_REVOKED".equals(org.getVerificationStatus());
+        if (identityChanged && !revoked && org.getName() != null && !org.getName().isBlank()) {
             var result = companyVerificationService.verify(org.getIce(), org.getName(), user.getId(), user.getEmail());
             companyVerificationService.apply(user, result);
             companyVerificationService.applyToOrg(org, result);
@@ -742,18 +743,38 @@ public class OrganizationService {
         return organizationRepository.save(org);
     }
 
+    /** « Relancer la vérification » côté entreprise : contrôle automatique sur l'e-mail professionnel du compte. */
     @Transactional
     public Organization recheck(User user) {
         Organization org = ensureForRecruiter(user);
-        if (org.getIce() == null || org.getIce().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Renseignez l’ICE avant de relancer la vérification");
+        if ("ADMIN_REVOKED".equals(org.getVerificationStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La vérification de votre entreprise a été retirée par l’équipe HireLink. "
+                            + "Écrivez-nous depuis la page Support pour la faire réexaminer.");
         }
-        var result = companyVerificationService.verify(
-                org.getIce(),
-                org.getName() != null ? org.getName() : user.getCompany(),
-                user.getId(),
-                user.getEmail()
-        );
+        return runAutomaticCheck(org, user);
+    }
+
+    /**
+     * Relance du contrôle automatique par l'administration (après un retrait de badge) :
+     * même règle que pour l'entreprise, appliquée à l'e-mail du créateur de l'espace. Pas de validation manuelle.
+     */
+    @Transactional
+    public Organization recheckByAdmin(Organization org) {
+        User owner = org.getOwner();
+        if (owner == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cette entreprise n’a pas de créateur d’espace.");
+        }
+        return runAutomaticCheck(org, owner);
+    }
+
+    private Organization runAutomaticCheck(Organization org, User user) {
+        String name = org.getName() != null && !org.getName().isBlank() ? org.getName() : user.getCompany();
+        if (name == null || name.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Renseignez le nom de l’entreprise avant de relancer la vérification.");
+        }
+        var result = companyVerificationService.verify(org.getIce(), name, user.getId(), user.getEmail());
         companyVerificationService.apply(user, result);
         companyVerificationService.applyToOrg(org, result);
         userRepository.save(user);

@@ -32,6 +32,8 @@ public class MeController {
     private final SkillCatalogService skillCatalog;
     private final ma.ensat.hirelink.service.CandidateCareerService careerService;
     private final ma.ensat.hirelink.service.CvQualityService cvQualityService;
+    private final ma.ensat.hirelink.service.CvImportDraftService cvImportDraftService;
+    private final ma.ensat.hirelink.service.CvImportCommitService cvImportCommitService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** Seul vocabulaire admis pour users.experience_level : celui du select « pf-level » du profil candidat. */
@@ -45,7 +47,9 @@ public class MeController {
             CvStorage cvStorage,
             SkillCatalogService skillCatalog,
             ma.ensat.hirelink.service.CandidateCareerService careerService,
-            ma.ensat.hirelink.service.CvQualityService cvQualityService
+            ma.ensat.hirelink.service.CvQualityService cvQualityService,
+            ma.ensat.hirelink.service.CvImportDraftService cvImportDraftService,
+            ma.ensat.hirelink.service.CvImportCommitService cvImportCommitService
     ) {
         this.userRepository = userRepository;
         this.companyVerificationService = companyVerificationService;
@@ -54,6 +58,49 @@ public class MeController {
         this.skillCatalog = skillCatalog;
         this.careerService = careerService;
         this.cvQualityService = cvQualityService;
+        this.cvImportDraftService = cvImportDraftService;
+        this.cvImportCommitService = cvImportCommitService;
+    }
+
+    @PostMapping(value = "/cv-draft", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public java.util.Map<String, Object> saveCvDraft(
+            @AuthenticationPrincipal User user,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "payload", required = false) String payload,
+            @RequestParam(value = "step", required = false) String step
+    ) {
+        return cvImportDraftService.save(user, file, payload, step);
+    }
+
+    @GetMapping("/cv-draft")
+    public java.util.Map<String, Object> getCvDraft(@AuthenticationPrincipal User user) {
+        return cvImportDraftService.get(user);
+    }
+
+    @GetMapping("/cv-draft/file")
+    public ResponseEntity<Resource> getCvDraftFile(@AuthenticationPrincipal User user) {
+        java.util.Map<String, Object> draft = cvImportDraftService.get(user);
+        Object fileName = draft.get("draft") instanceof java.util.Map<?, ?> row ? row.get("fileName") : null;
+        Resource resource = cvImportDraftService.file(user);
+        String name = fileName == null ? "cv-draft" : String.valueOf(fileName).replaceAll("[^\\p{L}\\p{N}._ -]", "_");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + name + "\"")
+                .body(resource);
+    }
+
+    @DeleteMapping("/cv-draft")
+    public java.util.Map<String, Object> deleteCvDraft(@AuthenticationPrincipal User user) {
+        cvImportDraftService.delete(user);
+        return java.util.Map.of("deleted", true);
+    }
+
+    @PostMapping(value = "/cv/commit", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public java.util.Map<String, Object> commitCvImport(
+            @AuthenticationPrincipal User user,
+            @RequestPart(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "payload") String payload
+    ) {
+        return cvImportCommitService.commit(user, file, payload);
     }
 
     /** Le candidat confirme les sections. Elles entrent dans le profil seulement ici. */

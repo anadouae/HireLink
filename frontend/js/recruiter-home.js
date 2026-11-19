@@ -101,20 +101,23 @@
   }
 
   function renderFunnel() {
-    const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW", "OFFER", "HIRED"];
-    const labels = ["Reçues", "Présélection", "Shortlist", "Entretien", "Offre", "Embauchés"];
-    const counts = keys.map((k) => apps.filter((a) => a.status === k).length);
+    // Le parcours HireLink s'arrête à l'entretien : les anciens dossiers « Offre » ou finalisés comptent comme entretien atteint.
+    const keys = ["SUBMITTED", "SCREENING", "SHORTLISTED", "INTERVIEW"];
+    const labels = ["Reçues", "Présélection", "Shortlist", "Entretien"];
+    const stageOf = (s) => (s === "OFFER" || s === "HIRED" ? "INTERVIEW" : s);
+    const counts = keys.map((k) => apps.filter((a) => stageOf(a.status) === k).length);
     const max = Math.max(1, ...counts);
     const total = counts.reduce((a, b) => a + b, 0);
     $("chart-bars").innerHTML = keys.map((k, i) => {
       const reached = counts.slice(i).reduce((a, b) => a + b, 0), prev = i ? counts.slice(i - 1).reduce((a, b) => a + b, 0) : 0;
-      return '<a class="db-stage" href="' + (k === "HIRED" ? "recruiter-pipeline.html?view=list&status=hired" : "recruiter-pipeline.html?focus=stage:" + (k === "OFFER" || k === "HIRED" ? "INTERVIEW" : k)) + '">' +
-        "<small>" + labels[i] + "</small><b>" + counts[i] + '</b><span class="db-stage-bar"><i style="--w:' + Math.max(4, Math.round((counts[i] / max) * 100)) + '%"></i></span>' +
+      return '<a class="db-stage" href="recruiter-pipeline.html?focus=stage:' + k + '">' +
+        "<small>" + labels[i] + "</small><b>" + counts[i] + '</b><span class="db-stage-bar"><i data-w="' + Math.max(4, Math.round((counts[i] / max) * 100)) + '"></i></span>' +
         // Le pourcentage porte sur TOUS les dossiers, sinon « 55 % » se lirait comme une part du total alors
         // qu'il ne s'agit que de l'étape précédente.
-        (i && prev ? "<em>" + Math.round((reached / total) * 100) + " % des dossiers en cours vont au moins jusque-là</em>" : "<em>&nbsp;</em>") + "</a>";
+        (i && prev ? "<em>" + Math.round((reached / total) * 100) + " % des dossiers vont au moins jusque-là</em>" : "<em>&nbsp;</em>") + "</a>";
     }).join("");
-    const open = counts.slice(0, 5).reduce((a, b) => a + b, 0);
+    $("chart-bars").querySelectorAll("i[data-w]").forEach((n) => n.style.setProperty("--w", n.dataset.w + "%"));
+    const open = apps.filter((a) => !CLOSED.includes(a.status) && a.status !== "OFFER").length;
     $("conversion").textContent = open ? RC.plural(open, "dossier") + " ouvert" + (open > 1 ? "s" : "") + " · cliquez une étape pour l’ouvrir dans le pipeline" : "Aucun dossier ouvert pour l’instant";
   }
 
@@ -126,12 +129,12 @@
     const now = new Date(); const start = new Date(now); start.setHours(0, 0, 0, 0); start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
     const end = new Date(start); end.setDate(end.getDate() + 7);
     const week = apps.filter((a) => isLive(a) && new Date(a.interviewAt) >= start && new Date(a.interviewAt) < end).length;
-    const hired30 = apps.filter((a) => a.status === "HIRED" && a.updatedAt && Date.now() - new Date(a.updatedAt) < 30 * 864e5).length;
+    const received7 = apps.filter((a) => a.submittedAt && Date.now() - new Date(a.submittedAt) < 7 * 864e5).length;
     const k = [
       { t: "Candidatures actives", v: active.length, s: "Tous postes confondus", h: "recruiter-pipeline.html?view=list&status=active" },
       { t: "Entretiens cette semaine", v: week, s: "Du lundi au dimanche", h: "recruiter-agenda.html?view=week&date=" + ymd(now) },
       { t: "Délais de réponse tenus", v: slaPct + " %", s: watched.length - onTime ? (watched.length - onTime) + " en retard" : "Aucun retard", h: "recruiter-pipeline.html?view=breached" },
-      { t: "Embauches (30 jours)", v: hired30, s: "Dossiers finalisés", h: "recruiter-pipeline.html?view=list&status=hired" },
+      { t: "Nouvelles candidatures", v: received7, s: "Ces 7 derniers jours", h: "recruiter-pipeline.html?focus=stage:SUBMITTED" },
     ];
     if (RC.canManage()) k.splice(1, 0, { t: "Offres en ligne", v: offers.filter(RC.isLiveOffer).length, s: RC.plural(offers.length, "offre") + " au total", h: "recruiter-offers.html" });
     $("db-kpis").innerHTML = k.map((x) => '<a class="db-kpi" href="' + x.h + '"><small>' + esc(x.t) + "</small><b>" + esc(String(x.v)) + "</b><span>" + esc(x.s) + "</span></a>").join("");

@@ -28,7 +28,6 @@
     e.preventDefault();
     scrollToElement(target);
   });
-  document.addEventListener("landing:scroll-to", function (e) { scrollToElement(e.target); });
 
   function updateProgress() {
     const max = document.documentElement.scrollHeight - window.innerHeight;
@@ -241,29 +240,6 @@
         });
       }
     }
-  });
-
-  /* ---------- Compteurs : les chiffres montent quand ils apparaissent ---------- */
-
-  document.addEventListener("landing:offers-loaded", function () {
-    document.querySelectorAll("[data-stat], #offer-count").forEach(function (el) {
-      const target = parseInt(el.textContent, 10);
-      if (isNaN(target)) return;
-      const counter = { value: 0 };
-      el.textContent = "0";
-      const run = function () {
-        gsap.to(counter, {
-          value: target,
-          duration: 1.8,
-          ease: "power3.out",
-          onUpdate: function () { el.textContent = String(Math.round(counter.value)); }
-        });
-      };
-      const box = el.getBoundingClientRect();
-      // un compteur déjà visible à l'arrivée ne déclenchera jamais onEnter : il démarre tout de suite
-      if (box.top < window.innerHeight * 0.92 && box.bottom > 0) { run(); return; }
-      ScrollTrigger.create({ trigger: el, start: "top 92%", once: true, onEnter: run });
-    });
   });
 
   /* ---------- Cartes de formules : lueur qui suit le curseur ---------- */

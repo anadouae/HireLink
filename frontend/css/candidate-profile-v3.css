@@ -90,6 +90,10 @@
   text-decoration: line-through;
   margin-right: 0.35rem;
 }
+.cv-extract-status {
+  min-width: 9.5rem;
+  align-self: start;
+}
 .cv-extract-actions {
   display: flex;
   gap: 0.5rem;

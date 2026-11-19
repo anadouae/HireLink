@@ -29,7 +29,7 @@ public class DataSeeder {
     @Value("${hirelink.seed.force-reset:false}")
     private boolean forceReset;
 
-    @Value("${hirelink.seed.enabled:true}")
+    @Value("${hirelink.seed.enabled:false}")
     private boolean seedEnabled;
 
     @Value("${hirelink.bootstrap.admin-email:}")
@@ -71,14 +71,14 @@ public class DataSeeder {
             ma.ensat.hirelink.service.CatalogListingIndexer catalogIndexer
     ) {
         return args -> {
+            if (!seedEnabled) {
+                log.info("Amorçage de données désactivé (hirelink.seed.enabled=false).");
+                return;
+            }
+
             PasswordEncoder encoder = memoizing(realEncoder);
             seedRefusalCatalog(refusalReasons);
             bootstrapAdmin(users, realEncoder);
-            if (!seedEnabled) {
-                log.info("Données de démonstration désactivées (hirelink.seed.enabled=false).");
-                ensureCatalogBootstrap(offers, catalogListings, catalogIndexer);
-                return;
-            }
 
             if (forceReset) {
                 log.warn("hirelink.seed.force-reset=true — purge puis rechargement des données");

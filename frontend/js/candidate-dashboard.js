@@ -24,7 +24,7 @@
   function profileChecks(me) {
     const has = (v) => !!(v && String(v).trim());
     return [
-      [has(me && me.cvFileName), "Déposer votre CV", "candidate-settings.html#cv"],
+      [has(me && me.cvFileName), "Déposer votre CV", "candidate-profile.html#cv"],
       [has(me && me.cvSections), "Confirmer les sections de votre CV", "candidate-profile.html"],
       [has(me && me.skills), "Renseigner vos compétences", "candidate-profile.html"],
       [has(me && me.soughtRoles), "Indiquer le métier recherché", "candidate-profile.html"],

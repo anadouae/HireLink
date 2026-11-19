@@ -12,8 +12,9 @@ public class UserAvatar {
     @Column(name = "user_id")
     private Long userId;
 
+    /** MEDIUMBLOB (16 Mo) : un TINYBLOB (255 octets) ne contient aucune photo réelle. */
     @Lob
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "MEDIUMBLOB")
     private byte[] data;
 
     @Column(name = "content_type", nullable = false, length = 40)

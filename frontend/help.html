@@ -1,317 +1,236 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
   <script src="js/public-theme.js?v=20261101r"></script>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Aide &amp; FAQ — HireLink</title>
+  <title>Help — HireLink</title>
   <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
-  <meta name="description" content="Centre d’aide HireLink : compte et code par e-mail, profil et candidatures côté candidat, vérification ICE et rôles d’équipe côté recruteur, crédits IA et formules, données et sécurité." />
-  <meta property="og:title" content="Aide &amp; FAQ — HireLink" />
-  <meta property="og:description" content="Ce que HireLink fait réellement : inscription et code e-mail, suivi d’entreprise, vérification par ICE, rôles d’équipe, crédits IA et formules." />
-  <meta property="og:type" content="website" />
+  <meta name="description" content="Help HireLink : fonctionnement du service pour les candidats et les entreprises, compte, profil et CV, candidatures, équipe, formules et données." />
+  <meta name="theme-color" content="#7a2032" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,600;9..40,700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/tokens.css?v=20261103a" />
   <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
   <link rel="stylesheet" href="css/landing.css?v=20261107b" />
   <link rel="stylesheet" href="css/components.css?v=20261104h" />
   <link rel="stylesheet" href="css/legal.css?v=20261106a" />
   <link rel="stylesheet" href="css/motion.css?v=20261103a" />
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    "mainEntity": [
-      {
-        "@type": "Question",
-        "name": "Comment créer un compte ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Choisissez Inscription, indiquez si vous êtes candidat ou recruteur, complétez le CAPTCHA, puis validez votre adresse avec le code reçu. Le mot de passe se définit juste après, ou pas du tout si vous préférez le code à chaque connexion."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Que fait le bouton « Suivre » sur une entreprise ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Le suivi est enregistré sur votre compte : l’entreprise apparaît dans l’onglet « Suivies » avec sa date, et chaque nouvelle offre publiée chez elle déclenche une notification dans HireLink qui ouvre directement cette offre. Rien de plus : l’ordre des résultats ne change pas et aucun e-mail n’est envoyé. L’entreprise ne voit qu’un total, jamais votre identité."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Comment une entreprise est-elle vérifiée ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Raison sociale à l’inscription puis ICE dans Équipe → Paramètres. Avec un e-mail professionnel sur le domaine de l’entreprise et un ICE correspondant au registre, le badge est automatique ; sinon le dossier attend une validation humaine. Sans badge, le serveur refuse la publication."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Quels sont les tarifs ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Candidat : Gratuit (5 usages IA), Performance 39 MAD par mois (40 usages). Recruteur : Essentiel (20 usages, 1 siège, 3 offres), Professionnel 299 MAD (100 usages, 5 sièges, 20 offres), Entreprise 699 MAD (200 usages, 25 sièges)."
-        }
-      },
-      {
-        "@type": "Question",
-        "name": "Un plan payant améliore-t-il le classement des offres ?",
-        "acceptedAnswer": {
-          "@type": "Answer",
-          "text": "Non. Le classement d’un candidat reste calculé sur ses compétences, métiers, lieux et contrats, et une offre payante n’est ni mieux placée ni plus visible. Un plan change uniquement le quota de l’assistant IA et le nombre de sièges d’équipe."
-        }
-      }
-    ]
-  }
-  </script>
-  <link rel="stylesheet" href="css/public-dark.css?v=20261107b" />
+  <link rel="stylesheet" href="css/public-dark.css?v=20261118v8" />
   <link rel="stylesheet" href="css/premium.css?v=20261107b" />
+  <link rel="stylesheet" href="css/help-support.css?v=20261118v8" />
 </head>
 <body class="landing-body">
+  <a class="skip-link" href="#contenu">Aller au contenu</a>
   <header class="site-header">
-    <a class="brand" href="index.html">
+    <a class="brand" href="index.html" aria-label="HireLink">
       <span class="brand-mark"></span>
       <span class="brand-name">Hi<span class="r-pulse">r</span>e<span>Link</span></span>
     </a>
-    <nav class="nav" aria-label="Sur cette page">
-      <a href="index.html#offres">Offres</a>
+    <nav class="nav" aria-label="Navigation">
+      <a href="index.html#espaces">Espaces</a>
+      <a href="index.html#profil-cv">Profil et CV</a>
       <a href="index.html#entreprises">Entreprises</a>
-      <a href="index.html#candidats">Candidats</a>
-      <a href="index.html#metiers">Métiers</a>
-      <a href="index.html#parcours">Parcours</a>
-      <a href="checkout.html">Formules</a>
+      <a href="index.html#tarifs">Formules</a>
+      <a href="help.html" aria-current="page">Help</a>
+      <a href="support.html">Contact &amp; support</a>
     </nav>
-    <a class="btn btn-primary btn-sm" href="auth.html?mode=login">Connexion</a>
+    <a class="btn btn-primary btn-sm" href="auth.html?mode=login">Se connecter</a>
   </header>
 
-  <main class="legal-main help-main">
-    <p class="eyebrow">Centre d’aide unifié</p>
-    <h1>Tout HireLink, selon votre rôle</h1>
-    <p class="lead">Une seule page pour les visiteurs, les candidats et les recruteurs : guides, FAQ et règles réelles du produit — sans promesse marketing.</p>
+  <main class="legal-main help-main" id="contenu">
+    <p class="eyebrow">Help</p>
+    <h1>Help</h1>
+    <p class="lead">Comment fonctionne HireLink, côté candidat et côté entreprise, et les réponses aux questions les plus fréquentes. Vous ne trouvez pas ? Écrivez-nous depuis la page <a href="support.html">Support</a>.</p>
 
-    <div class="help-audience" role="tablist" aria-label="Choisir votre profil">
-      <button type="button" class="is-on" role="tab" aria-selected="true" data-help-aud="all">Tout le monde</button>
-      <button type="button" role="tab" aria-selected="false" data-help-aud="visitor">Visiteur</button>
+    <div class="help-audience" role="tablist" aria-label="Afficher l’aide pour">
+      <button type="button" class="is-on" role="tab" aria-selected="true" data-help-aud="all">Tout</button>
       <button type="button" role="tab" aria-selected="false" data-help-aud="candidat">Candidat</button>
-      <button type="button" role="tab" aria-selected="false" data-help-aud="recruteur">Recruteur</button>
+      <button type="button" role="tab" aria-selected="false" data-help-aud="recruteur">Entreprise</button>
     </div>
 
     <ul class="hp-nav" aria-label="Sections de l’aide">
-      <li data-help-for="all visitor candidat recruteur"><a href="#compte">Compte &amp; connexion</a></li>
-      <li data-help-for="all visitor candidat"><a href="#candidat">Candidat</a></li>
-      <li data-help-for="all visitor recruteur"><a href="#recruteur">Recruteur</a></li>
-      <li data-help-for="all candidat recruteur"><a href="#credits">Crédits IA &amp; formules</a></li>
-      <li data-help-for="all visitor candidat recruteur"><a href="#donnees">Données &amp; sécurité</a></li>
-      <li data-help-for="all visitor candidat recruteur"><a href="#contact">Une question restante</a></li>
+      <li data-help-for="all candidat recruteur"><a href="#hirelink">HireLink en bref</a></li>
+      <li data-help-for="all candidat recruteur"><a href="#compte">Compte et connexion</a></li>
+      <li data-help-for="all candidat"><a href="#candidat">Candidat</a></li>
+      <li data-help-for="all recruteur"><a href="#recruteur">Entreprise</a></li>
+      <li data-help-for="all candidat recruteur"><a href="#formules">Formules</a></li>
+      <li data-help-for="all candidat recruteur"><a href="#donnees">Données et sécurité</a></li>
     </ul>
 
-    <section class="hp-section" id="compte" data-help-for="all visitor candidat recruteur">
-      <h2><span class="hp-num">1</span>Compte &amp; connexion</h2>
-      <p class="hp-kicker">Deux entrées possibles — un compte candidat ou un espace recruteur — et une seule façon de prouver son identité : l’adresse e-mail.</p>
+    <section class="hp-section" id="hirelink" data-help-for="all candidat recruteur">
+      <h2><span class="hp-num">1</span>HireLink en bref</h2>
+      <p class="hp-kicker">Un même service pour chercher un poste et pour recruter, avec un suivi clair de chaque candidature.</p>
+      <ul class="hp-facts">
+        <li><strong>Candidats</strong><span>ajoutez votre CV, vérifiez votre profil, cherchez parmi les offres HireLink et celles des sites d’emploi, postulez et suivez chaque étape.</span></li>
+        <li><strong>Entreprises</strong><span>publiez vos offres, recevez les dossiers, avancez chaque candidature jusqu’à votre choix, organisez les entretiens en équipe.</span></li>
+        <li><strong>Assistant IA</strong><span>il lit un CV, prépare un entretien ou aide à rédiger. Il ne postule jamais et ne décide jamais à votre place.</span></li>
+      </ul>
+    </section>
+
+    <section class="hp-section" id="compte" data-help-for="all candidat recruteur">
+      <h2><span class="hp-num">2</span>Compte et connexion</h2>
       <div class="faq">
         <details open>
           <summary>Comment créer un compte ?</summary>
-          <p>Choisissez Inscription, indiquez si vous êtes candidat ou recruteur, complétez le CAPTCHA, puis validez votre adresse avec le code reçu. Le mot de passe se définit juste après, sur l’écran qui s’ouvre ; vous pouvez aussi vous en passer et utiliser le code à chaque connexion.</p>
+          <p>Choisissez « Créer un compte », indiquez si vous êtes candidat ou entreprise, puis saisissez le code reçu par e-mail pour confirmer votre adresse. Vous pouvez ensuite définir un mot de passe, ou continuer à vous connecter avec un code.</p>
         </details>
         <details>
-          <summary>Pourquoi un code par e-mail plutôt qu’un mot de passe ?</summary>
-          <p>Le code prouve que vous contrôlez l’adresse, ce qu’un mot de passe volé ne prouve pas. Il est à usage unique et expire ; le même mécanisme sert à valider l’inscription et à reprendre la main en cas de doute.</p>
+          <summary>Quelles sont les façons de se connecter ?</summary>
+          <p>Un code reçu par e-mail, un mot de passe, votre compte Google ou une clé d’accès enregistrée sur votre appareil. La double authentification s’active depuis la page Sécurité de votre espace.</p>
         </details>
         <details>
           <summary>Mot de passe oublié ?</summary>
-          <p>Sur l’écran Connexion, utilisez « Mot de passe oublié ». Vous recevez un lien valable 30 minutes, utilisable une seule fois. Le message reste volontairement identique que le compte existe ou non : HireLink ne confirme pas publiquement quelles adresses sont inscrites.</p>
+          <p>Sur l’écran de connexion, choisissez « Mot de passe oublié » : vous recevez un lien à usage unique. Vous pouvez aussi vous connecter directement avec un code par e-mail.</p>
         </details>
         <details>
-          <summary>On me demande un CAPTCHA : est-ce normal ?</summary>
-          <p>Le CAPTCHA apparaît à l’inscription et après deux échecs de connexion, pour ralentir les tentatives automatisées. Les demandes de réinitialisation sont également limitées par adresse IP. Un compte peut être désactivé depuis la page Sécurité ; il ne l’est jamais en silence.</p>
-        </details>
-        <details>
-          <summary>« Session expirée » : est-ce que je perds ce que je faisais ?</summary>
-          <p>Non. Quand une page protégée refuse une session expirée, l’écran de connexion rouvre ensuite la page que vous visiez, offre ou candidature comprise, dans le même onglet. Il faut simplement le temps de saisir à nouveau le code ou le mot de passe.</p>
+          <summary>Ma session a expiré : est-ce que je perds ce que je faisais ?</summary>
+          <p>Non. Après la reconnexion, HireLink vous ramène sur la page que vous consultiez, offre ou candidature comprise.</p>
         </details>
       </div>
     </section>
 
-    <section class="hp-section" id="candidat" data-help-for="all visitor candidat">
-      <h2><span class="hp-num">2</span>Côté candidat</h2>
-      <p class="hp-kicker">Votre profil sert à classer les offres. Il n’est pas une vitrine publique.</p>
-      <ul class="hp-facts">
-        <li><strong>Le classement</strong><span>se calcule sur vos compétences, métiers visés, lieux et contrats — pas sur la formule payante.</span></li>
-        <li><strong>Une candidature</strong><span>un seul envoi par offre ; un double clic ne crée pas un doublon, et vous pouvez la retirer tant qu’elle n’est pas clôturée.</span></li>
-        <li><strong>Suivre une entreprise</strong><span>le suivi est compté sur le serveur, pas dans votre navigateur : une notification vous prévient à chaque nouvelle offre de cette entreprise.</span></li>
-        <li><strong>Vos données</strong><span>export, désactivation et suppression se font depuis Sécurité ; aucune fiche publique de candidat n’existe sur HireLink.</span></li>
-      </ul>
-      <div class="faq" style="margin-top:1.1rem">
-        <details>
-          <summary>Comment les offres sont-elles personnalisées ?</summary>
-          <p>À partir de votre profil (compétences, métiers, lieux, contrats). HireLink trie les offres pour coller à ce que vous cherchez et explique l’écart entre le poste demandé et votre profil. Rien n’est envoyé automatiquement : chaque candidature reste une décision de votre part.</p>
-        </details>
-        <details>
-          <summary>Que fait exactement le bouton « Suivre » ?</summary>
-          <p>Il enregistre le suivi sur le serveur, pas dans votre navigateur. Trois effets, pas davantage : l’entreprise apparaît dans l’onglet « Suivies » avec sa date, elle passe en tête de votre liste d’entreprises, et la publication d’une nouvelle offre chez elle déclenche une notification qui ouvre directement cette offre. Le suivi est anonyme : l’entreprise voit un total, jamais qui. Aucun e-mail n’est envoyé et le classement des offres ne change pas.</p>
-        </details>
-        <details>
-          <summary>Quelles notifications vais-je recevoir ?</summary>
-          <p>Une nouvelle offre d’une entreprise que vous suivez, chaque changement d’état d’une candidature, et les entretiens qui vous concernent. Vous pouvez désactiver les e-mails non critiques dans Paramètres ; les e-mails de sécurité restent envoyés.</p>
-        </details>
-        <details>
-          <summary>Une entreprise peut-elle consulter mon profil librement ?</summary>
-          <p>Non. Un recruteur ouvre votre dossier quand vous avez postulé, ou quand vous êtes explicitement mis en avant dans sa base de talents ; il n’existe pas de page publique de candidat indexable. Vous gardez la main : retrait de candidature, profil incomplété, suppression de compte.</p>
-        </details>
-        <details>
-          <summary>L’assistant IA peut-il postuler à ma place ?</summary>
-          <p>Non. Il synthétise votre profil, propose une réécriture, prépare un entretien, explique un score et contrôle la langue de votre lettre. L’envoi d’une candidature ne peut pas être automatisé.</p>
-        </details>
-      </div>
-    </section>
-
-    <section class="hp-section" id="recruteur" data-help-for="all visitor recruteur">
-      <h2><span class="hp-num">3</span>Côté recruteur</h2>
-      <p class="hp-kicker">Un espace par entreprise, trois rôles, et une règle : ce qui est affiché au candidat doit être mesurable.</p>
+    <section class="hp-section" id="candidat" data-help-for="all candidat">
+      <h2><span class="hp-num">3</span>Côté candidat</h2>
+      <p class="hp-kicker">Deux étapes avant de postuler : votre CV, puis votre profil. Le guide en haut de votre espace vous indique ce qu’il reste à faire.</p>
       <div class="faq">
         <details>
-          <summary>Comment une entreprise est-elle vérifiée ?</summary>
-          <p>À l’inscription, le recruteur indique sa raison sociale ; l’ICE s’ajoute ensuite dans Équipe → Paramètres. Si l’e-mail est professionnel (domaine de l’entreprise) et que l’ICE correspond au registre, le badge est attribué automatiquement. Sinon le dossier attend une validation humaine. Sans badge, la publication d’une offre est refusée par le serveur — ce n’est pas un message d’interface.</p>
+          <summary>Comment préparer mon profil ?</summary>
+          <p>Dans <strong>Profil &amp; CV</strong>, ajoutez votre CV : HireLink le lit et propose les informations trouvées (expériences, formation, compétences). Vous gardez ce qui est juste, corrigez le reste, puis complétez votre profil. Le rappel en haut de l’écran disparaît quand tout est prêt.</p>
+        </details>
+        <details>
+          <summary>Comment les offres sont-elles classées ?</summary>
+          <p>Selon votre profil : compétences, métiers visés, lieux et contrats. La formule choisie ne change pas ce classement.</p>
+        </details>
+        <details>
+          <summary>Comment postuler et suivre mes candidatures ?</summary>
+          <p>Ouvrez une offre, vérifiez le dossier envoyé puis confirmez. Une seule candidature par offre. Chaque changement d’étape apparaît dans <strong>Mes candidatures</strong> et dans vos notifications ; vous pouvez retirer une candidature tant qu’elle n’est pas clôturée.</p>
+        </details>
+        <details>
+          <summary>Que fait le bouton « Suivre » sur une entreprise ?</summary>
+          <p>L’entreprise rejoint vos <strong>Entreprises suivies</strong> et chaque nouvelle offre qu’elle publie vous est signalée. L’entreprise voit le nombre d’abonnés, jamais leur identité.</p>
+        </details>
+        <details>
+          <summary>Qui peut voir mon profil ?</summary>
+          <p>Les entreprises auxquelles vous avez envoyé une candidature. Il n’existe pas de page publique de candidat.</p>
+        </details>
+        <details>
+          <summary>Comment choisir mes alertes ?</summary>
+          <p>Dans <strong>Paramètres → Alertes</strong>, choisissez de recevoir aussi par e-mail les nouvelles de vos candidatures et entretiens. Les e-mails de sécurité sont toujours envoyés.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="hp-section" id="recruteur" data-help-for="all recruteur">
+      <h2><span class="hp-num">4</span>Côté entreprise</h2>
+      <p class="hp-kicker">Un espace par entreprise, un Créateur et des recruteurs.</p>
+      <div class="faq">
+        <details>
+          <summary>Comment mon entreprise est-elle vérifiée ?</summary>
+          <p>Le badge « Entreprise vérifiée » s’affiche automatiquement quand votre compte utilise une adresse e-mail professionnelle au nom de l’entreprise (pas une messagerie personnelle). L’ICE est facultatif : il complète la fiche de l’entreprise s’il est renseigné.</p>
         </details>
         <details>
           <summary>Puis-je préparer une offre sans la publier ?</summary>
-          <p>Oui. À la dernière étape de l’assistant, décochez « Publier immédiatement » : l’offre est enregistrée en brouillon, visible uniquement par votre équipe, et vous la publierez plus tard depuis la liste des offres. Cette option reste disponible même avant vérification.</p>
+          <p>Oui. À la dernière étape, décochez « Publier immédiatement » : l’offre reste en brouillon, visible uniquement par votre équipe, et vous la publiez quand vous voulez depuis <strong>Mes offres</strong>.</p>
         </details>
         <details>
-          <summary>Qui peut faire quoi dans mon équipe ?</summary>
-          <p><strong>Créateur</strong> — invitations, rôles, fiche entreprise, formule de facturation, transfert de son propre rôle. <strong>Recruteur</strong> — offres, pipeline, entretiens, agenda ; il n’invite ni ne retire personne. Le serveur applique ces règles, pas seulement l’interface.</p>
+          <summary>Qui fait quoi dans l’équipe ?</summary>
+          <p>Le <strong>Créateur</strong> gère les invitations, les rôles, la fiche entreprise et la formule. Les <strong>Recruteurs</strong> gèrent les offres, les candidatures, les entretiens et l’agenda. Chaque espace a un seul Créateur, qui peut transmettre ce rôle.</p>
         </details>
         <details>
-          <summary>Combien de sièges puis-je occuper ?</summary>
-          <p>Essentiel : 1 siège. Professionnel : 5. Entreprise : 25. Un membre en pause garde son siège et son rôle sans y avoir accès ; une invitation en attente occupe un siège jusqu’à ce que la personne réponde. Les deux états sont visibles dans Équipe → Membres.</p>
+          <summary>Combien de personnes peuvent rejoindre l’espace ?</summary>
+          <p>Essentiel : 1 siège. Professionnel : 5. Entreprise : 25. Une invitation en attente occupe un siège jusqu’à la réponse de la personne.</p>
         </details>
         <details>
-          <summary>HireLink promet-il un délai de réponse au candidat ?</summary>
-          <p>Non, et c’est volontaire. L’application observe vos premières réponses réellement envoyées et affiche un badge de réactivité quand elles sont rapides ; le badge disparaît si le rythme retombe. Aucun texte, aucun plan payant n’achète de la visibilité : les formules ne changent que les crédits IA et le nombre de sièges.</p>
+          <summary>Comment avancer une candidature ?</summary>
+          <p>Dans <strong>Candidatures</strong>, ouvrez le dossier, lisez le CV et faites passer la candidature à l’étape suivante, jusqu’à l’entretien puis votre choix. Le candidat est informé à chaque étape.</p>
         </details>
       </div>
     </section>
 
-    <section class="hp-section" id="credits" data-help-for="all candidat recruteur">
-      <h2><span class="hp-num">4</span>Crédits IA &amp; formules</h2>
-      <p class="hp-kicker">Un crédit = un appel à l’assistant. Le compteur se remet à zéro chaque mois ; l’historique de consommation est consultable dans l’application.</p>
+    <section class="hp-section" id="formules" data-help-for="all candidat recruteur">
+      <h2><span class="hp-num">5</span>Formules</h2>
+      <p class="hp-kicker">Les formules changent le nombre d’aides IA, d’offres et de sièges. Elles ne changent ni le classement des offres ni la vérification d’une entreprise.</p>
       <table class="hp-plans">
-        <caption>Les deux seules différences entre une formule gratuite et une formule payante : le nombre d’usages de l’assistant et le nombre de sièges.</caption>
+        <caption>Prix mensuels, sans engagement.</caption>
         <thead>
-          <tr><th scope="col">Formule</th><th scope="col">Prix</th><th scope="col">Usages IA / mois</th><th scope="col">Sièges d’équipe</th></tr>
+          <tr><th scope="col">Formule</th><th scope="col">Prix</th><th scope="col">Aides IA / mois</th><th scope="col">Offres actives</th><th scope="col">Sièges</th></tr>
         </thead>
         <tbody>
-          <tr><th scope="row">Candidat Gratuit</th><td>Gratuit</td><td><b>5</b></td><td>—</td></tr>
-          <tr><th scope="row">Candidat Performance</th><td>39 MAD / mois</td><td><b>40</b></td><td>—</td></tr>
-          <tr><th scope="row">Recruteur Essentiel</th><td>Gratuit</td><td><b>20</b></td><td><b>1</b></td></tr>
-          <tr><th scope="row">Recruteur Professionnel</th><td>299 MAD / mois</td><td><b>100</b></td><td><b>5</b></td></tr>
-          <tr><th scope="row">Recruteur Entreprise</th><td>699 MAD / mois</td><td><b>200</b></td><td><b>25</b></td></tr>
+          <tr data-help-for="all candidat"><th scope="row">Candidat · Gratuit</th><td>Gratuit</td><td><b>5</b></td><td>—</td><td>—</td></tr>
+          <tr data-help-for="all candidat"><th scope="row">Candidat · Performance</th><td>39 MAD / mois</td><td><b>40</b></td><td>—</td><td>—</td></tr>
+          <tr data-help-for="all recruteur"><th scope="row">Entreprise · Essentiel</th><td>Gratuit</td><td>—</td><td><b>3</b></td><td><b>1</b></td></tr>
+          <tr data-help-for="all recruteur"><th scope="row">Entreprise · Professionnel</th><td>299 MAD / mois</td><td><b>100</b></td><td><b>20</b></td><td><b>5</b></td></tr>
+          <tr data-help-for="all recruteur"><th scope="row">Entreprise · Entreprise</th><td>699 MAD / mois</td><td><b>200</b></td><td>Illimitées</td><td><b>25</b></td></tr>
         </tbody>
       </table>
-      <p class="hp-note"><strong>Ce qu’un plan payant ne change pas.</strong> Le classement des offres pour un candidat, la position d’une offre dans les résultats, ni la vérification de l’entreprise. Un plan payant n’accélère rien : il relève uniquement le quota de l’assistant, le nombre de sièges et d’offres actives. Le passage à une formule payante se fait via le <a href="checkout.html">paiement en ligne</a> (couronne ou Paramètres → Facturation), à tout moment et sans pénalité, par le créateur de l’espace.</p>
+      <p class="hp-note">Vous changez de formule depuis <strong>Paramètres → Formule</strong> de votre espace. Côté entreprise, seul le Créateur peut le faire. Une facture est disponible dans votre espace après chaque paiement.</p>
     </section>
 
-    <section class="hp-section" id="donnees" data-help-for="all visitor candidat recruteur">
-      <h2><span class="hp-num">5</span>Données &amp; sécurité</h2>
+    <section class="hp-section" id="donnees" data-help-for="all candidat recruteur">
+      <h2><span class="hp-num">6</span>Données et sécurité</h2>
       <ul class="hp-facts">
-        <li><strong>Mots de passe</strong><span>hachés ; la double authentification et les passkeys se configurent sur la page Sécurité.</span></li>
-        <li><strong>CV et pièces jointes</strong><span>stockés sur le serveur, servis par une adresse qui n’expose pas l’arborescence, supprimés avec le dossier.</span></li>
-        <li><strong>Journal</strong><span>les actions sensibles d’une équipe (invitations, changements de rôle, décisions) laissent une trace consultable.</span></li>
-        <li><strong>Vos choix</strong><span>export de vos données, désactivation temporaire ou suppression définitive, depuis Sécurité.</span></li>
+        <li><strong>Connexion</strong><span>mots de passe protégés, double authentification et clés d’accès disponibles depuis la page Sécurité.</span></li>
+        <li><strong>CV et documents</strong><span>accessibles uniquement aux personnes concernées, supprimés avec votre compte.</span></li>
+        <li><strong>Vos choix</strong><span>export de vos données, désactivation ou suppression du compte, à tout moment.</span></li>
       </ul>
-      <p class="hp-kicker" style="margin-top:1rem">Le détail complet — ce qui est collecté, pourquoi, et pendant combien de temps — est sur la <a href="security.html">page Sécurité</a>.</p>
+      <p class="hp-kicker hp-gap">Le détail de ce qui est conservé, et pourquoi, est sur la page <a href="security.html">Sécurité</a> et dans la <a href="legal/confidentialite.html">politique de confidentialité</a>.</p>
     </section>
 
-    <section class="hp-section" id="contact" data-help-for="all visitor candidat recruteur">
-      <h2><span class="hp-num">6</span>Une question restante ?</h2>
-      <p class="hp-kicker">Les réponses ci-dessus décrivent le comportement actuel de l’application. Si votre situation diffère — un refus de publication inattendu, un badge de vérification bloqué, un compte qui ne reçoit plus ses codes — écrivez à l’équipe produit depuis la section <a href="about.html#contact">Contact</a> en décrivant ce que vous voyez à l’écran : les messages d’erreur de HireLink sont en français et indiquent ce qui manque.</p>
+    <section class="hp-section hp-support" data-help-for="all candidat recruteur">
+      <h2>Une question sans réponse ?</h2>
+      <p class="hp-kicker">Décrivez ce que vous voyez à l’écran : nous vous répondons par e-mail.</p>
+      <p class="hp-cta">
+        <a class="btn btn-primary" href="support.html">Contacter le support</a>
+      </p>
     </section>
-
-    <p class="hp-cta">
-      <a class="btn btn-soft" href="security.html">Voir la page Sécurité</a>
-      <a class="btn btn-primary" href="auth.html?mode=register">Accéder à HireLink</a>
-    </p>
   </main>
 
   <footer class="site-footer">
-    <div class="footer-glow" aria-hidden="true"></div>
     <div class="footer-inner">
       <div class="footer-brand">
         <a class="brand" href="index.html">
           <span class="brand-mark brand-mark--pulse" aria-hidden="true"></span>
-          <span class="brand-name">Hi<span class="r-pulse">r</span>e<span style="color:#e2c98a">Link</span></span>
+          <span class="brand-name">Hi<span class="r-pulse">r</span>e<span class="footer-live-gold">Link</span></span>
         </a>
-        <p>Le recrutement qui tient ses promesses.</p>
+        <p>Plateforme de recrutement : offres, dossiers, délais tenus.</p>
       </div>
       <nav class="footer-nav" aria-label="Pied de page">
         <div class="footer-col">
-          <span class="footer-label">Produit</span>
-          <a href="index.html#produit">Fonctionnalités</a>
-          <a href="index.html#tarifs">Tarifs</a>
-          <a href="index.html#parcours">Parcours</a>
+          <span class="footer-label">Découvrir</span>
+          <a href="index.html#espaces">Espaces</a>
+          <a href="index.html#profil-cv">Profil et CV</a>
+          <a href="index.html#tarifs">Formules</a>
         </div>
         <div class="footer-col">
-          <span class="footer-label">Confiance</span>
+          <span class="footer-label">Espaces</span>
+          <a href="auth.html?mode=register&amp;role=CANDIDAT">Espace candidat</a>
+          <a href="auth.html?mode=register&amp;role=RECRUTEUR">Espace entreprise</a>
+          <a href="auth.html?mode=login">Connexion</a>
+        </div>
+        <div class="footer-col">
+          <span class="footer-label">Ressources</span>
+          <a href="help.html">Help</a>
+          <a href="support.html">Support</a>
           <a href="security.html">Sécurité</a>
-          <a href="help.html">Aide &amp; FAQ</a>
           <a href="about.html">À propos</a>
         </div>
         <div class="footer-col">
-          <span class="footer-label">Accès</span>
-          <a href="auth.html?mode=login">Connexion</a>
-          <a href="auth.html?mode=register">Créer un compte</a>
-          <a href="about.html#contact">Contact</a>
+          <span class="footer-label">Légal</span>
+          <a href="legal/cgu.html">CGU</a>
+          <a href="legal/confidentialite.html">Confidentialité</a>
         </div>
       </nav>
     </div>
     <div class="footer-bottom">
-      <span>© <span class="footer-year">2026</span> HireLink</span>
-      <div class="footer-live" aria-hidden="true">
-        <span class="footer-live-mark brand-mark brand-mark--pulse"></span>
-        <span class="footer-live-word">Hi<span class="r-pulse">r</span>e<span class="footer-live-gold">Link</span></span>
-        <span class="footer-pulse"></span>
-      </div>
+      <span>© <span id="footer-year">2026</span> HireLink</span>
     </div>
   </footer>
-  <script src="js/nav.js?v=20261101r"></script>
-  <script src="js/public-nav.js?v=20261106a"></script>
-  <script defer src="js/premium.js?v=20261106g"></script>
-  <script>
-    (function () {
-      var root = document.querySelector(".help-audience");
-      if (!root) return;
-      var params = new URLSearchParams(location.search);
-      var role = null;
-      try {
-        var s = JSON.parse(localStorage.getItem("hirelink.session") || "null");
-        if (s && s.role === "CANDIDAT") role = "candidat";
-        if (s && s.role === "RECRUTEUR") role = "recruteur";
-      } catch (e) {}
-      var initial = params.get("for") || role || "all";
-      function apply(aud) {
-        root.querySelectorAll("[data-help-aud]").forEach(function (b) {
-          var on = b.getAttribute("data-help-aud") === aud;
-          b.classList.toggle("is-on", on);
-          b.setAttribute("aria-selected", on ? "true" : "false");
-        });
-        document.querySelectorAll("[data-help-for]").forEach(function (el) {
-          var ok = el.getAttribute("data-help-for").split(/\s+/).indexOf(aud) >= 0;
-          el.hidden = !ok;
-        });
-      }
-      root.addEventListener("click", function (e) {
-        var b = e.target.closest("[data-help-aud]");
-        if (!b) return;
-        apply(b.getAttribute("data-help-aud"));
-      });
-      if (!root.querySelector('[data-help-aud="' + initial + '"]')) initial = "all";
-      apply(initial);
-    })();
-  </script>
+  <script defer src="js/footer-year.js?v=20261101r"></script>
+  <script defer src="js/nav.js?v=20261101r"></script>
+  <script defer src="js/public-nav.js?v=20261106a"></script>
+  <script defer src="js/help-page.js?v=20261118v8"></script>
 </body>
 </html>

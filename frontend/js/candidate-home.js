@@ -120,23 +120,6 @@
     HireLinkApply.start(o, () => load(true, false));
   }
 
-  function openReport(o) {
-    HireLink.openModal({
-      title: "Signaler cette offre",
-      description: "Décrivez le problème : la modération reçoit votre texte exact avec l'offre.",
-      bodyHtml: '<label class="field-label" for="hl-report-reason">Motif (500 caractères maximum)</label>'
-        + '<textarea id="hl-report-reason" class="input" rows="4" maxlength="500"></textarea>',
-      confirmLabel: "Envoyer le signalement",
-      onConfirm: async () => {
-        const field = document.getElementById("hl-report-reason");
-        if (!field || field.value.trim().length < 5) { if (field) field.focus(); return false; }
-        await HireLinkAPI.api("/offers/" + o.id + "/report", { method: "POST", body: { reason: field.value.trim() } });
-        HireLink.toast("Signalement envoyé", "Merci.", "success");
-        load(true, false);
-      },
-    });
-  }
-
   function fillSelect(id, values, labelFn) {
     const sel = $(id);
     if (!sel) return;
@@ -561,12 +544,6 @@
     const apply = applyBtn(o, false);
     if (apply) actions.appendChild(apply);
     if (!o.external) {
-      const flag = document.createElement("button");
-      flag.type = "button";
-      flag.className = "btn btn-ghost";
-      flag.textContent = "Signaler";
-      flag.addEventListener("click", () => openReport(o));
-      actions.appendChild(flag);
     } else if (/^https:\/\//i.test(webSourceHome(o))) {
       const source = document.createElement("a");
       source.className = "btn btn-ghost";
@@ -698,12 +675,42 @@
     if (actions.childNodes.length) box.appendChild(actions);
   }
 
-  function webPendingNode() {
+  /** Indicateur de chargement : messages qui se relaient tant que le nœud est affiché (hauteur fixe, pas de saut). */
+  const LOADER_STEPS = {
+    main: ["Recherche dans les offres HireLink…", "Prise en compte de vos critères…", "Tri par pertinence…"],
+    web: ["Interrogation des sites d’emploi…", "Vérification des offres trouvées…", "Tri par pertinence…"],
+  };
+  function loaderNode(kind) {
+    const steps = LOADER_STEPS[kind] || LOADER_STEPS.main;
     const n = document.createElement("div");
-    n.className = "cs-web-pending";
-    n.id = "cs-web-pending";
+    n.className = "cs-loader cs-loader--" + kind;
     n.setAttribute("role", "status");
-    n.textContent = "Recherche des offres web en direct…";
+    n.setAttribute("aria-label", kind === "web" ? "Recherche d’offres supplémentaires en cours" : "Recherche en cours");
+    const dots = document.createElement("span");
+    dots.className = "cs-loader-dots";
+    dots.setAttribute("aria-hidden", "true");
+    for (let i = 0; i < 3; i++) dots.appendChild(document.createElement("i"));
+    const msg = document.createElement("span");
+    msg.className = "cs-loader-msg";
+    msg.setAttribute("aria-hidden", "true");
+    msg.textContent = steps[0];
+    n.append(dots, msg);
+    let i = 0;
+    const timer = setInterval(() => {
+      if (!n.isConnected) { clearInterval(timer); return; }
+      i = (i + 1) % steps.length;
+      msg.classList.remove("is-in");
+      void msg.offsetWidth;
+      msg.textContent = steps[i];
+      msg.classList.add("is-in");
+    }, 1800);
+    return n;
+  }
+
+  function webPendingNode() {
+    const n = loaderNode("web");
+    n.classList.add("cs-web-pending");
+    n.id = "cs-web-pending";
     return n;
   }
 
@@ -837,10 +844,7 @@
     if (!quiet && !append) {
       offerList.className = "";
       offerList.replaceChildren();
-      const sk = document.createElement("div");
-      sk.className = "skeleton";
-      sk.style.height = "120px";
-      offerList.appendChild(sk);
+      offerList.appendChild(loaderNode("main"));
     }
     try {
       if (!append) page = 0;

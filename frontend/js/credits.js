@@ -126,10 +126,12 @@
 
   function paint() {
     if (!chip || !status) return;
-    const low = status.remaining <= 1;
+    // Formule sans crédits IA (Essentiel) : pas d’alerte « épuisé », seulement l’information.
+    const none = Number(status.limit) <= 0;
+    const low = !none && status.remaining <= 1;
     chip.classList.toggle("is-low", low);
-    chip.classList.toggle("is-out", !status.allowed);
-    chip.title = summary();
+    chip.classList.toggle("is-out", !none && !status.allowed);
+    chip.title = none ? "Formule " + status.planLabel + " · IA non incluse" : summary();
     const lim = chip.querySelector(".rc-credits-limit");
     if (lim) lim.textContent = "/ " + status.limit;
     tween(status.remaining);
@@ -244,8 +246,15 @@
     const role = roleNow();
     const next = nextPlan();
     const growthRole = role === "CANDIDAT" ? "candidate" : "recruiter";
+    // Formule sans crédits IA (Essentiel) : l’IA n’est pas incluse, elle n’est pas « épuisée ».
+    if (s.limit != null && Number(s.limit) <= 0) {
+      if (global.HireLink) {
+        HireLink.toast("IA non incluse dans votre formule", "Pour utiliser l’IA : " + next + ".", "info");
+      }
+      return true;
+    }
     if (global.HireLinkGrowth && HireLinkGrowth.maybeSuggest) {
-      HireLinkGrowth.maybeSuggest({ aiExhausted: true, role: role });
+      HireLinkGrowth.maybeSuggest({ aiExhausted: true, aiLimit: s.limit, role: role });
       if (global.HireLink) {
         HireLink.toast(
           "Crédits IA épuisés",

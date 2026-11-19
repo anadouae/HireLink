@@ -1,8 +1,8 @@
 /**
  * Page d’accueil — section « Profil et CV ».
  * À l’entrée dans l’écran : le CV fictif est lu, les champs de la carte de profil
- * se remplissent un à un (la barre de complétion suit), les compétences arrivent
- * en badges, puis chaque proposition est validée. Avec prefers-reduced-motion,
+ * se remplissent un à un (la barre de lecture suit), les compétences arrivent
+ * en badges, puis le candidat garde ce qui est juste. Avec prefers-reduced-motion,
  * ou sans IntersectionObserver, l’état final reste affiché tel quel.
  */
 (function () {
@@ -78,7 +78,7 @@
       t += 560;
     });
     t += 300;
-    later(t, function () { host.classList.remove("is-flowing"); setStep(2); if (sub) sub.textContent = "Vérification de chaque proposition…"; });
+    later(t, function () { host.classList.remove("is-flowing"); setStep(2); if (sub) sub.textContent = "Vous gardez ce qui est juste…"; });
     t += 350;
     fields.forEach(function (field) {
       later(t, function () { field.classList.add("is-valid"); });

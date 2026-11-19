@@ -275,7 +275,7 @@
       title: "Offre suspendue",
       description: o.quarantineReason
         ? o.quarantineReason
-        : "Cette offre a été suspendue après plusieurs signalements de candidats.",
+        : "Cette offre est suspendue par l’administration.",
       hideCancel: true, confirmLabel: "Compris",
     });
   }

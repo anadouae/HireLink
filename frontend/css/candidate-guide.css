@@ -1,0 +1,244 @@
+/* Guide candidat : rappel dans la barre du haut + symbole ∞ (CV puis Profil) sur la page Profil & CV. */
+
+.cg-nav-nudge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: none;
+  max-width: min(220px, 34vw);
+  margin: 0;
+  padding: 0.38rem 0.75rem 0.38rem 0.55rem;
+  border: 1px solid color-mix(in srgb, #7a2032 28%, var(--line, #e6dfd8));
+  border-radius: 999px;
+  background: color-mix(in srgb, #7a2032 9%, var(--surface, #fff));
+  color: var(--ink, #1a1214);
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.cg-nav-nudge[hidden] { display: none !important; }
+
+.cg-nav-nudge:hover,
+.cg-nav-nudge:focus-visible {
+  border-color: color-mix(in srgb, #7a2032 50%, var(--line));
+  background: color-mix(in srgb, #7a2032 14%, var(--surface, #fff));
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.cg-nav-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+  background: #7a2032;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #7a2032 18%, transparent);
+  animation: cg-nav-pulse 1.8s ease-in-out infinite;
+}
+
+.cg-nav-nudge strong {
+  font-size: 0.78rem;
+  font-weight: 650;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* —— Profile page hub —— */
+.cg-hub {
+  display: flex;
+  justify-content: center;
+  margin: 0 0 1.15rem;
+}
+
+.cg-hub[hidden] { display: none !important; }
+
+.cg-hub-card {
+  width: min(420px, 100%);
+  padding: 1rem 1.15rem 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--line, #e6dfd8) 80%, #7a2032);
+  border-radius: 20px;
+  background:
+    radial-gradient(90% 80% at 15% 20%, color-mix(in srgb, #7a2032 10%, transparent), transparent 55%),
+    radial-gradient(90% 80% at 85% 80%, color-mix(in srgb, #9a7b4f 12%, transparent), transparent 50%),
+    var(--surface, #fff);
+  box-shadow: 0 12px 28px rgba(40, 22, 28, 0.08);
+  text-align: center;
+}
+
+.cg-hub-kicker {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft, #6b635c);
+}
+
+.cg-hub-title {
+  margin: 0.25rem 0 0.7rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink, #1a1214);
+}
+
+.cg-hub-infinity {
+  position: relative;
+  width: min(280px, 100%);
+  margin: 0 auto;
+}
+
+.cg-inf-svg {
+  width: 72px;
+  height: 36px;
+  overflow: visible;
+}
+
+.cg-inf-svg--lg {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 2 / 1;
+}
+
+.cg-inf-track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--line, #e6dfd8) 70%, #b9a48a);
+  stroke-width: 3.2;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+.cg-inf-active {
+  fill: none;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 28 140;
+  animation: cg-inf-dash 2.4s linear infinite;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, #7a2032 35%, transparent));
+}
+
+.cg-hub[data-phase="extracting"] .cg-inf-active,
+.cg-coach[data-phase="extracting"] .cg-inf-active {
+  stroke-dasharray: 40 120;
+  animation-duration: 1.15s;
+}
+
+.cg-hub[data-phase="review"] .cg-inf-active {
+  stroke-dasharray: 90 70;
+  animation-duration: 2.8s;
+}
+
+.cg-inf-node { transform-box: fill-box; transform-origin: center; }
+.cg-inf-node.is-pending { opacity: 0.55; }
+.cg-inf-node.is-pending circle { fill: #cfc4b6; stroke: #a89884; }
+.cg-inf-node.is-active { opacity: 1; animation: cg-inf-pulse 1.8s ease-in-out infinite; }
+.cg-inf-node.is-active[data-kind="cv"] circle {
+  fill: #7a2032; stroke: #fff;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, #7a2032 55%, transparent));
+}
+.cg-inf-node.is-active[data-kind="profil"] circle {
+  fill: #9a7b4f; stroke: #fff;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, #9a7b4f 55%, transparent));
+}
+.cg-inf-node.is-busy { opacity: 1; animation: cg-inf-pulse 0.9s ease-in-out infinite; }
+.cg-inf-node.is-busy circle { fill: #7a2032; stroke: #fff; }
+.cg-inf-node.is-done { opacity: 1; animation: none; }
+.cg-inf-node.is-done circle {
+  fill: #1f6b4a; stroke: #fff;
+  filter: drop-shadow(0 0 4px rgba(31, 107, 74, 0.4));
+}
+
+.cg-inf-label {
+  fill: #fff;
+  font-size: 5.2px;
+  font-weight: 700;
+  font-family: inherit;
+  pointer-events: none;
+}
+
+.cg-inf-label.cg-inf-label--sm { font-size: 3.6px; }
+
+.cg-nav-nudge.is-busy .cg-nav-dot { animation-duration: 0.8s; }
+
+.cg-hub-hint {
+  margin: 0.55rem auto 0;
+  max-width: 34ch;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--ink-soft, #6b635c);
+}
+
+.cg-inf-dot {
+  fill: #fff;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, #7a2032 60%, transparent));
+  offset-path: path("M18,18 C18,8 30,8 36,18 C42,28 54,28 54,18 C54,8 42,8 36,18 C30,28 18,28 18,18");
+  offset-rotate: 0deg;
+  animation: cg-inf-travel 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.cg-hub-hit {
+  position: absolute;
+  top: 8%;
+  width: 42%;
+  height: 84%;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.cg-hub-hit--cv { left: 2%; }
+.cg-hub-hit--profil { right: 2%; }
+
+.cg-hub-hit:focus-visible {
+  outline: 2px solid #7a2032;
+  outline-offset: 2px;
+}
+
+.cg-hub-legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.55rem;
+  font-size: 0.8rem;
+  color: var(--ink-soft, #6b635c);
+}
+
+.cg-hub-legend b { color: var(--ink, #1a1214); }
+.cg-hub-arrow { opacity: 0.55; }
+
+@keyframes cg-nav-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.75; }
+}
+
+@keyframes cg-inf-dash { to { stroke-dashoffset: -168; } }
+
+@keyframes cg-inf-travel {
+  0% { offset-distance: 0%; opacity: 0; }
+  12% { opacity: 1; }
+  88% { opacity: 1; }
+  100% { offset-distance: 100%; opacity: 0; }
+}
+
+@keyframes cg-inf-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-nav-dot,
+  .cg-inf-active,
+  .cg-inf-dot,
+  .cg-inf-node.is-active,
+  .cg-inf-node.is-busy { animation: none; }
+}
+
+@media (max-width: 720px) {
+  .cg-nav-nudge { max-width: 42vw; padding: 0.32rem 0.55rem; }
+  .cg-nav-nudge strong { font-size: 0.7rem; }
+}

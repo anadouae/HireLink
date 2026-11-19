@@ -22,7 +22,7 @@ C:\xampp\mysql\bin\mysqldump.exe -uroot --single-transaction --routines --databa
 
 ## Migration préparée (non exécutée sur `hirelink`)
 
-Fichier : `database/migrate_external_offers.sql`
+Fichier : `database/migrations/V002__external_offers.sql`
 
 - Deux `CREATE TABLE IF NOT EXISTS` uniquement.
 - Aucun `DROP`, aucun `ALTER` sur les tables historiques.
@@ -32,7 +32,7 @@ Fichier : `database/migrate_external_offers.sql`
 Commande, **seulement après autorisation** :
 
 ```
-C:\xampp\mysql\bin\mysql.exe -uroot hirelink < C:\Users\daurinia\Desktop\HireLink\database\migrate_external_offers.sql
+C:\xampp\mysql\bin\mysql.exe -uroot hirelink < C:\Users\daurinia\Desktop\HireLink\database\migrations\V002__external_offers.sql
 ```
 
 Contrôles immédiats :

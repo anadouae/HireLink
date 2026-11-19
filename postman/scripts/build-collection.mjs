@@ -10,40 +10,6 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const out = path.join(__dirname, "..", "HireLink.postman_collection.json");
 
-const CAPTCHA_PRE = `const base = pm.environment.get("baseUrl");
-const csrf = [
-  { key: "X-HireLink-CSRF", value: "1" },
-  { key: "Content-Type", value: "application/json" },
-  { key: "Accept", value: "application/json" }
-];
-function solve(cap) {
-  if (cap.kind === "question" && cap.question) {
-    const m = String(cap.question).match(/Combien font (\\d+)\\s*([+\\-−])\\s*(\\d+)/);
-    if (!m) throw new Error("CAPTCHA question illisible");
-    const a = Number(m[1]), b = Number(m[3]);
-    return m[2] === "+" ? String(a + b) : String(a - b);
-  }
-  const texts = [...String(cap.svg || "").matchAll(/<text[^>]*\\sx="(\\d+)"[^>]*>([^<]+)<\\/text>/g)]
-    .map((x) => ({ x: Number(x[1]), ch: x[2] }))
-    .sort((a, b) => a.x - b.x);
-  const ans = texts.map((t) => t.ch).join("");
-  if (!ans) throw new Error("CAPTCHA image vide");
-  return ans;
-}
-// Newman attend la fin de pm.sendRequest avant la requête principale.
-pm.sendRequest({
-  url: base + "/auth/captcha",
-  method: "POST",
-  header: csrf,
-  body: { mode: "raw", raw: "{}" }
-}, function (err, res) {
-  if (err) throw err;
-  if (res.code === 429) throw new Error("CAPTCHA throttled (429)");
-  const cap = res.json();
-  pm.environment.set("captchaToken", cap.token);
-  pm.environment.set("captchaAnswer", solve(cap));
-});`;
-
 function hdrBearer(varName) {
   return [
     { key: "Authorization", value: `Bearer {{${varName}}}`, type: "text" },
@@ -115,7 +81,7 @@ const collection = {
       "Suite API professionnelle HireLink (endpoints Spring réels uniquement).\n\n" +
       "**Cible :** instance ISO (`baseUrl`, défaut http://127.0.0.1:18081/api/v1).\n" +
       "**Interdit :** base démo `hirelink` / port 8081 / JAR F3C2.\n" +
-      "**Auth :** CAPTCHA one-shot résolu côté client (pas de bypass). OTP / MFA / reset token = manuels.\n" +
+      "**Auth :** e-mail + mot de passe. OTP / MFA / reset token = manuels (pas de contournement).\n" +
       "**Comptes seed :** documentés dans DataSeeder (mots de passe via variables d'environnement Newman).",
     schema: "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
   },
@@ -152,39 +118,24 @@ const collection = {
     {
       name: "1. Authentification et sécurité",
       description:
-        "CAPTCHA obligatoire pour login/forgot. Admin MFA : assert challenge sans jeton. Pas de contournement OTP/MFA.",
+        "Connexion e-mail + mot de passe. Admin MFA : assert challenge sans jeton. Pas de contournement OTP/MFA.",
       item: [
-        req("CAPTCHA challenge", "POST", "/auth/captcha", {
-          body: {},
-          description: "POST /auth/captcha — épreuve serveur one-shot",
-          tests: [
-            statusTest(200),
-            jsonOk,
-            `pm.test("token captcha", () => { const j = pm.response.json(); pm.expect(j.token).to.be.a("string").that.is.not.empty; pm.environment.set("captchaToken", j.token); });`,
-          ],
-        }),
-        req("Login candidat (CAPTCHA)", "POST", "/auth/login", {
-          preRequest: CAPTCHA_PRE,
+        req("Login candidat", "POST", "/auth/login", {
           body: {
             email: "{{candidateEmail}}",
             password: "{{candidatePassword}}",
-            captchaToken: "{{captchaToken}}",
-            captchaAnswer: "{{captchaAnswer}}",
           },
-          description: "POST /auth/login — rôle CANDIDAT seed. CAPTCHA résolu en prerequest.",
+          description: "POST /auth/login — rôle CANDIDAT seed.",
           tests: [
             statusTest(200),
             jsonOk,
             `pm.test("accessToken candidat", () => { const j = pm.response.json(); pm.expect(j.accessToken).to.be.a("string").that.is.not.empty; pm.expect(j.role).to.eql("CANDIDAT"); pm.environment.set("candidateToken", j.accessToken); pm.environment.set("candidateUserId", String(j.userId)); });`,
           ],
         }),
-        req("Login recruteur (CAPTCHA)", "POST", "/auth/login", {
-          preRequest: CAPTCHA_PRE,
+        req("Login recruteur", "POST", "/auth/login", {
           body: {
             email: "{{recruiterEmail}}",
             password: "{{recruiterPassword}}",
-            captchaToken: "{{captchaToken}}",
-            captchaAnswer: "{{captchaAnswer}}",
           },
           tests: [
             statusTest(200),
@@ -192,12 +143,9 @@ const collection = {
           ],
         }),
         req("Login admin → MFA challenge (pas de bypass)", "POST", "/auth/login", {
-          preRequest: CAPTCHA_PRE,
           body: {
             email: "{{adminEmail}}",
             password: "{{adminPassword}}",
-            captchaToken: "{{captchaToken}}",
-            captchaAnswer: "{{captchaAnswer}}",
           },
           description:
             "Si MFA admin activé : 200 + mfaRequired sans accessToken. Ne pas appeler /mfa/verify sans TOTP manuel.",
@@ -219,12 +167,9 @@ const collection = {
           ],
         }),
         req("Login mot de passe invalide", "POST", "/auth/login", {
-          preRequest: CAPTCHA_PRE,
           body: {
             email: "{{candidateEmail}}",
             password: "WrongPassword-NotSeed-000!",
-            captchaToken: "{{captchaToken}}",
-            captchaAnswer: "{{captchaAnswer}}",
           },
           tests: [
             `pm.test("refus 401/400/403", () => pm.expect([400,401,403]).to.include(pm.response.code));`,

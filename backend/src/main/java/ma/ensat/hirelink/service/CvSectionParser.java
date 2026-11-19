@@ -28,11 +28,14 @@ public final class CvSectionParser {
 
     private static final Pattern YEAR = Pattern.compile("(19|20)\\d{2}");
     private static final Pattern MONTHS = Pattern.compile(
-            "janvier|fevrier|mars|avril|mai|juin|juillet|aout|septembre|octobre|novembre|decembre|january|february|march|april|may|june|july|august|september|october|november|december|ete|summer|winter|automne|printemps");
+            "janvier|janv|fevrier|fevr|mars|avril|avr|mai|juin|juillet|juil|aout|aou|septembre|sept|octobre|oct|novembre|nov|decembre|dec|january|jan|february|feb|march|mar|april|apr|may|june|jun|july|jul|august|aug|september|sep|october|oct|november|nov|december|dec|ete|summer|winter|automne|printemps");
     private static final Pattern SPLIT = Pattern.compile("(?i)\\s+(?:chez|at)\\s+|\\s*[—–]\\s*|\\s+-\\s+|\\s*,\\s*");
     private static final Pattern STAGE = Pattern.compile("(?i)\\bstages?\\b|\\bstagiaires?\\b|\\bintern(?:ship)?s?\\b");
     private static final Pattern ALTERNANCE = Pattern.compile("(?i)\\balternances?\\b|\\bapprentissages?\\b|\\bapprentice(?:ship)?\\b|\\bapprenti(?:e|es|s)?\\b");
     private static final Pattern ONGOING = Pattern.compile("(?i)depuis|present|aujourd|current|\\bnow\\b|en cours");
+    private static final Pattern LEVEL = Pattern.compile("(?i)\\b(?:A[12]|B[12]|C[12]|natif(?:ve)?|native|courant(?:e)?|fluent|beginner|intermediate|advanced)\\b");
+    private static final Pattern LANGUAGE_NAME = Pattern.compile(
+            "(?i)\\b(français|francais|french|anglais|english|arabe|arabic|espagnol|spanish|allemand|german|amazigh)\\b");
 
     private static final Map<String, String> HEADINGS = new LinkedHashMap<>();
     static {
@@ -96,6 +99,8 @@ public final class CvSectionParser {
         String languageBlock = blocks.getOrDefault("languages", new StringBuilder()).toString();
         String languages = languagesIn(languageBlock.isBlank() ? text : languageBlock);
         sections.put("languages", languages);
+        enrichEducation(sections, blocks.getOrDefault("education", new StringBuilder()).toString());
+        enrichPreferences(sections, text);
         String note = null;
         if (!blocks.getOrDefault("experience", new StringBuilder()).toString().isBlank() && jobs.isEmpty()) {
             note = "Le texte d'expérience est conservé, mais aucune fiche n'a pu être séparée.";
@@ -106,19 +111,31 @@ public final class CvSectionParser {
     private static List<Experience> readEntries(String block, String forcedKind) {
         List<Experience> out = new ArrayList<>();
         StringBuilder current = null;
+        boolean previousBullet = false;
         for (String line : block.split("\n")) {
-            if (line.isBlank()) {
+            String normalized = normalizeLine(line);
+            if (normalized.isBlank()) {
                 flush(out, current, forcedKind);
                 current = null;
+                previousBullet = false;
                 continue;
             }
-            if (current != null && attachesAsDate(line)) {
-                current.append(' ').append(line.trim());
+            if (isBullet(normalized)) {
+                previousBullet = true;
                 continue;
             }
-            if (attachesAsDate(line)) continue;
+            if (previousBullet && !attachesAsDate(normalized) && !looksLikeEntryHeader(normalized)) {
+                previousBullet = false;
+                continue;
+            }
+            previousBullet = false;
+            if (current != null && attachesAsDate(normalized)) {
+                current.append(' ').append(normalized);
+                continue;
+            }
+            if (attachesAsDate(normalized)) continue;
             flush(out, current, forcedKind);
-            current = new StringBuilder(line.trim());
+            current = new StringBuilder(normalized);
         }
         flush(out, current, forcedKind);
         return out;
@@ -146,9 +163,7 @@ public final class CvSectionParser {
             start = found.get(0);
             incomplete = !ongoing;
         }
-        String withoutDates = MONTHS.matcher(YEAR.matcher(fold(text)).replaceAll(" ")).replaceAll(" ");
-        withoutDates = text.replaceAll("(?i)(19|20)\\d{2}", " ")
-                .replaceAll("(?i)janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre|january|february|march|april|may|june|july|august|september|october|november|december", " ");
+        String withoutDates = stripDateTokens(text);
         String[] parts = SPLIT.split(withoutDates.trim());
         String title = parts.length > 0 ? clean(stripKind(parts[0])) : "";
         String org = parts.length > 1 ? clean(parts[1]) : "";
@@ -193,14 +208,119 @@ public final class CvSectionParser {
         return letters.length() <= 2;
     }
 
+    private static String normalizeLine(String line) {
+        return (line == null ? "" : line)
+                .replace('\u007f', '•')
+                .replace('\u0007', '•')
+                .replace('\u000b', ' ')
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    private static boolean isBullet(String line) {
+        return line.contains("•") || line.contains("▪") || line.contains("◦") || line.contains("‣")
+                || line.matches("^[*]\\s*.*")
+                || line.matches("^[-–—]\\s+.*");
+    }
+
+    private static boolean looksLikeEntryHeader(String line) {
+        return line.contains("—") || line.contains("–")
+                || Pattern.compile("(?i)\\s+(?:chez|at)\\s+").matcher(line).find()
+                || line.matches(".*\\s+-\\s+.*")
+                || line.contains(",");
+    }
+
+    private static String stripDateTokens(String value) {
+        String[] original = value.split("\\s+");
+        StringBuilder kept = new StringBuilder();
+        for (String token : original) {
+            String tokenFolded = fold(token).replaceAll("[.,]", "");
+            if (tokenFolded.matches("(19|20)\\d{2}")
+                    || MONTHS.matcher(tokenFolded).matches()
+                    || tokenFolded.matches("depuis|present|aujourd'hui|aujourd|current|now|ongoing|cours")) {
+                continue;
+            }
+            if (!kept.isEmpty()) kept.append(' ');
+            kept.append(token);
+        }
+        return kept.toString();
+    }
+
     private static String languagesIn(String text) {
-        String folded = fold(text);
         List<String> found = new ArrayList<>();
-        for (String[] pair : LANGUAGES) {
-            if (found.contains(pair[1])) continue;
-            if (Pattern.compile("\\b" + pair[0] + "\\b").matcher(folded).find()) found.add(pair[1]);
+        Matcher matcher = LANGUAGE_NAME.matcher(text == null ? "" : text);
+        while (matcher.find()) {
+            String canonical = canonicalLanguage(matcher.group());
+            if (canonical == null || found.stream().anyMatch(x -> x.startsWith(canonical + " "))) continue;
+            String after = text.substring(matcher.end(), Math.min(text.length(), matcher.end() + 24));
+            Matcher level = LEVEL.matcher(after);
+            found.add(canonical + (level.find() ? " (" + level.group().trim() + ")" : ""));
         }
         return String.join(", ", found);
+    }
+
+    private static String canonicalLanguage(String value) {
+        String folded = fold(value);
+        for (String[] pair : LANGUAGES) {
+            if (pair[0].equals(folded)) return pair[1];
+        }
+        return null;
+    }
+
+    private static void enrichEducation(Map<String, String> sections, String block) {
+        sections.put("education_school", "");
+        sections.put("education_degree", "");
+        sections.put("education_domain", "");
+        sections.put("education_start", "");
+        sections.put("education_end", "");
+        sections.put("graduation_year", "");
+        if (block == null || block.isBlank()) return;
+
+        List<String> years = new ArrayList<>();
+        Matcher yearMatcher = YEAR.matcher(block);
+        while (yearMatcher.find()) years.add(yearMatcher.group());
+        if (!years.isEmpty()) {
+            if (years.size() >= 2) {
+                sections.put("education_start", years.get(0));
+                sections.put("education_end", years.get(years.size() - 1));
+            }
+            sections.put("graduation_year", years.get(years.size() - 1));
+        }
+
+        String firstLine = block.lines().map(String::trim).filter(line -> !line.isBlank()).findFirst().orElse("");
+        String withoutDates = stripDateTokens(firstLine).replaceAll("\\([^)]*\\)", " ").replaceAll("\\s+", " ").trim();
+        String[] parts = withoutDates.split("\\s*[—–]\\s*");
+        if (parts.length == 1) parts = withoutDates.split("\\s+-\\s+");
+        if (parts.length > 0) sections.put("education_school", clean(parts[0]));
+        if (parts.length > 1) sections.put("education_degree", clean(parts[1]));
+        if (parts.length > 2) sections.put("education_domain", clean(String.join(" — ", java.util.Arrays.copyOfRange(parts, 2, parts.length))));
+    }
+
+    private static void enrichPreferences(Map<String, String> sections, String text) {
+        sections.put("preferred_locations", "");
+        sections.put("work_mode", "");
+        String source = text == null ? "" : text;
+        List<String> locations = new ArrayList<>();
+        Matcher labelled = Pattern.compile("(?im)^(?:lieux recherchés|locations?|based in)\\s*[:\\-]?\\s*([^.;\\n]+)$").matcher(source);
+        while (labelled.find()) addLocations(locations, labelled.group(1));
+        Matcher location = Pattern.compile("(?i)(?:^|\\s)[àa]\\s+([\\p{L}][\\p{L}'-]{1,40})(?=\\s+(?:ou|or)\\b|[.;])").matcher(source);
+        while (location.find()) addLocations(locations, location.group(1));
+        if (!locations.isEmpty()) sections.put("preferred_locations", String.join(", ", locations));
+        String folded = fold(source);
+        if (folded.contains("teletravail") || folded.contains("remote")) sections.put("work_mode", "Télétravail");
+        else if (folded.contains("hybride") || folded.contains("hybrid")) sections.put("work_mode", "Hybride");
+        else if (folded.contains("sur site") || folded.contains("on-site") || folded.contains("presentiel")) {
+            sections.put("work_mode", "Sur site");
+        }
+    }
+
+    private static void addLocations(List<String> locations, String value) {
+        for (String part : value.split("(?i)\\s+ou\\s+|\\s+or\\s+|\\s*,\\s*")) {
+            String location = clean(part);
+            if (!location.isBlank() && locations.stream().noneMatch(existing -> fold(existing).equals(fold(location)))) {
+                locations.add(location);
+            }
+        }
     }
 
     private static String headingKey(String line) {

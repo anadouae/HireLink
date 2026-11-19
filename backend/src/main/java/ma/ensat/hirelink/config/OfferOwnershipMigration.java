@@ -4,6 +4,7 @@ import ma.ensat.hirelink.repository.JobOfferRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,9 @@ public class OfferOwnershipMigration {
 
     private final JobOfferRepository jobOfferRepository;
 
+    @Value("${hirelink.startup-migrations.enabled:false}")
+    private boolean startupMigrationsEnabled;
+
     public OfferOwnershipMigration(JobOfferRepository jobOfferRepository) {
         this.jobOfferRepository = jobOfferRepository;
     }
@@ -28,6 +32,7 @@ public class OfferOwnershipMigration {
     @EventListener(ApplicationReadyEvent.class)
     @Transactional
     public void attachLegacyOffersToTheirOrganization() {
+        if (!startupMigrationsEnabled) return;
         try {
             int attached = jobOfferRepository.backfillMissingOrganization();
             if (attached > 0) {

@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @Order(80)
-@ConditionalOnProperty(name = "hirelink.external-jobs.startup-sync", havingValue = "true", matchIfMissing = true)
+@ConditionalOnProperty(
+        name = {"hirelink.external-jobs.sync-enabled", "hirelink.external-jobs.startup-sync"},
+        havingValue = "true")
 public class ExternalJobsStartupSync implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(ExternalJobsStartupSync.class);

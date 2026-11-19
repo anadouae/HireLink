@@ -2,56 +2,13 @@ import { APIRequestContext, Page, expect } from "@playwright/test";
 
 export const API = process.env.HL_API || "http://127.0.0.1:18081/api/v1";
 
-export function solveCaptcha(cap: {
-  kind?: string;
-  question?: string;
-  svg?: string;
-}): string {
-  if (cap.kind === "question" && cap.question) {
-    const m = String(cap.question).match(/Combien font (\d+)\s*([+−\-])\s*(\d+)/);
-    if (!m) throw new Error("CAPTCHA question illisible: " + cap.question);
-    const a = Number(m[1]);
-    const b = Number(m[3]);
-    return m[2] === "+" ? String(a + b) : String(a - b);
-  }
-  const texts = [...String(cap.svg || "").matchAll(/<text[^>]*\sx="(\d+)"[^>]*>([^<]+)<\/text>/g)]
-    .map((m) => ({ x: Number(m[1]), ch: m[2] }))
-    .sort((a, b) => a.x - b.x);
-  const ans = texts.map((t) => t.ch).join("");
-  if (!ans) throw new Error("CAPTCHA image vide");
-  return ans;
-}
-
-export async function issueSolvedCaptcha(request: APIRequestContext) {
-  for (let i = 0; i < 8; i++) {
-    const res = await request.post(API + "/auth/captcha", {
-      data: {},
-      headers: { "X-HireLink-CSRF": "1" },
-    });
-    if (res.status() === 429) throw new Error("CAPTCHA throttled");
-    const cap = await res.json();
-    try {
-      return { token: cap.token as string, answer: solveCaptcha(cap) };
-    } catch {
-      /* retry */
-    }
-  }
-  throw new Error("unable to solve captcha");
-}
-
 export async function apiLogin(
   request: APIRequestContext,
   email: string,
   password: string
 ) {
-  const solved = await issueSolvedCaptcha(request);
   const res = await request.post(API + "/auth/login", {
-    data: {
-      email,
-      password,
-      captchaToken: solved.token,
-      captchaAnswer: solved.answer,
-    },
+    data: { email, password },
     headers: { "X-HireLink-CSRF": "1" },
   });
   const body = await res.json();

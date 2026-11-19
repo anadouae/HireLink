@@ -208,11 +208,8 @@
     const payable = q.payable !== false && Number(q.amountTtc) > 0 && selectedCode === paidCode();
     amountEl.textContent = money(q.amountTtc);
     labelEl.textContent = payable ? "Total à payer" : "Montant";
-    if (q.vatConfigured === true) {
-      noteEl.textContent = "Sous-total HT " + money(q.amountHt) + " · TVA " + money(q.tva);
-    } else {
-      noteEl.textContent = Number(q.amountTtc) > 0 ? "Montant catalogue · TVA non configurée" : "Formule gratuite";
-    }
+    // Le détail HT / TVA figure sur la facture, pas sur le choix de la formule.
+    noteEl.textContent = Number(q.amountTtc) > 0 ? (cycle === "year" ? "Par an" : "Par mois") : "Formule gratuite";
     toPay.disabled = !payable;
     if (selectedCode !== paidCode()) {
       const paid = plans.find((p) => p.code === paidCode());
@@ -225,9 +222,6 @@
 
     document.getElementById("ck-recap-plan").textContent = q.planLabel || "—";
     document.getElementById("ck-recap-cycle").textContent = q.cycleLabel || (cycle === "year" ? "Annuel" : "Mensuel");
-    document.getElementById("ck-recap-ht-label").textContent = q.vatConfigured === true ? "Montant HT" : "Montant catalogue";
-    document.getElementById("ck-recap-ht").textContent = money(q.amountHt);
-    document.getElementById("ck-recap-tva").textContent = q.vatConfigured === true ? money(q.tva) : "Non configurée";
     document.getElementById("ck-recap-ttc").textContent = money(q.amountTtc);
 
     const holder = document.getElementById("ck-holder");
@@ -318,7 +312,7 @@
   }
 
   function cardLooksFilled() {
-    // Simulation : n'importe quelles valeurs passent ; on exige seulement que les champs ne soient pas vides.
+    // Contrôle de saisie seulement : les champs carte restent dans le navigateur (prestataire de paiement à brancher ici).
     const pan = String((document.getElementById("ck-pan") || {}).value || "").replace(/\D/g, "");
     const exp = String((document.getElementById("ck-exp") || {}).value || "").trim();
     const cvc = String((document.getElementById("ck-cvc") || {}).value || "").replace(/\D/g, "");

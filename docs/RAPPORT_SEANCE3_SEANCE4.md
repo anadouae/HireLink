@@ -235,7 +235,7 @@ Entity / Table MySQL
 ### 5.3 Points d’amélioration (optionnels)
 - Utiliser activement les **Tags** (`@ManyToMany`) dans le wizard d’offre  
 - Captures d’écran Postman dans le dossier `docs/`  
-- Diagramme de classes “version finale exhaustive” (toutes les entities + attributs) via le prompt agent ci-dessous  
+- Diagramme de classes “version finale exhaustive” (toutes les entités et leurs attributs)  
 
 ### 5.4 Conclusion
 Les objectifs des séances 3 et 4 sont **atteints au niveau code et livrables**.  

@@ -5,7 +5,7 @@ Suite API professionnelle pour l’instance **ISO** (`http://127.0.0.1:18081`), 
 ## Interdictions
 
 - Ne **jamais** pointer `baseUrl` vers `:8081` (démo / JAR F3C2 / base `hirelink`).
-- Ne pas contourner CAPTCHA, OTP ou MFA.
+- Ne pas contourner OTP ou MFA.
 - Ne pas committer `environments/*.local.json` ni `reports/`.
 
 ## Fichiers
@@ -64,7 +64,7 @@ Rapports : `postman/reports/newman-*.json` (gitignorés).
 ## Domaines couverts
 
 1. Prérequis & santé
-2. Authentification et sécurité (CAPTCHA réel)
+2. Authentification et sécurité
 3. Profil candidat et CV (lecture)
 4. Recherche et catalogue
 5. Offres et candidatures

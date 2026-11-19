@@ -414,3 +414,27 @@
   box-shadow: 0 6px 14px rgba(122, 32, 50, 0.22);
 }
 .help-main .hp-nav { margin-top: 1rem; }
+
+/* Document unique « Conditions d’utilisation et confidentialité » (page + fenêtre d’inscription) */
+.legal-part {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  margin: 2rem 0 0.9rem;
+  color: var(--burgundy, #7a2032);
+}
+.legal-body > .legal-part:first-child { margin-top: 0.5rem; }
+.legal-block h3 {
+  font-size: 1.05rem;
+  margin: 0 0 0.55rem;
+}
+.legal-block p { margin: 0 0 0.5rem; color: var(--ink-soft); line-height: 1.6; }
+.legal-block li { line-height: 1.6; margin-bottom: 0.25rem; }
+.legal-foot { margin-top: 1.5rem; }
+.legal-modal {
+  max-height: 58vh;
+  overflow-y: auto;
+  padding-right: 0.4rem;
+}
+.legal-modal .legal-block { margin-bottom: 0.75rem; padding: 0.9rem 1rem; }
+.legal-modal .legal-part { font-size: 1.15rem; margin: 1.1rem 0 0.6rem; }
+.auth-consent--single label { font-size: 0.9rem; }

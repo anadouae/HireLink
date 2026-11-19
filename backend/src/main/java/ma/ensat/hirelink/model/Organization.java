@@ -62,6 +62,25 @@ public class Organization {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
+    /** Legacy database column; keep new rows active without using it for access decisions. */
+    @Column(name = "active", nullable = false)
+    private boolean legacyActive = true;
+
+    /**
+     * État décidé par l'administration : null = active, DISABLED = désactivée (réversible),
+     * REMOVED = retirée (données conservées, plus d'accès). Colonne distincte de l'ancienne
+     * colonne « active » laissée en base par une version précédente, qui n'est plus lue.
+     */
+    @Column(name = "access_status", length = 16)
+    private String accessStatus;
+    @Column(name = "access_changed_at")
+    private Instant accessChangedAt;
+    /** Comptes et offres mis en pause par la désactivation : seuls ceux-là sont rétablis à la réactivation. */
+    @Column(name = "paused_member_ids", columnDefinition = "TEXT")
+    private String pausedMemberIds;
+    @Column(name = "paused_offer_ids", columnDefinition = "TEXT")
+    private String pausedOfferIds;
+
     /** Membres de l'organisation (@OneToMany via Membership). */
     @OneToMany(mappedBy = "organization")
     private List<Membership> memberships = new ArrayList<>();
@@ -111,4 +130,16 @@ public class Organization {
     public Instant getCreatedAt() { return createdAt; }
     public List<Membership> getMemberships() { return memberships; }
     public void setMemberships(List<Membership> memberships) { this.memberships = memberships; }
+
+    public String getAccessStatus() { return accessStatus; }
+    public void setAccessStatus(String accessStatus) { this.accessStatus = accessStatus; }
+    public Instant getAccessChangedAt() { return accessChangedAt; }
+    public void setAccessChangedAt(Instant accessChangedAt) { this.accessChangedAt = accessChangedAt; }
+    public String getPausedMemberIds() { return pausedMemberIds; }
+    public void setPausedMemberIds(String pausedMemberIds) { this.pausedMemberIds = pausedMemberIds; }
+    public String getPausedOfferIds() { return pausedOfferIds; }
+    public void setPausedOfferIds(String pausedOfferIds) { this.pausedOfferIds = pausedOfferIds; }
+    /** Active tant que l'administration ne l'a ni désactivée ni retirée. */
+    public boolean isAccessActive() { return accessStatus == null || accessStatus.isBlank() || "ACTIVE".equals(accessStatus); }
+    public boolean isRemoved() { return "REMOVED".equals(accessStatus); }
 }

@@ -63,18 +63,6 @@
       "enabled": true
     },
     {
-      "key": "captchaToken",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
-      "key": "captchaAnswer",
-      "value": "",
-      "type": "default",
-      "enabled": true
-    },
-    {
       "key": "sampleApplicationId",
       "value": "",
       "type": "default",

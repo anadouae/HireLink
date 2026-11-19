@@ -5,12 +5,12 @@
   <script src="js/public-theme.js?v=20261101r"></script>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HireLink — Recrutement à performance équitable</title>
+  <title>HireLink — Offres, candidatures, réponses tenues</title>
   <link rel="icon" type="image/png" href="assets/logo-hirelink-icon.png" />
-  <meta name="description" content="HireLink : offres des recruteurs, recherche web en direct, candidatures suivies et délais de réponse dans un même espace. Pour candidats et recruteurs." />
+  <meta name="description" content="HireLink relie candidats et entreprises : recherche d’offres, suivi des candidatures et délais de réponse dans un même espace." />
   <meta name="theme-color" content="#7a2032" />
-  <meta property="og:title" content="HireLink — Recrutement à performance équitable" />
-  <meta property="og:description" content="Chaque talent mérite une réponse. Chaque offre exige un engagement. Transparence bilatérale, ROI mesurable." />
+  <meta property="og:title" content="HireLink — Offres, candidatures, réponses tenues" />
+  <meta property="og:description" content="Cherchez des offres, postulez, suivez chaque étape. Côté entreprise : publiez, lisez les dossiers et répondez dans les délais." />
   <meta property="og:type" content="website" />
   <meta property="og:locale" content="fr_FR" />
   <meta property="og:site_name" content="HireLink" />
@@ -18,12 +18,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400;1,9..144,600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
-  <link rel="stylesheet" href="css/search.css?v=20261103d" />
   <link rel="stylesheet" href="css/offer-card.css?v=20261110g" />
-  <link rel="stylesheet" href="css/home.css?v=20261110g" />
-  <link rel="stylesheet" href="css/public-dark.css?v=20261107b" />
+  <link rel="stylesheet" href="css/home.css?v=20261118v8" />
+  <link rel="stylesheet" href="css/public-dark.css?v=20261118v8" />
   <link rel="stylesheet" href="css/premium.css?v=20261107b" />
-  <link rel="stylesheet" href="css/landing-profile.css?v=20261118v7" />
+  <link rel="stylesheet" href="css/landing-profile.css?v=20261118v8" />
 </head>
 <body class="home">
   <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -35,10 +34,10 @@
       <span class="brand-name">Hi<span class="r-accent">r</span>eLink</span>
     </a>
     <nav class="nav" aria-label="Sur cette page">
-      <a href="#offres">Offres</a>
+      <a href="#espaces">Espaces</a>
+      <a href="#profil-cv">Profil et CV</a>
       <a href="#entreprises">Entreprises</a>
-      <a href="#candidats">Candidats</a>
-      <a href="#metiers">Métiers</a>
+      <a href="#candidats">Dossiers</a>
       <a href="#parcours">Parcours</a>
       <a href="#tarifs">Formules</a>
     </nav>
@@ -54,60 +53,24 @@
         <span class="hero-spot"></span>
       </div>
       <div class="hero-inner">
-        <p class="eyebrow" data-reveal>Recrutement à performance équitable</p>
-        <h1 class="hero-title" id="hero-title" data-split><em id="offer-count">—</em> offres ouvertes au Maroc</h1>
-        <p class="hero-lead" data-reveal>Stages, premiers emplois et CDI. Suivez vos candidatures et les délais de réponse, dans un même espace.</p>
-
-        <form class="search-card" id="finder" data-reveal>
-          <div class="search-tabs" role="tablist" aria-label="Type de recherche">
-            <button type="button" class="is-on" data-find="offers" role="tab" aria-selected="true">Trouver des offres</button>
-            <button type="button" data-find="people" role="tab" aria-selected="false">Trouver des candidats</button>
-          </div>
-          <p class="search-hint" id="search-hint">Trouvez un poste parmi les offres publiées. La connexion sert à postuler avec votre CV.</p>
-          <div class="search-row">
-            <input id="q-text" data-suggest="job" type="search" placeholder="Rechercher un poste, une entreprise…" aria-label="Poste ou entreprise" autocomplete="off" />
-            <input id="q-city" data-suggest="place" type="search" placeholder="Lieu" autocomplete="off" aria-label="Lieu" />
-            <select id="q-contract" aria-label="Type de contrat"><option value="">Type de contrat</option></select>
-            <button type="submit" id="q-submit">Rechercher</button>
-          </div>
-          <div class="search-filters">
-            <select id="q-country" aria-label="Pays">
-              <option value="MA">Maroc</option>
-              <option value="ALL">Tous les pays</option>
-            </select>
-            <select id="q-origin" aria-label="Provenance">
-              <option value="">Toutes les provenances</option>
-              <option value="hirelink">Offres HireLink</option>
-              <option value="external">Offres web</option>
-            </select>
-            <select id="q-since" aria-label="Date de publication">
-              <option value="">Toute date</option>
-              <option value="7">7 derniers jours</option>
-              <option value="30">30 derniers jours</option>
-              <option value="90">90 derniers jours</option>
-            </select>
-          </div>
-          <p class="search-hint">Les offres web viennent d'une recherche en direct sur des sites d'emploi publics (Remotive, Arbeitnow, Remote OK, Himalayas, Jobicy, Adzuna, We Work Remotely) : rien n'est stocké chez nous, et la candidature se fait sur le site d'origine (HireLink ne suit pas ces candidatures).</p>
-          <div class="quick-row">
-            <span>Recherche rapide</span>
-            <div id="quick-chips"></div>
-          </div>
-        </form>
+        <p class="eyebrow" data-reveal>De la première opportunité au bon recrutement</p>
+        <h1 class="hero-title" id="hero-title" data-split>Votre prochain défi commence ici.</h1>
+        <p class="hero-lead" data-reveal>Stage, premier emploi ou nouvelle étape : trouvez une opportunité claire et accompagnez chaque candidature jusqu’à la réponse.</p>
+        <ul class="hero-pitch" data-reveal>
+          <li><span>Candidats</span> Trouvez votre offre. Explorez large, affinez, postulez vers le poste qui vous fait avancer.</li>
+          <li><span>Entreprises</span> Pourvoyez plus vite. Publiez, recevez les dossiers, avancez chaque candidature jusqu’à votre choix.</li>
+        </ul>
+        <div class="hero-cta" data-reveal>
+          <a class="btn btn-primary btn-lg" href="auth.html?mode=register&amp;role=CANDIDAT">Je cherche un poste</a>
+          <a class="btn btn-ghost btn-lg" href="auth.html?mode=register&amp;role=RECRUTEUR">Je recrute</a>
+          <a class="link-arrow" href="auth.html?mode=login">Déjà un compte ? Se connecter</a>
+        </div>
       </div>
-      <a class="scroll-cue" href="#chiffres" aria-label="Découvrir HireLink"><span></span></a>
-    </section>
-
-    <section class="stats" id="chiffres" aria-label="HireLink en chiffres">
-      <dl class="stats-row" data-reveal-group>
-        <div class="stat"><dt>Offres ouvertes</dt><dd data-stat="offers">—</dd></div>
-        <div class="stat"><dt>Entreprises qui recrutent</dt><dd data-stat="companies">—</dd></div>
-        <div class="stat"><dt>Villes</dt><dd data-stat="cities">—</dd></div>
-        <div class="stat"><dt>Entreprises réactives, mesurées</dt><dd data-stat="pace">—</dd></div>
-      </dl>
+      <a class="scroll-cue" href="#espaces" aria-label="Découvrir HireLink"><span></span></a>
     </section>
 
     <section class="manifesto" aria-label="Notre engagement">
-      <p class="manifesto-text" data-scrub-words>Chaque talent mérite une réponse. Chaque offre exige un engagement. Transparence bilatérale, ROI mesurable.</p>
+      <p class="manifesto-text" data-scrub-words>Chaque candidature mérite une réponse. Chaque offre engage l’entreprise. Un même fil : chercher, postuler, suivre, choisir.</p>
     </section>
 
     <section class="scene scene--dark" id="espaces" data-scene aria-labelledby="espaces-title">
@@ -115,18 +78,19 @@
         <div class="scene-stage">
           <header class="scene-intro">
             <p class="eyebrow">Deux espaces</p>
-            <h2 id="espaces-title" data-split>Une plateforme, un espace pour chaque rôle</h2>
+            <h2 id="espaces-title" data-split>Votre prochain poste. Leur prochain talent.</h2>
+            <p>Candidats : visez l’offre idéale. Entreprises : pourvoyez le poste sans perdre le fil.</p>
           </header>
           <ol class="scene-steps">
             <li class="scene-step" data-scene-step>
               <div class="step-text">
                 <p class="step-index" aria-hidden="true">01</p>
                 <h3>Espace candidat</h3>
-                <p>Un profil, un CV déposé une fois, des candidatures guidées et un suivi limpide jusqu’à la réponse.</p>
+                <p>Cherchez parmi un large choix d’offres, postulez avec un seul CV, suivez chaque étape jusqu’à la réponse.</p>
                 <ul class="step-list">
-                  <li>CV lu automatiquement, corrigeable avant d’enregistrer</li>
-                  <li>Candidature guidée : compétences, CV, lettre</li>
-                  <li>Statut à chaque étape, date de l’entretien dès qu’elle est fixée</li>
+                  <li>CV relu à l’écran, corrigible avant d’enregistrer</li>
+                  <li>Candidature pas à pas : compétences, CV, lettre</li>
+                  <li>Statut à chaque étape, date d’entretien dès qu’elle est fixée</li>
                 </ul>
                 <a class="link-arrow" href="auth.html?mode=register&role=CANDIDAT">Créer mon espace candidat</a>
               </div>
@@ -138,14 +102,14 @@
             <li class="scene-step" data-scene-step>
               <div class="step-text">
                 <p class="step-index" aria-hidden="true">02</p>
-                <h3>Espace recruteur</h3>
-                <p>Publiez vos offres, faites avancer chaque dossier dans un pipeline clair et décidez avec des règles partagées.</p>
+                <h3>Espace entreprise</h3>
+                <p>Publiez vite, recevez les candidatures sur vos offres et faites avancer chaque dossier. Pas d’annuaire de profils : les talents arrivent là où vous recrutez.</p>
                 <ul class="step-list">
-                  <li>Pipeline : reçu, présélection, shortlist, entretien</li>
-                  <li>Refus toujours accompagné d’un motif du catalogue</li>
-                  <li>Entretiens, convocations et équipe de recruteurs</li>
+                  <li>Étapes : reçue, présélection, shortlist, entretien</li>
+                  <li>Tout refus s’accompagne d’un motif</li>
+                  <li>Entretiens, convocations et équipe selon votre formule</li>
                 </ul>
-                <a class="link-arrow" href="auth.html?mode=register&role=RECRUTEUR">Ouvrir l’espace recruteur</a>
+                <a class="link-arrow" href="auth.html?mode=register&role=RECRUTEUR">Ouvrir l’espace entreprise</a>
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -156,7 +120,7 @@
           <div class="scene-foot">
             <div class="scene-dots" role="group" aria-label="Choisir un espace">
               <button type="button" class="is-active" aria-current="true">Candidat</button>
-              <button type="button">Recruteur</button>
+              <button type="button">Entreprise</button>
             </div>
           </div>
         </div>
@@ -167,7 +131,7 @@
       <header class="block-head">
         <p class="eyebrow">Profil et CV</p>
         <h2 id="pcv-title" data-split>Votre CV remplit le profil, vous gardez la main</h2>
-        <p>Déposez votre CV une fois. HireLink lit ses sections et vous propose chaque élément : rien n’est enregistré sans votre accord.</p>
+        <p>Déposez votre CV une fois. HireLink lit ses sections et vous les propose : vous gardez ce qui est juste, rien n’est enregistré sans vous.</p>
       </header>
       <div class="pcv-grid">
         <div class="pcv-text">
@@ -178,18 +142,17 @@
             </li>
             <li class="pcv-step" data-pcv-step>
               <span class="pcv-step-num" aria-hidden="true">2</span>
-              <div><h3>HireLink vous propose</h3><p>Identité, expériences, formation, compétences et langues sont lues puis proposées une à une.</p></div>
+              <div><h3>HireLink lit votre CV</h3><p>Identité, expériences, formation, compétences et langues sont repérées et vous sont proposées.</p></div>
             </li>
             <li class="pcv-step" data-pcv-step>
               <span class="pcv-step-num" aria-hidden="true">3</span>
-              <div><h3>Vous vérifiez et validez</h3><p>Acceptez, corrigez ou refusez chaque proposition. Rien n’écrase votre profil automatiquement.</p></div>
+              <div><h3>Vous gardez ce qui est juste</h3><p>Acceptez ou refusez chaque proposition, puis complétez votre profil à votre rythme.</p></div>
             </li>
             <li class="pcv-step" data-pcv-step>
               <span class="pcv-step-num" aria-hidden="true">4</span>
-              <div><h3>Votre profil est prêt</h3><p>Vos compétences confirmées servent à classer les offres pour vous : une aide, jamais un filtre d’exclusion.</p></div>
+              <div><h3>Vous postulez</h3><p>Vos compétences servent à classer les offres pour vous : une aide, jamais un filtre d’exclusion.</p></div>
             </li>
           </ol>
-          <p class="pcv-next"><strong>Bientôt</strong><span>Déposer le CV dès la création du compte, pour pré-remplir le profil en une seule fois.</span></p>
           <a class="link-arrow" href="auth.html?mode=register&amp;role=CANDIDAT">Créer mon profil candidat</a>
         </div>
         <figure class="pcv-demo" data-pcv>
@@ -214,12 +177,12 @@
                 <span class="pcv-avatar">SE</span>
                 <div>
                   <span class="pcv-card-title">Mon profil</span>
-                  <span class="pcv-card-sub" data-pcv-sub>Chaque élément validé par vous</span>
+                  <span class="pcv-card-sub" data-pcv-sub>Vous gardez ce qui est juste</span>
                 </div>
-                <span class="pcv-ready">Profil prêt</span>
+                <span class="pcv-ready">Prêt à postuler</span>
               </div>
               <div class="pcv-progress">
-                <div class="pcv-progress-row"><span>Profil complété</span><b data-pcv-percent>100 %</b></div>
+                <div class="pcv-progress-row"><span>Lecture du CV</span><b data-pcv-percent>100 %</b></div>
                 <div class="pcv-bar"><i></i></div>
               </div>
               <ul class="pcv-fields">
@@ -232,7 +195,7 @@
             </div>
           </div>
           <figcaption class="pcv-caption">
-            <span>Illustration avec un profil fictif : le CV est lu, chaque section est proposée, puis validée par le candidat.</span>
+            <span>Illustration avec un profil fictif : le CV est lu, chaque section est proposée, le candidat garde ce qui est juste.</span>
             <button type="button" class="pcv-replay" data-pcv-replay hidden>Rejouer</button>
           </figcaption>
         </figure>
@@ -242,10 +205,9 @@
     <section class="block" id="entreprises" aria-labelledby="entreprises-title">
       <header class="block-head">
         <p class="eyebrow">Entreprises</p>
-        <h2 id="entreprises-title" data-split>Les entreprises qui recrutent</h2>
-        <p>Les organisations qui publient sur HireLink. L’identité est contrôlée avant qu’une offre soit visible.</p>
+        <h2 id="entreprises-title" data-split>Ils publient. Vous pourvoyez.</h2>
+        <p>Des organisations actives sur HireLink, à l’identité vérifiée avant publication : pour recruter plus vite, en confiance.</p>
       </header>
-      <div class="line-tabs" id="company-tabs" role="group" aria-label="Filtrer par ville" data-reveal></div>
       <div class="rail" data-reveal>
         <div class="rail-track" id="company-grid" data-reveal-group tabindex="0" role="region" aria-label="Entreprises, défilement horizontal"></div>
         <div class="rail-nav">
@@ -256,44 +218,31 @@
       <p class="block-more" data-reveal><a class="btn btn-primary" href="auth.html?mode=register&role=RECRUTEUR">Publier une offre</a></p>
     </section>
 
-    <section class="block block--tint" id="liste-offres" aria-labelledby="offres-title">
-      <header class="block-head">
-        <p class="eyebrow">Offres</p>
-        <h2 id="offres-title" data-split>Les offres ouvertes</h2>
-        <p id="offers-lead">Classées par ville, type de contrat et réactivité réellement mesurée.</p>
-      </header>
-      <div class="offer-grid" id="public-offers" data-reveal-group><p class="muted">Chargement des offres…</p></div>
-      <p class="block-more" data-reveal>
-        <span id="offers-more" hidden><button type="button" class="btn btn-ghost" id="offers-more-btn"></button></span>
-        <a class="btn btn-primary" href="auth.html?mode=register&role=CANDIDAT">Voir les offres dans mon espace</a>
-      </p>
-    </section>
-
     <section class="scene" id="candidats" data-scene aria-labelledby="candidats-title">
       <div class="scene-track">
         <div class="scene-stage">
           <header class="scene-intro">
             <p class="eyebrow">Dossiers</p>
-            <h2 id="candidats-title" data-split>Les dossiers que le recruteur lit</h2>
-            <p>Pas d’annuaire public de visages. Le recruteur ouvre un dossier : le CV, la lecture extraite, une synthèse, puis les étapes.</p>
+            <h2 id="candidats-title" data-split>Recevez. Lisez. Choisissez plus vite.</h2>
+            <p>Pas d’annuaire public. Les candidatures arrivent sur vos offres — CV, lecture, étapes — pour pourvoir le poste sans perdre le fil.</p>
           </header>
           <ol class="scene-steps">
             <li class="scene-step" data-scene-step>
               <div class="step-text">
                 <p class="step-index" aria-hidden="true">01</p>
-                <h3>CV déposé</h3>
-                <p>Le candidat envoie son PDF. HireLink en extrait le texte et les sections. Il peut corriger avant d’enregistrer.</p>
+                <h3>Profil et CV</h3>
+                <p>Le candidat dépose son CV une fois, le vérifie à l’écran, puis postule depuis son espace.</p>
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
-                <img src="assets/landing/candidat-espace-cv.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Espace CV du candidat : aperçu du CV PDF déposé et vérification technique de ses sections" />
+                <img src="assets/landing/candidat-espace-cv.webp" width="1600" height="1000" loading="lazy" decoding="async" alt="Espace CV du candidat : aperçu du CV déposé et de ses sections" />
               </figure>
             </li>
             <li class="scene-step" data-scene-step>
               <div class="step-text">
                 <p class="step-index" aria-hidden="true">02</p>
-                <h3>Candidats</h3>
-                <p>Tous les dossiers de l’organisation : étape, correspondance et délai de réponse. La synthèse du CV reste une lecture séparée, elle ne retient personne.</p>
+                <h3>Dossiers reçus</h3>
+                <p>Chaque candidature arrive sur votre offre : étape, correspondance et délai de réponse, visibles pour toute l’équipe.</p>
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -304,7 +253,7 @@
               <div class="step-text">
                 <p class="step-index" aria-hidden="true">03</p>
                 <h3>Étapes du dossier</h3>
-                <p>Reçu, lecture, shortlist, entretien. Un refus s’accompagne d’un motif. Le délai promis sur l’offre reste visible.</p>
+                <p>Reçue, présélection, shortlist, entretien. Un refus s’accompagne d’un motif. Le délai promis reste visible.</p>
               </div>
               <figure class="frame step-media">
                 <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -314,11 +263,11 @@
           </ol>
           <div class="scene-foot">
             <div class="scene-dots" role="group" aria-label="Choisir une étape">
-              <button type="button" class="is-active" aria-current="true">CV déposé</button>
-              <button type="button">Candidats</button>
+              <button type="button" class="is-active" aria-current="true">Profil et CV</button>
+              <button type="button">Dossiers reçus</button>
               <button type="button">Étapes du dossier</button>
             </div>
-            <a class="btn btn-primary" href="auth.html?mode=register&role=RECRUTEUR">Ouvrir l’espace recruteur</a>
+            <a class="btn btn-primary" href="auth.html?mode=register&role=RECRUTEUR">Ouvrir l’espace entreprise</a>
           </div>
         </div>
       </div>
@@ -327,34 +276,25 @@
     <section class="block" id="metiers" aria-labelledby="metiers-title">
       <header class="block-head">
         <p class="eyebrow">Métiers</p>
-        <h2 id="metiers-title" data-split>Métiers recherchés</h2>
-        <p>Les familles que le classement et la recherche utilisent. Choisissez-en une pour filtrer les offres.</p>
+        <h2 id="metiers-title" data-split>Le métier que vous visez</h2>
+        <p>Des familles de métiers pour vous repérer. La recherche complète se fait dans votre espace, une fois connecté.</p>
       </header>
       <div class="metier-grid" id="metier-grid" data-reveal-group></div>
-    </section>
-
-    <section class="block block--tint" id="villes" aria-labelledby="villes-title">
-      <header class="block-head">
-        <p class="eyebrow">Villes</p>
-        <h2 id="villes-title" data-split>Offres par ville</h2>
-        <p>Les villes présentes dans les offres publiées.</p>
-      </header>
-      <div class="city-row" id="city-row" data-reveal-group></div>
     </section>
 
     <section class="block" id="parcours" aria-labelledby="parcours-title">
       <header class="block-head">
         <p class="eyebrow">Parcours</p>
-        <h2 id="parcours-title" data-split>Le parcours d’une candidature</h2>
-        <p>Quatre temps, les mêmes des deux côtés.</p>
+        <h2 id="parcours-title" data-split>Du premier clic à votre choix</h2>
+        <p>Quatre temps partagés : le candidat avance vers son poste, l’entreprise vers la bonne personne.</p>
       </header>
       <div class="path" data-path>
         <span class="path-line" aria-hidden="true"><span class="path-fill"></span></span>
         <ol class="path-row">
-          <li class="path-step"><b>1</b><strong>Postuler</strong><span>CV déjà déposé</span></li>
+          <li class="path-step"><b>1</b><strong>Postuler</strong><span>CV prêt dans l’espace</span></li>
           <li class="path-step"><b>2</b><strong>Suivre</strong><span>Chaque étape visible</span></li>
           <li class="path-step"><b>3</b><strong>Échanger</strong><span>Entretien daté</span></li>
-          <li class="path-step"><b>4</b><strong>Décider</strong><span>Suite ou refus motivé</span></li>
+          <li class="path-step"><b>4</b><strong>Choisir</strong><span>Suite ou refus motivé</span></li>
         </ol>
       </div>
     </section>
@@ -362,39 +302,39 @@
     <section class="block block--tint" id="tarifs" aria-labelledby="pricing-title">
       <header class="block-head">
         <p class="eyebrow">Formules</p>
-        <h2 id="pricing-title">Accélérez votre carrière</h2>
-        <p id="pricing-lead">ROI personnel clair : activez votre recherche gratuitement, passez en Performance pour diviser votre temps de recherche.</p>
+        <h2 id="pricing-title">Des formules simples, pour chaque rôle</h2>
+        <p id="pricing-lead">Candidats : cherchez et postulez. Entreprises : publiez et gérez l’équipe selon le nombre de sièges.</p>
       </header>
 
       <div class="pricing-switch" role="tablist" aria-label="Voir les tarifs" data-reveal>
         <button type="button" class="is-active" role="tab" aria-selected="true" data-pricing="candidat" id="price-tab-candidat">Candidats</button>
-        <button type="button" role="tab" aria-selected="false" data-pricing="recruteur" id="price-tab-recruteur">Recruteurs</button>
+        <button type="button" role="tab" aria-selected="false" data-pricing="recruteur" id="price-tab-recruteur">Entreprises</button>
       </div>
 
       <div class="pricing" id="pricing-candidat" role="tabpanel" aria-labelledby="price-tab-candidat">
         <article class="price-card">
           <p class="eyebrow">Gratuit</p>
           <div class="price">0 <small>MAD</small></div>
-          <p class="price-note">Activez votre recherche sans friction.</p>
+          <p class="price-note">Pour commencer votre recherche.</p>
           <ul>
-            <li><strong>Transparence totale :</strong> postuler et suivre son parcours en temps réel.</li>
-            <li><strong>Matching local :</strong> offres classées selon votre profil (aide, jamais filtre d’exclusion).</li>
-            <li><strong>5 crédits IA / 30 jours :</strong> 1 action réussie = 1 crédit ; un échec ne débite pas.</li>
+            <li><strong>Postuler et suivre</strong> chaque étape jusqu’à la réponse.</li>
+            <li><strong>Offres classées</strong> selon votre profil, sans filtre caché.</li>
+            <li><strong>5 aides IA tous les 30 jours</strong> : une aide qui échoue n’est pas comptée.</li>
           </ul>
-          <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=CANDIDAT">Activer ma recherche</a>
+          <a class="btn btn-ghost btn-block" href="auth.html?mode=register&amp;role=CANDIDAT">Créer mon espace candidat</a>
         </article>
         <article class="price-card is-featured">
-          <span class="tag">ROI perso</span>
+          <span class="tag">Plus d’aides</span>
           <p class="eyebrow">Performance</p>
           <div class="price">39 <small>MAD / mois</small></div>
-          <p class="price-note">Beaucoup plus d’usages du même assistant.</p>
+          <p class="price-note">Plus d’accompagnement sur votre profil et vos entretiens.</p>
           <ul>
-            <li><strong>40 crédits IA / mois :</strong> contre 5 en Gratuit.</li>
-            <li><strong>Réécriture de profil :</strong> synthèse, pitch et contrôle de la langue.</li>
-            <li><strong>Préparation d’entretien :</strong> questions à partir du poste et de votre CV.</li>
+            <li><strong>40 aides IA par mois</strong> (contre 5 en Gratuit).</li>
+            <li><strong>Affiner votre profil</strong> : synthèse et présentation.</li>
+            <li><strong>Préparer un entretien</strong> à partir du poste et de votre CV.</li>
           </ul>
-          <p class="price-note">Votre profil n’est ni mieux classé ni mis en avant : le matching reste calculé sur vos compétences.</p>
-          <a class="btn btn-primary btn-block" href="checkout.html?plan=candidate&planCode=PERFORMANCE">Passer en Performance</a>
+          <p class="price-note">Votre profil n’est pas mis en avant artificiellement : le classement suit vos compétences.</p>
+          <a class="btn btn-primary btn-block" href="checkout.html?plan=candidate&amp;planCode=PERFORMANCE">Passer en Performance</a>
         </article>
       </div>
 
@@ -402,46 +342,46 @@
         <article class="price-card">
           <p class="eyebrow">Essentiel</p>
           <div class="price">0 <small>MAD</small></div>
-          <p class="price-note">Publier et suivre sans abonnement.</p>
+          <p class="price-note">1 siège : le Créateur de l’espace.</p>
           <ul>
-            <li><strong>3 offres actives</strong> · <strong>1 siège</strong> · crédits IA selon catalogue.</li>
-            <li><strong>Pipeline ATS :</strong> étapes contrôlées côté serveur, motif de refus obligatoire.</li>
-            <li><strong>Badge ICE :</strong> vérification entreprise avant publication.</li>
+            <li><strong>3 offres actives</strong> · <strong>1 siège</strong>.</li>
+            <li><strong>Suivi des candidatures</strong>, avec un motif pour chaque refus.</li>
+            <li><strong>Vérification de l’entreprise</strong> avant publication.</li>
           </ul>
-          <a class="btn btn-ghost btn-block" href="auth.html?mode=register&role=RECRUTEUR">Activer mon sourcing</a>
+          <a class="btn btn-ghost btn-block" href="auth.html?mode=register&amp;role=RECRUTEUR">Ouvrir l’espace entreprise</a>
         </article>
         <article class="price-card is-featured">
           <span class="tag">Équipe</span>
           <p class="eyebrow">Professionnel</p>
           <div class="price">299 <small>MAD / mois</small></div>
-          <p class="price-note">Capacité d’équipe et d’offres élargie.</p>
+          <p class="price-note">5 sièges : le Créateur et jusqu’à 4 recruteurs.</p>
           <ul>
-            <li><strong>20 offres actives</strong> · <strong>5 sièges</strong> · <strong>100 crédits IA / mois</strong>.</li>
-            <li><strong>Invitations recruteurs</strong> dans la limite de sièges (grandfathering si downgrade).</li>
-            <li><strong>Paiement simulé</strong> au checkout (HT / TVA / TTC catalogue).</li>
+            <li><strong>20 offres actives</strong> · <strong>5 sièges</strong>.</li>
+            <li><strong>100 aides IA par mois</strong> pour l’équipe.</li>
+            <li><strong>Inviter des recruteurs</strong> jusqu’à la limite de sièges.</li>
           </ul>
           <p class="price-note">La formule ne change pas le classement des offres côté candidats.</p>
-          <a class="btn btn-primary btn-block" href="checkout.html?plan=recruiter&planCode=PROFESSIONNEL">Voir Professionnel</a>
+          <a class="btn btn-primary btn-block" href="checkout.html?plan=recruiter&amp;planCode=PROFESSIONNEL">Choisir Professionnel</a>
         </article>
         <article class="price-card">
           <p class="eyebrow">Entreprise</p>
           <div class="price">699 <small>MAD / mois</small></div>
-          <p class="price-note">Pour les organisations structurées.</p>
+          <p class="price-note">25 sièges : le Créateur et jusqu’à 24 recruteurs.</p>
           <ul>
-            <li><strong>Offres actives élargies</strong> (garde-fou technique) · <strong>25 sièges</strong>.</li>
-            <li><strong>200 crédits IA / mois</strong>.</li>
-            <li><strong>Membres déjà présents</strong> conservés en cas de changement de formule.</li>
+            <li><strong>Offres actives illimitées</strong> · <strong>25 sièges</strong>.</li>
+            <li><strong>200 aides IA par mois</strong> pour l’équipe.</li>
+            <li><strong>Membres déjà présents</strong> conservés si vous changez de formule.</li>
           </ul>
-          <a class="btn btn-ghost btn-block" href="checkout.html?plan=recruiter&planCode=ENTREPRISE">Voir Entreprise</a>
+          <a class="btn btn-ghost btn-block" href="checkout.html?plan=recruiter&amp;planCode=ENTREPRISE">Choisir Entreprise</a>
         </article>
       </div>
-      <p class="pricing-footnote">Cinq formules catalogue : Gratuit / Performance (candidat) · Essentiel / Professionnel / Entreprise (recruteur). Paiement simulé — aucun débit bancaire réel en démonstration.</p>
+      <p class="pricing-footnote">Chaque espace entreprise a un seul Créateur ; les autres sièges sont des Recruteurs qui gèrent les offres et les candidatures. Une facture est disponible dans votre espace après chaque paiement.</p>
     </section>
 
     <section class="finale" aria-labelledby="finale-title">
       <div class="finale-glow" aria-hidden="true"></div>
-      <h2 id="finale-title" data-split>Prêt à recruter (ou postuler) avec engagement ?</h2>
-      <p data-reveal>Compte en quelques secondes. Le profil se construit après — quand vous êtes prêt.</p>
+      <h2 id="finale-title" data-split>Trouvez votre offre. Pourvoyez votre poste.</h2>
+      <p data-reveal>Candidats : explorez large, visez juste. Entreprises : publiez, recevez, choisissez plus vite. Compte en quelques secondes.</p>
       <a class="btn btn-champagne btn-lg" href="auth.html?mode=register" data-reveal>Créer mon compte</a>
     </section>
   </main>
@@ -458,42 +398,32 @@
         <a href="legal/cgu.html">CGU</a>
         <a href="legal/confidentialite.html">Confidentialité</a>
         <a href="about.html">À propos</a>
-        <a href="help.html">Aide</a>
       </div>
       <nav class="footer-nav" aria-label="Pied de page">
         <div class="footer-col">
-          <span class="footer-label">Recherche</span>
-          <a href="#offres">Offres</a>
+          <span class="footer-label">Découvrir</span>
+          <a href="#espaces">Espaces</a>
+          <a href="#profil-cv">Profil et CV</a>
           <a href="#entreprises">Entreprises</a>
-          <a href="#candidats">Dossiers candidats</a>
-          <a href="#metiers">Métiers</a>
-          <a href="#villes">Villes</a>
+          <a href="#candidats">Dossiers</a>
+          <a href="#parcours">Parcours</a>
         </div>
         <div class="footer-col">
           <span class="footer-label">Formules</span>
-          <a href="#tarifs">Candidat · Gratuit</a>
-          <a href="#tarifs">Candidat · Performance</a>
-          <a href="#tarifs">Recruteur · Essentiel</a>
-          <a href="#tarifs">Recruteur · Professionnel</a>
-        </div>
-        <div class="footer-col" id="footer-cities">
-          <span class="footer-label">Offres par ville</span>
+          <a href="#tarifs" data-pricing-open="candidat">Candidats : Gratuit, Performance</a>
+          <a href="#tarifs" data-pricing-open="recruteur">Entreprises : Essentiel, Professionnel, Entreprise</a>
         </div>
         <div class="footer-col">
-          <span class="footer-label">Contrats</span>
-          <a href="#offres" data-contract="CDI">CDI</a>
-          <a href="#offres" data-contract="CDD">CDD</a>
-          <a href="#offres" data-contract="Stage">Stage</a>
-          <a href="#offres" data-contract="Alternance">Alternance</a>
-          <a href="#offres" data-contract="Freelance">Freelance</a>
+          <span class="footer-label">Espaces</span>
+          <a href="auth.html?mode=register&amp;role=CANDIDAT">Espace candidat</a>
+          <a href="auth.html?mode=register&amp;role=RECRUTEUR">Espace entreprise</a>
+          <a href="auth.html?mode=login">Connexion</a>
         </div>
         <div class="footer-col">
           <span class="footer-label">Ressources</span>
-          <a href="#profil-cv">Profil et CV</a>
-          <a href="#parcours">Parcours d’une candidature</a>
+          <a href="help.html">Help</a>
+          <a href="support.html">Support</a>
           <a href="security.html">Vérification des entreprises</a>
-          <a href="help.html">Centre d’aide</a>
-          <a href="auth.html?mode=login">Connexion</a>
         </div>
       </nav>
     </div>
@@ -507,17 +437,15 @@
   <script defer src="js/vendor/gsap.min.js?v=20261101r"></script>
   <script defer src="js/vendor/ScrollTrigger.min.js?v=20261101r"></script>
   <script defer src="js/vendor/lenis.min.js?v=20261101r"></script>
-  <script defer src="js/pricing-switch.js?v=20261101r"></script>
+  <script defer src="js/pricing-switch.js?v=20261118v8"></script>
   <script defer src="js/nav.js?v=20261101r"></script>
   <script defer src="js/public-nav.js?v=20261106a"></script>
-  <script defer src="js/search.js?v=20261101r"></script>
   <script defer src="js/places.js?v=20261103h"></script>
   <script defer src="js/offer-card.js?v=20261110g"></script>
-  <script defer src="js/suggest.js?v=20261103g"></script>
-  <script defer src="js/landing-offers.js?v=20261118v7"></script>
+  <script defer src="js/landing-offers.js?v=20261118v8"></script>
   <script defer src="js/footer-year.js?v=20261101r"></script>
-  <script defer src="js/home-motion.js?v=20261103k"></script>
-  <script defer src="js/landing-profile.js?v=20261118v7"></script>
+  <script defer src="js/home-motion.js?v=20261118v8"></script>
+  <script defer src="js/landing-profile.js?v=20261118v8"></script>
   <script defer src="js/premium.js?v=20261106g"></script>
 </body>
 </html>

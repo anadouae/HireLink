@@ -38,9 +38,8 @@ spring.datasource.password=
 # hirelink.jwt.access-ttl-minutes=15
 
 # --- Seed démonstration --------------------------------------------------
-# true = comptes / orgs / offres fictifs au démarrage (local / démo pédagogique)
-# false = aucune donnée de démonstration (proche prod)
-hirelink.seed.enabled=true
+# Le seed reste désactivé par défaut ; l'activer uniquement sur une base de test dédiée.
+hirelink.seed.enabled=false
 # NE JAMAIS laisser à true en permanence : purge + rechargement destructif
 hirelink.seed.force-reset=false
 
@@ -49,10 +48,6 @@ hirelink.seed.force-reset=false
 # que MFA non activée manuellement — voir docs/ADMIN_MFA_DEMO.md).
 # Hors démo locale (recette / préprod / prod) : true
 hirelink.security.admin-mfa-required=false
-
-# --- CAPTCHA -------------------------------------------------------------
-# Défis locaux (question / SVG). Aucune clé tierce.
-# (pas de propriété à activer — toujours on pour les routes protégées)
 
 # --- SMTP (FACULTATIF — laisser vide = journalisation, pas d'envoi réel) ---
 # spring.mail.host=
@@ -77,7 +72,6 @@ hirelink.external-jobs.lever.enabled=false
 hirelink.external-jobs.ashby.enabled=false
 hirelink.external-jobs.jooble.enabled=false
 hirelink.web-search.enabled=false
-hirelink.catalog.rebuild-on-startup=false
 
 # --- OTP console (démo locale sans SMTP uniquement) ----------------------
 # hirelink.otp.log-to-console=false

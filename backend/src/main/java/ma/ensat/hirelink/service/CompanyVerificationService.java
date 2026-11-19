@@ -15,11 +15,14 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Vérification employeur — même logique que LinkedIn / Indeed :
- * 1) e-mail professionnel (pas Gmail)
- * 2) ICE + raison sociale confrontés au registre
- * 3) si tout matche → badge automatique
- * 4) sinon file d’attente admin (espace Administration)
+ * Vérification employeur, sur le modèle de LinkedIn (pas de registre national) :
+ * 1) nom de l'entreprise renseigné ;
+ * 2) e-mail professionnel du compte (domaine d'entreprise, pas une messagerie grand public
+ *    ni une adresse universitaire) → badge « Entreprise vérifiée » automatique ;
+ * 3) ICE facultatif : format contrôlé s'il est saisi, rapproché du référentiel interne
+ *    ({@link IceIdentityLookup}) pour compléter la fiche — point d'entrée prévu pour un
+ *    fournisseur officiel le jour où il sera branché ;
+ * 4) l'administration ne valide jamais à la main : elle peut seulement retirer un badge erroné.
  */
 @Service
 public class CompanyVerificationService {
@@ -27,7 +30,9 @@ public class CompanyVerificationService {
     private static final Set<String> FREE_EMAIL_DOMAINS = Set.of(
             "gmail.com", "googlemail.com", "yahoo.com", "yahoo.fr", "hotmail.com",
             "hotmail.fr", "outlook.com", "outlook.fr", "live.com", "icloud.com",
-            "proton.me", "protonmail.com", "mail.com", "aol.com", "yandex.com"
+            "proton.me", "protonmail.com", "mail.com", "aol.com", "yandex.com",
+            "live.fr", "msn.com", "ymail.com", "gmx.com", "gmx.fr", "laposte.net", "orange.fr",
+            "free.fr", "sfr.fr", "menara.ma", "mail.ru", "zoho.com", "tutanota.com", "hey.com"
     );
 
     public record Result(
@@ -73,60 +78,53 @@ public class CompanyVerificationService {
     }
 
     public Result verify(String rawIce, String companyName, Long currentUserId, String email) {
-        if (rawIce == null || rawIce.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "ICE obligatoire pour lancer la vérification");
-        }
         if (companyName == null || companyName.isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Raison sociale obligatoire");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nom de l’entreprise obligatoire");
         }
-        IceFormatValidator.Result format = iceFormatValidator.validate(rawIce);
-        if (!format.formatValid()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, format.message());
-        }
-        String ice = format.normalized();
         String name = companyName.trim();
         java.time.Instant now = java.time.Instant.now();
 
-        // Les membres d'une même entreprise partagent son ICE : conflit seulement si aucun autre compte portant cet ICE n'a la même raison sociale.
-        var others = userRepository.findAllByCompanyIce(ice).stream()
-                .filter(u -> currentUserId == null || !u.getId().equals(currentUserId)).toList();
-        if (!others.isEmpty() && others.stream().noneMatch(u -> similar(u.getCompany() == null ? "" : u.getCompany(), name) >= 0.72)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cet ICE est déjà lié à un autre compte HireLink");
+        String ice = null;
+        Boolean checkDigitOk = null;
+        boolean formatValid = true;
+        IceIdentityLookup.Hit known = null;
+        if (rawIce != null && !rawIce.isBlank()) {
+            IceFormatValidator.Result format = iceFormatValidator.validate(rawIce);
+            if (!format.formatValid()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, format.message());
+            }
+            ice = format.normalized();
+            checkDigitOk = format.checkDigitAdvisoryOk();
+            // Les membres d'une même entreprise partagent son ICE : conflit seulement si aucun autre compte portant cet ICE n'a la même raison sociale.
+            var others = userRepository.findAllByCompanyIce(ice).stream()
+                    .filter(u -> currentUserId == null || !u.getId().equals(currentUserId)).toList();
+            if (!others.isEmpty() && others.stream().noneMatch(u -> similar(u.getCompany() == null ? "" : u.getCompany(), name) >= 0.72)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "Cet ICE est déjà lié à un autre compte HireLink");
+            }
+            known = iceIdentityLookup.lookup(ice).orElse(null);
         }
-        boolean corporateEmail = isCorporateEmail(email);
-        var hit = iceIdentityLookup.lookup(ice);
+        boolean nameMatchesRegistry = known != null && similar(name, known.legalName()) >= 0.72;
+        String displayName = nameMatchesRegistry ? known.legalName() : name;
 
-        if (!corporateEmail) {
+        if (!isCorporateEmail(email)) {
             return new Result(ice, name, false, "NEED_CORPORATE_EMAIL", false, "PENDING",
-                    "Format ICE valide. Pour le badge automatique, utilisez un e-mail professionnel (@entreprise.ma). "
-                            + IceIdentityLookup.manualPortalHint(),
-                    true, format.checkDigitAdvisoryOk(),
-                    hit.map(IceIdentityLookup.Hit::legalName).orElse(null),
-                    hit.map(IceIdentityLookup.Hit::address).orElse(null),
-                    hit.map(IceIdentityLookup.Hit::city).orElse(null),
-                    hit.map(IceIdentityLookup.Hit::source).orElse(null),
+                    "Pour obtenir le badge, utilisez l’adresse e-mail professionnelle de votre entreprise "
+                            + "(par exemple prenom@votre-entreprise.com).",
+                    formatValid, checkDigitOk,
+                    known != null ? known.legalName() : null,
+                    known != null ? known.address() : null,
+                    known != null ? known.city() : null,
+                    known != null ? known.source() : null,
                     now);
         }
-        if (hit.isEmpty()) {
-            return new Result(ice, name, false, "WAITING_REGISTRY", true, "PENDING",
-                    "Format ICE valide. Entreprise non trouvée dans le registre HireLink — "
-                            + IceIdentityLookup.manualPortalHint(),
-                    true, format.checkDigitAdvisoryOk(),
-                    null, null, null, null, now);
-        }
-        IceIdentityLookup.Hit known = hit.get();
-        if (similar(name, known.legalName()) < 0.72) {
-            return new Result(ice, name, false, "NAME_MISMATCH", true, "PENDING",
-                    "Format ICE valide, mais la raison sociale ne correspond pas à « " + known.legalName()
-                            + " ». Corrigez le nom ou attendez la revue admin.",
-                    true, format.checkDigitAdvisoryOk(),
-                    known.legalName(), known.address(), known.city(), known.source(), known.checkedAt());
-        }
-        return new Result(ice, known.legalName(), true, "REGISTRY_MATCH", true, "AUTO_REGISTRY",
-                "ICE vérifié : entreprise identifiée (« " + known.legalName() + " »).",
-                true, format.checkDigitAdvisoryOk(),
-                known.legalName(), known.address(), known.city(), known.source(), known.checkedAt());
+        return new Result(ice, displayName, true, "DOMAIN_EMAIL", true, "AUTO_EMAIL",
+                "Entreprise vérifiée grâce à votre adresse e-mail professionnelle.",
+                formatValid, checkDigitOk,
+                known != null ? known.legalName() : null,
+                known != null ? known.address() : null,
+                known != null ? known.city() : null,
+                known != null ? known.source() : "E-mail professionnel",
+                now);
     }
 
     /**
@@ -248,12 +246,16 @@ public class CompanyVerificationService {
         }
     }
 
-    public void markAdminDecision(Organization org, boolean verified) {
-        org.setVerified(verified);
-        org.setVerificationStatus(verified ? "ADMIN_APPROVED" : "PENDING");
-        org.setVerificationMethod(verified ? "ADMIN" : "PENDING");
+    /**
+     * Décision d'administration : uniquement le retrait d'un badge erroné. La validation reste automatique
+     * (relance de la vérification par l'entreprise).
+     */
+    public void revokeByAdmin(Organization org) {
+        org.setVerified(false);
+        org.setVerificationStatus("ADMIN_REVOKED");
+        org.setVerificationMethod("ADMIN");
         if (org.getOwner() != null) {
-            org.getOwner().setCompanyVerified(verified);
+            org.getOwner().setCompanyVerified(false);
             org.getOwner().setVerificationStatus(org.getVerificationStatus());
         }
     }
@@ -263,37 +265,35 @@ public class CompanyVerificationService {
             return false;
         }
         String domain = email.substring(email.indexOf('@') + 1).toLowerCase(Locale.ROOT).trim();
-        return !domain.isEmpty() && !FREE_EMAIL_DOMAINS.contains(domain);
+        if (domain.isEmpty() || !domain.contains(".") || FREE_EMAIL_DOMAINS.contains(domain)) return false;
+        // Adresse universitaire (étudiant, école) : elle ne prouve pas l'appartenance à une entreprise.
+        boolean academic = domain.endsWith(".edu") || domain.contains(".ac.") || domain.endsWith(".ac")
+                || domain.startsWith("etu.") || domain.contains(".etu.") || domain.startsWith("student.");
+        return !academic;
     }
 
     public String publishBlockReason(String verificationStatus) {
         if (verificationStatus == null || verificationStatus.isBlank()) {
-            return "Entreprise non vérifiée — publication impossible.";
+            return "Entreprise non vérifiée : publication impossible pour le moment.";
         }
         return switch (verificationStatus) {
-            case "NEED_CORPORATE_EMAIL" ->
-                    "Publication refusée : fournissez un e-mail professionnel lié au domaine de l’entreprise, ou attendez la validation admin.";
-            case "WAITING_REGISTRY" ->
-                    "Publication refusée : vérification registre en cours. Un admin peut valider le dossier.";
-            case "NAME_MISMATCH" ->
-                    "Publication refusée : alignez la raison sociale sur le registre ICE.";
+            case "NEED_CORPORATE_EMAIL", "WAITING_REGISTRY", "NAME_MISMATCH" ->
+                    "Publication impossible : votre compte doit utiliser l’adresse e-mail professionnelle de l’entreprise. "
+                            + "Mettez-la à jour, puis relancez la vérification.";
             case "PENDING" ->
-                    "Publication refusée : complétez ICE + raison sociale. Un admin peut aussi valider.";
+                    "Publication impossible : renseignez le nom de l’entreprise, puis relancez la vérification.";
             default ->
-                    "Entreprise non vérifiée (" + verificationStatus + ") — l’inscription ne donne pas le droit de publier.";
+                    "Entreprise non vérifiée : publication impossible pour le moment.";
         };
     }
 
+    /** Libellé affiché partout (admin, espace entreprise) : jamais de code interne. */
     public String statusLabel(String status, boolean verified) {
-        if (verified) {
-            if ("ADMIN_APPROVED".equals(status)) return "Vérifiée par l’admin";
-            return "Vérifiée automatiquement";
-        }
+        if (verified) return "Vérifiée";
         return switch (status == null ? "" : status) {
-            case "NEED_CORPORATE_EMAIL" -> "E-mail professionnel requis";
-            case "WAITING_REGISTRY" -> "En attente du registre";
-            case "NAME_MISMATCH" -> "Nom différent du registre";
-            default -> "En attente";
+            case "NEED_CORPORATE_EMAIL", "WAITING_REGISTRY", "NAME_MISMATCH" -> "E-mail professionnel requis";
+            case "ADMIN_REVOKED" -> "Vérification retirée";
+            default -> "Non vérifiée";
         };
     }
 

@@ -74,18 +74,18 @@ Sans `-Fresh`, le script réapplique seulement V001…V006 de façon idempotente
 Double-clic ou :
 
 ```bat
-LANCER-HIRELINK.bat
+scripts\LANCER-BACKEND.bat
 ```
 
-Variante démo (SMTP forcé vide) :
-
-```bat
-LANCER-HIRELINK-DEMO.bat
-```
-
-Attendre le log : `Started HireLinkApplication` puis `Seed OK` (première fois).
+Attendre le log : `Started HireLinkApplication`. Par défaut, le backend utilise `hirelink_test`
+et `ddl-auto=validate`; aucun seed, bootstrap ou import planifié ne s’exécute au démarrage.
 
 Contrôle : ouvrir [http://127.0.0.1:8081/api/v1/health](http://127.0.0.1:8081/api/v1/health) → `status: UP`.
+Pour voir la base associée aux connexions MySQL actives :
+
+```powershell
+& 'C:\xampp\mysql\bin\mysql.exe' -u root -h 127.0.0.1 -P 3306 -e "SELECT ID, USER, DB, HOST, COMMAND FROM information_schema.PROCESSLIST WHERE DB IS NOT NULL;"
+```
 
 ---
 
@@ -94,8 +94,10 @@ Contrôle : ouvrir [http://127.0.0.1:8081/api/v1/health](http://127.0.0.1:8081/a
 Dans un **second** terminal :
 
 ```bat
-LANCER-FRONTEND.bat
+scripts\LANCER-FRONTEND.bat
 ```
+
+(équivalent : `py -m http.server 5500` lancé depuis le dossier `frontend`)
 
 Ouvrir [http://127.0.0.1:5500/](http://127.0.0.1:5500/) (pas `file://`).
 

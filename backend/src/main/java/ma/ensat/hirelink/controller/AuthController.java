@@ -11,7 +11,6 @@ import ma.ensat.hirelink.security.ClientInfo;
 import ma.ensat.hirelink.security.RefreshCookies;
 import ma.ensat.hirelink.service.AuditService;
 import ma.ensat.hirelink.service.AuthService;
-import ma.ensat.hirelink.service.CaptchaService;
 import ma.ensat.hirelink.service.GoogleTokenService;
 import ma.ensat.hirelink.service.LegalConsentService;
 import ma.ensat.hirelink.service.PasswordResetService;
@@ -37,14 +36,13 @@ public class AuthController {
     private final RefreshCookies cookies;
     private final SessionService sessions;
     private final AuditService audit;
-    private final CaptchaService captcha;
 
     @Value("${hirelink.google.client-id:}")
     private String googleClientId;
 
     public AuthController(AuthService authService, GoogleTokenService googleTokenService, LegalConsentService legalConsent,
                           PasswordResetService passwordReset, RefreshCookies cookies, SessionService sessions,
-                          AuditService audit, CaptchaService captcha) {
+                          AuditService audit) {
         this.authService = authService;
         this.googleTokenService = googleTokenService;
         this.legalConsent = legalConsent;
@@ -52,7 +50,6 @@ public class AuthController {
         this.cookies = cookies;
         this.sessions = sessions;
         this.audit = audit;
-        this.captcha = captcha;
     }
 
     private ResponseEntity<AuthResponse> respond(AuthResult r, HttpServletRequest req, HttpServletResponse res) {
@@ -83,17 +80,10 @@ public class AuthController {
         return legalConsent.listFor(user);
     }
 
-    /** Épreuve anti-robot fabriquée par le serveur : pas de service externe, donc utilisable hors ligne. */
-    @PostMapping("/captcha")
-    public CaptchaService.Challenge captchaChallenge(HttpServletRequest req) {
-        return captcha.issue(ClientInfo.from(req).ip());
-    }
-
     @PostMapping("/request-otp")
     public AuthDtos.Message requestOtp(@Valid @RequestBody AuthDtos.RequestOtp body, HttpServletRequest req) {
-        captcha.assertValid(body.captchaToken(), body.captchaAnswer());
         authService.requestOtp(body.email(), body.purpose(), ClientInfo.from(req));
-        return new AuthDtos.Message("Si l'adresse est valide, un code vient d'être envoyé (en démo locale : voir la console du serveur).");
+        return new AuthDtos.Message("Si l'adresse est valide, un code vient d'être envoyé.");
     }
 
     @PostMapping("/verify-register-otp")
@@ -203,7 +193,6 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public AuthDtos.Message forgot(@Valid @RequestBody AuthDtos.ForgotPassword body, HttpServletRequest req) {
-        captcha.assertValid(body.captchaToken(), body.captchaAnswer());
         passwordReset.request(body.email(), ClientInfo.from(req));
         return new AuthDtos.Message(PasswordResetService.GENERIC);
     }

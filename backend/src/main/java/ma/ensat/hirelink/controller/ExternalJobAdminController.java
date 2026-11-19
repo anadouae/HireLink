@@ -100,25 +100,27 @@ public class ExternalJobAdminController {
         // Deux mécanismes distincts : import catalogue (sync) vs recherche Web directe (éphémère).
         Map<String, Object> importCatalog = new LinkedHashMap<>();
         importCatalog.put("mechanism", "CATALOG_IMPORT");
-        importCatalog.put("label", "Import catalogue (stocké)");
+        importCatalog.put("label", "Offres importées");
         importCatalog.put("enabled", !live.isEmpty());
         importCatalog.put("availableCount", visible.size());
         importCatalog.put("hiddenCount", hidden);
         importCatalog.put("syncApplicable", true);
         importCatalog.put("summary", live.isEmpty()
-                ? "Aucun connecteur d’import n’est activé. Les annonces stockées ne sont pas rafraîchies automatiquement."
-                : "Import catalogue actif pour au moins une source. La synchronisation met à jour le catalogue stocké.");
+                ? "Aucune source d’import n’est active : les offres déjà importées restent visibles tant qu’elles sont valides, mais ne sont plus mises à jour."
+                : "Les offres de ces sources sont copiées dans HireLink et mises à jour régulièrement.");
         body.put("importCatalog", importCatalog);
 
         Map<String, Object> webDirect = new LinkedHashMap<>();
         webDirect.put("mechanism", "WEB_DIRECT_SEARCH");
-        webDirect.put("label", "Recherche Web directe");
+        webDirect.put("label", "Recherche web en direct");
         webDirect.put("enabled", webSearchEnabled);
         webDirect.put("syncApplicable", false);
-        webDirect.put("providers", List.of("Remotive", "Arbeitnow", "Remote OK", "Jooble (si clé)"));
+        webDirect.put("providers", catalog.all().stream()
+                .filter(s -> "web-search".equals(s.kind()) || "remote".equals(s.kind()))
+                .map(ExternalSourceCatalog.SourceInfo::label).toList());
         webDirect.put("summary", webSearchEnabled
-                ? "Recherche Web active : résultats temporaires non stockés, ouverts sur le site d’origine. Pas de synchronisation catalogue."
-                : "Recherche Web désactivée (hirelink.web-search.enabled=false). Le candidat ne reçoit pas d’annonces Web éphémères.");
+                ? "À chaque recherche d’un candidat, HireLink interroge ces sites d’emploi publics et affiche leurs réponses. Rien n’est enregistré : le candidat postule sur le site d’origine."
+                : "La recherche web en direct est désactivée : les candidats voient uniquement les offres HireLink et les offres importées.");
         body.put("webDirectSearch", webDirect);
         return body;
     }

@@ -59,6 +59,28 @@ mark.hl-mark {
   box-shadow: inset 0 -2px 0 var(--champagne, #c9a66b);
 }
 
+@media (max-width: 720px) {
+  .hl-combo-menu {
+    position: fixed;
+    left: 0.75rem;
+    right: 0.75rem;
+    max-height: min(280px, 55vh);
+  }
+  .hl-combo-option {
+    min-height: 44px;
+  }
+  .hl-combo input,
+  input.hl-combo-input {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hl-combo-menu {
+    animation: none;
+  }
+}
+
 .hl-noresult {
   display: grid;
   justify-items: center;

@@ -9,12 +9,12 @@
 
   const copy = {
     candidat: {
-      title: "Accélérez votre carrière",
-      lead: "ROI personnel clair : activez votre recherche gratuitement, passez en Performance pour diviser votre temps de recherche.",
+      title: "Des formules simples, pour chaque rôle",
+      lead: "Candidats : cherchez et postulez gratuitement, passez en Performance pour plus d’aides IA.",
     },
     recruteur: {
-      title: "Recrutez à la performance, sans opacité",
-      lead: "ROI entreprise : Essentiel gratuit, Professionnel (299 MAD) ou Entreprise (699 MAD) selon la taille d’équipe.",
+      title: "Des formules simples, pour chaque équipe",
+      lead: "Entreprises : Essentiel (1 siège), Professionnel (5 sièges) ou Entreprise (25 sièges), selon la taille de l’équipe.",
     },
   };
 
@@ -33,4 +33,8 @@
 
   tabC.addEventListener("click", () => show("candidat"));
   tabR.addEventListener("click", () => show("recruteur"));
+  // Liens « Formules candidats / entreprises » (pied de page) : ouvrent le bon onglet.
+  document.querySelectorAll("[data-pricing-open]").forEach((link) => {
+    link.addEventListener("click", () => show(link.getAttribute("data-pricing-open") === "recruteur" ? "recruteur" : "candidat"));
+  });
 })();

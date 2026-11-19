@@ -1,5 +1,5 @@
 /**
- * Champs à suggestions ([data-suggest] : job, place, nationality, school, level, study, domain, contract, mode, company) :
+ * Champs à suggestions ([data-suggest] : job, place, city, country, nationality, school, level, study, domain, contract, mode, company) :
  * liste de HireLinkSearch avec drapeaux pour les lieux et les nationalités.
  * « company » : noms d'entreprises fournis par le serveur (2 caractères minimum, 300 ms d'attente, 8 au plus) ;
  * un écran peut fournir input.hlSuggestParams() → { context } (entreprises des résultats affichés).
@@ -13,13 +13,14 @@
     const kind = input.getAttribute("data-suggest");
     if (!kind || input.dataset.suggestReady === "1") return;
     input.dataset.suggestReady = "1";
-    const withFlag = kind === "place" || kind === "city" || kind === "nationality";
+    const withFlag = kind === "place" || kind === "city" || kind === "country" || kind === "nationality";
     const isCompany = kind === "company";
+    const cache = new Map();
     let flagEl = null;
 
     const combo = HireLinkSearch.combobox(input, {
       minChars: isCompany ? 2 : (kind === "job" ? 1 : 0),
-      delay: isCompany ? 300 : undefined,
+      delay: isCompany ? 300 : 170,
       emptyText: isCompany
         ? "Aucune entreprise ne correspond : le texte saisi filtre quand même les résultats."
         : "Aucune proposition : vous pouvez saisir librement.",
@@ -28,6 +29,8 @@
         input.dispatchEvent(new Event("change", { bubbles: true }));
       } : undefined,
       fetch: function (q) {
+        const cacheKey = kind + "|" + q.toLowerCase();
+        if (cache.has(cacheKey)) return Promise.resolve(cache.get(cacheKey));
         let url = base() + "/catalog/suggest?kind=" + encodeURIComponent(kind) + "&q=" + encodeURIComponent(q);
         if (isCompany && typeof input.hlSuggestParams === "function") {
           const extra = input.hlSuggestParams() || {};
@@ -42,13 +45,33 @@
         return fetch(url)
           .then(function (r) { return r.ok ? r.json() : []; })
           .then(function (rows) {
-            return rows.map(function (row) {
+            const values = rows.slice(0, 8).map(function (row) {
               return { key: row.label, label: row.label, flag: row.flag, sub: row.country, icon: row.icon || "" };
             });
+            const seen = new Set();
+            const deduplicated = values.filter(function (item) {
+              const key = item.label.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+              if (seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            if (q.trim() && !deduplicated.some(function (item) {
+              return item.label.toLocaleLowerCase() === q.trim().toLocaleLowerCase();
+            })) {
+              deduplicated.push({
+                key: "custom:" + q.trim(),
+                label: 'Ajouter "' + q.trim() + '"',
+                custom: true,
+                customValue: q.trim(),
+                sub: "Saisie libre",
+              });
+            }
+            cache.set(cacheKey, deduplicated);
+            return deduplicated;
           });
       },
       onPick: function (item) {
-        input.value = item.label;
+        input.value = item.customValue || item.label;
         input.dispatchEvent(new Event("input", { bubbles: true }));
         input.dispatchEvent(new Event("change", { bubbles: true }));
         paintFlag();

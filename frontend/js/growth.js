@@ -9,12 +9,11 @@
 
   const FALLBACK = {
     candidate: {
-      title: "Performance · 39 MAD TTC / mois",
-      subtitle: "40 crédits IA mensuels pour les assistants réellement disponibles",
+      title: "Performance · 39 MAD / mois",
+      subtitle: "40 crédits IA par mois pour le CV et les entretiens",
       bullets: [
         "40 crédits IA / mois (1 action = 1 crédit)",
         "Réécriture de profil et préparation d’entretien",
-        "Paiement simulé — HT / TVA / TTC affichés au checkout",
         "Sans plafond de candidatures",
       ],
       cta: "Voir Performance",
@@ -22,26 +21,25 @@
       planCode: "PERFORMANCE",
     },
     recruiter: {
-      title: "Professionnel · 299 MAD TTC / mois",
+      title: "Professionnel · 299 MAD / mois",
       subtitle: "20 offres actives, 5 sièges, 100 crédits IA",
       bullets: [
         "20 offres actives (3 en Essentiel)",
         "5 sièges d’équipe (1 en Essentiel)",
         "100 crédits IA / mois",
-        "Paiement simulé — prix TTC catalogue",
       ],
       cta: "Voir Professionnel",
-      priceNote: "Entreprise (699 MAD TTC) : offres illimitées sous garde-fou, 25 sièges, 200 crédits IA",
+      priceNote: "Entreprise (699 MAD / mois) : offres illimitées, 25 sièges, 200 crédits IA",
       planCode: "PROFESSIONNEL",
     },
     recruiterEnterprise: {
-      title: "Entreprise · 699 MAD TTC / mois",
+      title: "Entreprise · 699 MAD / mois",
       subtitle: "Capacité élargie pour les équipes structurées",
       bullets: [
-        "Offres actives illimitées (garde-fou technique)",
+        "Offres actives illimitées",
         "25 sièges",
         "200 crédits IA / mois",
-        "Paiement simulé — facture HT / TVA / TTC",
+        "Une facture à chaque paiement",
       ],
       cta: "Voir Entreprise",
       priceNote: "Les membres déjà présents au-delà d’un plafond inférieur sont conservés",
@@ -128,7 +126,7 @@
     const mad = Number(row.monthlyMad);
     if (!(mad > 0)) return null; // ne pas proposer une formule gratuite / expirée
     base.planCode = row.code;
-    base.title = (row.label || row.code) + " · " + mad + " MAD TTC / mois";
+    base.title = (row.label || row.code) + " · " + mad + " MAD / mois";
     if (row.credits != null) {
       base.subtitle = row.credits + " crédits IA / mois";
     }
@@ -137,7 +135,7 @@
       if (feats.length) base.bullets = feats;
     }
     base.cta = "Voir " + (row.label || row.code);
-    base.priceNote = "Prix catalogue · promotions actives appliquées au checkout";
+    base.priceNote = "Sans engagement · résiliable à tout moment";
     return base;
   }
 
@@ -282,6 +280,8 @@
   /** Déclencheurs contextuels depuis l’état organisation / crédits (non bloquants). */
   function maybeSuggest(context) {
     const ctx = context || {};
+    // Formule sans crédits IA (Essentiel) : rien n’est « épuisé », on ne montre pas ce message.
+    if (ctx.aiExhausted && ctx.aiLimit != null && Number(ctx.aiLimit) <= 0) return false;
     if (ctx.aiExhausted) {
       return showNudge({
         reason: "ai_credits_exhausted",

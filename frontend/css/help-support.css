@@ -1,0 +1,66 @@
+/* Pages Help et Support */
+.hp-gap { margin-top: 1rem; }
+.hp-support { border-top: 1px solid var(--line, #e7dfd5); padding-top: 1.5rem; }
+.hp-plans tr[hidden] { display: none; }
+.site-header .nav a[aria-current="page"] { color: var(--burgundy, #7a2032); font-weight: 600; }
+
+.support-main { max-width: 760px; }
+.support-form {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--line, #e7dfd5);
+  border-radius: 18px;
+  background: var(--surface, #fff);
+  box-shadow: 0 10px 30px rgba(122, 32, 50, 0.06);
+}
+.support-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem 1.1rem; }
+.support-field { display: grid; gap: 0.35rem; font-size: 0.92rem; }
+.support-field--wide { grid-column: 1 / -1; }
+.support-field[hidden] { display: none; }
+.support-field > span { font-weight: 600; color: var(--ink, #1f1a17); }
+.support-field input,
+.support-field select,
+.support-field textarea {
+  width: 100%;
+  padding: 0.65rem 0.8rem;
+  border: 1px solid var(--line, #d9cfc3);
+  border-radius: 12px;
+  background: var(--cream, #f5f1ec);
+  color: inherit;
+  font: inherit;
+}
+.support-field textarea { resize: vertical; min-height: 9rem; }
+.support-field input:focus,
+.support-field select:focus,
+.support-field textarea:focus { outline: 2px solid color-mix(in srgb, #7a2032 45%, transparent); outline-offset: 1px; border-color: #7a2032; }
+.support-count { justify-self: end; color: var(--ink-soft, #6b625a); font-size: 0.8rem; }
+.support-hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.support-error { margin: 1rem 0 0; padding: 0.7rem 0.9rem; border-radius: 12px; background: color-mix(in srgb, #7a2032 8%, transparent); color: #7a2032; font-size: 0.9rem; }
+.support-actions { display: flex; align-items: center; gap: 1rem; margin-top: 1.25rem; flex-wrap: wrap; }
+.support-hint { color: var(--ink-soft, #6b625a); font-size: 0.85rem; }
+.support-done {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, #c9a86a 50%, transparent);
+  background: color-mix(in srgb, #c9a86a 10%, var(--surface, #fff));
+}
+.support-done:focus { outline: none; }
+html[data-theme="dark"] .support-form,
+html[data-theme="dark"] .support-done { background: rgba(255, 255, 255, 0.04); border-color: rgba(255, 255, 255, 0.12); }
+html[data-theme="dark"] .support-field input,
+html[data-theme="dark"] .support-field select,
+html[data-theme="dark"] .support-field textarea { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.16); }
+html[data-theme="dark"] .support-field > span { color: inherit; }
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 6000;
+  padding: 0.6rem 1rem;
+  border-radius: 999px;
+  background: #1f1a17;
+  color: #fff;
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }

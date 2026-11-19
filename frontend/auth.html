@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="css/design-system.css?v=20261106b" />
   <link rel="stylesheet" href="css/components.css?v=20261104h" />
   <link rel="stylesheet" href="css/auth.css?v=20261105l" />
-  <link rel="stylesheet" href="css/legal.css?v=20261112a" />
+  <link rel="stylesheet" href="css/legal.css?v=20261118a" />
   <link rel="stylesheet" href="css/motion.css?v=20261103a" />
   <link rel="stylesheet" href="css/mascotte.css?v=20261105i" />
   <link rel="stylesheet" href="css/search.css?v=20261103d" />
@@ -58,20 +58,11 @@
               <label for="email" id="email-label">Email</label>
               <input id="email" type="email" required placeholder="Entrez votre adresse e-mail" autocomplete="email" />
             </div>
-            <div class="auth-captcha" data-captcha hidden></div>
-            <section class="auth-consents" id="reg-consents" hidden aria-label="Accords et documents">
-              <h3>Accords</h3>
-              <div class="auth-consent" data-consent="terms">
-                <input type="checkbox" id="accept-terms" />
-                <label for="accept-terms">J’accepte les <a href="legal/cgu.html" target="_blank" rel="noopener" data-legal="terms">Conditions générales d’utilisation</a> <span aria-hidden="true">*</span></label>
-                <p class="auth-consent-tip" id="tip-terms">Règles d’usage du compte, des offres et des candidatures. Document pédagogique à valider.</p>
+            <section class="auth-consents" id="reg-consents" hidden aria-label="Accord">
+              <div class="auth-consent auth-consent--single">
+                <input type="checkbox" id="accept-legal" />
+                <label for="accept-legal">J’accepte les <a href="legal/conditions.html" target="_blank" rel="noopener" data-legal="all">conditions d’utilisation et la politique de confidentialité</a> de HireLink.</label>
               </div>
-              <div class="auth-consent" data-consent="privacy">
-                <input type="checkbox" id="accept-privacy" />
-                <label for="accept-privacy">J’ai pris connaissance de la <a href="legal/confidentialite.html" target="_blank" rel="noopener" data-legal="privacy">Politique de confidentialité</a> <span aria-hidden="true">*</span></label>
-                <p class="auth-consent-tip" id="tip-privacy">Traitements réellement implémentés : compte, CV, candidatures, notifications transactionnelles, export / effacement. Pas de marketing.</p>
-              </div>
-              <p class="auth-consents-note">Les liens s’ouvrent sans effacer ce formulaire. Les cases obligatoires sont vérifiées aussi côté serveur.</p>
             </section>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Continuer</button>
@@ -203,17 +194,10 @@
                 </div>
               </div>
 
-              <section class="auth-consents" id="reg-consents-profile" aria-label="Accords et documents">
-                <h3>Accords</h3>
-                <div class="auth-consent" data-consent="terms">
-                  <input type="checkbox" id="accept-terms-profile" />
-                  <label for="accept-terms-profile">J’accepte les <a href="legal/cgu.html" target="_blank" rel="noopener" data-legal="terms">Conditions générales d’utilisation</a> <span aria-hidden="true">*</span></label>
-                  <p class="auth-consent-tip">Règles d’usage du compte, des offres et des candidatures.</p>
-                </div>
-                <div class="auth-consent" data-consent="privacy">
-                  <input type="checkbox" id="accept-privacy-profile" />
-                  <label for="accept-privacy-profile">J’ai pris connaissance de la <a href="legal/confidentialite.html" target="_blank" rel="noopener" data-legal="privacy">Politique de confidentialité</a> <span aria-hidden="true">*</span></label>
-                  <p class="auth-consent-tip">Données de compte, CV, candidatures, notifications transactionnelles — sans e-mails promotionnels.</p>
+              <section class="auth-consents" id="reg-consents-profile" aria-label="Accord">
+                <div class="auth-consent auth-consent--single">
+                  <input type="checkbox" id="accept-legal-profile" />
+                  <label for="accept-legal-profile">J’accepte les <a href="legal/conditions.html" target="_blank" rel="noopener" data-legal="all">conditions d’utilisation et la politique de confidentialité</a> de HireLink.</label>
                 </div>
               </section>
               <div class="sheet-foot">
@@ -235,7 +219,6 @@
               <label for="password">Mot de passe</label>
               <input id="password" type="password" required autocomplete="current-password" />
             </div>
-            <div class="auth-captcha" data-captcha hidden></div>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Se connecter</button>
               <button type="button" class="btn btn-ghost btn-block" id="btn-forgot">Mot de passe oublié ?</button>
@@ -321,12 +304,11 @@
           </form>
 
           <form id="form-forgot" class="auth-step auth-form" data-panel="forgot" novalidate>
-            <p class="field-hint">Indiquez l’adresse de votre compte. Si elle existe, un lien valable 30 minutes vous est envoyé (en démonstration locale, il s’affiche dans la console du serveur).</p>
+            <p class="field-hint">Indiquez l’adresse de votre compte. Si elle existe, un lien valable 30 minutes vous est envoyé.</p>
             <div class="field">
               <label for="forgot-email">Email</label>
               <input id="forgot-email" type="email" required autocomplete="username" placeholder="vous@exemple.ma" />
             </div>
-            <div class="auth-captcha" data-captcha hidden></div>
             <div class="auth-actions">
               <button type="submit" class="btn btn-primary btn-block">Envoyer le lien</button>
               <button type="button" class="btn btn-ghost btn-block" data-back-login>Retour</button>
@@ -368,7 +350,7 @@
   <script src="js/places.js?v=20261103h"></script>
   <script src="js/suggest.js?v=20261103g"></script>
   <script src="js/webauthn.js?v=20261101r"></script>
-  <script src="js/auth.js?v=20261116nocap"></script>
+  <script src="js/auth.js?v=20261118c"></script>
 <script defer src="js/premium.js?v=20261106g"></script>
 </body>
 </html>

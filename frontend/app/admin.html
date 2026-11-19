@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https: http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095; connect-src 'self' http://localhost:8081 http://127.0.0.1:8081 http://localhost:18081 http://127.0.0.1:18081 http://localhost:18082 http://127.0.0.1:18082 http://localhost:8095 http://127.0.0.1:8095 https://accounts.google.com; frame-src https://accounts.google.com blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Tableau de bord · Administration — HireLink</title>
+  <title>Vue d’ensemble · Administration — HireLink</title>
   <meta name="robots" content="noindex" />
   <link rel="icon" type="image/png" href="../assets/logo-hirelink-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="../css/shell.css?v=20261105c" />
   <link rel="stylesheet" href="../css/mascotte.css?v=20261105i" />
   <link rel="stylesheet" href="../css/premium.css?v=20261107b" />
+  <link rel="stylesheet" href="../css/admin.css?v=20261118c" />
   <script data-role="ADMINISTRATEUR" src="../js/app-guard.js?v=20261101r"></script>
   <script src="../js/theme.js?v=20261101r"></script>
 </head>
@@ -29,135 +30,172 @@
       <header class="rc-topbar" id="rc-topbar"></header>
       <main class="rc-content" id="rc-content">
         <section id="view-dash">
-          <div class="rc-head"><div><p class="rc-eyebrow">Administration</p><h1>Tableau de bord</h1><p>Vue d’ensemble de la plateforme : comptes, entreprises, offres et candidatures.</p></div></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Administration</p><h1>Vue d’ensemble</h1><p>Revenus, comptes, entreprises et actions en attente, calculés à l’ouverture de la page.</p></div>
+            <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="dash-refresh">Actualiser</button></div></div>
+          <div class="adm-kpis" id="dash-kpis"></div>
+          <div class="adm-grid">
+            <section class="rc-card"><div class="rc-card-head"><div><h2>Revenu mensuel par formule</h2><p>Prix mensuel × nombre d’abonnés actifs.</p></div></div>
+              <div class="adm-card-body"><div class="adm-hbars" id="dash-revenue"></div><p class="adm-foot-note" id="dash-revenue-note"></p></div></section>
+            <section class="rc-card"><div class="rc-card-head"><div><h2>Répartition des formules</h2><p>Entreprises actives et candidats actifs.</p></div></div>
+              <div class="adm-card-body"><div class="adm-donuts" id="dash-plans"></div></div></section>
+          </div>
+          <section class="rc-card"><div class="rc-card-head"><div><h2>Inscriptions</h2><p>Nouveaux comptes candidats et recruteurs.</p></div>
+            <div class="rc-seg" id="dash-gran" role="tablist" aria-label="Période"><button type="button" class="rc-seg-btn is-on" data-g="week">12 semaines</button><button type="button" class="rc-seg-btn" data-g="month">12 mois</button></div></div>
+            <div class="adm-card-body adm-hist"><div id="dash-signups"></div><div class="adm-hist-legend"><span><i class="c"></i>Candidats</span><span><i class="r"></i>Recruteurs</span></div></div></section>
           <h2 class="db-h">À traiter</h2>
           <div class="db-actions" id="db-actions"></div>
-          <section class="rc-card db-card" style="margin-top:1.4rem">
-            <div class="rc-card-head"><div><h2>Recherche transversale</h2><p>Un compte, une entreprise, une offre ou une candidature — sans savoir laquelle on cherche.</p></div></div>
+          <section class="rc-card db-card">
+            <div class="rc-card-head"><div><h2>Recherche transversale</h2><p>Un compte, une entreprise, une offre ou une candidature, en une seule recherche.</p></div></div>
             <div class="rc-card-body">
               <input id="gs-query" class="rc-search-input" type="search" placeholder="Nom, e-mail, ICE, titre d’offre, ville…" aria-label="Rechercher sur la plateforme" autocomplete="off" />
               <div id="gs-results" class="gs-results" aria-live="polite"></div>
             </div>
           </section>
-          <section class="rc-card db-card" style="margin-top:1.4rem">
-            <div class="rc-card-head"><div><h2>Entreprises à vérifier</h2><p>Les badges automatiques (ICE + e-mail professionnel) passent sans revue.</p></div><a class="btn btn-ghost btn-sm" href="#orgs/pending">Tout voir</a></div>
-            <div class="rc-card-body" id="dash-pending"></div>
-          </section>
-          <section class="rc-card db-card">
-            <div class="rc-card-head"><div><h2>Entonnoir de la plateforme</h2><p>Candidatures par étape, toutes entreprises confondues</p></div></div>
-            <div class="rc-card-body"><div class="db-funnel" id="chart-apps"></div></div>
-          </section>
-          <h2 class="db-h">Indicateurs</h2>
-          <div class="db-kpis" id="stats"></div>
         </section>
 
         <section id="view-orgs" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Entreprises</p><h1>Gestion des entreprises</h1><p>Vérification, plan et équipe de chaque organisation.</p></div></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Entreprises</p><h1>Gestion des entreprises</h1><p>Le badge « Entreprise vérifiée » est attribué automatiquement grâce à l’e-mail professionnel. Ouvrez une fiche pour retirer un badge, désactiver ou retirer une entreprise.</p></div></div>
           <div class="rc-toolbar">
-            <div class="rc-chips" id="org-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="pending">À vérifier</button><button type="button" class="rc-chip" data-f="verified">Vérifiées</button><button type="button" class="rc-chip" data-f="premium">Premium</button></div>
+            <div class="rc-chips" id="org-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="verified">Vérifiées</button><button type="button" class="rc-chip" data-f="pending">Sans badge</button><button type="button" class="rc-chip" data-f="paid">Formule payante</button><button type="button" class="rc-chip" data-f="disabled">Désactivées</button><button type="button" class="rc-chip" data-f="removed">Retirées</button></div>
             <span class="rc-spacer"></span>
             <input id="org-search" class="rc-search-input" type="search" placeholder="Rechercher une entreprise…" aria-label="Rechercher une entreprise" />
           </div>
           <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Entreprise</th><th>ICE</th><th>Plan</th><th>Statut</th><th>Équipe</th><th>Offres</th><th></th></tr></thead>
+            <thead><tr><th>Entreprise</th><th>Formule</th><th>Badge</th><th>État</th><th>Équipe</th><th>Offres</th><th></th></tr></thead>
             <tbody id="orgs-body"></tbody>
           </table></div></section>
         </section>
 
         <section id="view-users" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Comptes</p><h1>Utilisateurs</h1><p>Activez ou désactivez un compte. Un compte désactivé ne peut plus se connecter.</p></div></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Comptes</p><h1>Utilisateurs</h1><p>Déconnectez un compte de tous ses appareils, ou désactivez-le : un compte désactivé ne peut plus se connecter.</p></div></div>
           <div class="rc-toolbar">
-            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="OWNER">Créateurs d’espace</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Admins</button></div>
+            <div class="rc-chips" id="user-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Tous</button><button type="button" class="rc-chip" data-f="CANDIDAT">Candidats</button><button type="button" class="rc-chip" data-f="RECRUTEUR">Recruteurs</button><button type="button" class="rc-chip" data-f="OWNER">Créateurs d’espace</button><button type="button" class="rc-chip" data-f="ADMINISTRATEUR">Administrateurs</button><button type="button" class="rc-chip" data-f="inactive">Désactivés</button></div>
             <span class="rc-spacer"></span>
-            <select id="user-org" aria-label="Filtrer par organisation"><option value="">Toutes les organisations</option></select>
+            <select id="user-org" aria-label="Filtrer par entreprise"><option value="">Toutes les entreprises</option></select>
             <input id="user-search" class="rc-search-input" type="search" placeholder="Rechercher un compte…" aria-label="Rechercher un compte" />
           </div>
           <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Compte</th><th>Rôle</th><th>Organisation</th><th>Statut</th><th></th></tr></thead>
+            <thead><tr><th>Compte</th><th>Rôle</th><th>Entreprise</th><th>Inscrit le</th><th>Statut</th><th></th></tr></thead>
             <tbody id="users-body"></tbody>
           </table></div></section>
         </section>
 
-        <section id="view-moderation" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Modération</p><h1>Signalements d’offres</h1><p>Trois signalements suspendent une offre automatiquement. Vous confirmez la sanction, vous la annulez, ou vous écartez le signalement.</p></div>
-            <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="mod-refresh">Actualiser</button></div></div>
+        <section id="view-support" hidden>
+          <div class="rc-head"><div><p class="rc-eyebrow">Support</p><h1>Messages du support</h1><p>Les demandes envoyées depuis la page Contact &amp; support : questions sur l’application, demandes liées à un compte ou à une entreprise. Répondez par e-mail, puis marquez le message comme traité.</p></div>
+            <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="sup-refresh">Actualiser</button></div></div>
           <section class="rc-card is-flush">
-            <div class="rc-card-head"><div><h2>En attente de décision</h2><p class="rc-muted" style="margin:.15rem 0 0" id="mod-note">Une ligne par offre, tous ses signalements dessous.</p></div></div>
-            <div class="rc-card-body" id="mod-queue"></div>
-          </section>
-          <section class="rc-card is-flush" style="margin-top:1rem">
-            <div class="rc-card-head"><div><h2>Dernières décisions</h2><p class="rc-muted" style="margin:.15rem 0 0">Ce qui a été tranché, et par qui.</p></div></div>
+            <div class="adm-filters"><div class="rc-chips" id="sup-filter" role="tablist"></div></div>
             <div class="rc-tablewrap"><table class="rc-table">
-              <thead><tr><th>Offre</th><th>Motif invoqué</th><th>Décision</th><th>Tranché le</th><th>Par</th></tr></thead>
-              <tbody id="mod-handled"></tbody>
+              <thead><tr><th>Reçu le</th><th>De</th><th>Sujet</th><th>Message</th><th>État</th><th></th></tr></thead>
+              <tbody id="sup-body"></tbody>
             </table></div>
+            <div class="adm-pager" id="sup-pager"></div>
           </section>
         </section>
 
         <section id="view-external" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Sources et intégrations</p><h1>Recherche web</h1><p>Les offres web proposées aux candidats sont cherchées en direct, au moment de la recherche. Rien n’est stocké ni à modérer ici.</p></div></div>
-          <section class="rc-card"><div class="rc-card-body">
-            <h2 style="margin:0 0 .5rem;font-size:1.05rem">Comment ça fonctionne</h2>
-            <ul style="margin:0 0 .85rem;padding-left:1.2rem;line-height:1.6">
-              <li><strong>Offres HireLink</strong> : publiées par les recruteurs, stockées dans HireLink ; le candidat postule dans HireLink.</li>
-              <li><strong>Offres web</strong> : à chaque recherche, HireLink interroge en direct des sites d’emploi publics (Remotive, Arbeitnow, Remote OK, Himalayas, Jobicy, Adzuna, We Work Remotely) et affiche leurs réponses.</li>
-              <li>Aucune offre web n’est enregistrée : une offre retirée par son site d’origine disparaît aussitôt des résultats.</li>
-              <li>Le candidat postule sur le site d’origine ; HireLink ne crée pas de candidature pour une offre web.</li>
-            </ul>
-            <p class="rc-muted" style="margin:0">Une source lente ou indisponible est simplement ignorée pour la recherche en cours : les autres résultats restent affichés.</p>
-          </div></section>
+          <div class="rc-head"><div><p class="rc-eyebrow">Sources externes</p><h1>Sources externes</h1><p>Vérifiez les services utilisés pour compléter les offres HireLink : disponibilité, fournisseurs actifs et dernière mise à jour.</p></div>
+            <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="ext-refresh">Actualiser</button></div></div>
+          <div class="adm-sources" id="ext-boxes"></div>
+          <section class="rc-card is-flush"><div class="rc-card-head"><div><h2>Sources d’import</h2><p>Une source en pause garde ses offres déjà importées tant qu’elles restent valides.</p></div>
+            <button type="button" class="btn btn-soft btn-sm" id="ext-sync">Mettre à jour maintenant</button></div>
+            <div class="rc-tablewrap"><table class="rc-table">
+              <thead><tr><th>Source</th><th>État</th><th>Offres visibles</th><th>Masquées</th><th>Dernière mise à jour</th></tr></thead>
+              <tbody id="ext-body"><tr><td colspan="5" class="adm-empty-cell">Chargement…</td></tr></tbody>
+            </table></div></section>
         </section>
 
         <section id="view-offers" hidden>
           <div class="rc-head"><div><p class="rc-eyebrow">Contenu</p><h1>Offres de la plateforme</h1><p>Suspendez une annonce douteuse, rétablissez-la si le doute est levé. Le recruteur reçoit une notification dans les deux cas.</p></div></div>
           <div class="rc-toolbar">
-            <div class="rc-chips" id="offer-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="online">En ligne</button><button type="button" class="rc-chip" data-f="suspended">Suspendues</button><button type="button" class="rc-chip" data-f="draft">Hors ligne</button><button type="button" class="rc-chip" data-f="closed">Clôturées</button><button type="button" class="rc-chip" data-f="archived">Archivées</button><button type="button" class="rc-chip" data-f="reported">Signalées</button></div>
+            <div class="rc-chips" id="offer-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="online">En ligne</button><button type="button" class="rc-chip" data-f="suspended">Suspendues</button><button type="button" class="rc-chip" data-f="draft">Hors ligne</button><button type="button" class="rc-chip" data-f="closed">Clôturées</button><button type="button" class="rc-chip" data-f="archived">Archivées</button></div>
             <span class="rc-spacer"></span>
             <input id="offer-search" class="rc-search-input" type="search" placeholder="Rechercher une offre…" aria-label="Rechercher une offre" />
           </div>
           <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Offre</th><th>Entreprise</th><th>État</th><th>Candidatures</th><th>Signalements</th><th></th></tr></thead>
+            <thead><tr><th>Offre</th><th>Entreprise</th><th>État</th><th>Candidatures</th><th></th></tr></thead>
             <tbody id="offers-body"></tbody>
           </table></div></section>
         </section>
 
         <section id="view-plans" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Facturation</p><h1>Plans et factures</h1><p>Une formule payante s’active après le paiement simulé du créateur de l’espace. L’administration consulte les factures, elle n’en change pas le statut.</p></div></div>
-          <div class="rc-grid rc-grid--2" id="plan-cards"></div>
-          <section class="rc-card is-flush" style="margin-top:1rem">
-            <div class="rc-card-head"><div><h2>Consommation IA — mois en cours</h2><p class="rc-muted" style="margin:.15rem 0 0">1 crédit par action IA réussie. Une action échouée n’est jamais débitée.</p></div></div>
-            <div class="rc-tablewrap"><table class="rc-table">
-              <thead><tr><th>Compte</th><th>Formule</th><th>Sièges</th><th>Enveloppe</th><th>Actions</th><th>Utilisation</th></tr></thead>
-              <tbody id="ai-usage-body"></tbody>
-            </table></div>
-          </section>
-          <section class="rc-card is-flush" style="margin-top:1rem">
-            <div class="rc-card-head"><div><h2>Factures</h2><p class="rc-muted" style="margin:.15rem 0 0" id="invoices-note">Le reste à recevoir est la somme des factures non payées.</p></div></div>
-            <div class="rc-toolbar" style="padding:0 1rem;gap:.6rem;flex-wrap:wrap"><label class="rc-search" style="min-width:220px"><input type="search" id="invoice-q" placeholder="Numéro, entreprise, débiteur" aria-label="Rechercher une facture" /></label><div class="rc-chips" id="invoice-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="NON_PAYEE">Non payées</button><button type="button" class="rc-chip" data-f="PAYEE">Payées</button><button type="button" class="rc-chip" data-f="ANNULEE">Annulées</button><button type="button" class="rc-chip" data-f="AVOIR">Historique</button></div></div>
-            <div class="rc-tablewrap"><table class="rc-table">
-              <thead><tr><th>N°</th><th>Date</th><th>Entreprise</th><th>Débiteur</th><th>Total TTC</th><th>Statut</th><th></th></tr></thead>
-              <tbody id="invoices-body"></tbody>
-            </table></div>
-          </section>
+          <div class="rc-head"><div><p class="rc-eyebrow">Facturation</p><h1>Formules et factures</h1><p>Une formule payante s’active dès le règlement de sa facture par le créateur de l’espace ou par le candidat. L’administration consulte les factures sans en changer le statut.</p></div></div>
+          <div class="adm-switch"><div class="rc-seg" id="plans-switch" role="tablist" aria-label="Affichage"><button type="button" class="rc-seg-btn is-on" data-pv="plans" role="tab">Formules</button><button type="button" class="rc-seg-btn" data-pv="invoices" role="tab">Factures</button><button type="button" class="rc-seg-btn" data-pv="ai" role="tab">Consommation IA</button></div></div>
+          <div data-pane="plans"><div class="rc-grid rc-grid--2" id="plan-cards"></div></div>
+          <div data-pane="invoices" hidden>
+            <section class="rc-card is-flush">
+              <div class="rc-card-head"><div><h2>Factures</h2><p class="rc-muted" id="invoices-note">Le reste à recevoir est la somme des factures non payées.</p></div></div>
+              <div class="adm-filters"><div class="adm-field"><label for="invoice-q">Rechercher</label><input type="search" id="invoice-q" placeholder="Numéro, entreprise, débiteur" /></div>
+                <div class="rc-chips" id="invoice-filter" role="tablist"><button type="button" class="rc-chip is-on" data-f="all">Toutes</button><button type="button" class="rc-chip" data-f="NON_PAYEE">Non payées</button><button type="button" class="rc-chip" data-f="PAYEE">Payées</button><button type="button" class="rc-chip" data-f="ANNULEE">Annulées</button><button type="button" class="rc-chip" data-f="AVOIR">Avoirs</button></div></div>
+              <div class="rc-tablewrap"><table class="rc-table">
+                <thead><tr><th>N°</th><th>Date</th><th>Entreprise</th><th>Débiteur</th><th>Total TTC</th><th>Statut</th><th></th></tr></thead>
+                <tbody id="invoices-body"></tbody>
+              </table></div>
+            </section>
+          </div>
+          <div data-pane="ai" hidden>
+            <div class="adm-ai-kpis" id="ai-kpis"></div>
+            <section class="rc-card adm-ai-providers">
+              <div class="rc-card-head"><div><h2>Fournisseurs IA</h2><p>Ordre configuré pour la génération et l’analyse IA.</p></div></div>
+              <div class="rc-card-body">
+                <p><strong>Fournisseur principal :</strong> Groq · <strong>Secours :</strong> Gemini puis Mistral · <strong>Repli :</strong> analyse locale sans clé.</p>
+                <p class="rc-muted">Les fournisseurs externes sont utilisés uniquement lorsqu’une clé API est configurée. Sans clé ou en cas d’échec, l’application reste utilisable avec le repli local.</p>
+              </div>
+            </section>
+            <section class="rc-card is-flush">
+              <div class="rc-card-head"><div><h2>Consommation IA du mois</h2><p class="rc-muted">1 crédit par action IA réussie ; une action échouée n’est jamais décomptée. Classement par crédits utilisés.</p></div></div>
+              <div class="rc-tablewrap"><table class="rc-table">
+                <thead><tr><th>Entreprise ou candidat</th><th>Formule</th><th>Sièges</th><th>Crédits du mois</th><th>Actions</th><th>Utilisation</th></tr></thead>
+                <tbody id="ai-usage-body"></tbody>
+              </table></div>
+            </section>
+          </div>
         </section>
 
         <section id="view-audit" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Sécurité</p><h1>Journal d’audit</h1><p>Opérations sensibles, 50 lignes par page. Aucun mot de passe ni jeton n’y est enregistré. Le journal ne se modifie pas depuis cet écran.</p></div>
-            <div class="rc-head-actions"><select id="audit-filter" aria-label="Filtrer par action"><option value="">Toutes les actions</option><option>LOGIN_FAILURE</option><option>LOGIN_LOCKED</option><option>LOGIN_SUCCESS</option><option>MFA_FAILURE</option><option>SESSION_TOKEN_REUSE</option><option>ACCESS_DENIED</option><option>USER_SUSPENDED</option><option>ORG_VERIFIED</option><option>STAGE_CHANGE</option><option>OFFER_SUSPENDED</option><option>OFFER_RESTORED</option><option>INVOICE_STATUS_CHANGED</option><option>DATA_EXPORT</option><option>AUDIT_EXPORTED</option><option>ACCOUNT_ERASED</option></select><button type="button" class="btn btn-ghost btn-sm" id="audit-export" title="2 000 derniers évènements, filtre en cours inclus">Exporter CSV</button><button type="button" class="btn btn-soft btn-sm" id="audit-refresh">Actualiser</button></div></div>
-          <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Date</th><th>Action</th><th>Compte</th><th>Rôle</th><th>Cible</th><th>Résultat</th><th>Détail</th></tr></thead>
-            <tbody id="audit-body"></tbody>
-          </table></div><div class="rc-card-foot" id="audit-pager"></div></section>
+          <div class="rc-head"><div><p class="rc-eyebrow">Sécurité</p><h1>Journal d’audit</h1><p>Connexions et opérations sensibles. Aucun mot de passe ni code n’y figure, et le journal ne se modifie pas.</p></div>
+            <div class="rc-head-actions"><button type="button" class="btn btn-ghost btn-sm" id="audit-export">Exporter (CSV)</button><button type="button" class="btn btn-soft btn-sm" id="audit-refresh">Actualiser</button></div></div>
+          <section class="rc-card is-flush">
+            <div class="adm-filters">
+              <div class="rc-chips" id="audit-cat" role="tablist"></div>
+            </div>
+            <div class="adm-filters">
+              <div class="adm-field"><label for="audit-from">Du</label><input type="date" id="audit-from" /></div>
+              <div class="adm-field"><label for="audit-to">Au</label><input type="date" id="audit-to" /></div>
+              <div class="adm-presets" data-range="audit"><button type="button" data-days="7">7 j</button><button type="button" data-days="30">30 j</button><button type="button" data-days="90">90 j</button><button type="button" data-days="0">Tout</button></div>
+              <div class="adm-field"><label for="audit-result">Résultat</label><select id="audit-result"><option value="">Tous</option><option value="ok">Réussis</option><option value="fail">Échecs</option></select></div>
+              <span class="rc-spacer"></span>
+              <div class="adm-field"><label for="audit-q">Compte ou détail</label><input type="search" id="audit-q" placeholder="e-mail, mot du détail…" /></div>
+            </div>
+            <div class="rc-tablewrap"><table class="rc-table">
+              <thead><tr><th>Date</th><th>Évènement</th><th>Compte</th><th>Cible</th><th>Résultat</th><th>Détail</th></tr></thead>
+              <tbody id="audit-body"></tbody>
+            </table></div>
+            <div class="adm-pager" id="audit-pager"></div>
+          </section>
         </section>
 
         <section id="view-emails" hidden>
-          <div class="rc-head"><div><p class="rc-eyebrow">Messagerie</p><h1>E-mails</h1><p>Journalisé : la messagerie est absente, le message n’a pas été envoyé. Envoyé : le serveur d’envoi l’a accepté, sans preuve de livraison ni de lecture. Échec : l’envoi a été refusé. Les messages secrets ne conservent pas leur contenu.</p></div>
+          <div class="rc-head"><div><p class="rc-eyebrow">Messagerie</p><h1>Journal des e-mails</h1><p>Envoyé : accepté par le service d’envoi. Non envoyé : enregistré ici, mais l’envoi d’e-mails n’est pas configuré. Échec : l’envoi a été refusé. Le contenu des messages confidentiels (codes, liens) n’est pas conservé. Historique de 30 jours.</p></div>
             <div class="rc-head-actions"><button type="button" class="btn btn-soft btn-sm" id="mail-refresh">Actualiser</button></div></div>
-          <section class="rc-card is-flush"><div class="rc-tablewrap"><table class="rc-table">
-            <thead><tr><th>Date</th><th>Destinataire</th><th>Objet</th><th>Type</th><th>État</th><th>Détail</th></tr></thead>
-            <tbody id="mail-body"></tbody>
-          </table></div></section>
+          <section class="rc-card is-flush">
+            <div class="adm-filters"><div class="rc-chips" id="mail-status" role="tablist"></div></div>
+            <div class="adm-filters">
+              <div class="adm-field"><label for="mail-from">Du</label><input type="date" id="mail-from" /></div>
+              <div class="adm-field"><label for="mail-to">Au</label><input type="date" id="mail-to" /></div>
+              <div class="adm-presets" data-range="mail"><button type="button" data-days="7">7 j</button><button type="button" data-days="30">30 j</button><button type="button" data-days="90">90 j</button><button type="button" data-days="0">Tout</button></div>
+              <div class="adm-field"><label for="mail-kind">Type</label><select id="mail-kind"><option value="">Tous les types</option></select></div>
+              <span class="rc-spacer"></span>
+              <div class="adm-field"><label for="mail-q">Destinataire ou objet</label><input type="search" id="mail-q" placeholder="adresse, mot de l’objet…" /></div>
+            </div>
+            <div class="rc-tablewrap"><table class="rc-table">
+              <thead><tr><th>Date</th><th>Destinataire</th><th>Objet</th><th>Type</th><th>État</th><th></th></tr></thead>
+              <tbody id="mail-body"></tbody>
+            </table></div>
+            <div class="adm-pager" id="mail-pager"></div>
+          </section>
         </section>
+
       </main>
     </div>
   </div>
@@ -168,9 +206,7 @@
   <script defer src="../js/api.js?v=20261109a"></script>
   <script defer src="../js/search.js?v=20261101r"></script>
   <script defer src="../js/places.js?v=20261103h"></script>
-  <script defer src="../js/in-app-help.js?v=20261105s"></script>
-  <script defer src="../js/credits.js?v=20261105v"></script>
-  <script defer src="../js/app-shell.js?v=20261118v6"></script>
-  <script defer src="../js/admin.js?v=20261118v6"></script>
+  <script defer src="../js/app-shell.js?v=20261118v8"></script>
+  <script defer src="../js/admin.js?v=20261118d"></script>
 </body>
 </html>

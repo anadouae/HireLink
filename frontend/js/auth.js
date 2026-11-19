@@ -4,8 +4,6 @@
   let role = params.get("role") === "RECRUTEUR" ? "RECRUTEUR" : "CANDIDAT";
   let pendingEmail = "";
   let otpPurpose = "REGISTER";
-  /** Panneau qui porte l'épreuve anti-robot du prochain envoi de code (email ou mot de passe). */
-  let otpHostPanel = null;
   let viaGoogle = false;
   let profileStep = "role";
   const COUNTRIES = [
@@ -19,7 +17,7 @@
   ];
   let phoneDial = "212";
   let phoneCountryName = "Maroc";
-  const LEGAL_DRAFT = { termsVersion: "cgu:2026-11-12", privacyVersion: "privacy:2026-11-12" };
+  const LEGAL_DRAFT = { termsVersion: "cgu:2026-11-18", privacyVersion: "privacy:2026-11-18" };
   let legalVersions = Object.assign({}, LEGAL_DRAFT);
   const CONSENT_STORE = "hirelink.auth.draft";
 
@@ -76,90 +74,11 @@
 
   /* ------------------------------------------------------------ contrôle anti-robot */
 
-  /**
-   * Épreuve fabriquée par le serveur : image SVG de caractères brouillés, ou question de calcul en repli.
-   * Aucune dépendance externe, donc la démonstration passe sans connexion ni clé à enregistrer.
-   */
-  function mountCaptcha(host) {
-    if (!host) return null;
-    if (host.__cap) return host.__cap;
-    host.innerHTML =
-      '<p class="cap-note">Contrôle anti-robot</p>' +
-      '<div class="cap-challenge" aria-live="polite"></div>' +
-      '<div class="cap-line">' +
-      '<input class="cap-answer" type="text" maxlength="12" autocomplete="off" spellcheck="false" placeholder="Votre réponse" aria-label="Réponse au contrôle anti-robot" />' +
-      '<button type="button" class="cap-refresh">Nouvelle question</button>' +
-      '</div>';
-    const challenge = host.querySelector(".cap-challenge");
-    const answer = host.querySelector(".cap-answer");
-    const cap = {
-      disabled: false,
-      draw: async function () {
-        host.__token = "";
-        try {
-          const c = await HireLinkAPI.api("/auth/captcha", { method: "POST", body: {} });
-          if (c && c.kind === "disabled") {
-            cap.disabled = true;
-            host.hidden = true;
-            host.__token = "";
-            answer.value = "";
-            return;
-          }
-          cap.disabled = false;
-          host.__token = c.token;
-          if (c.kind === "image") challenge.innerHTML = c.svg;
-          else challenge.textContent = c.question || "Répondez à la question.";
-          answer.value = "";
-          answer.focus();
-        } catch (err) {
-          host.__token = "";
-          challenge.textContent = (err && err.status === 429)
-            ? "Trop de contrôles demandés. Patientez quelques minutes."
-            : "Contrôle indisponible pour le moment.";
-        }
-      },
-      /** Affiche l’épreuve. force=true : toujours un nouveau jeton (après consommation / échec). */
-      show: function (force) {
-        if (cap.disabled) { host.hidden = true; return Promise.resolve(); }
-        host.hidden = false;
-        return (!force && host.__token) ? Promise.resolve() : cap.draw();
-      },
-      hide: function () { host.hidden = true; host.__token = ""; challenge.innerHTML = ""; answer.value = ""; },
-      value: function () { return { captchaToken: host.__token || "", captchaAnswer: answer.value.trim() }; },
-      /** Après tout appel qui a consommé le jeton (succès ou 428). */
-      renew: function () { return cap.disabled ? Promise.resolve() : cap.show(true); },
-    };
-    host.querySelector(".cap-refresh").addEventListener("click", function () { cap.draw(); });
-    host.__cap = cap;
-    return cap;
-  }
-
-  const captchaOf = (panel) => mountCaptcha(panel && panel.querySelector("[data-captcha]"));
-
-  /** Le serveur répond 428 quand l'épreuve manque ou est ratée : on la remet en avant, neuve. */
-  function isCaptchaChallenge(err) { return err && err.status === 428; }
-
-  async function renewCaptcha(panel) {
-    const cap = captchaOf(panel);
-    if (cap) await cap.renew();
-  }
-
   async function sendOtp(email, purpose) {
-    const host = otpHostPanel || panels.email;
-    const cap = captchaOf(host);
-    try {
-      await HireLinkAPI.api("/auth/request-otp", {
-        method: "POST",
-        body: Object.assign({ email, purpose }, cap.value()),
-      });
-      await cap.renew();
-    } catch (err) {
-      if (isCaptchaChallenge(err)) {
-        showPanel(host === panels.password ? "password" : "email");
-        await cap.renew();
-      }
-      throw err;
-    }
+    await HireLinkAPI.api("/auth/request-otp", {
+      method: "POST",
+      body: { email, purpose },
+    });
     document.getElementById("otp-hint").textContent =
       (purpose === "LOGIN" ? "Code de connexion envoyé à " : "Code envoyé à ") + email +
       ". Valable 15 minutes, vérifiez vos indésirables s’il n’arrive pas.";
@@ -176,8 +95,6 @@
     if (pipe) pipe.classList.toggle("is-hidden", mode !== "register" || NO_PIPE.indexOf(name) >= 0);
     const card = document.querySelector(".auth-card");
     if (card) card.classList.toggle("is-wide", name === "profile");
-    // Envoi d'e-mail = cible d'abus : l'épreuve est exigée d'emblée sur ces deux écrans.
-    if (name === "email" || name === "forgot") captchaOf(panels[name]).show();
   }
 
   function setPipe(n) {
@@ -253,15 +170,16 @@
     if (profileStep !== "role") paintProfile();
   }
 
+  /** Une seule case couvre les conditions d'utilisation et la politique de confidentialité. */
+  const LEGAL_BOXES = ["accept-legal", "accept-legal-profile"];
+  const legalChecked = () => LEGAL_BOXES.some((id) => !!(document.getElementById(id) || {}).checked);
+
   function persistAuthDraft() {
     try {
       const draft = {
         email: (document.getElementById("email") || {}).value || pendingEmail || "",
         role,
-        acceptTerms: !!(document.getElementById("accept-terms") || {}).checked
-          || !!(document.getElementById("accept-terms-profile") || {}).checked,
-        acceptPrivacy: !!(document.getElementById("accept-privacy") || {}).checked
-          || !!(document.getElementById("accept-privacy-profile") || {}).checked,
+        acceptLegal: legalChecked(),
         termsVersion: legalVersions.termsVersion,
         privacyVersion: legalVersions.privacyVersion,
       };
@@ -277,54 +195,65 @@
       if (draft.email && document.getElementById("email") && !document.getElementById("email").value) {
         document.getElementById("email").value = draft.email;
       }
-      ["accept-terms", "accept-terms-profile"].forEach((id) => {
+      LEGAL_BOXES.forEach((id) => {
         const el = document.getElementById(id);
-        if (el) el.checked = !!draft.acceptTerms;
-      });
-      ["accept-privacy", "accept-privacy-profile"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.checked = !!draft.acceptPrivacy;
+        if (el) el.checked = !!draft.acceptLegal;
       });
     } catch (_) { /* ignore */ }
   }
 
   function consentPayload(requireChecked) {
-    const termsOk = !!(document.getElementById("accept-terms") || {}).checked
-      || !!(document.getElementById("accept-terms-profile") || {}).checked;
-    const privacyOk = !!(document.getElementById("accept-privacy") || {}).checked
-      || !!(document.getElementById("accept-privacy-profile") || {}).checked;
-    if (requireChecked && (!termsOk || !privacyOk)) {
-      HireLink.toast("Accords requis", "Cochez les Conditions générales et la Politique de confidentialité.", "warn");
+    const ok = legalChecked();
+    if (requireChecked && !ok) {
+      HireLink.toast("Accord requis", "Cochez la case des conditions d’utilisation et de la politique de confidentialité.", "warn");
       return null;
     }
-    if (!termsOk || !privacyOk) return null;
+    if (!ok) return null;
+    // Une case, deux accords enregistrés côté serveur (conditions + confidentialité).
     return {
       acceptTermsVersion: legalVersions.termsVersion,
       acceptPrivacyVersion: legalVersions.privacyVersion,
     };
   }
 
-  function wireConsentUi() {
-    document.querySelectorAll(".auth-consent").forEach((row) => {
-      const link = row.querySelector("a[data-legal]");
-      if (link) {
-        link.addEventListener("click", () => persistAuthDraft());
-        link.addEventListener("keydown", (e) => {
-          if (e.key === "Enter" || e.key === " ") persistAuthDraft();
+  /** Le texte s'ouvre dans une fenêtre, sans quitter le formulaire. Repli : la page complète dans un nouvel onglet. */
+  async function openLegal(link) {
+    persistAuthDraft();
+    try {
+      const res = await fetch(link.getAttribute("href"), { credentials: "same-origin" });
+      if (!res.ok) throw new Error("indisponible");
+      const doc = new DOMParser().parseFromString(await res.text(), "text/html");
+      const main = doc.querySelector("[data-legal-body]");
+      if (!main) throw new Error("indisponible");
+      main.querySelectorAll("script, style, link, iframe").forEach((n) => n.remove());
+      HireLink.openModal({
+        title: "Conditions d’utilisation et confidentialité",
+        description: "Ce que vous acceptez en créant un compte HireLink.",
+        bodyHtml: '<div class="legal-modal">' + main.innerHTML + "</div>",
+        confirmLabel: "J’ai lu, j’accepte",
+        cancelLabel: "Fermer",
+        large: true,
+      }).then((accepted) => {
+        if (!accepted) return;
+        LEGAL_BOXES.forEach((id) => {
+          const el = document.getElementById(id);
+          if (el && el.offsetParent !== null) el.checked = true;
         });
-      }
-      const toggleTip = () => {
-        const open = row.classList.contains("is-open");
-        document.querySelectorAll(".auth-consent.is-open").forEach((r) => r.classList.remove("is-open"));
-        if (!open) row.classList.add("is-open");
-      };
-      row.addEventListener("click", (e) => {
-        if (e.target.closest("a") || e.target.closest("input")) return;
-        if (window.matchMedia("(hover: none)").matches) toggleTip();
+        persistAuthDraft();
       });
-      row.addEventListener("focusin", () => row.classList.add("is-open"));
+    } catch (_) {
+      window.open(link.getAttribute("href"), "_blank", "noopener");
+    }
+  }
+
+  function wireConsentUi() {
+    document.querySelectorAll("a[data-legal]").forEach((link) => {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        openLegal(link);
+      });
     });
-    ["accept-terms", "accept-privacy", "accept-terms-profile", "accept-privacy-profile"].forEach((id) => {
+    LEGAL_BOXES.forEach((id) => {
       const el = document.getElementById(id);
       if (el) el.addEventListener("change", persistAuthDraft);
     });
@@ -374,7 +303,7 @@
       ADMINISTRATEUR: ["account.html", "security.html"],
     };
     // Pages publiques sûres (fiche entreprise, offres landing) — retour après login « Suivre », etc.
-    const publicOk = ["company.html", "index.html", "about.html", "pricing.html", "help.html"];
+    const publicOk = ["company.html", "index.html", "about.html", "help.html", "support.html"];
     if (publicOk.indexOf(file) >= 0) {
       return n.indexOf("app/") === 0 ? n : (file === "index.html" ? n : "../" + n);
     }
@@ -515,11 +444,9 @@
   panels.forgot.addEventListener("submit", async (e) => {
     e.preventDefault();
     try {
-      const r = await HireLinkAPI.api("/auth/forgot-password", { method: "POST", body: Object.assign({ email: document.getElementById("forgot-email").value.trim() }, captchaOf(panels.forgot).value()) });
-      await renewCaptcha(panels.forgot);
+      const r = await HireLinkAPI.api("/auth/forgot-password", { method: "POST", body: { email: document.getElementById("forgot-email").value.trim() } });
       HireLink.toast("Demande envoyée", r.message, "ok");
     } catch (err) {
-      if (isCaptchaChallenge(err)) await renewCaptcha(panels.forgot);
       HireLink.toast("Échec", err.message, "danger");
     }
   });
@@ -699,7 +626,6 @@
     if (otpPurpose === "LOGIN") {
       document.getElementById("email-pw").value = pendingEmail;
       otpPurpose = "REGISTER";
-      otpHostPanel = panels.password;
       applyMode();
       return;
     }
@@ -719,7 +645,6 @@
     if (mode === "register" && !consentPayload(true)) return;
     pendingEmail = email;
     otpPurpose = "REGISTER";
-    otpHostPanel = panels.email;
     viaGoogle = false;
     persistAuthDraft();
     try {
@@ -765,17 +690,12 @@
     }
     pendingEmail = email;
     otpPurpose = "LOGIN";
-    otpHostPanel = panels.password;
     try {
       await sendOtp(email, "LOGIN");
       title.textContent = "Connexion par code";
       sub.textContent = "Saisissez le code reçu par e-mail.";
       showPanel("otp");
     } catch (err) {
-      if (isCaptchaChallenge(err)) {
-        HireLink.toast("Contrôle anti-robot", "Répondez à la question affichée, puis relancez l’envoi du code.", "warn");
-        return;
-      }
       HireLink.toast("Échec", err.message, "danger");
     }
   });
@@ -876,15 +796,13 @@
     try {
       const auth = await HireLinkAPI.api("/auth/login", {
         method: "POST",
-        body: Object.assign({
+        body: {
           email: document.getElementById("email-pw").value.trim(),
           password: document.getElementById("password").value,
-        }, captchaOf(panels.password).value()),
+        },
       });
       afterAuth(auth, true);
     } catch (err) {
-      // Jeton consommé dès la première tentative : toujours renouveler.
-      await renewCaptcha(panels.password);
       HireLink.toast("Connexion refusée", err.message, "danger");
     }
   });

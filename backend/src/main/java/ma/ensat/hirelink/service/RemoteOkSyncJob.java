@@ -8,7 +8,9 @@ import org.springframework.stereotype.Component;
 
 /** Une passe par heure, seulement si l'import est explicitement activé. */
 @Component
-@ConditionalOnProperty(name = "hirelink.external-jobs.remoteok.enabled", havingValue = "true")
+@ConditionalOnProperty(
+        name = {"hirelink.external-jobs.sync-enabled", "hirelink.external-jobs.remoteok.enabled"},
+        havingValue = "true")
 public class RemoteOkSyncJob {
 
     private static final Logger log = LoggerFactory.getLogger(RemoteOkSyncJob.class);

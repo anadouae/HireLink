@@ -1,4 +1,4 @@
-/** Entreprise & équipe : fiche entreprise, vérification (ICE), logo, membres de l'organisation. */
+/** Entreprise & équipe : fiche entreprise, badge « Entreprise vérifiée » (e-mail professionnel), logo, membres. */
 (function () {
   const RC = HireLinkApp;
   const session = RC.mount({ active: "team", title: "Entreprise & équipe" });
@@ -8,11 +8,11 @@
   let org = null;
 
   const VERIF = {
-    REGISTRY_MATCH: { label: "Vérifiée (registre)", tone: "ok" },
-    ADMIN_APPROVED: { label: "Vérifiée par l’administration", tone: "ok" },
-    MANUAL_REVIEW: { label: "En revue par l’administration", tone: "warn" },
-    PENDING: { label: "Vérification en attente", tone: "warn" },
-    REJECTED: { label: "Vérification refusée", tone: "danger" },
+    NEED_CORPORATE_EMAIL: { label: "E-mail professionnel requis", tone: "warn" },
+    WAITING_REGISTRY: { label: "E-mail professionnel requis", tone: "warn" },
+    NAME_MISMATCH: { label: "E-mail professionnel requis", tone: "warn" },
+    ADMIN_REVOKED: { label: "Vérification retirée", tone: "danger" },
+    PENDING: { label: "Non vérifiée", tone: "warn" },
   };
 
   function paintLogo(o, bust) {
@@ -29,12 +29,6 @@
     } else box.textContent = letter;
   }
 
-  const ICE_PORTALS = [
-    { label: "ice.gov.ma", url: "https://www.ice.gov.ma/" },
-    { label: "DirectInfo OMPIC", url: "https://www.directinfo.ma/" },
-    { label: "OMPIC — ICE", url: "http://www.ompic.ma/fr/content/identifiant-commun-de-lentreprise" },
-  ];
-
   function fmtWhen(iso) {
     if (!iso) return "";
     const d = new Date(iso);
@@ -42,54 +36,25 @@
     return d.toLocaleString("fr-MA", { dateStyle: "short", timeStyle: "short" });
   }
 
-  function icePortalsHtml(list) {
-    const links = (list && list.length ? list : ICE_PORTALS)
-      .map((p) => '<a href="' + esc(p.url) + '" target="_blank" rel="noopener noreferrer">' + esc(p.label) + "</a>")
-      .join("");
-    return '<div class="ice-status-links">' + links + "</div>";
-  }
-
+  /** L'ICE est facultatif : il complète la fiche, le badge dépend de l'e-mail professionnel. */
   function paintIceFromOrg(o) {
     const ice = (o.ice || "").trim();
     if (!ice) {
-      paintIcePanel({ empty: true });
+      paintIcePanel({ empty: true, hint: "Facultatif : l’identifiant fiscal de l’entreprise (15 chiffres au Maroc)." });
       return;
     }
     if (o.iceFormatValid === false) {
-      paintIcePanel({
-        tone: "danger",
-        title: "Format ICE invalide",
-        message: "L’ICE doit contenir exactement 15 chiffres (9 + 4 + 2). Les zéros de tête sont conservés.",
-        ice: ice,
-        portals: true,
-      });
+      paintIcePanel({ tone: "danger", title: "ICE au mauvais format", message: "L’ICE contient exactement 15 chiffres.", ice: ice });
       return;
     }
-    if (o.iceLegalName) {
-      paintIcePanel({
-        tone: "ok",
-        title: "ICE vérifié : entreprise identifiée",
-        message: "Identité confirmée via le référentiel HireLink (pas un extrait OMPIC en direct).",
-        ice: ice,
-        legalName: o.iceLegalName,
-        address: o.iceAddress || o.city || "",
-        source: o.iceSource || "Référentiel HireLink",
-        checkedAt: o.iceCheckedAt,
-      });
-      return;
-    }
-    if (o.iceFormatValid === true) {
-      paintIcePanel({
-        tone: "warn",
-        title: "Format valide, entreprise non confirmée",
-        message: "Aucune API OMPIC / DirectInfo / ice.gov.ma gratuite n’est disponible. Vérifiez manuellement sur un portail officiel, puis demandez une validation admin si besoin.",
-        ice: ice,
-        checkedAt: o.iceCheckedAt,
-        portals: true,
-      });
-      return;
-    }
-    paintIcePanel({ empty: true, hint: "Saisissez l’ICE pour lancer la vérification automatique." });
+    paintIcePanel({
+      tone: "ok",
+      title: o.iceLegalName ? "Entreprise reconnue" : "ICE enregistré",
+      message: o.iceLegalName ? "" : "Il complète la fiche de votre entreprise.",
+      ice: ice,
+      legalName: o.iceLegalName || "",
+      address: o.iceLegalName ? (o.iceAddress || o.city || "") : "",
+    });
   }
 
   function paintIcePanel(s) {
@@ -107,14 +72,12 @@
     if (s.ice) rows.push("<li><strong>ICE</strong>" + esc(s.ice) + "</li>");
     if (s.legalName) rows.push("<li><strong>Dénomination légale</strong>" + esc(s.legalName) + "</li>");
     if (s.address) rows.push("<li><strong>Adresse / ville</strong>" + esc(s.address) + "</li>");
-    if (s.source) rows.push("<li><strong>Source</strong>" + esc(s.source) + "</li>");
-    if (s.checkedAt) rows.push("<li><strong>Vérifié le</strong>" + esc(fmtWhen(s.checkedAt)) + "</li>");
+    if (s.checkedAt) rows.push("<li><strong>Contrôlé le</strong>" + esc(fmtWhen(s.checkedAt)) + "</li>");
     box.innerHTML =
       '<div class="' + cls + '">' +
       "<div><strong>" + esc(s.title || "ICE") + "</strong>" +
       (s.message ? "<span>" + esc(s.message) + "</span>" : "") + "</div>" +
       (rows.length ? '<ul class="ice-status-meta">' + rows.join("") + "</ul>" : "") +
-      (s.portals ? icePortalsHtml(s.manualPortals) : "") +
       "</div>";
   }
 
@@ -125,11 +88,11 @@
     const ice = ($("co-ice").value || "").trim();
     const name = ($("co-name").value || "").trim();
     if (!ice) {
-      paintIcePanel({ empty: true, hint: "Saisissez l’ICE pour lancer la vérification automatique." });
+      paintIcePanel({ empty: true, hint: "Facultatif : l’identifiant fiscal de l’entreprise (15 chiffres au Maroc)." });
       return;
     }
     const seq = ++iceCheckSeq;
-    paintIcePanel({ tone: "info", title: "Vérification en cours…", message: "Contrôle du format puis recherche d’identité.", ice: ice });
+    paintIcePanel({ tone: "info", title: "Contrôle en cours…", ice: ice });
     try {
       const r = await HireLinkAPI.api("/organizations/mine/ice/check", {
         method: "POST",
@@ -137,47 +100,20 @@
       });
       if (seq !== iceCheckSeq) return;
       if (!r.formatValid) {
-        paintIcePanel({
-          tone: "danger",
-          title: "Format ICE invalide",
-          message: r.formatMessage || "L’ICE doit contenir exactement 15 chiffres.",
-          ice: r.normalized || ice,
-          portals: true,
-          manualPortals: r.manualPortals,
-        });
-        return;
-      }
-      if (r.identityFound) {
-        paintIcePanel({
-          tone: "ok",
-          title: r.identityMessage || "ICE vérifié : entreprise identifiée",
-          message: "Structure 9 + 4 + 2 respectée. Identité confirmée dans le référentiel HireLink.",
-          ice: r.normalized || ice,
-          legalName: r.legalName || "",
-          address: [r.address, r.city].filter(Boolean).join(" · "),
-          source: r.source || "",
-          checkedAt: r.checkedAt,
-        });
+        paintIcePanel({ tone: "danger", title: "ICE au mauvais format", message: "L’ICE contient exactement 15 chiffres.", ice: r.normalized || ice });
         return;
       }
       paintIcePanel({
-        tone: "warn",
-        title: "Format valide, entreprise non confirmée",
-        message: r.identityMessage || "Vérifiez manuellement sur un portail officiel.",
+        tone: "ok",
+        title: r.identityFound ? "Entreprise reconnue" : "ICE au bon format",
+        message: r.identityFound ? "" : "Enregistrez la fiche pour l’ajouter à votre entreprise.",
         ice: r.normalized || ice,
-        checkedAt: r.checkedAt,
-        portals: true,
-        manualPortals: r.manualPortals,
+        legalName: r.identityFound ? (r.legalName || "") : "",
+        address: r.identityFound ? [r.address, r.city].filter(Boolean).join(" · ") : "",
       });
     } catch (err) {
       if (seq !== iceCheckSeq) return;
-      paintIcePanel({
-        tone: "danger",
-        title: "Vérification impossible",
-        message: err.message || "Réessayez dans un instant.",
-        ice: ice,
-        portals: true,
-      });
+      paintIcePanel({ tone: "danger", title: "Contrôle impossible", message: err.message || "Réessayez dans un instant.", ice: ice });
     }
   }
 
@@ -194,11 +130,13 @@
     const v = o.verified ? { label: o.statusLabel || "Entreprise vérifiée", tone: "ok" } : VERIF[o.verificationStatus] || { label: o.statusLabel || "À vérifier", tone: "warn" };
     $("kpi-status").textContent = v.label;
     $("kpi-status").closest(".rc-kpi").className = "rc-kpi rc-kpi--" + v.tone;
-    $("kpi-ice").textContent = o.ice ? "ICE " + o.ice : "ICE non renseigné";
-    $("verify-hint").innerHTML = o.verified
-      ? "Badge actif : vos offres peuvent être publiées et le badge apparaît côté candidats."
-      : "Saisissez un ICE à 15 chiffres : le format est contrôlé immédiatement, puis HireLink tente d’identifier l’entreprise. Sans confirmation automatique, utilisez les portails officiels ou la validation admin.";
-    $("btn-recheck").hidden = !!o.verified || !canEdit;
+    $("kpi-ice").textContent = o.ice ? "ICE " + o.ice : "Badge lié à l’e-mail professionnel";
+    $("verify-hint").textContent = o.verified
+      ? "Badge « Entreprise vérifiée » actif : il apparaît sur vos offres et votre page entreprise."
+      : o.verificationStatus === "ADMIN_REVOKED"
+        ? "Le badge a été retiré par l’équipe HireLink. Écrivez-nous depuis la page Support pour le faire réexaminer."
+        : "Le badge s’obtient automatiquement avec l’adresse e-mail professionnelle de l’entreprise (par exemple prenom@votre-entreprise.com). L’ICE est facultatif.";
+    $("btn-recheck").hidden = !!o.verified || !canEdit || o.verificationStatus === "ADMIN_REVOKED";
     const f = $("company-form");
     ["co-name", "co-ice", "co-website", "co-sector", "co-city", "co-bio"].forEach((id) => { $(id).disabled = !canEdit; });
     $("co-name").value = o.name || "";
@@ -593,7 +531,7 @@
       const o = await HireLinkAPI.api("/organizations/mine/verify", { method: "POST" });
       RC.cacheSet("org", o);
       paintOrg(o);
-      if (!o.verified) RC.toast("Vérification", o.message || "Dossier transmis à l’administration.", "warn");
+      if (!o.verified) RC.toast("Vérification", o.message || "Utilisez l’adresse e-mail professionnelle de l’entreprise.", "warn");
       else if (!Mascotte.celebrate({ cle: "organisation-validee", title: "Organisation validée !", description: "Votre badge « Entreprise vérifiée » est visible côté candidats." })) {
         RC.toast("Vérification", "Badge attribué automatiquement.", "ok");
       }
